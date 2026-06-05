@@ -1,0 +1,28 @@
+{
+    "optima": {
+        "username": "optima",
+        "password": "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92",
+        "token": "255a5f5b-5e1c-4edf-9b62-3f7e1080a022",
+        "plan": "free",
+        "used": 0,
+        "date": "2026-06-06"
+    },
+    "thanhthu": {
+        "username": "thanhthu",
+        "password": "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92",
+        "token": "d4e5eaf8-d116-4160-a13e-70db6c54b22f",
+        "plan": "free",
+        "used": 0,
+        "date": "2026-06-05"
+    },
+    "thuthuy": {
+        "username": "thuthuy",
+        "email": "",
+        "password": "5994471abb01112afcc18159f6cc74b4f511b99806da59b3caf5a9c173cacfc5",
+        "token": "5c6c6a19-7548-42ce-a892-4da742fe5366",
+        "login_type": "password",
+        "plan": "free",
+        "used": 1,
+        "date": "2026-06-05"
+    }
+}
