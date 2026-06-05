@@ -1,4 +1,5 @@
-server.py
-index.html
-requirements.txt
-users.json
+fastapi
+uvicorn
+pydantic
+google-genai
+python-multipart
