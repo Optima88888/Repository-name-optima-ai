@@ -9,6 +9,7 @@ import json
 import os
 import hashlib
 import uuid
+import re
 
 # ======================================================
 # GPT MINI PREMIUM SERVER
@@ -61,6 +62,8 @@ chat_memory = {}
 class RegisterRequest(BaseModel):
     username: str
     password: str
+    email: str = ""
+    phone: str = ""
 
 class LoginRequest(BaseModel):
     username: str
@@ -95,6 +98,19 @@ def safe_username(text: str) -> str:
 
 def hash_password(password: str) -> str:
     return hashlib.sha256(password.encode("utf-8")).hexdigest()
+
+def password_error_message(password: str) -> str:
+    if len(password) < 8:
+        return "Mật khẩu phải có tối thiểu 8 ký tự."
+    if not re.search(r"[A-Z]", password):
+        return "Mật khẩu phải chứa ít nhất 1 chữ in hoa."
+    if not re.search(r"[a-z]", password):
+        return "Mật khẩu phải chứa ít nhất 1 chữ thường."
+    if not re.search(r"[0-9]", password):
+        return "Mật khẩu phải chứa ít nhất 1 số."
+    if not re.search(r"[@!#$%&*]", password):
+        return "Mật khẩu phải chứa ít nhất 1 ký tự đặc biệt như @ ! # $ % & *."
+    return ""
 
 def load_json(file_path: str):
     if not os.path.exists(file_path):
@@ -252,28 +268,44 @@ def register(req: RegisterRequest):
     users = load_users()
     username = safe_username(req.username)
     password = req.password.strip()
+    email = req.email.strip().lower()
+    phone = req.phone.strip()
 
     if len(username) < 3:
         return {"success": False, "message": "Tên đăng nhập phải có ít nhất 3 ký tự."}
-    if len(password) < 4:
-        return {"success": False, "message": "Mật khẩu phải có ít nhất 4 ký tự."}
+    pass_msg = password_error_message(password)
+    if pass_msg:
+        return {"success": False, "message": pass_msg + " Ví dụ mật khẩu hợp lệ: Aa@078912"}
+    if not email.endswith("@gmail.com") or "@" not in email:
+        return {"success": False, "message": "Vui lòng nhập đúng địa chỉ Gmail để đăng ký."}
+    clean_phone = phone.replace(" ", "").replace("-", "")
+    if not (clean_phone.startswith("0") or clean_phone.startswith("+84")) or len(clean_phone) < 9:
+        return {"success": False, "message": "Vui lòng nhập đúng số điện thoại/Zalo để đăng ký."}
     if username in users:
         return {"success": False, "message": "Tài khoản đã tồn tại."}
+
+    for _, existing in users.items():
+        if existing.get("email", "").lower() == email:
+            return {"success": False, "message": "Gmail này đã được dùng để đăng ký tài khoản khác."}
+        if existing.get("phone", "").replace(" ", "").replace("-", "") == clean_phone:
+            return {"success": False, "message": "Số điện thoại này đã được dùng để đăng ký tài khoản khác."}
 
     token = str(uuid.uuid4())
     users[username] = {
         "username": username,
-        "email": "",
+        "email": email,
+        "phone": phone,
         "password": hash_password(password),
         "token": token,
         "login_type": "password",
         "plan": "free",
         "used": 0,
-        "date": today()
+        "date": today(),
+        "registered_at": today()
     }
     save_users(users)
 
-    return {"success": True, "message": "Đăng ký thành công.", "token": token, "username": username, "plan": "free", "plan_label": "FREE", "remaining": FREE_LIMIT}
+    return {"success": True, "message": "Đăng ký thành công. Thông tin Gmail và số điện thoại đã được ghi nhận để hỗ trợ tài khoản.", "token": token, "username": username, "plan": "free", "plan_label": "FREE", "remaining": FREE_LIMIT}
 
 @app.post("/login")
 def login(req: LoginRequest):
@@ -482,6 +514,9 @@ async function loadData(){
         <div class="card">
             <b>👤 ${username}</b><br><br>
             Gói hiện tại: <span class="badge">${plan}</span><br><br>
+            Gmail: ${u.email || "Chưa có"}<br>
+            SĐT/Zalo: ${u.phone || "Chưa có"}<br>
+            Ngày đăng ký: ${u.registered_at || "Chưa có"}<br><br>
             Đã dùng: ${u.used || 0} lượt<br><br>
             <select id="plan_${username}">
                 <option value="free">Free</option>

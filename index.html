@@ -908,7 +908,72 @@ button{
     word-break:break-word;
 }
 
+
+/* REGISTER FORM UPGRADE */
+.register-box h2{
+    color:#38bdf8;
+    text-align:center;
+    margin:4px 0 10px;
+    font-size:26px;
+}
+.register-note{
+    color:#cbd5e1;
+    font-size:14px;
+    line-height:1.6;
+    text-align:center;
+    margin:0 0 14px;
+}
+.back-login-btn{
+    background:#334155!important;
+}
+.register-secure{
+    color:#94a3b8;
+    font-size:13px;
+    line-height:1.5;
+    text-align:center;
+    margin-top:12px;
+}
+
+
+/* PASSWORD SECURITY RULES */
+.password-rules{
+    margin:10px 0 14px;
+    padding:14px;
+    border-radius:14px;
+    background:rgba(15,23,42,.82);
+    border:1px solid #334155;
+    color:#94a3b8;
+    font-size:13px;
+    line-height:1.8;
+}
+.password-rules-title{
+    color:#fbbf24;
+    font-weight:900;
+    margin-bottom:6px;
+}
+.password-rules .ok{
+    color:#22c55e;
+    font-weight:800;
+}
+.password-rules .bad{
+    color:#f87171;
+    font-weight:800;
+}
+.password-example{
+    margin-top:8px;
+    color:#cbd5e1;
+}
+
 </style>
+<!-- Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-1ZNYNTMNYC"></script>
+<script>
+window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', 'G-1ZNYNTMNYC');
+</script>
+
 </head>
 
 <body>
@@ -918,14 +983,48 @@ button{
         <h1>⚡ GPT Mini Premium</h1>
         <p style="text-align:center;color:#94a3b8;">Đăng nhập để sử dụng trợ lý AI cao cấp</p>
 
-        <input id="authUsername" placeholder="Tên đăng nhập">
-        <input id="authPassword" type="password" placeholder="Mật khẩu">
+        <div id="loginBox">
+            <input id="authUsername" placeholder="Tên đăng nhập">
+            <input id="authPassword" type="password" placeholder="Mật khẩu">
 
-        <button onclick="login()">Đăng nhập</button>
-        <button onclick="register()">Đăng ký tài khoản</button>
-        <button class="google-btn" onclick="googleDemoLogin()">🔐 Đăng nhập nhanh bằng Google</button>
+            <button onclick="login()">Đăng nhập</button>
+            <button onclick="showRegisterForm()">Đăng ký tài khoản</button>
+            <button class="google-btn" onclick="googleDemoLogin()">🔐 Đăng nhập nhanh bằng Google</button>
 
-        <div class="small-note">Bản local demo: Google login sẽ tạo tài khoản nhanh bằng email bạn nhập.</div>
+            <div class="small-note">Nếu chưa có tài khoản, vui lòng đăng ký bằng Gmail và số điện thoại để được hỗ trợ kích hoạt Premium.</div>
+        </div>
+
+        <div id="registerBox" class="register-box" style="display:none;">
+            <h2>📝 Đăng ký tài khoản</h2>
+            <p class="register-note">
+                Vui lòng nhập đúng Gmail và số điện thoại. Thông tin này giúp bộ phận hỗ trợ xác nhận thanh toán, kích hoạt Premium và liên hệ khi cần thiết.
+            </p>
+
+            <input id="regUsername" placeholder="Tên đăng nhập">
+            <input id="regEmail" type="email" placeholder="Gmail bắt buộc">
+            <input id="regPhone" type="tel" placeholder="Số điện thoại / Zalo bắt buộc">
+            <input id="regPassword" type="password" placeholder="Mật khẩu bảo mật, ví dụ: Aa@078912" oninput="checkPasswordStrength()">
+
+            <div class="password-rules" id="passwordRules">
+                <div class="password-rules-title">🛡️ Yêu cầu bảo mật mật khẩu</div>
+                <div id="ruleLength">◆ Ít nhất 8 ký tự</div>
+                <div id="ruleUpper">◆ Có chữ in hoa A-Z</div>
+                <div id="ruleLower">◆ Có chữ thường a-z</div>
+                <div id="ruleNumber">◆ Có số 0-9</div>
+                <div id="ruleSpecial">◆ Có ký tự đặc biệt @ ! # $ % & *</div>
+                <div class="password-example">Ví dụ: <b>Aa@078912</b></div>
+            </div>
+
+            <input id="regPassword2" type="password" placeholder="Nhập lại mật khẩu" oninput="checkPasswordStrength()">
+
+            <button onclick="submitRegister()">✅ Tạo tài khoản ngay</button>
+            <button class="back-login-btn" onclick="showLoginForm()">← Quay lại đăng nhập</button>
+
+            <div class="register-secure">
+                🔒 Thông tin được lưu để hỗ trợ tài khoản, kích hoạt Premium và chăm sóc khách hàng.
+            </div>
+        </div>
+
         <div class="auth-message" id="authMessage"></div>
     </div>
 </div>
@@ -1273,15 +1372,117 @@ function showAuth(){
   document.getElementById("app").style.display="none";
 }
 
-async function register(){
-  const u=document.getElementById("authUsername").value.trim();
-  const p=document.getElementById("authPassword").value.trim();
+function showRegisterForm(){
+  document.getElementById("loginBox").style.display="none";
+  document.getElementById("registerBox").style.display="block";
+  showMessage("");
+  setTimeout(checkPasswordStrength, 100);
+}
+
+function showLoginForm(){
+  document.getElementById("registerBox").style.display="none";
+  document.getElementById("loginBox").style.display="block";
+  showMessage("");
+}
+
+function isValidGmail(email){
+  return /^[a-zA-Z0-9._%+-]+@gmail\.com$/.test(email);
+}
+
+function isValidPhone(phone){
+  const clean = phone.replace(/\s+/g,"");
+  return /^(0|\+84)[0-9]{8,10}$/.test(clean);
+}
+
+
+function validateStrongPassword(password){
+  return {
+    length: password.length >= 8,
+    upper: /[A-Z]/.test(password),
+    lower: /[a-z]/.test(password),
+    number: /[0-9]/.test(password),
+    special: /[@!#$%&*]/.test(password)
+  };
+}
+
+function passwordErrorMessage(password){
+  const r = validateStrongPassword(password);
+
+  if(!r.length) return "Mật khẩu phải có tối thiểu 8 ký tự.";
+  if(!r.upper) return "Mật khẩu phải chứa ít nhất 1 chữ in hoa, ví dụ: A.";
+  if(!r.lower) return "Mật khẩu phải chứa ít nhất 1 chữ thường, ví dụ: a.";
+  if(!r.number) return "Mật khẩu phải chứa ít nhất 1 số, ví dụ: 0-9.";
+  if(!r.special) return "Mật khẩu phải chứa ít nhất 1 ký tự đặc biệt như @ ! # $ % & *.";
+
+  return "";
+}
+
+function updateRule(id, ok, text){
+  const el=document.getElementById(id);
+  if(!el) return;
+  el.className = ok ? "ok" : "bad";
+  el.innerText = (ok ? "✓ " : "◆ ") + text;
+}
+
+function checkPasswordStrength(){
+  const p=document.getElementById("regPassword")?.value || "";
+  const r=validateStrongPassword(p);
+
+  updateRule("ruleLength", r.length, "Ít nhất 8 ký tự");
+  updateRule("ruleUpper", r.upper, "Có chữ in hoa A-Z");
+  updateRule("ruleLower", r.lower, "Có chữ thường a-z");
+  updateRule("ruleNumber", r.number, "Có số 0-9");
+  updateRule("ruleSpecial", r.special, "Có ký tự đặc biệt @ ! # $ % & *");
+}
+
+function isStrongPassword(password){
+  const r=validateStrongPassword(password);
+  return r.length && r.upper && r.lower && r.number && r.special;
+}
+
+async function submitRegister(){
+  const u=document.getElementById("regUsername").value.trim();
+  const email=document.getElementById("regEmail").value.trim().toLowerCase();
+  const phone=document.getElementById("regPhone").value.trim();
+  const p=document.getElementById("regPassword").value.trim();
+  const p2=document.getElementById("regPassword2").value.trim();
+
+  if(u.length<3){
+    showMessage("Tên đăng nhập phải có ít nhất 3 ký tự.");
+    return;
+  }
+
+  if(!isValidGmail(email)){
+    showMessage("Vui lòng nhập đúng địa chỉ Gmail, ví dụ: tenban@gmail.com");
+    return;
+  }
+
+  if(!isValidPhone(phone)){
+    showMessage("Vui lòng nhập đúng số điện thoại/Zalo, ví dụ: 0363382629");
+    return;
+  }
+
+  const passMsg = passwordErrorMessage(p);
+  if(passMsg){
+    showMessage("🔐 " + passMsg + " Ví dụ mật khẩu hợp lệ: Aa@078912");
+    return;
+  }
+
+  if(p!==p2){
+    showMessage("Mật khẩu nhập lại chưa khớp.");
+    return;
+  }
 
   try{
     const r=await fetch(API+"/register",{
         method:"POST",
         headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({username:u,password:p})
+        body:JSON.stringify({
+            username:u,
+            password:p,
+            email:email,
+            phone:phone
+        })
     });
 
     const d=await r.json();
@@ -1295,8 +1496,12 @@ async function register(){
         showApp();
     }
   }catch(e){
-    showMessage("Không kết nối được server. Kiểm tra "+API+"/docs");
+    showMessage("Không kết nối được server. Vui lòng thử lại hoặc liên hệ Zalo 036 338 2629.");
   }
+}
+
+function register(){
+  showRegisterForm();
 }
 
 async function login(){
