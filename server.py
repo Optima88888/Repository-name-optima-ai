@@ -25,11 +25,11 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 SUPABASE_URL = (os.getenv("SUPABASE_URL") or "").rstrip("/")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY", "")
 
-SUPABASE_TABLE = os.getenv("SUPABASE_TABLE", "người dùng")
-COL_USERNAME = os.getenv("SUPABASE_COL_USERNAME", "tên người dùng")
-COL_EMAIL = os.getenv("SUPABASE_COL_EMAIL", "e-mail")
-COL_PHONE = os.getenv("SUPABASE_COL_PHONE", "điện thoại")
-COL_PASSWORD = os.getenv("SUPABASE_COL_PASSWORD", "mật khẩu")
+SUPABASE_TABLE = os.getenv("SUPABASE_TABLE", "users")
+COL_USERNAME = os.getenv("SUPABASE_COL_USERNAME", "username")
+COL_EMAIL = os.getenv("SUPABASE_COL_EMAIL", "email")
+COL_PHONE = os.getenv("SUPABASE_COL_PHONE", "phone")
+COL_PASSWORD = os.getenv("SUPABASE_COL_PASSWORD", "password")
 COL_PLAN = os.getenv("SUPABASE_COL_PLAN", "plan")
 COL_TOKEN = os.getenv("SUPABASE_COL_TOKEN", "token")
 COL_USED = os.getenv("SUPABASE_COL_USED", "used")
@@ -164,10 +164,10 @@ def normalize_supabase_user(row: dict):
         return None
     return {
         "id": row.get("id") or row.get("nhận dạng"),
-        "username": row.get(COL_USERNAME) or row.get("username") or row.get("tên người dùng"),
-        "email": row.get(COL_EMAIL) or row.get("email") or row.get("e-mail"),
-        "phone": row.get(COL_PHONE) or row.get("phone") or row.get("điện thoại"),
-        "password": row.get(COL_PASSWORD) or row.get("password") or row.get("mật khẩu"),
+        "username": row.get("username") or row.get(COL_USERNAME) or row.get("tên người dùng"),
+        "email": row.get("email") or row.get(COL_EMAIL) or row.get("e-mail"),
+        "phone": row.get("phone") or row.get(COL_PHONE) or row.get("điện thoại"),
+        "password": row.get("password") or row.get(COL_PASSWORD) or row.get("mật khẩu"),
         "token": row.get(COL_TOKEN) or row.get("token"),
         "plan": row.get(COL_PLAN) or row.get("plan") or "free",
         "used": row.get(COL_USED) or row.get("used") or 0,
@@ -516,13 +516,40 @@ def login(req: LoginRequest):
 
 @app.post("/google-login")
 def google_login(req: GoogleLoginRequest):
-    users = load_users()
     email = req.email.strip().lower()
 
     if not email or "@" not in email:
         return {"success": False, "message": "Email Google không hợp lệ."}
 
     username = safe_username(email.split("@")[0])
+
+    if supabase_enabled():
+        user = supabase_find_user_by_username(username)
+        if not user:
+            token = str(uuid.uuid4())
+            user = {
+                "username": username,
+                "email": email,
+                "phone": "",
+                "password": "",
+                "token": token,
+                "login_type": "google-demo",
+                "plan": "free",
+                "used": 0,
+                "date": today(),
+                "registered_at": today()
+            }
+            ok, err = supabase_insert_user(user)
+            if not ok:
+                return {"success": False, "message": "Chưa lưu được tài khoản Google vào Supabase. Kiểm tra RLS/policy hoặc tên cột."}
+        reset_daily_if_needed(user)
+        if not user.get("token"):
+            user["token"] = str(uuid.uuid4())
+        supabase_update_user(username, {"token": user["token"], "date": user.get("date", today()), "used": user.get("used", 0)})
+        plan = user.get("plan", "free")
+        return {"success": True, "message": "Đăng nhập Google demo thành công.", "token": user["token"], "username": username, "plan": plan, "plan_label": PLAN_LABELS.get(plan, plan.upper()), "remaining": remaining_text(user)}
+
+    users = load_json(USERS_FILE)
 
     if username not in users:
         users[username] = {
@@ -539,7 +566,7 @@ def google_login(req: GoogleLoginRequest):
 
     user = users[username]
     reset_daily_if_needed(user)
-    save_users(users)
+    save_json(USERS_FILE, users)
 
     plan = user.get("plan", "free")
     return {"success": True, "message": "Đăng nhập Google demo thành công.", "token": user["token"], "username": username, "plan": plan, "plan_label": PLAN_LABELS.get(plan, plan.upper()), "remaining": remaining_text(user)}
@@ -838,6 +865,8 @@ def admin_approve(req: AdminApproveRequest):
 
     users[username]["plan"] = req.plan
     users[username]["used"] = 0
+    if supabase_enabled():
+        supabase_update_user(username, {"plan": req.plan, "used": 0})
     save_users(users)
 
     return {"success": True, "message": f"Đã cập nhật tài khoản {username} thành gói {PLAN_LABELS.get(req.plan, req.plan)}."}
