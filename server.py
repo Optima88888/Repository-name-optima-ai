@@ -10,6 +10,7 @@ import os
 import hashlib
 import uuid
 import re
+import requests
 
 # ======================================================
 # GPT MINI PREMIUM SERVER
@@ -20,6 +21,20 @@ import re
 # ======================================================
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+
+SUPABASE_URL = (os.getenv("SUPABASE_URL") or "").rstrip("/")
+SUPABASE_KEY = os.getenv("SUPABASE_KEY", "")
+
+SUPABASE_TABLE = os.getenv("SUPABASE_TABLE", "người dùng")
+COL_USERNAME = os.getenv("SUPABASE_COL_USERNAME", "tên người dùng")
+COL_EMAIL = os.getenv("SUPABASE_COL_EMAIL", "e-mail")
+COL_PHONE = os.getenv("SUPABASE_COL_PHONE", "điện thoại")
+COL_PASSWORD = os.getenv("SUPABASE_COL_PASSWORD", "mật khẩu")
+COL_PLAN = os.getenv("SUPABASE_COL_PLAN", "plan")
+COL_TOKEN = os.getenv("SUPABASE_COL_TOKEN", "token")
+COL_USED = os.getenv("SUPABASE_COL_USED", "used")
+COL_DATE = os.getenv("SUPABASE_COL_DATE", "date")
+COL_REGISTERED_AT = os.getenv("SUPABASE_COL_REGISTERED_AT", "registered_at")
 
 app = FastAPI(title="GPT Mini Premium")
 
@@ -35,6 +50,9 @@ USERS_FILE = "users.json"
 SUPPORT_FILE = "support_messages.json"
 FREE_LIMIT = 10
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "admin123")
+
+SUPPORT_ZALO = "036 338 2629"
+SUPPORT_EMAIL = "gptminipro@gmail.com"
 
 PLAN_LABELS = {
     "free": "FREE",
@@ -125,7 +143,140 @@ def save_json(file_path: str, data):
     with open(file_path, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=4)
 
+def supabase_enabled() -> bool:
+    return bool(SUPABASE_URL and SUPABASE_KEY)
+
+def supabase_headers(prefer: str = ""):
+    headers = {
+        "apikey": SUPABASE_KEY,
+        "Authorization": f"Bearer {SUPABASE_KEY}",
+        "Content-Type": "application/json"
+    }
+    if prefer:
+        headers["Prefer"] = prefer
+    return headers
+
+def supabase_table_url() -> str:
+    return f"{SUPABASE_URL}/rest/v1/{SUPABASE_TABLE}"
+
+def normalize_supabase_user(row: dict):
+    if not row:
+        return None
+    return {
+        "id": row.get("id") or row.get("nhận dạng"),
+        "username": row.get(COL_USERNAME) or row.get("username") or row.get("tên người dùng"),
+        "email": row.get(COL_EMAIL) or row.get("email") or row.get("e-mail"),
+        "phone": row.get(COL_PHONE) or row.get("phone") or row.get("điện thoại"),
+        "password": row.get(COL_PASSWORD) or row.get("password") or row.get("mật khẩu"),
+        "token": row.get(COL_TOKEN) or row.get("token"),
+        "plan": row.get(COL_PLAN) or row.get("plan") or "free",
+        "used": row.get(COL_USED) or row.get("used") or 0,
+        "date": row.get(COL_DATE) or row.get("date") or today(),
+        "registered_at": row.get(COL_REGISTERED_AT) or row.get("registered_at") or row.get("created_at") or today(),
+        "_raw": row
+    }
+
+def supabase_find_user_by_username(username: str):
+    if not supabase_enabled():
+        return None
+    try:
+        res = requests.get(
+            supabase_table_url(),
+            headers=supabase_headers(),
+            params={"select": "*", COL_USERNAME: f"eq.{username}"},
+            timeout=12
+        )
+        if res.status_code >= 400:
+            return None
+        data = res.json()
+        return normalize_supabase_user(data[0]) if data else None
+    except Exception:
+        return None
+
+def supabase_email_or_phone_exists(email: str, clean_phone: str):
+    if not supabase_enabled():
+        return False, ""
+    try:
+        res = requests.get(supabase_table_url(), headers=supabase_headers(), params={"select": "*"}, timeout=12)
+        if res.status_code >= 400:
+            return False, ""
+        for row in res.json():
+            user = normalize_supabase_user(row)
+            if not user:
+                continue
+            if (user.get("email") or "").lower() == email:
+                return True, "Gmail này đã được dùng để đăng ký tài khoản khác."
+            if (user.get("phone") or "").replace(" ", "").replace("-", "") == clean_phone:
+                return True, "Số điện thoại này đã được dùng để đăng ký tài khoản khác."
+        return False, ""
+    except Exception:
+        return False, ""
+
+def supabase_insert_user(user: dict):
+    if not supabase_enabled():
+        return False, "Chưa cấu hình Supabase."
+    payload_full = {
+        COL_USERNAME: user["username"],
+        COL_EMAIL: user.get("email", ""),
+        COL_PHONE: user.get("phone", ""),
+        COL_PASSWORD: user.get("password", ""),
+        COL_TOKEN: user.get("token", ""),
+        COL_PLAN: user.get("plan", "free"),
+        COL_USED: user.get("used", 0),
+        COL_DATE: user.get("date", today()),
+        COL_REGISTERED_AT: user.get("registered_at", today())
+    }
+    payload_basic = {
+        COL_USERNAME: user["username"],
+        COL_EMAIL: user.get("email", ""),
+        COL_PHONE: user.get("phone", ""),
+        COL_PASSWORD: user.get("password", "")
+    }
+    try:
+        res = requests.post(supabase_table_url(), headers=supabase_headers("return=minimal"), json=payload_full, timeout=12)
+        if res.status_code < 400:
+            return True, ""
+        res2 = requests.post(supabase_table_url(), headers=supabase_headers("return=minimal"), json=payload_basic, timeout=12)
+        if res2.status_code < 400:
+            return True, ""
+        return False, res2.text
+    except Exception as e:
+        return False, str(e)
+
+def supabase_update_user(username: str, updates: dict):
+    if not supabase_enabled():
+        return False
+    mapping = {
+        "token": COL_TOKEN, "plan": COL_PLAN, "used": COL_USED, "date": COL_DATE,
+        "registered_at": COL_REGISTERED_AT, "password": COL_PASSWORD,
+        "email": COL_EMAIL, "phone": COL_PHONE, "username": COL_USERNAME
+    }
+    payload = {mapping.get(k, k): v for k, v in updates.items()}
+    try:
+        res = requests.patch(
+            supabase_table_url(),
+            headers=supabase_headers("return=minimal"),
+            params={COL_USERNAME: f"eq.{username}"},
+            json=payload,
+            timeout=12
+        )
+        return res.status_code < 400
+    except Exception:
+        return False
+
 def load_users():
+    if supabase_enabled():
+        try:
+            res = requests.get(supabase_table_url(), headers=supabase_headers(), params={"select": "*"}, timeout=12)
+            if res.status_code < 400:
+                users = {}
+                for row in res.json():
+                    user = normalize_supabase_user(row)
+                    if user and user.get("username"):
+                        users[user["username"]] = user
+                return users
+        except Exception:
+            pass
     return load_json(USERS_FILE)
 
 def save_users(users):
@@ -166,7 +317,8 @@ def smart_fallback_reply(message: str):
 Gợi ý nhanh:
 Anh/chị có thể nhập: "Viết bài Facebook bán [sản phẩm] cho [khách hàng mục tiêu] với ưu đãi [ưu đãi]."
 
-📞 Cần hỗ trợ triển khai chuyên sâu: Zalo 036 338 2629"""
+📞 Cần hỗ trợ triển khai chuyên sâu: Zalo 036 338 2629
+✉️ Email hỗ trợ: gptminipro@gmail.com"""
 
     if any(k in text for k in ["quảng cáo", "ads", "facebook ads", "tiktok", "chạy ads"]):
         return """📈 TƯ VẤN QUẢNG CÁO FACEBOOK / TIKTOK
@@ -181,7 +333,8 @@ Anh/chị có thể nhập: "Viết bài Facebook bán [sản phẩm] cho [khác
 Gợi ý:
 Với shop mới, nên bắt đầu bằng chiến dịch tin nhắn/inbox ngân sách nhỏ để test tệp khách hàng trước.
 
-📞 Cần hỗ trợ chạy quảng cáo trực tiếp: Zalo 036 338 2629"""
+📞 Cần hỗ trợ chạy quảng cáo trực tiếp: Zalo 036 338 2629
+✉️ Email hỗ trợ: gptminipro@gmail.com"""
 
     if any(k in text for k in ["premium", "nâng cấp", "kích hoạt", "gói", "thanh toán"]):
         return """💎 HỖ TRỢ PREMIUM
@@ -198,7 +351,8 @@ Nếu anh/chị đã thanh toán, vui lòng gửi:
 ◆ Gói đã thanh toán
 ◆ Mã giao dịch hoặc nội dung chuyển khoản
 
-📞 Zalo hỗ trợ kích hoạt nhanh: 036 338 2629"""
+📞 Zalo hỗ trợ kích hoạt nhanh: 036 338 2629
+✉️ Email hỗ trợ: gptminipro@gmail.com"""
 
     if any(k in text for k in ["website", "landing", "trang bán hàng"]):
         return """🌐 TƯ VẤN WEBSITE / LANDING PAGE
@@ -213,22 +367,18 @@ Nếu anh/chị đã thanh toán, vui lòng gửi:
 
 GPT Mini Premium có thể hỗ trợ lên bố cục, nội dung và kịch bản chuyển đổi.
 
-📞 Hỗ trợ trực tiếp: Zalo 036 338 2629"""
+📞 Hỗ trợ trực tiếp: Zalo 036 338 2629
+✉️ Email hỗ trợ: gptminipro@gmail.com"""
 
-    return """🔔 Hệ thống AI hiện đang xử lý lượng yêu cầu lớn.
+    return """⚠️ Hệ thống đang xử lý nhiều yêu cầu.
 
-Tôi vẫn có thể hỗ trợ anh/chị theo mẫu tư vấn nhanh:
+Vui lòng thử lại sau ít phút.
 
-◆ Nếu cần viết content: Gửi sản phẩm + khách hàng mục tiêu.
-◆ Nếu cần tư vấn quảng cáo: Gửi ngành hàng + ngân sách.
-◆ Nếu cần chọn gói Premium: Nên dùng gói Chuyên Nghiệp 199.000đ/tháng hoặc gói Vĩnh Viễn 599.000đ để tiết kiệm lâu dài.
-◆ Nếu cần kích hoạt Premium: Gửi tên tài khoản, gói đã chuyển khoản và mã giao dịch.
+Cần hỗ trợ nhanh:
+📱 Zalo: 036 338 2629
+📧 Email: gptminipro@gmail.com
 
-💎 Nâng cấp Premium giúp sử dụng ổn định hơn, hạn mức cao hơn và hạn chế gián đoạn.
-
-📞 Zalo hỗ trợ trực tiếp: 036 338 2629
-
-Anh/chị cần hỗ trợ vấn đề nào ạ?"""
+Khi liên hệ, vui lòng gửi tên tài khoản, Gmail đăng ký và ảnh lỗi nếu có."""
 
 def friendly_ai_error(message: str = ""):
     return smart_fallback_reply(message)
@@ -251,7 +401,8 @@ Bạn đã sử dụng toàn bộ lượt truy cập miễn phí được cấp 
 
 ━━━━━━━━━━━━━━━━━━━━━━
 
-📞 Zalo hỗ trợ kích hoạt nhanh: 036 338 2629"""
+📞 Zalo hỗ trợ kích hoạt nhanh: 036 338 2629
+✉️ Email hỗ trợ: gptminipro@gmail.com"""
 
 @app.get("/")
 def home():
@@ -265,7 +416,6 @@ def health():
 
 @app.post("/register")
 def register(req: RegisterRequest):
-    users = load_users()
     username = safe_username(req.username)
     password = req.password.strip()
     email = req.email.strip().lower()
@@ -278,12 +428,39 @@ def register(req: RegisterRequest):
         return {"success": False, "message": pass_msg + " Ví dụ mật khẩu hợp lệ: Aa@078912"}
     if not email.endswith("@gmail.com") or "@" not in email:
         return {"success": False, "message": "Vui lòng nhập đúng địa chỉ Gmail để đăng ký."}
+
     clean_phone = phone.replace(" ", "").replace("-", "")
     if not (clean_phone.startswith("0") or clean_phone.startswith("+84")) or len(clean_phone) < 9:
         return {"success": False, "message": "Vui lòng nhập đúng số điện thoại/Zalo để đăng ký."}
+
+    if supabase_enabled():
+        if supabase_find_user_by_username(username):
+            return {"success": False, "message": "Tài khoản đã tồn tại."}
+        exists, msg = supabase_email_or_phone_exists(email, clean_phone)
+        if exists:
+            return {"success": False, "message": msg}
+
+        token = str(uuid.uuid4())
+        user = {
+            "username": username,
+            "email": email,
+            "phone": phone,
+            "password": hash_password(password),
+            "token": token,
+            "login_type": "password",
+            "plan": "free",
+            "used": 0,
+            "date": today(),
+            "registered_at": today()
+        }
+        ok, err = supabase_insert_user(user)
+        if ok:
+            return {"success": True, "message": "Đăng ký thành công. Thông tin đã được lưu vào Supabase.", "token": token, "username": username, "plan": "free", "plan_label": "FREE", "remaining": FREE_LIMIT}
+        return {"success": False, "message": "Supabase chưa ghi được dữ liệu. Kiểm tra tên bảng/cột hoặc chính sách RLS."}
+
+    users = load_json(USERS_FILE)
     if username in users:
         return {"success": False, "message": "Tài khoản đã tồn tại."}
-
     for _, existing in users.items():
         if existing.get("email", "").lower() == email:
             return {"success": False, "message": "Gmail này đã được dùng để đăng ký tài khoản khác."}
@@ -292,37 +469,48 @@ def register(req: RegisterRequest):
 
     token = str(uuid.uuid4())
     users[username] = {
-        "username": username,
-        "email": email,
-        "phone": phone,
-        "password": hash_password(password),
-        "token": token,
-        "login_type": "password",
-        "plan": "free",
-        "used": 0,
-        "date": today(),
-        "registered_at": today()
+        "username": username, "email": email, "phone": phone,
+        "password": hash_password(password), "token": token,
+        "login_type": "password", "plan": "free", "used": 0,
+        "date": today(), "registered_at": today()
     }
-    save_users(users)
-
+    save_json(USERS_FILE, users)
     return {"success": True, "message": "Đăng ký thành công. Thông tin Gmail và số điện thoại đã được ghi nhận để hỗ trợ tài khoản.", "token": token, "username": username, "plan": "free", "plan_label": "FREE", "remaining": FREE_LIMIT}
 
 @app.post("/login")
 def login(req: LoginRequest):
-    users = load_users()
     username = safe_username(req.username)
     password = req.password.strip()
 
+    if supabase_enabled():
+        user = supabase_find_user_by_username(username)
+        if not user:
+            return {"success": False, "message": "Tài khoản không tồn tại."}
+        if user.get("password") != hash_password(password):
+            return {"success": False, "message": "Mật khẩu không đúng."}
+
+        reset_daily_if_needed(user)
+        if not user.get("token"):
+            user["token"] = str(uuid.uuid4())
+        supabase_update_user(username, {
+            "token": user.get("token"),
+            "date": user.get("date", today()),
+            "used": user.get("used", 0),
+            "plan": user.get("plan", "free")
+        })
+
+        plan = user.get("plan", "free")
+        return {"success": True, "message": "Đăng nhập thành công.", "token": user["token"], "username": username, "plan": plan, "plan_label": PLAN_LABELS.get(plan, plan.upper()), "remaining": remaining_text(user)}
+
+    users = load_json(USERS_FILE)
     if username not in users:
         return {"success": False, "message": "Tài khoản không tồn tại."}
-
     user = users[username]
     if user.get("password") != hash_password(password):
         return {"success": False, "message": "Mật khẩu không đúng."}
 
     reset_daily_if_needed(user)
-    save_users(users)
-
+    save_json(USERS_FILE, users)
     plan = user.get("plan", "free")
     return {"success": True, "message": "Đăng nhập thành công.", "token": user["token"], "username": username, "plan": plan, "plan_label": PLAN_LABELS.get(plan, plan.upper()), "remaining": remaining_text(user)}
 
@@ -364,6 +552,8 @@ def status(token: str):
         return {"success": False, "message": "Chưa đăng nhập."}
 
     reset_daily_if_needed(user)
+    if supabase_enabled() and username:
+        supabase_update_user(username, {"date": user.get("date", today()), "used": user.get("used", 0)})
     save_users(users)
     plan = user.get("plan", "free")
 
@@ -378,11 +568,13 @@ def activate(req: ActivateRequest):
 
     code = req.code.strip()
     if code not in PREMIUM_CODES:
-        return {"success": False, "message": "Mã Premium không đúng. Vui lòng kiểm tra lại hoặc liên hệ Zalo 036 338 2629."}
+        return {"success": False, "message": "Mã Premium không đúng. Vui lòng kiểm tra lại hoặc liên hệ Zalo 036 338 2629 / Email gptminipro@gmail.com."}
 
     plan = PREMIUM_CODES[code]
     user["plan"] = plan
     user["used"] = 0
+    if supabase_enabled() and username:
+        supabase_update_user(username, {"plan": plan, "used": 0})
     save_users(users)
 
     return {"success": True, "message": f"Kích hoạt thành công gói {PLAN_LABELS.get(plan, plan)}.", "plan": plan, "plan_label": PLAN_LABELS.get(plan, plan), "remaining": "Không giới hạn"}
@@ -403,6 +595,8 @@ def chat(req: ChatRequest):
             return {"reply": free_limit_message(), "limit_reached": True, "plan": plan, "remaining": 0}
 
         user["used"] = int(user.get("used", 0)) + 1
+        if supabase_enabled() and username:
+            supabase_update_user(username, {"used": user.get("used", 0), "date": user.get("date", today())})
         save_users(users)
 
     if not GEMINI_API_KEY:
@@ -418,31 +612,53 @@ def chat(req: ChatRequest):
         chat_memory[username].append({"role": "user", "text": user_message})
 
         history_text = ""
-        for msg in chat_memory[username][-40:]:
+        for msg in chat_memory[username][-10:]:
             if msg["role"] == "user":
                 history_text += f"Người dùng: {msg['text']}\\n"
             else:
-                history_text += f"GPT Mini Premium: {msg['text']}\\n"
+                history_text += f"AI: {msg['text']}\\n"
 
         prompt = f"""
-Bạn là GPT Mini Premium Assistant, trợ lý AI cao cấp hỗ trợ kinh doanh online.
+Bạn là GPT Mini Premium.
 
-QUY TẮC:
-- Luôn trả lời bằng tiếng Việt.
-- Trả lời rõ ràng, chuyên nghiệp, thân thiện.
-- Không hiển thị lỗi kỹ thuật.
-- Hỗ trợ: viết content, Facebook/TikTok Ads, tư vấn dịch vụ mạng xã hội Facebook, chạy quảng cáo Facebook TikTok, marketing, automation, website, landing page, chatbot.
-- Nếu người dùng cần hỗ trợ trực tiếp, hướng họ qua Zalo 036 338 2629.
-- Nếu hỏi về Premium, giới thiệu 4 gói:
-  1. Cơ Bản 99.000đ/tháng
-  2. Chuyên Nghiệp 199.000đ/tháng
-  3. Doanh Nghiệp 399.000đ/tháng
-  4. Vĩnh Viễn 599.000đ
+Nhiệm vụ:
+- Hỗ trợ Marketing, Content bán hàng, Facebook Ads, TikTok Ads.
+- Hỗ trợ thiết kế hình ảnh, Website, Landing Page, AI Automation.
+- Tư vấn kinh doanh online ngắn gọn, thực tế, dễ áp dụng.
 
-LỊCH SỬ:
+QUY TẮC TRẢ LỜI:
+1. Luôn trả lời bằng tiếng Việt.
+2. Trả lời trực tiếp vào câu hỏi, không lan man.
+3. Ưu tiên câu trả lời dưới 10 dòng nếu người dùng không yêu cầu chi tiết.
+4. Không tự giới thiệu lại ở mỗi tin nhắn.
+5. Không dùng các câu mở đầu dài dòng như:
+   - Tuyệt vời!
+   - Rất vui được hỗ trợ bạn.
+   - Tôi là GPT Mini Premium.
+   - Cảm ơn bạn đã liên hệ.
+   - Thiết kế hình ảnh đóng vai trò rất quan trọng...
+6. Chỉ hỏi thêm thông tin khi thật sự cần.
+7. Nếu không đủ thông tin, trả lời:
+   "Vui lòng cung cấp thêm thông tin để tôi hỗ trợ chính xác."
+
+GỢI Ý TRẢ LỜI THEO TÌNH HUỐNG:
+- Nếu hỏi thiết kế ảnh: hỏi loại ảnh, nội dung, kích thước, màu chủ đạo.
+- Nếu hỏi quảng cáo: hỏi sản phẩm, ngân sách, khu vực, mục tiêu.
+- Nếu hỏi content: hỏi sản phẩm, khách hàng mục tiêu, ưu đãi.
+- Nếu hỏi website: ưu tiên tốc độ, bảo mật, SEO, trải nghiệm người dùng.
+- Nếu hỏi Premium: tư vấn gói phù hợp ngắn gọn.
+
+THÔNG TIN HỖ TRỢ:
+- Zalo: 036 338 2629
+- Email: gptminipro@gmail.com
+
+LỊCH SỬ NGẮN:
 {history_text}
 
-TRẢ LỜI TIN NHẮN MỚI NHẤT:
+CÂU HỎI MỚI NHẤT:
+{user_message}
+
+TRẢ LỜI NGẮN GỌN, CHUYÊN NGHIỆP:
 """
 
         response = client.models.generate_content(model="gemini-2.5-flash-lite", contents=prompt)
@@ -453,7 +669,18 @@ TRẢ LỜI TIN NHẮN MỚI NHẤT:
 
     except Exception as e:
         # Ẩn mọi lỗi kỹ thuật: 429 quota, RESOURCE_EXHAUSTED, API error...
-        return {"reply": friendly_ai_error(req.message), "ai_overload": True}
+        return {
+            "reply": """⚠️ Hệ thống đang xử lý nhiều yêu cầu.
+
+Vui lòng thử lại sau ít phút.
+
+📧 Email hỗ trợ:
+gptminipro@gmail.com
+
+📱 Zalo:
+036 338 2629""",
+            "ai_overload": True
+        }
 
 @app.post("/support")
 def support(req: SupportRequest):
@@ -469,11 +696,33 @@ def support(req: SupportRequest):
     messages[username].append({"from": username, "message": req.message.strip(), "date": today()})
     save_json(SUPPORT_FILE, messages)
 
-    return {"success": True, "message": "Đã ghi nhận hỗ trợ. Nếu cần gấp vui lòng liên hệ Zalo 036 338 2629."}
+    return {"success": True, "message": "Đã ghi nhận hỗ trợ. Nếu cần gấp vui lòng liên hệ Zalo 036 338 2629 hoặc Email gptminipro@gmail.com."}
 
 @app.get("/support-messages")
 def support_messages():
     return load_json(SUPPORT_FILE)
+
+
+@app.get("/supabase-test")
+def supabase_test():
+    if not supabase_enabled():
+        return {"success": False, "message": "Chưa có SUPABASE_URL hoặc SUPABASE_KEY trong Render Environment."}
+    try:
+        res = requests.get(
+            supabase_table_url(),
+            headers=supabase_headers(),
+            params={"select": "*", "limit": "1"},
+            timeout=12
+        )
+        return {
+            "success": res.status_code < 400,
+            "status_code": res.status_code,
+            "table": SUPABASE_TABLE,
+            "url": supabase_table_url(),
+            "response": res.text[:500]
+        }
+    except Exception as e:
+        return {"success": False, "message": str(e)}
 
 @app.get("/admin", response_class=HTMLResponse)
 def admin_page():

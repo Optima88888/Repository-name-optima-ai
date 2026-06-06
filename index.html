@@ -964,6 +964,29 @@ button{
     color:#cbd5e1;
 }
 
+
+/* EMAIL SUPPORT UPGRADE */
+.support-contact-box{
+    margin-top:12px;
+    padding:13px;
+    border-radius:14px;
+    background:rgba(56,189,248,.08);
+    border:1px solid rgba(56,189,248,.25);
+    color:#cbd5e1;
+    font-size:13px;
+    line-height:1.7;
+    text-align:left;
+}
+.support-contact-box b{
+    color:#38bdf8;
+}
+.support-mail-line{
+    margin-top:8px;
+    color:#38bdf8;
+    font-weight:900;
+    line-height:1.7;
+}
+
 </style>
 <!-- Google Analytics -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-1ZNYNTMNYC"></script>
@@ -991,7 +1014,15 @@ gtag('config', 'G-1ZNYNTMNYC');
             <button onclick="showRegisterForm()">Đăng ký tài khoản</button>
             <button class="google-btn" onclick="googleDemoLogin()">🔐 Đăng nhập nhanh bằng Google</button>
 
-            <div class="small-note">Nếu chưa có tài khoản, vui lòng đăng ký bằng Gmail và số điện thoại để được hỗ trợ kích hoạt Premium.</div>
+            <div class="small-note">
+                Nếu chưa có tài khoản, vui lòng đăng ký bằng Gmail và số điện thoại để được hỗ trợ kích hoạt Premium.
+
+                <div class="support-contact-box">
+                    📞 Zalo hỗ trợ: <b>036 338 2629</b><br>
+                    ✉️ Email hỗ trợ: <b>gptminipro@gmail.com</b><br>
+                    Khi cần hỗ trợ, vui lòng gửi tên tài khoản, Gmail đăng ký và ảnh lỗi nếu có.
+                </div>
+            </div>
         </div>
 
         <div id="registerBox" class="register-box" style="display:none;">
@@ -1022,6 +1053,16 @@ gtag('config', 'G-1ZNYNTMNYC');
 
             <div class="register-secure">
                 🔒 Thông tin được lưu để hỗ trợ tài khoản, kích hoạt Premium và chăm sóc khách hàng.
+
+                <div class="support-contact-box">
+                    📞 Zalo hỗ trợ: <b>036 338 2629</b><br>
+                    ✉️ Email hỗ trợ: <b>gptminipro@gmail.com</b><br><br>
+                    Nếu gặp lỗi đăng ký, vui lòng gửi:<br>
+                    ◆ Tên tài khoản<br>
+                    ◆ Gmail đăng ký<br>
+                    ◆ Số điện thoại/Zalo<br>
+                    ◆ Ảnh chụp màn hình lỗi nếu có
+                </div>
             </div>
         </div>
 
@@ -1100,7 +1141,7 @@ gtag('config', 'G-1ZNYNTMNYC');
     <div id="supportPanel" class="support-panel">
         <h2>🤖 GPT Mini Premium Assistant</h2>
         <p>
-            Mini Support Chat đang trực tuyến. Anh/chị có thể hỏi về kích hoạt Premium, kiểm tra thanh toán, báo lỗi hoặc tư vấn gói phù hợp.
+            Mini Support Chat đang trực tuyến. Anh/chị có thể hỏi về kích hoạt Premium, kiểm tra thanh toán, báo lỗi hoặc tư vấn gói phù hợp.<br><br>📞 Zalo: 036 338 2629<br>✉️ Email: gptminipro@gmail.com
         </p>
 
         <div id="supportChatBox" class="support-chat-box"></div>
@@ -1285,7 +1326,7 @@ gtag('config', 'G-1ZNYNTMNYC');
                         ◆ Tên tài khoản đăng nhập
                     </div>
 
-                    <div class="payment-zalo">💬 Zalo hỗ trợ: 036 338 2629</div>
+                    <div class="payment-zalo">💬 Zalo hỗ trợ: 036 338 2629<br>✉️ Email hỗ trợ: gptminipro@gmail.com</div>
 
                     <div style="color:#94a3b8;font-size:13px;margin-top:8px;">
                         Đội ngũ hỗ trợ sẽ kiểm tra và xử lý nhanh nhất cho anh/chị.
@@ -1320,7 +1361,7 @@ gtag('config', 'G-1ZNYNTMNYC');
         </div>
 
         <p style="color:#cbd5e1;">
-            Nâng cấp để trải nghiệm đầy đủ bộ công cụ AI cao cấp dành cho kinh doanh online.<br><br>📞 Zalo hỗ trợ trực tiếp: <b>036 338 2629</b>
+            Nâng cấp để trải nghiệm đầy đủ bộ công cụ AI cao cấp dành cho kinh doanh online.<br><br>📞 Zalo hỗ trợ trực tiếp: <b>036 338 2629</b><br>✉️ Email hỗ trợ: <b>gptminipro@gmail.com</b>
         </p>
 
         <div class="lock-actions">
@@ -1496,7 +1537,7 @@ async function submitRegister(){
         showApp();
     }
   }catch(e){
-    showMessage("Không kết nối được server. Vui lòng thử lại hoặc liên hệ Zalo 036 338 2629.");
+    showMessage("Không kết nối được hệ thống.\n\n📞 Zalo: 036 338 2629\n✉️ Email: gptminipro@gmail.com\n\nVui lòng gửi ảnh lỗi và thông tin tài khoản để được hỗ trợ nhanh nhất.");
   }
 }
 
@@ -1526,7 +1567,7 @@ async function login(){
         showApp();
     }
   }catch(e){
-    showMessage("Không kết nối được server. Kiểm tra "+API+"/docs");
+    showMessage("Không kết nối được hệ thống.\n\n📞 Zalo: 036 338 2629\n✉️ Email: gptminipro@gmail.com\n\nVui lòng thử lại sau ít phút hoặc gửi ảnh lỗi để được hỗ trợ.");
   }
 }
 
@@ -1554,7 +1595,7 @@ async function googleDemoLogin(){
         showApp();
     }
   }catch(e){
-    showMessage("Không kết nối được server Google login demo.");
+    showMessage("Không kết nối được đăng nhập nhanh.\n\n📞 Zalo: 036 338 2629\n✉️ Email: gptminipro@gmail.com\n\nVui lòng đăng ký bằng Gmail hoặc gửi ảnh lỗi để được hỗ trợ.");
   }
 }
 
@@ -1651,7 +1692,7 @@ async function confirmPaid(){
         headers:{"Content-Type":"application/json"},
         body:JSON.stringify({
             token:token,
-            message:"Khách báo đã thanh toán "+p.name+" - "+p.label+". Nội dung CK: "+content
+            message:"Khách báo đã thanh toán "+p.name+" - "+p.label+". Nội dung CK: "+content+". Email hỗ trợ hiển thị cho khách: gptminipro@gmail.com"
         })
     });
 
@@ -1660,7 +1701,7 @@ async function confirmPaid(){
     closePremium();
 
   }catch(e){
-    alert("Không gửi được thông báo thanh toán. Hãy mở web bằng link Render hoặc localhost.");
+    alert("Không gửi được thông báo thanh toán. Vui lòng liên hệ Zalo 036 338 2629 hoặc Email gptminipro@gmail.com để được hỗ trợ.");
   }
 }
 
@@ -1682,7 +1723,7 @@ async function activatePremium(){
         loadStatus();
     }
   }catch(e){
-    alert("Không kết nối được server kích hoạt gói.");
+    alert("Không kết nối được hệ thống kích hoạt gói. Vui lòng liên hệ Zalo 036 338 2629 hoặc Email gptminipro@gmail.com.");
   }
 }
 
@@ -1731,7 +1772,7 @@ function renderMessages(){
 📈 Chạy Quảng Cáo Facebook Ads • TikTok Ads<br>
 🤖 AI Automation • Landing Page • Website AI<br>
 🎯 Tối ưu chuyển đổi • Tăng Inbox • Tăng Doanh Thu<br><br>
-📞 Tư vấn trực tiếp qua Zalo: <strong>036 338 2629</strong>
+📞 Tư vấn trực tiếp qua Zalo: <strong>036 338 2629</strong><br>✉️ Email hỗ trợ: <strong>gptminipro@gmail.com</strong>
         </p>
 
         <div class="quick-grid">
@@ -1812,7 +1853,8 @@ Anh/chị vui lòng gửi thêm:
 ◆ Chạy Quảng Cáo Facebook Ads/TikTok Ads
 ◆ Tối ưu nội dung bán hàng
 
-📞 Zalo tư vấn trực tiếp: 036 338 2629`;
+📞 Zalo tư vấn trực tiếp: 036 338 2629
+✉️ Email hỗ trợ: gptminipro@gmail.com`;
         }
         else if(lower.includes("tiktok")){
             reply = `🎬 HỖ TRỢ NỘI DUNG TIKTOK
@@ -1826,7 +1868,8 @@ Anh/chị vui lòng gửi:
 ◆ Phong cách muốn làm: chuyên nghiệp, viral, bán hàng hay review
 
 📈 Nếu cần tư vấn chạy quảng cáo TikTok hoặc dịch vụ mạng xã hội:
-Zalo 036 338 2629`;
+Zalo 036 338 2629
+✉️ Email hỗ trợ: gptminipro@gmail.com`;
         }
         else if(lower.includes("premium")){
             reply = `💎 TƯ VẤN GÓI PREMIUM
@@ -1841,7 +1884,8 @@ GPT Mini Premium có các gói:
 Nếu anh/chị kinh doanh online, nên chọn gói Chuyên Nghiệp hoặc Vĩnh Viễn để tối ưu chi phí lâu dài.
 
 📞 Hỗ trợ kích hoạt nhanh qua Zalo:
-036 338 2629`;
+036 338 2629
+✉️ Email hỗ trợ: gptminipro@gmail.com`;
         }
         else{
             reply = `🤖 GPT Mini Premium Assistant
@@ -1857,7 +1901,8 @@ Tôi có thể hỗ trợ anh/chị về:
 
 Anh/chị vui lòng mô tả nhu cầu cụ thể để tôi tư vấn phù hợp.
 
-📞 Zalo hỗ trợ trực tiếp: 036 338 2629`;
+📞 Zalo hỗ trợ trực tiếp: 036 338 2629
+✉️ Email hỗ trợ: gptminipro@gmail.com`;
         }
 
         c[c.length-1].text = reply;
@@ -1909,7 +1954,8 @@ Premium bao gồm:
 ◆ Hỗ trợ kỹ thuật riêng
 
 💎 Nâng Cấp Premium Ngay
-📞 Zalo hỗ trợ: 036 338 2629`;
+📞 Zalo hỗ trợ: 036 338 2629
+✉️ Email hỗ trợ: gptminipro@gmail.com`;
 
         saveChats();
         renderMessages();
@@ -1948,7 +1994,8 @@ Premium bao gồm:
 ◆ Hỗ trợ kỹ thuật riêng
 
 💎 Nâng Cấp Premium Ngay
-📞 Zalo hỗ trợ: 036 338 2629`;
+📞 Zalo hỗ trợ: 036 338 2629
+✉️ Email hỗ trợ: gptminipro@gmail.com`;
 
     saveChats();
     renderMessages();
@@ -1991,7 +2038,18 @@ Anh/chị cần hỗ trợ gì hôm nay?
 ◆ Tư vấn gói phù hợp
 ◆ Hỗ trợ kỹ thuật
 
-Em đang trực tuyến và sẵn sàng hỗ trợ.`);
+Em đang trực tuyến và sẵn sàng hỗ trợ.
+
+━━━━━━━━━━━━━━━
+
+📞 Zalo hỗ trợ: 036 338 2629
+✉️ Email hỗ trợ: gptminipro@gmail.com
+
+Khi gửi yêu cầu hỗ trợ, anh/chị vui lòng cung cấp:
+◆ Tên tài khoản
+◆ Gmail đăng ký
+◆ Số điện thoại/Zalo
+◆ Ảnh lỗi nếu có`);
 }
 
 function supportAutoReply(msg){
@@ -2056,6 +2114,7 @@ Hiện yêu cầu này cần được hỗ trợ trực tiếp để xử lý ch
 Anh/chị vui lòng liên hệ Zalo để được tư vấn nhanh:
 
 📞 Zalo hỗ trợ trực tiếp: 036 338 2629
+✉️ Email hỗ trợ: gptminipro@gmail.com
 
 Đội ngũ hỗ trợ có thể tư vấn:
 ◆ Kích hoạt Premium
@@ -2126,6 +2185,7 @@ Tài khoản hiện tại chưa kích hoạt Premium nên chưa thể sử dụn
 
 📞 Hỗ trợ kích hoạt nhanh qua Zalo:
 036 338 2629
+✉️ Email hỗ trợ: gptminipro@gmail.com
 
 💬 Chuyên viên sẽ tư vấn gói phù hợp, hỗ trợ kích hoạt và hướng dẫn sử dụng chi tiết.`;
 
