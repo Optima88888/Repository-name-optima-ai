@@ -987,6 +987,68 @@ button{
     line-height:1.7;
 }
 
+
+/* ===== PREMIUM SIDEBAR GROUP MENU ===== */
+.menu-group-title{
+    margin:18px 0 8px;
+    color:#fbbf24;
+    font-size:13px;
+    font-weight:900;
+    letter-spacing:.6px;
+    text-transform:uppercase;
+}
+.menu-separator{
+    height:1px;
+    margin:16px 0;
+    background:linear-gradient(90deg,transparent,rgba(56,189,248,.35),transparent);
+}
+.tool-menu.hot{
+    border-color:rgba(251,191,36,.45);
+    background:linear-gradient(180deg,#1b2233,#101827);
+}
+.tool-menu.vip{
+    border-color:rgba(168,85,247,.45);
+}
+.tool-menu .tag-hot{
+    background:linear-gradient(135deg,#f59e0b,#ef4444);
+}
+.tool-menu .tag-vip{
+    background:linear-gradient(135deg,#8b5cf6,#ec4899);
+}
+.tool-menu .tag-pro{
+    background:linear-gradient(135deg,#2563eb,#06b6d4);
+}
+.tool-menu .tag-free{
+    background:linear-gradient(135deg,#334155,#64748b);
+}
+
+
+/* ===== SIDEBAR LAYOUT FIX ===== */
+#app{
+    display:flex;
+    width:100%;
+    height:100vh;
+    overflow:hidden;
+}
+.sidebar{
+    flex:0 0 370px;
+    max-width:370px;
+    min-width:320px;
+}
+.main{
+    flex:1;
+    min-width:0;
+}
+.new-chat,
+.logout-btn{
+    display:block;
+    width:100%;
+    max-width:100%;
+}
+.support-panel{
+    right:24px;
+}
+
 </style>
 <!-- Google Analytics -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-1ZNYNTMNYC"></script>
@@ -1082,17 +1144,46 @@ gtag('config', 'G-1ZNYNTMNYC');
 
         <button class="premium-btn" onclick="openPremium()">💎 Nâng Cấp Premium Ngay</button>
 
-        <div class="account-box">
-            <div class="sidebar-section-title">⚡ CÔNG CỤ AI PREMIUM</div>
+        <div class="account-box premium-menu">
+            <div class="tool-menu app-nav hot" data-section="dashboard">🏠 Dashboard <small class="tag-free">Home</small></div>
+            <div class="tool-menu app-nav" data-section="chat">🤖 AI Chat <small class="tag-free">Free</small></div>
 
-            <div class="tool-menu premium-tool" data-tool="Tạo Ảnh AI">🖼️ Tạo Ảnh AI <small>Premium</small></div>
-            <div class="tool-menu premium-tool" data-tool="Tạo Video AI">🎬 Tạo Video AI <small>Premium</small></div>
-            <div class="tool-menu premium-tool" data-tool="Tạo Giọng Nói AI">🎙️ Tạo Giọng Nói <small>Premium</small></div>
-            <div class="tool-menu premium-tool" data-tool="Tạo Website AI">🌐 Tạo Website AI <small>Premium</small></div>
-            <div class="tool-menu premium-tool" data-tool="AI Automation">🤖 AI Automation <small>Premium</small></div>
-            <div class="tool-menu premium-tool" data-tool="Phân Tích Dữ Liệu">📊 Phân Tích Dữ Liệu <small>Premium</small></div>
-            <div class="tool-menu premium-tool" data-tool="Marketing AI">📈 Marketing AI <small>Premium</small></div>
-            <div class="tool-menu premium-tool" data-tool="Landing Page Bán Hàng">🛒 Landing Page <small>Premium</small></div>
+            <div class="menu-separator"></div>
+            <div class="menu-group-title">🔥 CÔNG CỤ HOT</div>
+
+            <div class="tool-menu premium-tool hot" data-tool="AI Facebook">📝 AI Facebook <small class="tag-hot">Hot</small></div>
+            <div class="tool-menu premium-tool hot" data-tool="AI Video">🎬 AI Video <small class="tag-hot">Hot</small></div>
+            <div class="tool-menu premium-tool hot" data-tool="AI Image">🎨 AI Image <small class="tag-vip">VIP</small></div>
+            <div class="tool-menu premium-tool hot" data-tool="AI Kinh Doanh">💰 AI Kinh Doanh <small class="tag-pro">Pro</small></div>
+
+            <div class="menu-separator"></div>
+            <div class="menu-group-title">✍️ CONTENT STUDIO</div>
+
+            <div class="tool-menu premium-tool vip" data-tool="AI Giọng Nói">🎙️ AI Giọng Nói <small class="tag-vip">VIP</small></div>
+            <div class="tool-menu premium-tool vip" data-tool="AI Livestream">🎬 AI Livestream <small class="tag-vip">VIP</small></div>
+            <div class="tool-menu premium-tool" data-tool="Lịch Content 7 Ngày">📅 Lịch Content <small class="tag-pro">Pro</small></div>
+            <div class="tool-menu premium-tool" data-tool="AI Content">📘 AI Content <small class="tag-pro">Pro</small></div>
+
+            <div class="menu-separator"></div>
+            <div class="menu-group-title">📈 MARKETING HUB</div>
+
+            <div class="tool-menu premium-tool" data-tool="AI Marketing">📈 AI Marketing <small class="tag-pro">Pro</small></div>
+            <div class="tool-menu premium-tool vip" data-tool="AI Phễu Bán Hàng">🧲 AI Phễu Bán Hàng <small class="tag-vip">VIP</small></div>
+            <div class="tool-menu premium-tool vip" data-tool="AI Phân Tích Đối Thủ">🕵️ AI Phân Tích Đối Thủ <small class="tag-vip">VIP</small></div>
+            <div class="tool-menu premium-tool vip" data-tool="AI Chăm Sóc Khách Cũ">💬 AI Chăm Sóc Khách Cũ <small class="tag-vip">VIP</small></div>
+
+            <div class="menu-separator"></div>
+            <div class="menu-group-title">🌐 AUTOMATION & WEBSITE</div>
+
+            <div class="tool-menu premium-tool vip" data-tool="AI Website">🌐 AI Website <small class="tag-vip">VIP</small></div>
+            <div class="tool-menu premium-tool vip" data-tool="Landing Page Bán Hàng">🛒 Landing Page <small class="tag-vip">VIP</small></div>
+            <div class="tool-menu premium-tool vip" data-tool="AI Automation">🤖 AI Automation <small class="tag-vip">VIP</small></div>
+
+            <div class="menu-separator"></div>
+            <div class="menu-group-title">👑 PREMIUM</div>
+
+            <div class="tool-menu hot" onclick="openPremium()">👑 Premium VIP <small class="tag-hot">Upgrade</small></div>
+            <div class="tool-menu app-nav" data-section="account">⚙️ Tài Khoản <small class="tag-free">Info</small></div>
 
             <div class="sidebar-stat">
                 <div>👥 Thành viên<br><b id="memberCount">1.285+</b></div>
@@ -1115,14 +1206,14 @@ gtag('config', 'G-1ZNYNTMNYC');
             <div class="header-badge">💎 Premium AI Suite</div>
         </div>
         <div class="ai-tools">
-            <button class="tool-btn premium-tool" data-tool="Tạo Ảnh AI">🖼️ Tạo Ảnh AI <span>Premium</span></button>
-            <button class="tool-btn premium-tool" data-tool="Tạo Video AI">🎬 Tạo Video AI <span>Premium</span></button>
-            <button class="tool-btn premium-tool" data-tool="Tạo Giọng Nói AI">🎙️ Tạo Giọng Nói <span>Premium</span></button>
-            <button class="tool-btn premium-tool" data-tool="Tạo Website AI">🌐 Tạo Website AI <span>Premium</span></button>
-            <button class="tool-btn premium-tool" data-tool="AI Automation">🤖 AI Automation <span>Premium</span></button>
-            <button class="tool-btn premium-tool" data-tool="Phân Tích Dữ Liệu">📊 Phân Tích Dữ Liệu <span>Premium</span></button>
-            <button class="tool-btn premium-tool" data-tool="Kế Hoạch Marketing">📈 Kế Hoạch Marketing <span>Premium</span></button>
-            <button class="tool-btn premium-tool" data-tool="Landing Page Bán Hàng">🛍️ Landing Page <span>Premium</span></button>
+            <button class="tool-btn premium-tool" data-tool="AI Facebook">📝 AI Facebook <span>Hot</span></button>
+            <button class="tool-btn premium-tool" data-tool="AI Video">🎬 AI Video <span>Hot</span></button>
+            <button class="tool-btn premium-tool" data-tool="AI Image">🎨 AI Image <span>VIP</span></button>
+            <button class="tool-btn premium-tool" data-tool="AI Kinh Doanh">💰 AI Kinh Doanh <span>Pro</span></button>
+            <button class="tool-btn premium-tool" data-tool="AI Marketing">📈 Marketing <span>Pro</span></button>
+            <button class="tool-btn premium-tool" data-tool="AI Phễu Bán Hàng">🧲 Phễu Bán Hàng <span>VIP</span></button>
+            <button class="tool-btn premium-tool" data-tool="AI Website">🌐 Website <span>VIP</span></button>
+            <button class="tool-btn premium-tool" data-tool="AI Automation">🤖 Automation <span>VIP</span></button>
         </div>
 
         <div id="messages" class="messages"></div>
@@ -1352,8 +1443,8 @@ gtag('config', 'G-1ZNYNTMNYC');
 
         <div class="lock-list">
             ◆ Không giới hạn công cụ AI nâng cao<br>
-            ◆ Tạo Ảnh AI, Video AI, Website AI<br>
-            ◆ AI Automation và phân tích dữ liệu<br>
+            ◆ AI Viết Bài Facebook, Trả Lời Inbox, Chốt Sale<br>
+            ◆ Kịch Bản Video, Lịch Content, Báo Giá Dịch Vụ<br>
             ◆ Hạn mức sử dụng cao hơn<br>
             ◆ Tốc độ phản hồi ưu tiên<br>
             ◆ Hỗ trợ kỹ thuật ưu tiên<br>
@@ -1384,6 +1475,7 @@ const PLANS = {
 let selectedPlanKey = "basic";
 let token = localStorage.getItem("optima_token");
 let username = localStorage.getItem("optima_username");
+let currentPlan = "free";
 let chats = JSON.parse(localStorage.getItem("optima_chats") || "[]");
 let currentIndex = 0;
 
@@ -1616,6 +1708,7 @@ async function loadStatus(){
 
     if(d.success){
       document.getElementById("usernameText").innerText=d.username;
+      currentPlan = d.plan || "free";
 
       const plan=document.getElementById("planText");
       plan.innerText=(d.plan_label||d.plan||"FREE").toUpperCase();
@@ -1778,36 +1871,52 @@ function renderMessages(){
         <div class="quick-grid">
             <div class="quick-card" onclick="quickAsk('Viết giúp tôi một bài Facebook bán hàng chuyên nghiệp')">
                 <b>📘 Viết bài Facebook</b>
-                <span>Tạo nội dung bán hàng, caption và kịch bản chăm sóc khách.</span>
+                <span>Tạo bài bán hàng, caption viral, nội dung tăng inbox.</span>
             </div>
 
-            <div class="quick-card" onclick="quickAsk('Lên kế hoạch nội dung TikTok cho shop online')">
-                <b>🎬 Nội dung TikTok</b>
-                <span>Ý tưởng video, hook mở đầu và kịch bản viral ngắn.</span>
+            <div class="quick-card" onclick="quickAsk('Lên kịch bản video TikTok/Reels bán hàng cho sản phẩm của tôi')">
+                <b>🎬 Kịch bản Video</b>
+                <span>Hook mở đầu, cảnh quay, lời thoại, CTA chốt đơn.</span>
+            </div>
+
+            <div class="quick-card premium-tool" data-tool="AI Trả Lời Inbox">
+                <b>📩 Trả lời Inbox</b>
+                <span>Soạn câu trả lời khách hỏi giá, chê đắt, còn hàng.</span>
+            </div>
+
+            <div class="quick-card premium-tool" data-tool="AI Chốt Sale">
+                <b>🔥 Chốt Sale</b>
+                <span>Xử lý từ chối, kéo khách quay lại, tăng tỷ lệ mua.</span>
+            </div>
+
+            <div class="quick-card premium-tool" data-tool="Lịch Content 7 Ngày">
+                <b>📅 Lịch Content 7 Ngày</b>
+                <span>Tạo lịch đăng bài Facebook/TikTok theo từng ngày.</span>
+            </div>
+
+            <div class="quick-card premium-tool" data-tool="Kế Hoạch Marketing 30 Ngày">
+                <b>📈 Marketing 30 Ngày</b>
+                <span>Kế hoạch tăng nhận diện, inbox, đơn hàng.</span>
+            </div>
+
+            <div class="quick-card premium-tool" data-tool="AI Báo Giá Dịch Vụ">
+                <b>💰 Báo giá dịch vụ</b>
+                <span>Tạo bảng giá 3 gói, mô tả quyền lợi, CTA nâng cấp.</span>
             </div>
 
             <div class="quick-card premium-tool" data-tool="Tạo Ảnh AI">
-                <b>🖼️ Tạo Ảnh AI</b>
-                <span>Công cụ Premium hỗ trợ tạo ảnh quảng cáo chuyên nghiệp.</span>
-            </div>
-
-            <div class="quick-card premium-tool" data-tool="Tạo Website AI">
-                <b>🌐 Website AI</b>
-                <span>Tạo landing page, bố cục bán hàng và nội dung website.</span>
-            </div>
-
-            <div class="quick-card premium-tool" data-tool="AI Automation">
-                <b>🤖 AI Automation</b>
-                <span>Tự động hóa quy trình bán hàng và chăm sóc khách hàng.</span>
+                <b>🖼️ Ý tưởng ảnh quảng cáo</b>
+                <span>Concept ảnh, bố cục, màu sắc, prompt tạo ảnh.</span>
             </div>
 
             <div class="quick-card" onclick="quickAsk('Tư vấn cho tôi gói Premium phù hợp để kinh doanh online')">
-                <b>💎 Tư vấn gói Premium</b>
+                <b>💎 Tư vấn Premium</b>
                 <span>Chọn gói phù hợp theo nhu cầu và ngân sách.</span>
             </div>
         </div>
     </div>`;
     initPremiumTools();
+initAppNav();
 startLiveStats();
     return;
   }
@@ -2153,6 +2262,37 @@ async function sendSupport(){
 }
 
 
+
+function isPremiumUser(){
+    return currentPlan && currentPlan !== "free" && currentPlan !== "expired";
+}
+
+const TOOL_PROMPTS = {
+    "AI Viết Bài Facebook": "Tạo giúp tôi một bài Facebook bán hàng chuyên nghiệp. Hãy hỏi tôi sản phẩm, khách hàng mục tiêu, ưu đãi và mục tiêu bài viết nếu tôi chưa cung cấp đủ.",
+    "AI Trả Lời Inbox": "Tôi cần soạn câu trả lời inbox cho khách hàng. Hãy tạo 3 phiên bản: mềm mại, chuyên nghiệp và chốt đơn. Tình huống của khách là:",
+    "AI Chốt Sale": "Tôi cần xử lý từ chối và chốt sale. Hãy đưa 5 câu trả lời thuyết phục, tự nhiên, không ép khách. Tình huống là:",
+    "Kịch Bản Video Viral": "Tạo kịch bản video TikTok/Reels bán hàng gồm hook 3 giây đầu, cảnh quay, lời thoại, caption và CTA. Sản phẩm của tôi là:",
+    "Lịch Content 7 Ngày": "Lập lịch content 7 ngày cho Facebook/TikTok gồm chủ đề, caption ngắn, ý tưởng ảnh/video và CTA. Ngành hàng của tôi là:",
+    "Kế Hoạch Marketing 30 Ngày": "Lập kế hoạch marketing 30 ngày để tăng inbox và đơn hàng. Bao gồm nội dung, quảng cáo, chăm sóc khách và KPI đơn giản. Sản phẩm/dịch vụ là:",
+    "AI Báo Giá Dịch Vụ": "Tạo bảng giá dịch vụ 3 gói gồm Cơ bản, Tiêu chuẩn, Cao cấp. Viết quyền lợi từng gói, giá đề xuất và CTA thuyết phục. Dịch vụ là:",
+    "Tạo Ảnh AI": "Đề xuất 5 concept ảnh quảng cáo chuyên nghiệp gồm bố cục, màu sắc, chữ trên ảnh và prompt AI tạo ảnh. Sản phẩm/dịch vụ là:",
+    "Landing Page Bán Hàng": "Tạo cấu trúc landing page bán hàng gồm headline, nỗi đau, lợi ích, bảng giá, cam kết, FAQ và CTA. Sản phẩm/dịch vụ là:"
+};
+
+function launchPremiumTool(toolName){
+    const prompt = TOOL_PROMPTS[toolName] || ("Hỗ trợ tôi với công cụ: " + toolName);
+    newChat();
+    const input = document.getElementById("input");
+    input.value = prompt;
+    input.focus();
+    const c = chats[currentIndex];
+    c.push({role:"ai", text:`✅ Đã mở công cụ: ${toolName}
+
+Anh/chị bổ sung thông tin sau dấu hai chấm rồi bấm Gửi để AI xử lý chính xác hơn.`});
+    saveChats();
+    renderMessages();
+}
+
 function showPremiumChatMessage(toolName){
     const c = chats[currentIndex];
 
@@ -2172,13 +2312,13 @@ Tài khoản hiện tại chưa kích hoạt Premium nên chưa thể sử dụn
 
 💎 Khi nâng cấp Premium anh/chị sẽ được mở khóa:
 
-◆ Tạo Ảnh AI
-◆ Tạo Video AI
-◆ Tạo Giọng Nói AI
-◆ Tạo Website AI
-◆ AI Automation
-◆ Phân Tích Dữ Liệu
-◆ Kế Hoạch Marketing
+◆ AI Viết Bài Facebook
+◆ AI Trả Lời Inbox
+◆ AI Chốt Sale
+◆ Kịch Bản Video Viral
+◆ Lịch Content 7 Ngày
+◆ Kế Hoạch Marketing 30 Ngày
+◆ AI Báo Giá Dịch Vụ
 ◆ Landing Page Chuyên Nghiệp
 
 ━━━━━━━━━━━━━━━
@@ -2212,10 +2352,62 @@ function goPremiumFromLock(){
     openPremium();
 }
 
+
+function openSection(section){
+    let content = "";
+    if(section === "dashboard"){
+        content = `🏠 DASHBOARD GPT MINI PREMIUM
+
+◆ Tài khoản: ${username || "Khách"}
+◆ Gói hiện tại: ${(currentPlan || "free").toUpperCase()}
+◆ Bộ công cụ: AI Facebook, AI Video, AI Image, AI Marketing, AI Kinh Doanh
+◆ Mục tiêu: tăng nội dung, tăng inbox, tăng tỷ lệ chốt đơn
+
+Chọn một công cụ ở menu bên trái để bắt đầu.`;
+    }else if(section === "chat"){
+        content = `🤖 AI CHAT
+
+Anh/chị có thể hỏi trực tiếp về:
+◆ Content bán hàng
+◆ Quảng cáo Facebook/TikTok
+◆ Tư vấn kinh doanh online
+◆ Thiết kế hình ảnh
+◆ Website / Landing Page
+◆ Automation`;
+    }else if(section === "account"){
+        content = `⚙️ TÀI KHOẢN
+
+◆ Username: ${username || ""}
+◆ Gói: ${(currentPlan || "free").toUpperCase()}
+◆ Zalo hỗ trợ: 036 338 2629
+◆ Email: gptminipro@gmail.com
+
+Cần nâng cấp hoặc gia hạn, bấm Premium VIP.`;
+    }
+
+    newChat();
+    chats[currentIndex].push({role:"ai", text:content});
+    saveChats();
+    renderMessages();
+}
+
+function initAppNav(){
+    document.querySelectorAll(".app-nav").forEach(btn=>{
+        btn.onclick = function(){
+            openSection(this.getAttribute("data-section") || "dashboard");
+        };
+    });
+}
+
 function initPremiumTools(){
     document.querySelectorAll(".premium-tool").forEach(btn=>{
         btn.onclick = function(){
-            openFeatureLock(this.getAttribute("data-tool") || "Premium");
+            const toolName = this.getAttribute("data-tool") || "Premium";
+            if(isPremiumUser()){
+                launchPremiumTool(toolName);
+            }else{
+                openFeatureLock(toolName);
+            }
         };
     });
 }
