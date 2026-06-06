@@ -849,6 +849,30 @@ def support(req: SupportRequest):
 
     return {"success": True, "message": "Đã ghi nhận hỗ trợ. Bộ phận kỹ thuật sẽ kiểm tra trong thời gian sớm nhất."}
 
+
+@app.get("/support-thread/{token}")
+def support_thread(token: str):
+    users = load_users()
+    username, user = find_user_by_token(users, token)
+    if not user:
+        return {"success": False, "message": "Bạn cần đăng nhập để xem hỗ trợ."}
+
+    support = load_json(SUPPORT_FILE)
+    ticket = support.get(username)
+
+    if not ticket:
+        return {"success": True, "username": username, "status": "empty", "messages": []}
+
+    if isinstance(ticket, dict):
+        return {
+            "success": True,
+            "username": username,
+            "status": ticket.get("status", "open"),
+            "messages": ticket.get("messages", [])
+        }
+
+    return {"success": True, "username": username, "status": "open", "messages": ticket}
+
 @app.get("/support-messages")
 def support_messages():
     return load_json(SUPPORT_FILE)
