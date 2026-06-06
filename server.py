@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse
 from pydantic import BaseModel
 from google import genai
-from datetime import date
+from datetime import date, datetime, timedelta
 import uvicorn
 import json
 import os
@@ -35,6 +35,7 @@ COL_TOKEN = os.getenv("SUPABASE_COL_TOKEN", "token")
 COL_USED = os.getenv("SUPABASE_COL_USED", "used")
 COL_DATE = os.getenv("SUPABASE_COL_DATE", "date")
 COL_REGISTERED_AT = os.getenv("SUPABASE_COL_REGISTERED_AT", "registered_at")
+COL_EXPIRES_AT = os.getenv("SUPABASE_COL_EXPIRES_AT", "expires_at")
 
 app = FastAPI(title="GPT Mini Premium")
 
@@ -111,6 +112,37 @@ class AdminApproveRequest(BaseModel):
 def today() -> str:
     return str(date.today())
 
+def add_days(days: int) -> str:
+    return str(date.today() + timedelta(days=days))
+
+def parse_date(value: str):
+    if not value:
+        return None
+    try:
+        return datetime.strptime(str(value)[:10], "%Y-%m-%d").date()
+    except Exception:
+        return None
+
+def is_expired(user: dict) -> bool:
+    plan = user.get("plan", "free")
+    if plan in ["free", "lifetime"]:
+        return False
+
+    expires_at = parse_date(user.get("expires_at"))
+    if not expires_at:
+        return False
+
+    return date.today() > expires_at
+
+def days_left(user: dict):
+    plan = user.get("plan", "free")
+    if plan == "lifetime":
+        return "Vĩnh viễn"
+    expires_at = parse_date(user.get("expires_at"))
+    if not expires_at:
+        return ""
+    return max(0, (expires_at - date.today()).days)
+
 def safe_username(text: str) -> str:
     return text.strip().lower().replace(" ", "_")
 
@@ -173,6 +205,7 @@ def normalize_supabase_user(row: dict):
         "used": row.get(COL_USED) or row.get("used") or 0,
         "date": row.get(COL_DATE) or row.get("date") or today(),
         "registered_at": row.get(COL_REGISTERED_AT) or row.get("registered_at") or row.get("created_at") or today(),
+        "expires_at": row.get(COL_EXPIRES_AT) or row.get("expires_at"),
         "_raw": row
     }
 
@@ -224,13 +257,16 @@ def supabase_insert_user(user: dict):
         COL_PLAN: user.get("plan", "free"),
         COL_USED: user.get("used", 0),
         COL_DATE: user.get("date", today()),
-        COL_REGISTERED_AT: user.get("registered_at", today())
+        COL_REGISTERED_AT: user.get("registered_at", today()),
+        COL_EXPIRES_AT: user.get("expires_at")
     }
     payload_basic = {
         COL_USERNAME: user["username"],
         COL_EMAIL: user.get("email", ""),
         COL_PHONE: user.get("phone", ""),
-        COL_PASSWORD: user.get("password", "")
+        COL_PASSWORD: user.get("password", ""),
+        COL_PLAN: user.get("plan", "free"),
+        COL_EXPIRES_AT: user.get("expires_at")
     }
     try:
         res = requests.post(supabase_table_url(), headers=supabase_headers("return=minimal"), json=payload_full, timeout=12)
@@ -248,7 +284,7 @@ def supabase_update_user(username: str, updates: dict):
         return False
     mapping = {
         "token": COL_TOKEN, "plan": COL_PLAN, "used": COL_USED, "date": COL_DATE,
-        "registered_at": COL_REGISTERED_AT, "password": COL_PASSWORD,
+        "registered_at": COL_REGISTERED_AT, "expires_at": COL_EXPIRES_AT, "password": COL_PASSWORD,
         "email": COL_EMAIL, "phone": COL_PHONE, "username": COL_USERNAME
     }
     payload = {mapping.get(k, k): v for k, v in updates.items()}
@@ -383,6 +419,28 @@ Khi liên hệ, vui lòng gửi tên tài khoản, Gmail đăng ký và ảnh l�
 def friendly_ai_error(message: str = ""):
     return smart_fallback_reply(message)
 
+def expired_plan_message(user=None):
+    expires_at = user.get("expires_at") if user else ""
+    return f"""🔒 GÓI PREMIUM ĐÃ HẾT HẠN
+
+Gói dịch vụ của tài khoản đã hết hạn{f" vào ngày {expires_at}" if expires_at else ""}.
+
+━━━━━━━━━━━━━━━━━━━━━━
+
+💎 VUI LÒNG GIA HẠN ĐỂ TIẾP TỤC SỬ DỤNG
+
+◆ Tiếp tục truy cập AI không giới hạn
+◆ Duy trì tốc độ phản hồi ưu tiên
+◆ Mở lại toàn bộ tính năng Premium
+◆ Được hỗ trợ kỹ thuật khi cần
+
+━━━━━━━━━━━━━━━━━━━━━━
+
+📞 Zalo hỗ trợ gia hạn: 036 338 2629
+✉️ Email hỗ trợ: gptminipro@gmail.com
+
+Sau khi thanh toán, vui lòng gửi tên tài khoản và ảnh giao dịch để được kích hoạt nhanh nhất."""
+
 def free_limit_message():
     return """🔒 TÀI KHOẢN ĐÃ HẾT LƯỢT SỬ DỤNG
 
@@ -451,7 +509,8 @@ def register(req: RegisterRequest):
             "plan": "free",
             "used": 0,
             "date": today(),
-            "registered_at": today()
+            "registered_at": today(),
+            "expires_at": None
         }
         ok, err = supabase_insert_user(user)
         if ok:
@@ -472,7 +531,7 @@ def register(req: RegisterRequest):
         "username": username, "email": email, "phone": phone,
         "password": hash_password(password), "token": token,
         "login_type": "password", "plan": "free", "used": 0,
-        "date": today(), "registered_at": today()
+        "date": today(), "registered_at": today(), "expires_at": None
     }
     save_json(USERS_FILE, users)
     return {"success": True, "message": "Đăng ký thành công. Thông tin Gmail và số điện thoại đã được ghi nhận để hỗ trợ tài khoản.", "token": token, "username": username, "plan": "free", "plan_label": "FREE", "remaining": FREE_LIMIT}
@@ -537,15 +596,16 @@ def google_login(req: GoogleLoginRequest):
                 "plan": "free",
                 "used": 0,
                 "date": today(),
-                "registered_at": today()
+                "registered_at": today(),
+                "expires_at": None
             }
             ok, err = supabase_insert_user(user)
             if not ok:
-                return {"success": False, "message": "Chưa lưu được tài khoản Google vào Supabase. Kiểm tra RLS/policy hoặc tên cột."}
+                return {"success": False, "message": "Chưa lưu được tài khoản Google vào Supabase. Kiểm tra cột dữ liệu hoặc RLS."}
         reset_daily_if_needed(user)
         if not user.get("token"):
             user["token"] = str(uuid.uuid4())
-        supabase_update_user(username, {"token": user["token"], "date": user.get("date", today()), "used": user.get("used", 0)})
+        supabase_update_user(username, {"token": user["token"], "date": user.get("date", today()), "used": user.get("used", 0), "plan": user.get("plan", "free")})
         plan = user.get("plan", "free")
         return {"success": True, "message": "Đăng nhập Google demo thành công.", "token": user["token"], "username": username, "plan": plan, "plan_label": PLAN_LABELS.get(plan, plan.upper()), "remaining": remaining_text(user)}
 
@@ -584,7 +644,24 @@ def status(token: str):
     save_users(users)
     plan = user.get("plan", "free")
 
-    return {"success": True, "username": username, "plan": plan, "plan_label": PLAN_LABELS.get(plan, plan.upper()), "used": user.get("used", 0), "remaining": remaining_text(user)}
+    if is_expired(user):
+        user["plan"] = "free"
+        if supabase_enabled() and username:
+            supabase_update_user(username, {"plan": "free"})
+        save_users(users)
+        return {
+            "success": True,
+            "username": username,
+            "plan": "expired",
+            "plan_label": "HẾT HẠN",
+            "used": user.get("used", 0),
+            "remaining": 0,
+            "expired": True,
+            "expires_at": user.get("expires_at"),
+            "message": "Gói Premium đã hết hạn. Vui lòng gia hạn để tiếp tục sử dụng đầy đủ tính năng."
+        }
+
+    return {"success": True, "username": username, "plan": plan, "plan_label": PLAN_LABELS.get(plan, plan.upper()), "used": user.get("used", 0), "remaining": remaining_text(user), "expires_at": user.get("expires_at"), "days_left": days_left(user)}
 
 @app.post("/activate")
 def activate(req: ActivateRequest):
@@ -600,11 +677,17 @@ def activate(req: ActivateRequest):
     plan = PREMIUM_CODES[code]
     user["plan"] = plan
     user["used"] = 0
+    if plan == "lifetime":
+        user["expires_at"] = None
+    else:
+        user["expires_at"] = add_days(30)
+
     if supabase_enabled() and username:
-        supabase_update_user(username, {"plan": plan, "used": 0})
+        supabase_update_user(username, {"plan": plan, "used": 0, "expires_at": user.get("expires_at")})
     save_users(users)
 
-    return {"success": True, "message": f"Kích hoạt thành công gói {PLAN_LABELS.get(plan, plan)}.", "plan": plan, "plan_label": PLAN_LABELS.get(plan, plan), "remaining": "Không giới hạn"}
+    expire_msg = "vĩnh viễn" if plan == "lifetime" else f"đến ngày {user.get('expires_at')}"
+    return {"success": True, "message": f"Kích hoạt thành công gói {PLAN_LABELS.get(plan, plan)} {expire_msg}.", "plan": plan, "plan_label": PLAN_LABELS.get(plan, plan), "remaining": "Không giới hạn", "expires_at": user.get("expires_at"), "days_left": days_left(user)}
 
 @app.post("/chat")
 def chat(req: ChatRequest):
@@ -616,6 +699,19 @@ def chat(req: ChatRequest):
 
     reset_daily_if_needed(user)
     plan = user.get("plan", "free")
+
+    if is_expired(user):
+        user["plan"] = "free"
+        if supabase_enabled() and username:
+            supabase_update_user(username, {"plan": "free"})
+        save_users(users)
+        return {
+            "reply": expired_plan_message(user),
+            "expired": True,
+            "limit_reached": True,
+            "plan": "expired",
+            "remaining": 0
+        }
 
     if not is_paid_plan(plan):
         if int(user.get("used", 0)) >= FREE_LIMIT:
@@ -792,7 +888,8 @@ async function loadData(){
             Gói hiện tại: <span class="badge">${plan}</span><br><br>
             Gmail: ${u.email || "Chưa có"}<br>
             SĐT/Zalo: ${u.phone || "Chưa có"}<br>
-            Ngày đăng ký: ${u.registered_at || "Chưa có"}<br><br>
+            Ngày đăng ký: ${u.registered_at || "Chưa có"}<br>
+            Hết hạn: ${u.expires_at || (plan === "lifetime" ? "Vĩnh viễn" : "Chưa có")}<br><br>
             Đã dùng: ${u.used || 0} lượt<br><br>
             <select id="plan_${username}">
                 <option value="free">Free</option>
@@ -865,11 +962,19 @@ def admin_approve(req: AdminApproveRequest):
 
     users[username]["plan"] = req.plan
     users[username]["used"] = 0
+    if req.plan == "lifetime":
+        users[username]["expires_at"] = None
+    elif req.plan == "free":
+        users[username]["expires_at"] = None
+    else:
+        users[username]["expires_at"] = add_days(30)
+
     if supabase_enabled():
-        supabase_update_user(username, {"plan": req.plan, "used": 0})
+        supabase_update_user(username, {"plan": req.plan, "used": 0, "expires_at": users[username].get("expires_at")})
     save_users(users)
 
-    return {"success": True, "message": f"Đã cập nhật tài khoản {username} thành gói {PLAN_LABELS.get(req.plan, req.plan)}."}
+    expire_msg = "vĩnh viễn" if req.plan == "lifetime" else (f"đến ngày {users[username].get('expires_at')}" if req.plan != "free" else "")
+    return {"success": True, "message": f"Đã cập nhật tài khoản {username} thành gói {PLAN_LABELS.get(req.plan, req.plan)} {expire_msg}."}
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8005))
