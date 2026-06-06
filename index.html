@@ -2,9 +2,11 @@
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
-<title>OPTIMA AI PREMIUM</title>
+<title>GPT Mini Premium</title>
+
 <style>
 *{box-sizing:border-box}
+
 body{
     margin:0;
     font-family:Arial,sans-serif;
@@ -23,12 +25,14 @@ body{
     padding:20px;
     overflow-y:auto;
 }
+
 .logo{
     font-size:27px;
     font-weight:bold;
     color:#38bdf8;
     margin-bottom:15px;
 }
+
 .account-box{
     background:#111827;
     border:1px solid #334155;
@@ -39,6 +43,7 @@ body{
     font-size:14px;
     line-height:1.6;
 }
+
 .badge{
     display:inline-block;
     padding:4px 10px;
@@ -47,9 +52,11 @@ body{
     font-size:12px;
     font-weight:bold;
 }
+
 .premium-badge{
     background:linear-gradient(135deg,#f59e0b,#f97316);
 }
+
 .new-chat,.premium-btn,.logout-btn{
     width:100%;
     padding:14px;
@@ -60,9 +67,11 @@ body{
     cursor:pointer;
     margin-bottom:12px;
 }
+
 .new-chat{background:linear-gradient(135deg,#2563eb,#06b6d4)}
 .premium-btn{background:linear-gradient(135deg,#f59e0b,#ef4444)}
 .logout-btn{background:#334155}
+
 .chat-item{
     padding:14px;
     border-radius:14px;
@@ -70,7 +79,10 @@ body{
     margin-bottom:10px;
     color:#dbeafe;
 }
-.chat-item:hover,.chat-item.active{background:#1e293b}
+
+.chat-item:hover,.chat-item.active{
+    background:#1e293b;
+}
 
 /* MAIN */
 .main{
@@ -78,6 +90,7 @@ body{
     display:flex;
     flex-direction:column;
 }
+
 .header{
     height:76px;
     display:flex;
@@ -87,11 +100,13 @@ body{
     font-size:26px;
     font-weight:bold;
 }
+
 .messages{
     flex:1;
     padding:32px;
     overflow-y:auto;
 }
+
 .msg{
     max-width:75%;
     padding:16px 20px;
@@ -101,15 +116,18 @@ body{
     white-space:pre-wrap;
     font-size:17px;
 }
+
 .user{
     margin-left:auto;
     background:linear-gradient(135deg,#2563eb,#1d4ed8);
 }
+
 .ai{
     margin-right:auto;
     background:#1e293b;
     border:1px solid #334155;
 }
+
 .input-box{
     display:flex;
     gap:12px;
@@ -117,6 +135,7 @@ body{
     border-top:1px solid #1e293b;
     background:#0f172a;
 }
+
 input,textarea{
     flex:1;
     padding:16px;
@@ -127,11 +146,13 @@ input,textarea{
     font-size:16px;
     outline:none;
 }
+
 textarea{
     width:100%;
     min-height:120px;
     resize:none;
 }
+
 button{
     padding:16px 26px;
     border:none;
@@ -141,12 +162,17 @@ button{
     font-weight:bold;
     cursor:pointer;
 }
+
 .welcome{
     text-align:center;
     margin-top:100px;
     color:#94a3b8;
 }
-.welcome h1{color:#38bdf8;font-size:38px}
+
+.welcome h1{
+    color:#38bdf8;
+    font-size:38px;
+}
 
 /* AUTH */
 .auth-screen{
@@ -157,6 +183,7 @@ button{
     justify-content:center;
     background:linear-gradient(135deg,#020617,#0f172a);
 }
+
 .auth-card{
     width:450px;
     background:#0f172a;
@@ -165,13 +192,41 @@ button{
     padding:30px;
     box-shadow:0 20px 60px rgba(0,0,0,.4);
 }
-.auth-card h1{color:#38bdf8;text-align:center}
-.auth-card input{width:100%;margin-bottom:14px}
-.auth-card button{width:100%;margin-top:8px}
-.google-btn{background:white!important;color:#111827!important}
-.auth-message{text-align:center;margin-top:16px;color:#fbbf24}
 
-/* MODAL PREMIUM */
+.auth-card h1{
+    color:#38bdf8;
+    text-align:center;
+}
+
+.auth-card input{
+    width:100%;
+    margin-bottom:14px;
+}
+
+.auth-card button{
+    width:100%;
+    margin-top:8px;
+}
+
+.google-btn{
+    background:white!important;
+    color:#111827!important;
+}
+
+.auth-message{
+    text-align:center;
+    margin-top:16px;
+    color:#fbbf24;
+}
+
+.small-note{
+    color:#94a3b8;
+    font-size:13px;
+    text-align:center;
+    margin-top:10px;
+}
+
+/* PREMIUM MODAL */
 .modal{
     position:fixed;
     inset:0;
@@ -181,6 +236,7 @@ button{
     justify-content:center;
     z-index:99999;
 }
+
 .modal-card{
     width:96%;
     max-width:1500px;
@@ -193,6 +249,7 @@ button{
     color:white;
     box-shadow:0 20px 80px rgba(0,0,0,.65);
 }
+
 .modal-title{
     text-align:center;
     font-size:34px;
@@ -201,18 +258,22 @@ button{
     margin:0;
     color:#f8fafc;
 }
+
 .modal-title span{color:#fbbf24}
+
 .subtitle{
     text-align:center;
     color:#cbd5e1;
     margin:10px 0 24px;
     font-size:17px;
 }
+
 .plans{
     display:grid;
     grid-template-columns:repeat(4,1fr);
     gap:18px;
 }
+
 .plan-card{
     position:relative;
     padding:22px;
@@ -220,23 +281,52 @@ button{
     background:linear-gradient(180deg,#0f172a,#0b1224);
     border:1px solid #334155;
     cursor:pointer;
-    min-height:620px;
+    min-height:690px;
     transition:.25s;
 }
+
 .plan-card:hover{
     transform:translateY(-5px);
     border-color:#38bdf8;
     box-shadow:0 0 25px rgba(56,189,248,.25);
 }
+
 .plan-card.selected{
     border:2px solid #fbbf24;
     box-shadow:0 0 35px rgba(251,191,36,.35);
 }
-.plan-icon{font-size:44px;text-align:center}
-.plan-name{text-align:center;font-size:22px;font-weight:900;margin:12px 0}
-.plan-sub{text-align:center;color:#cbd5e1;font-size:14px;min-height:36px}
-.plan-price{text-align:center;font-size:34px;font-weight:900;margin:18px 0}
-.plan-price small{font-size:15px;color:#cbd5e1}
+
+.plan-icon{
+    font-size:44px;
+    text-align:center;
+}
+
+.plan-name{
+    text-align:center;
+    font-size:22px;
+    font-weight:900;
+    margin:12px 0;
+}
+
+.plan-sub{
+    text-align:center;
+    color:#cbd5e1;
+    font-size:14px;
+    min-height:42px;
+}
+
+.plan-price{
+    text-align:center;
+    font-size:34px;
+    font-weight:900;
+    margin:18px 0;
+}
+
+.plan-price small{
+    font-size:15px;
+    color:#cbd5e1;
+}
+
 .feature{
     display:flex;
     gap:9px;
@@ -245,11 +335,17 @@ button{
     color:#f8fafc;
     font-size:14px;
 }
-.check{color:#22c55e;font-weight:bold}
+
+.check{
+    color:#22c55e;
+    font-weight:bold;
+}
+
 .blue .plan-price,.blue .plan-name{color:#38bdf8}
 .purple .plan-price,.purple .plan-name{color:#c084fc}
 .gold .plan-price,.gold .plan-name{color:#fbbf24}
 .red .plan-price,.red .plan-name{color:#fb7185}
+
 .ribbon{
     position:absolute;
     right:15px;
@@ -261,20 +357,23 @@ button{
     font-size:12px;
     font-weight:900;
 }
+
 .red .ribbon{
     background:#e11d48;
     color:white;
 }
+
 .value-box{
     margin-top:14px;
-    padding:12px;
+    padding:13px;
     border-radius:14px;
-    background:rgba(15,23,42,.85);
+    background:rgba(15,23,42,.88);
     border:1px solid #334155;
     color:#e2e8f0;
     font-size:13px;
     line-height:1.6;
 }
+
 .payment-panel{
     margin-top:22px;
     display:grid;
@@ -286,6 +385,7 @@ button{
     padding:18px;
     align-items:center;
 }
+
 .bank-box{
     background:#111827;
     border:1px solid #334155;
@@ -293,7 +393,11 @@ button{
     padding:16px;
     line-height:1.9;
 }
-.qr-box{text-align:center}
+
+.qr-box{
+    text-align:center;
+}
+
 .qr-box img{
     width:250px;
     max-width:100%;
@@ -301,6 +405,7 @@ button{
     padding:10px;
     border-radius:18px;
 }
+
 .selected-box{
     background:#111827;
     border:1px solid #334155;
@@ -308,18 +413,18 @@ button{
     padding:16px;
     text-align:center;
 }
+
 .selected-box h3{color:#fbbf24}
-.pay-actions button{width:100%;margin:8px 0}
+
+.pay-actions button{
+    width:100%;
+    margin:8px 0;
+}
+
 .close-btn{
     background:#334155!important;
     margin-top:10px;
     width:100%;
-}
-.small-note{
-    color:#94a3b8;
-    font-size:13px;
-    text-align:center;
-    margin-top:10px;
 }
 
 /* FLOAT SUPPORT BOT */
@@ -329,43 +434,57 @@ button{
     bottom:24px;
     z-index:9999;
 }
+
 .bot-bubble{
-    width:74px;
-    height:74px;
+    width:76px;
+    height:76px;
     border-radius:50%;
     background:linear-gradient(135deg,#22c55e,#06b6d4);
     display:flex;
     align-items:center;
     justify-content:center;
-    font-size:38px;
+    font-size:39px;
     cursor:pointer;
     box-shadow:0 12px 40px rgba(6,182,212,.45);
     animation:botDance 1.6s infinite ease-in-out;
     border:3px solid rgba(255,255,255,.18);
+    position:relative;
 }
+
 .bot-bubble::after{
-    content:"Hỗ trợ";
+    content:"● ● ●";
     position:absolute;
-    right:82px;
+    right:90px;
     background:#0f172a;
     border:1px solid #334155;
-    padding:8px 12px;
+    padding:10px 16px;
     border-radius:999px;
     color:#dbeafe;
-    font-size:13px;
+    font-size:14px;
+    font-weight:800;
+    letter-spacing:3px;
     white-space:nowrap;
+    animation:pulse 1.5s infinite;
 }
+
+@keyframes pulse{
+    0%{opacity:.45}
+    50%{opacity:1}
+    100%{opacity:.45}
+}
+
 @keyframes botDance{
     0%,100%{transform:translateY(0) rotate(0deg)}
     25%{transform:translateY(-8px) rotate(-7deg)}
     50%{transform:translateY(0) rotate(7deg)}
     75%{transform:translateY(-5px) rotate(-5deg)}
 }
+
 .support-panel{
     position:fixed;
     right:24px;
-    bottom:110px;
-    width:380px;
+    bottom:115px;
+    width:400px;
     max-width:calc(100vw - 40px);
     background:#0f172a;
     border:1px solid #334155;
@@ -375,15 +494,19 @@ button{
     display:none;
     box-shadow:0 20px 70px rgba(0,0,0,.55);
 }
+
 .support-panel h2{
     margin:0 0 8px;
     color:#38bdf8;
 }
+
 .support-panel p{
-    color:#94a3b8;
+    color:#cbd5e1;
     font-size:14px;
     margin:0 0 12px;
+    line-height:1.6;
 }
+
 .support-panel button{
     width:100%;
     margin-top:10px;
@@ -399,188 +522,713 @@ button{
     .sidebar{width:290px}
     .modal-card{padding:16px}
 }
+
+/* PREMIUM FEATURE TOOLS */
+.ai-tools{
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px;
+    padding:16px 20px;
+    background:#0f172a;
+    border-bottom:1px solid #1e293b;
+}
+.tool-btn{
+    position:relative;
+    background:linear-gradient(180deg,#111827,#0b1224);
+    border:1px solid #334155;
+    color:#e5e7eb;
+    padding:12px 16px;
+    border-radius:14px;
+    cursor:pointer;
+    font-weight:800;
+    font-size:14px;
+    transition:.25s;
+    box-shadow:0 8px 25px rgba(0,0,0,.22);
+}
+.tool-btn:hover{
+    transform:translateY(-3px);
+    border-color:#fbbf24;
+    box-shadow:0 0 24px rgba(251,191,36,.22);
+}
+.tool-btn span{
+    position:absolute;
+    top:-8px;
+    right:-8px;
+    background:linear-gradient(135deg,#f59e0b,#ef4444);
+    color:white;
+    padding:3px 8px;
+    border-radius:999px;
+    font-size:10px;
+    font-weight:900;
+}
+.lock-modal{
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,.72);
+    display:none;
+    align-items:center;
+    justify-content:center;
+    z-index:100000;
+}
+.lock-card{
+    width:520px;
+    max-width:calc(100vw - 30px);
+    background:#0f172a;
+    border:1px solid #334155;
+    border-radius:24px;
+    padding:26px;
+    color:white;
+    box-shadow:0 20px 80px rgba(0,0,0,.65);
+    text-align:center;
+}
+.lock-card h2{
+    color:#fbbf24;
+    margin-top:0;
+}
+.lock-list{
+    text-align:left;
+    background:#111827;
+    border:1px solid #334155;
+    border-radius:16px;
+    padding:16px;
+    line-height:1.9;
+    margin:18px 0;
+}
+.lock-actions{
+    display:flex;
+    gap:10px;
+}
+.lock-actions button{
+    flex:1;
+}
+
+
+.support-chat-box{
+    height:260px;
+    background:#020617;
+    border:1px solid #334155;
+    border-radius:18px;
+    padding:14px;
+    overflow-y:auto;
+    margin:12px 0;
+}
+.support-msg{
+    max-width:88%;
+    padding:11px 13px;
+    border-radius:14px;
+    margin:8px 0;
+    line-height:1.55;
+    font-size:14px;
+    white-space:pre-wrap;
+}
+.support-msg.bot{
+    background:#1e293b;
+    border:1px solid #334155;
+    color:#e5e7eb;
+    margin-right:auto;
+}
+.support-msg.user{
+    background:linear-gradient(135deg,#2563eb,#06b6d4);
+    color:white;
+    margin-left:auto;
+}
+.support-input-row{
+    display:flex;
+    gap:8px;
+    margin-top:10px;
+}
+.support-input-row input{
+    flex:1;
+    padding:13px;
+    border-radius:14px;
+    border:1px solid #334155;
+    background:#020617;
+    color:white;
+}
+.support-input-row button{
+    padding:13px 16px;
+    white-space:nowrap;
+}
+
+
+/* ===== GPT MINI PREMIUM UI UPGRADE ===== */
+.sidebar{
+    width:370px;
+}
+
+.logo{
+    font-size:30px;
+    line-height:1.15;
+}
+
+.main{
+    margin-left:0;
+}
+
+.header{
+    height:auto;
+    min-height:90px;
+    justify-content:space-between;
+    padding:18px 26px;
+    text-align:left;
+    background:linear-gradient(135deg,#020617,#0f172a);
+}
+
+.header-left h2{
+    margin:0;
+    font-size:28px;
+    color:#f8fafc;
+    letter-spacing:.3px;
+}
+
+.header-left p{
+    margin:6px 0 0;
+    font-size:14px;
+    color:#94a3b8;
+    font-weight:500;
+}
+
+.header-badge{
+    background:linear-gradient(135deg,#f59e0b,#ef4444);
+    padding:8px 14px;
+    border-radius:999px;
+    font-size:13px;
+    font-weight:900;
+    box-shadow:0 0 25px rgba(245,158,11,.25);
+}
+
+.sidebar-section-title{
+    color:#fbbf24;
+    font-weight:900;
+    font-size:14px;
+    margin:0 0 12px;
+    letter-spacing:.4px;
+}
+
+.tool-menu{
+    padding:12px 13px;
+    margin-top:8px;
+    border-radius:13px;
+    background:linear-gradient(180deg,#172033,#101827);
+    border:1px solid #334155;
+    cursor:pointer;
+    transition:.25s;
+    font-weight:800;
+    color:#e5e7eb;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:8px;
+}
+
+.tool-menu:hover{
+    transform:translateX(5px);
+    border-color:#fbbf24;
+    box-shadow:0 0 22px rgba(251,191,36,.18);
+}
+
+.tool-menu small{
+    background:linear-gradient(135deg,#f59e0b,#ef4444);
+    color:white;
+    padding:3px 8px;
+    border-radius:999px;
+    font-size:10px;
+    font-weight:900;
+}
+
+.sidebar-stat{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:8px;
+    margin-top:12px;
+}
+
+.sidebar-stat div{
+    background:#020617;
+    border:1px solid #334155;
+    border-radius:12px;
+    padding:10px;
+    font-size:12px;
+    color:#cbd5e1;
+}
+
+.welcome{
+    margin-top:60px;
+}
+
+.hero-welcome{
+    max-width:900px;
+    margin:0 auto;
+    text-align:center;
+}
+
+.hero-welcome h1{
+    color:#38bdf8;
+    font-size:42px;
+    margin-bottom:12px;
+}
+
+.hero-welcome p{
+    color:#cbd5e1;
+    font-size:17px;
+    line-height:1.6;
+}
+
+.quick-grid{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:14px;
+    max-width:860px;
+    margin:26px auto 0;
+}
+
+.quick-card{
+    background:linear-gradient(180deg,#111827,#0b1224);
+    border:1px solid #334155;
+    border-radius:18px;
+    padding:18px;
+    text-align:left;
+    cursor:pointer;
+    transition:.25s;
+}
+
+.quick-card:hover{
+    transform:translateY(-4px);
+    border-color:#38bdf8;
+    box-shadow:0 0 24px rgba(56,189,248,.2);
+}
+
+.quick-card b{
+    display:block;
+    color:#f8fafc;
+    margin-bottom:6px;
+}
+
+.quick-card span{
+    color:#94a3b8;
+    font-size:13px;
+    line-height:1.45;
+}
+
+.floating-premium{
+    position:fixed;
+    right:120px;
+    bottom:26px;
+    z-index:9997;
+    background:linear-gradient(135deg,#f59e0b,#ef4444);
+    color:white;
+    padding:14px 18px;
+    border-radius:999px;
+    font-weight:900;
+    box-shadow:0 12px 35px rgba(239,68,68,.3);
+    cursor:pointer;
+    animation:premiumFloat 2.2s infinite ease-in-out;
+}
+
+@keyframes premiumFloat{
+    0%,100%{transform:translateY(0)}
+    50%{transform:translateY(-5px)}
+}
+
+.ai-tools{
+    display:none!important;
+}
+
+.check{
+    color:#fbbf24!important;
+    font-size:16px;
+}
+
+@media(max-width:1100px){
+    .quick-grid{grid-template-columns:1fr 1fr}
+    .sidebar{width:330px}
+}
+@media(max-width:760px){
+    body{overflow:auto}
+    .sidebar{position:relative;width:100%;height:auto}
+    .main{min-height:100vh}
+    .quick-grid{grid-template-columns:1fr}
+    .floating-premium{display:none}
+}
+
+
+/* ===== PAYMENT TRUST + ZALO SUPPORT + LIVE STATS ===== */
+.payment-support{
+    margin-top:16px;
+    padding:16px;
+    border-radius:16px;
+    background:rgba(37,99,235,.12);
+    border:1px solid rgba(56,189,248,.28);
+    text-align:left;
+    line-height:1.65;
+}
+
+.payment-support-title{
+    color:#fbbf24;
+    font-weight:900;
+    font-size:15px;
+    margin-bottom:8px;
+}
+
+.payment-zalo{
+    margin-top:10px;
+    color:#38bdf8;
+    font-size:18px;
+    font-weight:900;
+}
+
+.trust-box{
+    margin-top:14px;
+    padding:12px;
+    border-radius:14px;
+    background:rgba(15,23,42,.86);
+    border:1px solid #334155;
+    color:#cbd5e1;
+    line-height:1.7;
+    font-size:13px;
+    text-align:center;
+}
+
+.sidebar-stat b{
+    color:#ffffff;
+    font-size:16px;
+    display:inline-block;
+    animation:numberPulse 1.2s infinite;
+}
+
+@keyframes numberPulse{
+    0%{opacity:.75;transform:scale(1)}
+    50%{opacity:1;transform:scale(1.08)}
+    100%{opacity:.75;transform:scale(1)}
+}
+
+
+/* LIMIT / PREMIUM UPGRADE NOTICE */
+.msg.ai{
+    word-break:break-word;
+}
+
 </style>
 </head>
 
 <body>
 
 <div id="authScreen" class="auth-screen">
-  <div class="auth-card">
-    <h1>⚡ OPTIMA AI</h1>
-    <p style="text-align:center;color:#94a3b8;">Đăng nhập để sử dụng trợ lý AI cao cấp</p>
-    <input id="authUsername" placeholder="Tên đăng nhập">
-    <input id="authPassword" type="password" placeholder="Mật khẩu">
-    <button onclick="login()">Đăng nhập</button>
-    <button onclick="register()">Đăng ký tài khoản</button>
-    <button class="google-btn" onclick="googleDemoLogin()">🔐 Đăng nhập nhanh bằng Google</button>
-    <div class="small-note">Bản local demo: Google login sẽ tạo tài khoản nhanh bằng email bạn nhập.</div>
-    <div class="auth-message" id="authMessage"></div>
-  </div>
+    <div class="auth-card">
+        <h1>⚡ GPT Mini Premium</h1>
+        <p style="text-align:center;color:#94a3b8;">Đăng nhập để sử dụng trợ lý AI cao cấp</p>
+
+        <input id="authUsername" placeholder="Tên đăng nhập">
+        <input id="authPassword" type="password" placeholder="Mật khẩu">
+
+        <button onclick="login()">Đăng nhập</button>
+        <button onclick="register()">Đăng ký tài khoản</button>
+        <button class="google-btn" onclick="googleDemoLogin()">🔐 Đăng nhập nhanh bằng Google</button>
+
+        <div class="small-note">Bản local demo: Google login sẽ tạo tài khoản nhanh bằng email bạn nhập.</div>
+        <div class="auth-message" id="authMessage"></div>
+    </div>
 </div>
 
 <div id="app" style="display:none;width:100%;height:100vh;">
-  <div class="sidebar">
-    <div class="logo">⚡ OPTIMA AI</div>
-    <div class="account-box">
-      👤 Tài khoản: <b id="usernameText"></b><br>
-      💎 Gói: <span id="planText" class="badge">FREE</span><br>
-      🔥 Lượt còn lại: <b id="remainingText">0</b>
+    <div class="sidebar">
+        <div class="logo">⚡ GPT Mini Premium</div>
+
+        <div class="account-box">
+            👤 Tài khoản: <b id="usernameText"></b><br>
+            💎 Gói: <span id="planText" class="badge">FREE</span><br>
+            🔥 Lượt còn lại: <b id="remainingText">0</b>
+        </div>
+
+        <button class="premium-btn" onclick="openPremium()">💎 Nâng Cấp Premium Ngay</button>
+
+        <div class="account-box">
+            <div class="sidebar-section-title">⚡ CÔNG CỤ AI PREMIUM</div>
+
+            <div class="tool-menu premium-tool" data-tool="Tạo Ảnh AI">🖼️ Tạo Ảnh AI <small>Premium</small></div>
+            <div class="tool-menu premium-tool" data-tool="Tạo Video AI">🎬 Tạo Video AI <small>Premium</small></div>
+            <div class="tool-menu premium-tool" data-tool="Tạo Giọng Nói AI">🎙️ Tạo Giọng Nói <small>Premium</small></div>
+            <div class="tool-menu premium-tool" data-tool="Tạo Website AI">🌐 Tạo Website AI <small>Premium</small></div>
+            <div class="tool-menu premium-tool" data-tool="AI Automation">🤖 AI Automation <small>Premium</small></div>
+            <div class="tool-menu premium-tool" data-tool="Phân Tích Dữ Liệu">📊 Phân Tích Dữ Liệu <small>Premium</small></div>
+            <div class="tool-menu premium-tool" data-tool="Marketing AI">📈 Marketing AI <small>Premium</small></div>
+            <div class="tool-menu premium-tool" data-tool="Landing Page Bán Hàng">🛒 Landing Page <small>Premium</small></div>
+
+            <div class="sidebar-stat">
+                <div>👥 Thành viên<br><b id="memberCount">1.285+</b></div>
+                <div>⚡ Yêu cầu hôm nay<br><b id="requestCount">8.921+</b></div>
+            </div>
+        </div>
+
+        <button class="new-chat" onclick="newChat()">+ Trò chuyện mới</button>
+        <button class="logout-btn" onclick="logout()">Đăng xuất</button>
+
+        <div id="chatList"></div>
     </div>
-    <button class="premium-btn" onclick="openPremium()">💎 Nâng cấp Premium</button>
-    <button class="new-chat" onclick="newChat()">+ Trò chuyện mới</button>
-    <button class="logout-btn" onclick="logout()">Đăng xuất</button>
-    <div id="chatList"></div>
-  </div>
 
-  <div class="main">
-    <div class="header">TRÍ TUỆ NHÂN TẠO OPTIMA</div>
-    <div id="messages" class="messages"></div>
-    <div class="input-box">
-      <input id="input" placeholder="Nhập tin nhắn..." />
-      <button onclick="send()">Gửi</button>
+    <div class="main">
+        <div class="header">
+            <div class="header-left">
+                <h2>🤖 GPT Mini Premium Assistant</h2>
+                <p>Trợ lý AI dành cho Marketing • Content • Automation • Kinh doanh online</p>
+            </div>
+            <div class="header-badge">💎 Premium AI Suite</div>
+        </div>
+        <div class="ai-tools">
+            <button class="tool-btn premium-tool" data-tool="Tạo Ảnh AI">🖼️ Tạo Ảnh AI <span>Premium</span></button>
+            <button class="tool-btn premium-tool" data-tool="Tạo Video AI">🎬 Tạo Video AI <span>Premium</span></button>
+            <button class="tool-btn premium-tool" data-tool="Tạo Giọng Nói AI">🎙️ Tạo Giọng Nói <span>Premium</span></button>
+            <button class="tool-btn premium-tool" data-tool="Tạo Website AI">🌐 Tạo Website AI <span>Premium</span></button>
+            <button class="tool-btn premium-tool" data-tool="AI Automation">🤖 AI Automation <span>Premium</span></button>
+            <button class="tool-btn premium-tool" data-tool="Phân Tích Dữ Liệu">📊 Phân Tích Dữ Liệu <span>Premium</span></button>
+            <button class="tool-btn premium-tool" data-tool="Kế Hoạch Marketing">📈 Kế Hoạch Marketing <span>Premium</span></button>
+            <button class="tool-btn premium-tool" data-tool="Landing Page Bán Hàng">🛍️ Landing Page <span>Premium</span></button>
+        </div>
+
+        <div id="messages" class="messages"></div>
+
+        <div class="input-box">
+            <input id="input" placeholder="Nhập tin nhắn..." />
+            <button onclick="send()">Gửi</button>
+        </div>
     </div>
-  </div>
 
-  <div class="support-float">
-    <div class="bot-bubble" onclick="toggleSupport()">🤖</div>
-  </div>
+    <div class="support-float">
+        <div class="bot-bubble" onclick="toggleSupport()">🤖</div>
+    </div>
 
-  <div id="supportPanel" class="support-panel">
-    <h2>💬 Hỗ trợ nhân viên</h2>
-    <p>Gửi nội dung cần hỗ trợ, nhân viên OPTIMA sẽ phản hồi sớm.</p>
-    <textarea id="supportMessage" placeholder="Nhập nội dung cần hỗ trợ..."></textarea>
-    <button onclick="sendSupport()">Gửi hỗ trợ</button>
-    <button class="close-btn" onclick="closeSupport()">Đóng</button>
-  </div>
+    
+    <div id="supportPanel" class="support-panel">
+        <h2>🤖 GPT Mini Premium Assistant</h2>
+        <p>
+            Mini Support Chat đang trực tuyến. Anh/chị có thể hỏi về kích hoạt Premium, kiểm tra thanh toán, báo lỗi hoặc tư vấn gói phù hợp.
+        </p>
+
+        <div id="supportChatBox" class="support-chat-box"></div>
+
+        <div class="support-input-row">
+            <input id="supportMessage" placeholder="Nhập nội dung cần hỗ trợ..." onkeydown="if(event.key==='Enter') sendSupport()">
+            <button onclick="sendSupport()">Gửi</button>
+        </div>
+
+        <button class="close-btn" onclick="closeSupport()">Đóng</button>
+    </div>
+
 </div>
 
 <div id="premiumModal" class="modal">
-  <div class="modal-card">
-    <h2 class="modal-title">👑 NÂNG CẤP <span>OPTIMA AI PREMIUM</span></h2>
-    <div class="subtitle">Mở khóa toàn bộ sức mạnh AI – Tăng tốc kinh doanh – Bứt phá doanh thu</div>
+    <div class="modal-card">
+        <h2 class="modal-title">👑 NÂNG CẤP <span>GPT Mini Premium</span></h2>
+        <div class="subtitle">Mở khóa toàn bộ sức mạnh AI – Tăng tốc kinh doanh – Bứt phá doanh thu</div>
 
-    <div class="plans">
-      <div class="plan-card blue" onclick="choosePlan('basic')">
-        <div class="plan-icon">🚀</div>
-        <div class="plan-name">GÓI CƠ BẢN</div>
-        <div class="plan-sub">Dành cho cá nhân mới bắt đầu kinh doanh online</div>
-        <div class="plan-price">99.000đ <small>/ tháng</small></div>
+        <div class="plans">
+            <div class="plan-card blue" onclick="choosePlan('basic')">
+                <div class="plan-icon">🚀</div>
+                <div class="plan-name">🔹 GÓI CƠ BẢN</div>
+                <div class="plan-sub">Dành cho người mới bắt đầu kinh doanh online</div>
+                <div class="plan-price">99.000đ <small>/ tháng</small></div>
 
-        <div class="feature"><span class="check">✅</span> 500 lượt chat AI / tháng</div>
-        <div class="feature"><span class="check">✅</span> Viết content bán hàng mỗi ngày</div>
-        <div class="feature"><span class="check">✅</span> Viết bài Facebook, TikTok, Zalo</div>
-        <div class="feature"><span class="check">✅</span> Caption viral tăng tương tác</div>
-        <div class="feature"><span class="check">✅</span> Gợi ý tiêu đề thu hút khách</div>
-        <div class="feature"><span class="check">✅</span> Tư vấn ý tưởng kinh doanh</div>
-        <div class="feature"><span class="check">✅</span> Hỗ trợ chăm sóc khách hàng</div>
-        <div class="feature"><span class="check">✅</span> Hơn 60+ mẫu prompt có sẵn</div>
-        <div class="feature"><span class="check">✅</span> Lưu lịch sử hội thoại cơ bản</div>
-        <div class="feature"><span class="check">✅</span> Phù hợp shop nhỏ, cá nhân bán hàng</div>
+                <div class="feature"><span class="check">✦</span> 500 lượt chat AI/tháng</div>
+                <div class="feature"><span class="check">✦</span> Viết bài Facebook, TikTok, Zalo</div>
+                <div class="feature"><span class="check">✦</span> Tạo caption viral tăng tương tác</div>
+                <div class="feature"><span class="check">✦</span> Gợi ý tiêu đề thu hút khách hàng</div>
+                <div class="feature"><span class="check">✦</span> Lên ý tưởng nội dung mỗi ngày</div>
+                <div class="feature"><span class="check">✦</span> Kịch bản chăm sóc khách hàng cơ bản</div>
+                <div class="feature"><span class="check">✦</span> 60+ mẫu prompt bán hàng</div>
+                <div class="feature"><span class="check">✦</span> Lưu lịch sử hội thoại</div>
 
-        <div class="value-box">
-            💡 Phù hợp cho người mới bắt đầu, cần AI hỗ trợ viết bài và chăm sóc khách nhanh.
+                <div class="value-box">
+                    💡 <b>Phù hợp:</b><br>
+                    👤 Cá nhân • 🛍️ Shop nhỏ • 📱 Người mới bán hàng<br><br>
+                    🎁 <b>GIÁ TRỊ THỰC TẾ NHẬN ĐƯỢC</b><br><br>
+                    ⏳ Tiết kiệm 5–10 giờ tạo nội dung mỗi tuần<br>
+                    📈 Duy trì đăng bài đều đặn mỗi ngày<br>
+                    💬 Phản hồi khách hàng nhanh hơn<br>
+                    🎯 Không lo bí ý tưởng bán hàng<br>
+                    🚀 Xây dựng thương hiệu cá nhân chuyên nghiệp
+                </div>
+            </div>
+
+            <div class="plan-card purple" onclick="choosePlan('pro')">
+                <div class="ribbon">⭐ PHỔ BIẾN NHẤT</div>
+                <div class="plan-icon">💎</div>
+                <div class="plan-name">GÓI CHUYÊN NGHIỆP</div>
+                <div class="plan-sub">Dành cho seller và chủ shop muốn tăng đơn hàng</div>
+                <div class="plan-price">199.000đ <small>/ tháng</small></div>
+
+                <div class="feature"><span class="check">✦</span> 2.000 lượt chat AI/tháng</div>
+                <div class="feature"><span class="check">✦</span> Toàn bộ quyền lợi Gói Cơ Bản</div>
+                <div class="feature"><span class="check">✦</span> AI Automation hỗ trợ bán hàng</div>
+                <div class="feature"><span class="check">✦</span> Phân tích khách hàng mục tiêu</div>
+                <div class="feature"><span class="check">✦</span> Tối ưu tỷ lệ chuyển đổi</div>
+                <div class="feature"><span class="check">✦</span> Kế hoạch Marketing tuần/tháng</div>
+                <div class="feature"><span class="check">✦</span> Phân tích đối thủ cạnh tranh</div>
+                <div class="feature"><span class="check">✦</span> Tư vấn Facebook Ads</div>
+                <div class="feature"><span class="check">✦</span> Xây dựng phễu bán hàng</div>
+                <div class="feature"><span class="check">✦</span> Tăng Inbox và tỷ lệ chốt đơn</div>
+                <div class="feature"><span class="check">✦</span> Hỗ trợ ưu tiên nhanh</div>
+                <div class="feature"><span class="check">✦</span> Cập nhật tính năng mới miễn phí</div>
+
+                <div class="value-box">
+                    💡 <b>Phù hợp:</b><br>
+                    🏪 Shop đang bán ổn định • 📊 Muốn tăng trưởng doanh thu • 🛒 Seller online<br><br>
+                    🎁 <b>GIÁ TRỊ THỰC TẾ NHẬN ĐƯỢC</b><br><br>
+                    ⏳ Tiết kiệm 10–20 giờ Marketing mỗi tuần<br>
+                    📈 Tăng tỷ lệ chuyển đổi khách hàng<br>
+                    🔥 Tăng tương tác và lượng Inbox<br>
+                    🎯 Hiểu rõ khách hàng mục tiêu<br>
+                    💰 Hỗ trợ tăng doanh thu bán hàng<br>
+                    🚀 Có chiến lược Marketing rõ ràng hơn<br>
+                    📊 Tối ưu hiệu quả quảng cáo<br>
+                    💬 Tăng tỷ lệ phản hồi khách hàng
+                </div>
+            </div>
+
+            <div class="plan-card gold" onclick="choosePlan('business')">
+                <div class="ribbon">🚀 TĂNG TRƯỞNG MẠNH</div>
+                <div class="plan-icon">🚀</div>
+                <div class="plan-name">GÓI DOANH NGHIỆP</div>
+                <div class="plan-sub">Giải pháp toàn diện cho chủ shop và doanh nghiệp</div>
+                <div class="plan-price">399.000đ <small>/ tháng</small></div>
+
+                <div class="feature"><span class="check">✦</span> Không giới hạn lượt chat</div>
+                <div class="feature"><span class="check">✦</span> Toàn bộ quyền lợi Gói Chuyên Nghiệp</div>
+                <div class="feature"><span class="check">✦</span> AI Automation nâng cao</div>
+                <div class="feature"><span class="check">✦</span> Chatbot bán hàng tự động</div>
+                <div class="feature"><span class="check">✦</span> Phân tích khách hàng chuyên sâu</div>
+                <div class="feature"><span class="check">✦</span> Xây dựng chiến lược kinh doanh</div>
+                <div class="feature"><span class="check">✦</span> Lập kế hoạch nội dung theo tháng</div>
+                <div class="feature"><span class="check">✦</span> Tư vấn Facebook Ads chuyên sâu</div>
+                <div class="feature"><span class="check">✦</span> Xây dựng hệ thống bán hàng online</div>
+                <div class="feature"><span class="check">✦</span> Quản lý nhiều tài khoản/team</div>
+                <div class="feature"><span class="check">✦</span> Hỗ trợ VIP 24/7</div>
+                <div class="feature"><span class="check">✦</span> Ưu tiên truy cập hệ thống</div>
+
+                <div class="value-box">
+                    💡 <b>Phù hợp:</b><br>
+                    🏢 Doanh nghiệp • 👥 Team Marketing • 🛒 Chủ shop doanh số lớn<br><br>
+                    🎁 <b>GIÁ TRỊ THỰC TẾ NHẬN ĐƯỢC</b><br><br>
+                    ⏳ Tiết kiệm hàng chục giờ vận hành mỗi tuần<br>
+                    🤖 Tự động hóa quy trình bán hàng<br>
+                    📈 Tăng hiệu suất đội nhóm<br>
+                    💰 Giảm chi phí thuê nhân sự<br>
+                    🎯 Xây dựng hệ thống Marketing bền vững<br>
+                    🚀 Mở rộng quy mô kinh doanh nhanh hơn<br>
+                    📊 Tăng năng suất làm việc của đội nhóm<br>
+                    🔥 Nâng cao khả năng cạnh tranh trên thị trường
+                </div>
+            </div>
+
+            <div class="plan-card red" onclick="choosePlan('lifetime')">
+                <div class="ribbon">👑 GIÁ TRỊ CAO NHẤT</div>
+                <div class="plan-icon">👑</div>
+                <div class="plan-name">GÓI VĨNH VIỄN</div>
+                <div class="plan-sub">Thanh toán 1 lần – Sử dụng trọn đời</div>
+                <div class="plan-price">599.000đ</div>
+
+                <div class="feature"><span class="check">✦</span> Toàn bộ quyền lợi Gói Doanh Nghiệp</div>
+                <div class="feature"><span class="check">✦</span> Không giới hạn thời gian sử dụng</div>
+                <div class="feature"><span class="check">✦</span> Không cần gia hạn hàng tháng</div>
+                <div class="feature"><span class="check">✦</span> Không phát sinh chi phí định kỳ</div>
+                <div class="feature"><span class="check">✦</span> Ưu tiên mọi tính năng mới</div>
+                <div class="feature"><span class="check">✦</span> Huy hiệu VIP Vĩnh Viễn</div>
+                <div class="feature"><span class="check">✦</span> Hỗ trợ ưu tiên trọn đời</div>
+                <div class="feature"><span class="check">✦</span> Quyền truy cập các bản nâng cấp tương lai</div>
+                <div class="feature"><span class="check">✦</span> Bảo hành tài khoản vĩnh viễn</div>
+
+                <div class="value-box">
+                    💡 <b>Phù hợp:</b><br>
+                    🚀 Người dùng lâu dài • 🏪 Chủ Shop Online • 🏢 Doanh nghiệp muốn tối ưu chi phí<br><br>
+                    🎁 <b>GIÁ TRỊ THỰC TẾ NHẬN ĐƯỢC</b><br><br>
+                    💰 Tiết kiệm chi phí gia hạn nhiều năm<br>
+                    🔓 Luôn sở hữu phiên bản cao cấp nhất<br>
+                    🚀 Không lo phát sinh chi phí định kỳ<br>
+                    📈 Đồng hành cùng quá trình phát triển kinh doanh<br>
+                    🎯 Tối ưu lợi nhuận lâu dài<br>
+                    🏆 Sở hữu trọn bộ tính năng cao cấp<br>
+                    ⚡ Luôn được ưu tiên cập nhật tính năng mới<br><br>
+                    🔥 <b>Chỉ thanh toán 1 lần – sử dụng trọn đời, nhận toàn bộ tính năng cao cấp và mọi bản nâng cấp trong tương lai mà không tốn thêm bất kỳ chi phí nào.</b>
+                </div>
+            </div>
         </div>
-      </div>
 
-      <div class="plan-card purple" onclick="choosePlan('pro')">
-        <div class="ribbon">🔥 PHỔ BIẾN</div>
-        <div class="plan-icon">⚡</div>
-        <div class="plan-name">GÓI CHUYÊN NGHIỆP</div>
-        <div class="plan-sub">Dành cho seller, shop online muốn tăng inbox và đơn hàng</div>
-        <div class="plan-price">199.000đ <small>/ tháng</small></div>
+        <div class="payment-panel">
+            <div class="bank-box">
+                <b style="color:#fbbf24">THANH TOÁN VIETQR</b><br>
+                Ngân hàng: <b>AGRIBANK</b><br>
+                Số tài khoản: <b>8888363382629</b><br>
+                Chủ tài khoản: <b>NGUYEN DANG THI XUAN</b><br>
+                Nội dung CK: <b id="transferContent"></b>
+            </div>
 
-        <div class="feature"><span class="check">✅</span> 2.000 lượt chat AI / tháng</div>
-        <div class="feature"><span class="check">✅</span> Toàn bộ quyền lợi gói Cơ Bản</div>
-        <div class="feature"><span class="check">✅</span> Kịch bản tư vấn bán hàng</div>
-        <div class="feature"><span class="check">✅</span> Xử lý từ chối khi khách chê giá</div>
-        <div class="feature"><span class="check">✅</span> Lập kế hoạch Marketing theo tuần</div>
-        <div class="feature"><span class="check">✅</span> Mẫu quảng cáo Facebook/TikTok</div>
-        <div class="feature"><span class="check">✅</span> Phân tích sản phẩm và khách hàng</div>
-        <div class="feature"><span class="check">✅</span> Gợi ý chương trình khuyến mãi</div>
-        <div class="feature"><span class="check">✅</span> Viết tin nhắn chăm sóc khách cũ</div>
-        <div class="feature"><span class="check">✅</span> Tối ưu nội dung tăng tỷ lệ chốt đơn</div>
-        <div class="feature"><span class="check">✅</span> Ưu tiên hỗ trợ trong 2 giờ</div>
+            <div class="qr-box">
+                <img id="vietqrImage" alt="VietQR thanh toán">
+                </div>
 
-        <div class="value-box">
-            💡 Phù hợp shop đang bán đều, muốn tăng chuyển đổi, tăng inbox và tiết kiệm thời gian làm nội dung.
+            <div class="selected-box">
+                <div style="color:#94a3b8">GÓI ĐÃ CHỌN</div>
+                <h3 id="selectedPlanName">GÓI CƠ BẢN</h3>
+                <div id="selectedPlanPrice" style="font-size:28px;color:#38bdf8;font-weight:900">99.000đ / tháng</div>
+                <div class="payment-support">
+                    <div class="payment-support-title">📞 HỖ TRỢ KÍCH HOẠT SAU THANH TOÁN</div>
+
+                    <div>
+                        Sau khi thanh toán, hệ thống sẽ kiểm tra và kích hoạt gói Premium trong thời gian sớm nhất.
+                    </div>
+
+                    <div style="margin-top:10px;color:#e2e8f0;">
+                        Nếu sau <b>5 phút</b> tài khoản vẫn chưa được kích hoạt tự động, anh/chị vui lòng gửi:
+                    </div>
+
+                    <div style="color:#cbd5e1;font-size:13px;margin-top:8px;line-height:1.7;">
+                        ◆ Ảnh chụp giao dịch thanh toán<br>
+                        ◆ Nội dung chuyển khoản<br>
+                        ◆ Tên tài khoản đăng nhập
+                    </div>
+
+                    <div class="payment-zalo">💬 Zalo hỗ trợ: 036 338 2629</div>
+
+                    <div style="color:#94a3b8;font-size:13px;margin-top:8px;">
+                        Đội ngũ hỗ trợ sẽ kiểm tra và xử lý nhanh nhất cho anh/chị.
+                    </div>
+                </div>
+                <div class="pay-actions">
+                    <button onclick="copyTransferContent()">📋 Sao chép nội dung CK</button>
+                    <button onclick="confirmPaid()">✦ Tôi đã thanh toán</button>
+                    <input id="premiumCode" placeholder="Nhập mã Premium nếu có" style="width:100%;margin-top:8px;">
+                    <button onclick="activatePremium()">🔑 Kích hoạt Premium</button>
+                    <button class="close-btn" onclick="closePremium()">Đóng</button>
+                </div>
+            </div>
         </div>
-      </div>
-
-      <div class="plan-card gold" onclick="choosePlan('business')">
-        <div class="ribbon">⭐ KHUYÊN DÙNG</div>
-        <div class="plan-icon">👑</div>
-        <div class="plan-name">GÓI DOANH NGHIỆP</div>
-        <div class="plan-sub">Dành cho doanh nghiệp, team marketing, chủ shop lớn</div>
-        <div class="plan-price">399.000đ <small>/ tháng</small></div>
-
-        <div class="feature"><span class="check">✅</span> Không giới hạn lượt chat</div>
-        <div class="feature"><span class="check">✅</span> Toàn bộ quyền lợi gói Chuyên Nghiệp</div>
-        <div class="feature"><span class="check">✅</span> AI Automation – tự động hóa công việc</div>
-        <div class="feature"><span class="check">✅</span> Phân tích khách hàng mục tiêu chuyên sâu</div>
-        <div class="feature"><span class="check">✅</span> Xây dựng chiến lược kinh doanh</div>
-        <div class="feature"><span class="check">✅</span> Lập kế hoạch nội dung theo tháng</div>
-        <div class="feature"><span class="check">✅</span> Phân tích đối thủ cạnh tranh</div>
-        <div class="feature"><span class="check">✅</span> Tư vấn quảng cáo Facebook chuyên sâu</div>
-        <div class="feature"><span class="check">✅</span> Xây dựng hệ thống bán hàng online</div>
-        <div class="feature"><span class="check">✅</span> Quản lý nhiều tài khoản/team</div>
-        <div class="feature"><span class="check">✅</span> Hỗ trợ VIP 24/7</div>
-
-        <div class="value-box">
-            💡 Gói được khuyên dùng nhất cho chủ shop, agency, team bán hàng cần dùng AI như trợ lý kinh doanh mỗi ngày.
-        </div>
-      </div>
-
-      <div class="plan-card red" onclick="choosePlan('lifetime')">
-        <div class="ribbon">💎 SIÊU TIẾT KIỆM</div>
-        <div class="plan-icon">💎</div>
-        <div class="plan-name">GÓI VĨNH VIỄN</div>
-        <div class="plan-sub">Thanh toán 1 lần – dùng trọn đời – không cần gia hạn</div>
-        <div class="plan-price">599.000đ <small>/ trọn đời</small></div>
-
-        <div class="feature"><span class="check">✅</span> Không giới hạn mọi tính năng</div>
-        <div class="feature"><span class="check">✅</span> Toàn bộ quyền lợi gói Doanh Nghiệp</div>
-        <div class="feature"><span class="check">✅</span> Dùng không giới hạn thời gian</div>
-        <div class="feature"><span class="check">✅</span> Không cần gia hạn hàng tháng</div>
-        <div class="feature"><span class="check">✅</span> Không phát sinh chi phí định kỳ</div>
-        <div class="feature"><span class="check">✅</span> Ưu tiên mọi tính năng mới</div>
-        <div class="feature"><span class="check">✅</span> Huy hiệu VIP vĩnh viễn</div>
-        <div class="feature"><span class="check">✅</span> Hỗ trợ VIP trọn đời</div>
-        <div class="feature"><span class="check">✅</span> Bảo hành tài khoản vĩnh viễn</div>
-        <div class="feature"><span class="check">✅</span> Quyền truy cập các bản nâng cấp sau</div>
-
-        <div class="value-box">
-            💡 Lựa chọn tiết kiệm nhất cho người dùng lâu dài, chủ shop và doanh nghiệp muốn tối ưu chi phí.
-        </div>
-      </div>
     </div>
+</div>
 
-    <div class="payment-panel">
-      <div class="bank-box">
-        <b style="color:#fbbf24">THANH TOÁN VIETQR</b><br>
-        Ngân hàng: <b>AGRIBANK</b><br>
-        Số tài khoản: <b>8888363382629</b><br>
-        Chủ tài khoản: <b>NGUYEN DANG THI XUAN</b><br>
-        Nội dung CK: <b id="transferContent"></b>
-      </div>
 
-      <div class="qr-box">
-        <img id="vietqrImage" alt="VietQR thanh toán">
-      </div>
+<div id="featureLockModal" class="lock-modal">
+    <div class="lock-card">
+        <h2>🔒 TÍNH NĂNG PREMIUM</h2>
+        <p id="lockedFeatureText">Tính năng này thuộc gói GPT Mini Premium.</p>
 
-      <div class="selected-box">
-        <div style="color:#94a3b8">GÓI ĐÃ CHỌN</div>
-        <h3 id="selectedPlanName">GÓI CƠ BẢN</h3>
-        <div id="selectedPlanPrice" style="font-size:28px;color:#38bdf8;font-weight:900">99.000đ / tháng</div>
-        <div class="pay-actions">
-          <button onclick="copyTransferContent()">📋 Sao chép nội dung CK</button>
-          <button onclick="confirmPaid()">✅ Tôi đã thanh toán</button>
-          <input id="premiumCode" placeholder="Nhập mã Premium nếu có" style="width:100%;margin-top:8px;">
-          <button onclick="activatePremium()">🔑 Kích hoạt Premium</button>
-          <button class="close-btn" onclick="closePremium()">Đóng</button>
+        <div class="lock-list">
+            ◆ Không giới hạn công cụ AI nâng cao<br>
+            ◆ Tạo Ảnh AI, Video AI, Website AI<br>
+            ◆ AI Automation và phân tích dữ liệu<br>
+            ◆ Hạn mức sử dụng cao hơn<br>
+            ◆ Tốc độ phản hồi ưu tiên<br>
+            ◆ Hỗ trợ kỹ thuật ưu tiên<br>
+            ◆ Gợi ý Marketing và Landing Page bán hàng
         </div>
-      </div>
+
+        <p style="color:#cbd5e1;">
+            Nâng cấp để trải nghiệm đầy đủ bộ công cụ AI cao cấp dành cho kinh doanh online.<br><br>📞 Zalo hỗ trợ trực tiếp: <b>036 338 2629</b>
+        </p>
+
+        <div class="lock-actions">
+            <button onclick="closeFeatureLock()" class="close-btn">Để sau</button>
+            <button onclick="goPremiumFromLock()">💎 Nâng cấp ngay</button>
+        </div>
     </div>
-  </div>
 </div>
 
 <script>
@@ -598,10 +1246,18 @@ let token = localStorage.getItem("optima_token");
 let username = localStorage.getItem("optima_username");
 let chats = JSON.parse(localStorage.getItem("optima_chats") || "[]");
 let currentIndex = 0;
-if(chats.length === 0) chats.push([]);
 
-function showMessage(text){document.getElementById("authMessage").innerText=text}
-function saveChats(){localStorage.setItem("optima_chats",JSON.stringify(chats))}
+if(chats.length === 0){
+    chats.push([]);
+}
+
+function showMessage(text){
+    document.getElementById("authMessage").innerText=text;
+}
+
+function saveChats(){
+    localStorage.setItem("optima_chats",JSON.stringify(chats));
+}
 
 function showApp(){
   document.getElementById("authScreen").style.display="none";
@@ -611,6 +1267,7 @@ function showApp(){
   renderSidebar();
   renderMessages();
 }
+
 function showAuth(){
   document.getElementById("authScreen").style.display="flex";
   document.getElementById("app").style.display="none";
@@ -619,66 +1276,105 @@ function showAuth(){
 async function register(){
   const u=document.getElementById("authUsername").value.trim();
   const p=document.getElementById("authPassword").value.trim();
+
   try{
-    const r=await fetch(API+"/register",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({username:u,password:p})});
-    const d=await r.json(); showMessage(d.message||d.detail||"Không rõ lỗi.");
+    const r=await fetch(API+"/register",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({username:u,password:p})
+    });
+
+    const d=await r.json();
+    showMessage(d.message||d.detail||"Không rõ lỗi.");
+
     if(d.success){
-        token=d.token;username=d.username;
+        token=d.token;
+        username=d.username;
         localStorage.setItem("optima_token",token);
         localStorage.setItem("optima_username",username);
         showApp();
     }
-  }catch(e){showMessage("Không kết nối được server. Kiểm tra "+API+"/docs")}
+  }catch(e){
+    showMessage("Không kết nối được server. Kiểm tra "+API+"/docs");
+  }
 }
 
 async function login(){
   const u=document.getElementById("authUsername").value.trim();
   const p=document.getElementById("authPassword").value.trim();
+
   try{
-    const r=await fetch(API+"/login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({username:u,password:p})});
-    const d=await r.json(); showMessage(d.message||d.detail||"Không rõ lỗi.");
+    const r=await fetch(API+"/login",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({username:u,password:p})
+    });
+
+    const d=await r.json();
+    showMessage(d.message||d.detail||"Không rõ lỗi.");
+
     if(d.success){
-        token=d.token;username=d.username;
+        token=d.token;
+        username=d.username;
         localStorage.setItem("optima_token",token);
         localStorage.setItem("optima_username",username);
         showApp();
     }
-  }catch(e){showMessage("Không kết nối được server. Kiểm tra "+API+"/docs")}
+  }catch(e){
+    showMessage("Không kết nối được server. Kiểm tra "+API+"/docs");
+  }
 }
 
 async function googleDemoLogin(){
   const email=prompt("Nhập Gmail của bạn để đăng nhập nhanh:");
   if(!email) return;
+
   const name=email.split("@")[0];
+
   try{
-    const r=await fetch(API+"/google-login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name,email})});
-    const d=await r.json(); showMessage(d.message||d.detail||"Không rõ lỗi.");
+    const r=await fetch(API+"/google-login",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({name,email})
+    });
+
+    const d=await r.json();
+    showMessage(d.message||d.detail||"Không rõ lỗi.");
+
     if(d.success){
-        token=d.token;username=d.username;
+        token=d.token;
+        username=d.username;
         localStorage.setItem("optima_token",token);
         localStorage.setItem("optima_username",username);
         showApp();
     }
-  }catch(e){showMessage("Không kết nối được server Google login demo.")}
+  }catch(e){
+    showMessage("Không kết nối được server Google login demo.");
+  }
 }
 
 function logout(){
     localStorage.removeItem("optima_token");
     localStorage.removeItem("optima_username");
-    token=null;username=null;
+    token=null;
+    username=null;
     showAuth();
 }
 
 async function loadStatus(){
   if(!token) return;
+
   try{
     const r=await fetch(API+"/status/"+token);
     const d=await r.json();
+
     if(d.success){
       document.getElementById("usernameText").innerText=d.username;
+
       const plan=document.getElementById("planText");
       plan.innerText=(d.plan_label||d.plan||"FREE").toUpperCase();
       plan.className=(d.plan && d.plan!=="free")?"badge premium-badge":"badge";
+
       document.getElementById("remainingText").innerText=d.remaining;
     }
   }catch(e){}
@@ -686,20 +1382,27 @@ async function loadStatus(){
 
 function choosePlan(key){
   selectedPlanKey=key;
+
   document.querySelectorAll(".plan-card").forEach(x=>x.classList.remove("selected"));
+
   const cards=document.querySelectorAll(".plan-card");
   const idx={basic:0,pro:1,business:2,lifetime:3}[key];
+
   if(cards[idx]) cards[idx].classList.add("selected");
+
   updatePaymentQR();
 }
 
 function updatePaymentQR(){
   const p=PLANS[selectedPlanKey];
-  const content="OPTIMA "+(username||"USER")+" "+p.code;
+  const content="GPTMINI "+(username||"USER")+" "+p.code;
+
   document.getElementById("selectedPlanName").innerText=p.name;
   document.getElementById("selectedPlanPrice").innerText=p.label;
   document.getElementById("transferContent").innerText=content;
+
   const qrUrl="https://img.vietqr.io/image/AGRIBANK-8888363382629-compact2.png?amount="+p.price+"&addInfo="+encodeURIComponent(content)+"&accountName="+encodeURIComponent("NGUYEN DANG THI XUAN");
+
   document.getElementById("vietqrImage").src=qrUrl;
 }
 
@@ -707,14 +1410,25 @@ function openPremium(){
     document.getElementById("premiumModal").style.display="flex";
     choosePlan("basic");
 }
-function closePremium(){document.getElementById("premiumModal").style.display="none"}
+
+function closePremium(){
+    document.getElementById("premiumModal").style.display="none";
+}
 
 function toggleSupport(){
     const panel=document.getElementById("supportPanel");
     panel.style.display = panel.style.display === "block" ? "none" : "block";
+    if(panel.style.display === "block") initSupportChat();
 }
-function openSupport(){document.getElementById("supportPanel").style.display="block"}
-function closeSupport(){document.getElementById("supportPanel").style.display="none"}
+
+function openSupport(){
+    document.getElementById("supportPanel").style.display="block";
+    initSupportChat();
+}
+
+function closeSupport(){
+    document.getElementById("supportPanel").style.display="none";
+}
 
 function copyTransferContent(){
   const text=document.getElementById("transferContent").innerText;
@@ -725,6 +1439,7 @@ function copyTransferContent(){
 async function confirmPaid(){
   const p=PLANS[selectedPlanKey];
   const content=document.getElementById("transferContent").innerText;
+
   try{
     const r=await fetch(API+"/support",{
         method:"POST",
@@ -734,54 +1449,39 @@ async function confirmPaid(){
             message:"Khách báo đã thanh toán "+p.name+" - "+p.label+". Nội dung CK: "+content
         })
     });
+
     const d=await r.json();
     alert(d.message||"Đã gửi thông báo thanh toán cho nhân viên.");
     closePremium();
+
   }catch(e){
-    alert("Không gửi được thông báo thanh toán. Hãy mở web bằng: http://localhost:8005");
+    alert("Không gửi được thông báo thanh toán. Hãy mở web bằng link Render hoặc localhost.");
   }
 }
 
 async function activatePremium(){
   const code=document.getElementById("premiumCode").value.trim();
+
   try{
     const r=await fetch(API+"/activate",{
         method:"POST",
         headers:{"Content-Type":"application/json"},
         body:JSON.stringify({token,code})
     });
+
     const d=await r.json();
     alert(d.message||"Không rõ lỗi.");
-    if(d.success){closePremium();loadStatus();}
+
+    if(d.success){
+        closePremium();
+        loadStatus();
+    }
   }catch(e){
     alert("Không kết nối được server kích hoạt gói.");
   }
 }
 
-async function sendSupport(){
-  const msg=document.getElementById("supportMessage").value.trim();
-  if(!msg){
-    alert("Vui lòng nhập nội dung cần hỗ trợ.");
-    return;
-  }
-  try{
-    const r=await fetch(API+"/support",{
-        method:"POST",
-        headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({token:token,message:msg})
-    });
-    const d=await r.json();
-    if(d.success){
-        alert("Đã gửi hỗ trợ thành công. Nhân viên OPTIMA sẽ phản hồi sớm.");
-        document.getElementById("supportMessage").value="";
-        closeSupport();
-    }else{
-        alert(d.message||"Không gửi được hỗ trợ.");
-    }
-  }catch(e){
-    alert("Không gửi được hỗ trợ. Hãy mở web bằng: http://localhost:8005");
-  }
-}
+
 
 function newChat(){
     chats.push([]);
@@ -790,6 +1490,7 @@ function newChat(){
     renderSidebar();
     renderMessages();
 }
+
 function loadChat(i){
     currentIndex=i;
     renderSidebar();
@@ -799,6 +1500,7 @@ function loadChat(i){
 function renderSidebar(){
   const list=document.getElementById("chatList");
   list.innerHTML="";
+
   chats.forEach((chat,i)=>{
     const div=document.createElement("div");
     div.className="chat-item"+(i===currentIndex?" active":"");
@@ -811,27 +1513,165 @@ function renderSidebar(){
 function renderMessages(){
   const box=document.getElementById("messages");
   const c=chats[currentIndex];
+
   box.innerHTML="";
+
   if(c.length===0){
-    box.innerHTML='<div class="welcome"><h1>Xin chào 👋</h1><p>Tôi là OPTIMA AI. Hãy nhập câu hỏi để bắt đầu.</p></div>';
+    box.innerHTML=`
+    <div class="welcome hero-welcome">
+        <h1>🚀 Chào mừng đến GPT Mini Premium</h1>
+        <p>
+            🚀 Giải pháp AI & Marketing toàn diện cho cá nhân, chủ shop và doanh nghiệp.<br><br>
+📌 Dịch vụ Mạng Xã Hội Facebook • TikTok<br>
+📈 Chạy Quảng Cáo Facebook Ads • TikTok Ads<br>
+🤖 AI Automation • Landing Page • Website AI<br>
+🎯 Tối ưu chuyển đổi • Tăng Inbox • Tăng Doanh Thu<br><br>
+📞 Tư vấn trực tiếp qua Zalo: <strong>036 338 2629</strong>
+        </p>
+
+        <div class="quick-grid">
+            <div class="quick-card" onclick="quickAsk('Viết giúp tôi một bài Facebook bán hàng chuyên nghiệp')">
+                <b>📘 Viết bài Facebook</b>
+                <span>Tạo nội dung bán hàng, caption và kịch bản chăm sóc khách.</span>
+            </div>
+
+            <div class="quick-card" onclick="quickAsk('Lên kế hoạch nội dung TikTok cho shop online')">
+                <b>🎬 Nội dung TikTok</b>
+                <span>Ý tưởng video, hook mở đầu và kịch bản viral ngắn.</span>
+            </div>
+
+            <div class="quick-card premium-tool" data-tool="Tạo Ảnh AI">
+                <b>🖼️ Tạo Ảnh AI</b>
+                <span>Công cụ Premium hỗ trợ tạo ảnh quảng cáo chuyên nghiệp.</span>
+            </div>
+
+            <div class="quick-card premium-tool" data-tool="Tạo Website AI">
+                <b>🌐 Website AI</b>
+                <span>Tạo landing page, bố cục bán hàng và nội dung website.</span>
+            </div>
+
+            <div class="quick-card premium-tool" data-tool="AI Automation">
+                <b>🤖 AI Automation</b>
+                <span>Tự động hóa quy trình bán hàng và chăm sóc khách hàng.</span>
+            </div>
+
+            <div class="quick-card" onclick="quickAsk('Tư vấn cho tôi gói Premium phù hợp để kinh doanh online')">
+                <b>💎 Tư vấn gói Premium</b>
+                <span>Chọn gói phù hợp theo nhu cầu và ngân sách.</span>
+            </div>
+        </div>
+    </div>`;
+    initPremiumTools();
+startLiveStats();
     return;
   }
+
   c.forEach(m=>{
     const div=document.createElement("div");
     div.className="msg "+m.role;
     div.innerText=m.text;
     box.appendChild(div);
   });
+
   box.scrollTop=box.scrollHeight;
+}
+
+
+function quickAsk(text){
+    const c = chats[currentIndex];
+
+    c.push({role:"user", text:text});
+    c.push({role:"ai", text:"● ● ●"});
+
+    saveChats();
+    renderMessages();
+
+    setTimeout(()=>{
+        const lower = text.toLowerCase();
+        let reply = "";
+
+        if(lower.includes("facebook")){
+            reply = `📘 HỖ TRỢ VIẾT BÀI FACEBOOK
+
+Tôi có thể giúp anh/chị viết bài bán hàng chuyên nghiệp.
+
+Anh/chị vui lòng gửi thêm:
+
+◆ Sản phẩm/dịch vụ đang bán
+◆ Khách hàng mục tiêu
+◆ Giá hoặc ưu đãi
+◆ Mục tiêu bài viết: tăng inbox, chốt đơn hay xây dựng thương hiệu
+
+📌 Ngoài ra GPT Mini Premium còn hỗ trợ:
+◆ Dịch vụ Mạng Xã Hội Facebook/TikTok
+◆ Chạy Quảng Cáo Facebook Ads/TikTok Ads
+◆ Tối ưu nội dung bán hàng
+
+📞 Zalo tư vấn trực tiếp: 036 338 2629`;
+        }
+        else if(lower.includes("tiktok")){
+            reply = `🎬 HỖ TRỢ NỘI DUNG TIKTOK
+
+Tôi có thể giúp anh/chị lên ý tưởng video, hook mở đầu và kịch bản TikTok.
+
+Anh/chị vui lòng gửi:
+
+◆ Sản phẩm/dịch vụ
+◆ Tệp khách hàng
+◆ Phong cách muốn làm: chuyên nghiệp, viral, bán hàng hay review
+
+📈 Nếu cần tư vấn chạy quảng cáo TikTok hoặc dịch vụ mạng xã hội:
+Zalo 036 338 2629`;
+        }
+        else if(lower.includes("premium")){
+            reply = `💎 TƯ VẤN GÓI PREMIUM
+
+GPT Mini Premium có các gói:
+
+◆ Cơ Bản: 99.000đ/tháng
+◆ Chuyên Nghiệp: 199.000đ/tháng
+◆ Doanh Nghiệp: 399.000đ/tháng
+◆ Vĩnh Viễn: 599.000đ
+
+Nếu anh/chị kinh doanh online, nên chọn gói Chuyên Nghiệp hoặc Vĩnh Viễn để tối ưu chi phí lâu dài.
+
+📞 Hỗ trợ kích hoạt nhanh qua Zalo:
+036 338 2629`;
+        }
+        else{
+            reply = `🤖 GPT Mini Premium Assistant
+
+Tôi có thể hỗ trợ anh/chị về:
+
+◆ Content bán hàng
+◆ Quảng cáo Facebook/TikTok
+◆ Dịch vụ Mạng Xã Hội
+◆ Website, Landing Page
+◆ AI Automation
+◆ Tư vấn gói Premium
+
+Anh/chị vui lòng mô tả nhu cầu cụ thể để tôi tư vấn phù hợp.
+
+📞 Zalo hỗ trợ trực tiếp: 036 338 2629`;
+        }
+
+        c[c.length-1].text = reply;
+        saveChats();
+        renderMessages();
+    },1500);
 }
 
 async function send(){
   const input=document.getElementById("input");
   const text=input.value.trim();
+
   if(!text)return;
+
   const c=chats[currentIndex];
+
   c.push({role:"user",text});
-  c.push({role:"ai",text:"Đang suy nghĩ..."});
+  c.push({role:"ai",text:"Đang xử lý yêu cầu..."});
+
   input.value="";
   saveChats();
   renderMessages();
@@ -842,28 +1682,312 @@ async function send(){
         headers:{"Content-Type":"application/json"},
         body:JSON.stringify({token:token,message:text})
     });
+
     const d=await r.json();
-    if(d.limit_reached){
-        c[c.length-1].text="⚠️ Bạn đã hết lượt miễn phí/gói hiện tại. Vui lòng nâng cấp để tiếp tục.";
-        openPremium();
-    }else{
-        c[c.length-1].text=d.reply||"AI không có phản hồi.";
+    const raw = JSON.stringify(d).toLowerCase();
+
+    if(
+        d.limit_reached ||
+        raw.includes("429") ||
+        raw.includes("resource_exhausted") ||
+        raw.includes("quota") ||
+        raw.includes("exceeded your current quota")
+    ){
+        c[c.length-1].text = `⚡ Phiên làm việc miễn phí đã đạt giới hạn tài nguyên.
+
+Để đảm bảo trải nghiệm ổn định và sử dụng liên tục, vui lòng nâng cấp lên GPT Mini Premium.
+
+Premium bao gồm:
+◆ Không giới hạn lượt sử dụng
+◆ Truy cập toàn bộ tính năng AI
+◆ Tốc độ phản hồi ưu tiên
+◆ Hỗ trợ kỹ thuật riêng
+
+💎 Nâng Cấp Premium Ngay
+📞 Zalo hỗ trợ: 036 338 2629`;
+
+        saveChats();
+        renderMessages();
+        loadStatus();
+
+        setTimeout(()=>{
+            openPremium();
+        },1200);
+
+        return;
     }
+
+    c[c.length-1].text=d.reply||"AI không có phản hồi.";
+
     saveChats();
     renderMessages();
     loadStatus();
+
   }catch(e){
-    c[c.length-1].text="Không kết nối được server. Kiểm tra server.py đang chạy chưa.";
+    c[c.length-1].text = `🔄 Hệ thống AI đang tạm thời xử lý lượng yêu cầu lớn.
+
+Kết nối có thể đang chậm hoặc máy chủ AI đang bảo trì trong giây lát.
+
+Vui lòng thử lại sau ít phút.
+
+━━━━━━━━━━━━━━━
+
+⚡ Phiên làm việc miễn phí có thể đã đạt giới hạn tài nguyên.
+
+Để đảm bảo trải nghiệm ổn định và sử dụng liên tục, vui lòng nâng cấp lên GPT Mini Premium.
+
+Premium bao gồm:
+◆ Không giới hạn lượt sử dụng
+◆ Truy cập toàn bộ tính năng AI
+◆ Tốc độ phản hồi ưu tiên
+◆ Hỗ trợ kỹ thuật riêng
+
+💎 Nâng Cấp Premium Ngay
+📞 Zalo hỗ trợ: 036 338 2629`;
+
     saveChats();
     renderMessages();
+
+    setTimeout(()=>{
+        openPremium();
+    },1500);
   }
+}
+
+
+
+
+
+function addSupportMessage(role, text){
+    const box = document.getElementById("supportChatBox");
+    if(!box) return;
+
+    const div = document.createElement("div");
+    div.className = "support-msg " + role;
+    div.innerText = text;
+    box.appendChild(div);
+    box.scrollTop = box.scrollHeight;
+}
+
+function initSupportChat(){
+    const box = document.getElementById("supportChatBox");
+    if(!box || box.dataset.ready === "1") return;
+
+    box.dataset.ready = "1";
+    addSupportMessage("bot", `🤖 Xin chào anh/chị.
+
+Em là nhân viên hỗ trợ GPT Mini Premium.
+
+Anh/chị cần hỗ trợ gì hôm nay?
+
+◆ Kích hoạt Premium
+◆ Kiểm tra thanh toán
+◆ Báo lỗi hệ thống
+◆ Tư vấn gói phù hợp
+◆ Hỗ trợ kỹ thuật
+
+Em đang trực tuyến và sẵn sàng hỗ trợ.`);
+}
+
+function supportAutoReply(msg){
+    const text = msg.toLowerCase();
+
+    if(text.includes("premium") || text.includes("nâng cấp") || text.includes("kich hoat") || text.includes("kích hoạt") || text.includes("gói")){
+        return `💎 HỖ TRỢ KÍCH HOẠT PREMIUM
+
+Dạ được ạ. Anh/chị vui lòng gửi giúp em:
+
+◆ Tên tài khoản đăng nhập
+◆ Gói muốn kích hoạt
+◆ Mã giao dịch hoặc nội dung chuyển khoản
+◆ Thời gian chuyển khoản nếu có
+
+Sau khi nhận được thông tin, hệ thống sẽ kiểm tra và hỗ trợ kích hoạt tài khoản trong thời gian sớm nhất.`;
+    }
+
+    if(text.includes("thanh toán") || text.includes("chuyển khoản") || text.includes("ck") || text.includes("mã giao dịch")){
+        return `💳 HỖ TRỢ KIỂM TRA THANH TOÁN
+
+Anh/chị vui lòng gửi giúp em:
+
+◆ Tên tài khoản đăng nhập
+◆ Gói đã thanh toán
+◆ Nội dung chuyển khoản
+◆ Mã giao dịch hoặc ảnh giao dịch nếu có
+
+Em sẽ ghi nhận thông tin để bộ phận hỗ trợ kiểm tra nhanh nhất.`;
+    }
+
+    if(text.includes("lỗi") || text.includes("loi") || text.includes("error") || text.includes("không dùng") || text.includes("không được")){
+        return `🛠 HỖ TRỢ KỸ THUẬT
+
+Anh/chị vui lòng mô tả thêm giúp em:
+
+◆ Anh/chị đang dùng tính năng nào
+◆ Nội dung lỗi hiển thị
+◆ Thiết bị đang sử dụng
+◆ Ảnh chụp màn hình nếu có
+
+Em sẽ ghi nhận để hỗ trợ kiểm tra chính xác hơn.`;
+    }
+
+    if(text.includes("giá") || text.includes("bao nhiêu") || text.includes("tư vấn")){
+        return `💼 TƯ VẤN GÓI PHÙ HỢP
+
+Hiện GPT Mini Premium có các gói:
+
+◆ Cơ Bản: 99.000đ/tháng
+◆ Chuyên Nghiệp: 199.000đ/tháng
+◆ Doanh Nghiệp: 399.000đ/tháng
+◆ Vĩnh Viễn: 599.000đ
+
+Nếu anh/chị đang bán hàng online, em khuyên chọn gói Chuyên Nghiệp hoặc Vĩnh Viễn để tối ưu chi phí lâu dài.`;
+    }
+
+    return `💬 Em đã nhận được nội dung của anh/chị.
+
+Hiện yêu cầu này cần được hỗ trợ trực tiếp để xử lý chính xác hơn.
+
+Anh/chị vui lòng liên hệ Zalo để được tư vấn nhanh:
+
+📞 Zalo hỗ trợ trực tiếp: 036 338 2629
+
+Đội ngũ hỗ trợ có thể tư vấn:
+◆ Kích hoạt Premium
+◆ Kiểm tra thanh toán
+◆ Dịch vụ Mạng Xã Hội Facebook/TikTok
+◆ Chạy quảng cáo Facebook Ads/TikTok Ads
+◆ Website, Landing Page và AI Automation
+
+Em vẫn sẵn sàng ghi nhận thêm thông tin nếu anh/chị muốn mô tả chi tiết hơn.`;
+}
+
+async function sendSupport(){
+    const input = document.getElementById("supportMessage");
+    const msg = input.value.trim();
+
+    if(!msg) return;
+
+    addSupportMessage("user", msg);
+    input.value = "";
+
+    setTimeout(()=>{
+        const reply = supportAutoReply(msg);
+        addSupportMessage("bot", reply);
+    }, 500);
+
+    try{
+        await fetch(API+"/support",{
+            method:"POST",
+            headers:{"Content-Type":"application/json"},
+            body:JSON.stringify({
+                token:token,
+                message:msg
+            })
+        });
+    }catch(e){}
+}
+
+
+function showPremiumChatMessage(toolName){
+    const c = chats[currentIndex];
+
+    c.push({role:"ai", text:"● ● ●"});
+    saveChats();
+    renderMessages();
+
+    setTimeout(()=>{
+        c[c.length-1].text =
+`👋 Xin chào anh/chị,
+
+🔒 Tính năng "${toolName}" thuộc gói Premium AI Suite.
+
+Tài khoản hiện tại chưa kích hoạt Premium nên chưa thể sử dụng công cụ này.
+
+━━━━━━━━━━━━━━━
+
+💎 Khi nâng cấp Premium anh/chị sẽ được mở khóa:
+
+◆ Tạo Ảnh AI
+◆ Tạo Video AI
+◆ Tạo Giọng Nói AI
+◆ Tạo Website AI
+◆ AI Automation
+◆ Phân Tích Dữ Liệu
+◆ Kế Hoạch Marketing
+◆ Landing Page Chuyên Nghiệp
+
+━━━━━━━━━━━━━━━
+
+📞 Hỗ trợ kích hoạt nhanh qua Zalo:
+036 338 2629
+
+💬 Chuyên viên sẽ tư vấn gói phù hợp, hỗ trợ kích hoạt và hướng dẫn sử dụng chi tiết.`;
+
+        saveChats();
+        renderMessages();
+    },5000);
+}
+
+function openFeatureLock(toolName){
+    const el = document.getElementById("lockedFeatureText");
+    if(el){
+        el.innerText = "Anh/chị đang truy cập: " + toolName + ". Đây là tính năng cao cấp chỉ mở cho thành viên GPT Mini Premium.";
+    }
+    showPremiumChatMessage(toolName);
+    document.getElementById("featureLockModal").style.display = "flex";
+}
+
+function closeFeatureLock(){
+    document.getElementById("featureLockModal").style.display = "none";
+}
+
+function goPremiumFromLock(){
+    closeFeatureLock();
+    openPremium();
+}
+
+function initPremiumTools(){
+    document.querySelectorAll(".premium-tool").forEach(btn=>{
+        btn.onclick = function(){
+            openFeatureLock(this.getAttribute("data-tool") || "Premium");
+        };
+    });
+}
+
+
+let memberNumber = 1285;
+let requestNumber = 8921;
+
+function formatPlusNumber(num){
+    return num.toLocaleString("vi-VN") + "+";
+}
+
+function startLiveStats(){
+    setInterval(()=>{
+        memberNumber += Math.floor(Math.random() * 3) + 1;
+        requestNumber += Math.floor(Math.random() * 8) + 2;
+
+        const memberEl = document.getElementById("memberCount");
+        const requestEl = document.getElementById("requestCount");
+
+        if(memberEl) memberEl.innerText = formatPlusNumber(memberNumber);
+        if(requestEl) requestEl.innerText = formatPlusNumber(requestNumber);
+    },2500);
 }
 
 document.getElementById("input").addEventListener("keydown",e=>{
     if(e.key==="Enter")send();
 });
 
-if(token&&username)showApp();else showAuth();
+initPremiumTools();
+
+if(token&&username){
+    showApp();
+}else{
+    showAuth();
+}
 </script>
+
 </body>
 </html>
