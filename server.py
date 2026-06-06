@@ -109,6 +109,19 @@ class AdminApproveRequest(BaseModel):
     admin_password: str
     plan: str = "business"
 
+class AdminExtendRequest(BaseModel):
+    username: str
+    admin_password: str
+    days: int = 30
+
+class AdminExpireRequest(BaseModel):
+    username: str
+    admin_password: str
+
+class AdminDeleteRequest(BaseModel):
+    username: str
+    admin_password: str
+
 def today() -> str:
     return str(date.today())
 
@@ -294,6 +307,20 @@ def supabase_update_user(username: str, updates: dict):
             headers=supabase_headers("return=minimal"),
             params={COL_USERNAME: f"eq.{username}"},
             json=payload,
+            timeout=12
+        )
+        return res.status_code < 400
+    except Exception:
+        return False
+
+def supabase_delete_user(username: str):
+    if not supabase_enabled():
+        return False
+    try:
+        res = requests.delete(
+            supabase_table_url(),
+            headers=supabase_headers("return=minimal"),
+            params={COL_USERNAME: f"eq.{username}"},
             timeout=12
         )
         return res.status_code < 400
@@ -856,68 +883,143 @@ def admin_page():
 <meta charset="UTF-8">
 <title>GPT Mini Premium Admin</title>
 <style>
-body{font-family:Arial;background:#020617;color:white;padding:30px}
-h1{color:#38bdf8}
-.card{background:#0f172a;border:1px solid #334155;border-radius:16px;padding:20px;margin:15px 0}
-button{padding:12px 18px;border:none;border-radius:10px;background:#22c55e;color:white;font-weight:bold;cursor:pointer;margin:4px}
-input,select{padding:12px;border-radius:10px;border:1px solid #334155;background:#020617;color:white;margin:5px}
-.badge{padding:5px 10px;border-radius:999px;background:#2563eb}
+*{box-sizing:border-box}
+body{font-family:Arial,system-ui;background:#020617;color:white;margin:0;padding:28px}
+h1{color:#38bdf8;margin:0 0 8px}
+p{color:#cbd5e1}
+.header{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:22px}
+.panel{background:#0f172a;border:1px solid #334155;border-radius:18px;padding:18px;margin:15px 0}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:14px}
+.card{background:#111827;border:1px solid #334155;border-radius:16px;padding:18px}
+input,select{padding:12px;border-radius:10px;border:1px solid #334155;background:#020617;color:white;margin:4px;width:100%}
+button{padding:11px 14px;border:none;border-radius:10px;background:#2563eb;color:white;font-weight:bold;cursor:pointer;margin:4px}
+button.green{background:#22c55e}
+button.orange{background:#f59e0b}
+button.red{background:#ef4444}
+button.gray{background:#475569}
+.badge{display:inline-block;padding:5px 10px;border-radius:999px;background:#2563eb;font-weight:bold}
+.badge.free{background:#64748b}
+.badge.pro,.badge.basic,.badge.business,.badge.premium{background:#16a34a}
+.badge.lifetime{background:#a855f7}
+.row{display:flex;gap:8px;flex-wrap:wrap}
+.row button{flex:1}
+.small{font-size:13px;color:#94a3b8;line-height:1.6}
+.search{max-width:420px}
+.notice{background:#172554;border:1px solid #2563eb;color:#dbeafe;border-radius:14px;padding:14px;margin-bottom:16px}
 </style>
 </head>
 <body>
-<h1>⚡ GPT Mini Premium Admin</h1>
-<p>Mật khẩu admin:</p>
-<input id="adminPassword" type="password" placeholder="Mật khẩu admin" value="admin123">
-<button onclick="loadData()">Tải dữ liệu</button>
+<div class="header">
+    <div>
+        <h1>⚡ GPT Mini Premium Admin</h1>
+        <p>Quản lý khách hàng, nâng cấp gói, gia hạn 30 ngày và khóa tài khoản.</p>
+    </div>
+    <button class="green" onclick="loadData()">🔄 Tải dữ liệu</button>
+</div>
+
+<div class="notice">
+    <b>Hướng dẫn nhanh:</b> Nhập mật khẩu admin → Tải dữ liệu → Chọn gói hoặc bấm Gia hạn 30 ngày cho khách.
+</div>
+
+<div class="panel">
+    <label>Mật khẩu admin</label>
+    <input id="adminPassword" type="password" placeholder="Nhập mật khẩu admin" value="admin123">
+    <label>Tìm khách hàng</label>
+    <input class="search" id="searchBox" placeholder="Tìm theo username, email, số điện thoại..." oninput="renderUsers()">
+</div>
+
 <h2>👥 Danh sách tài khoản</h2>
-<div id="users"></div>
+<div id="users" class="grid"></div>
+
 <h2>💳 Khách báo thanh toán / hỗ trợ</h2>
-<div id="payments"></div>
+<div id="payments" class="grid"></div>
+
 <script>
+let allData = {users:{}, support:{}};
+
+function planBadge(plan){
+    plan = plan || "free";
+    return `<span class="badge ${plan}">${plan.toUpperCase()}</span>`;
+}
+
+function expiredText(u){
+    if(!u.expires_at) return (u.plan === "lifetime") ? "Vĩnh viễn" : "Chưa có";
+    const today = new Date().toISOString().slice(0,10);
+    if(u.expires_at < today) return `<b style="color:#ef4444">${u.expires_at} - ĐÃ HẾT HẠN</b>`;
+    return `<b style="color:#22c55e">${u.expires_at}</b>`;
+}
+
 async function loadData(){
     const res = await fetch("/admin-data");
-    const data = await res.json();
+    allData = await res.json();
+    renderUsers();
+    renderSupport();
+}
+
+function renderUsers(){
     const usersBox = document.getElementById("users");
+    const q = (document.getElementById("searchBox").value || "").toLowerCase();
     usersBox.innerHTML = "";
-    Object.keys(data.users).forEach(username=>{
-        const u = data.users[username];
-        const plan = u.plan || "free";
+
+    Object.keys(allData.users || {}).forEach(username=>{
+        const u = allData.users[username];
+        const text = `${username} ${u.email||""} ${u.phone||""}`.toLowerCase();
+        if(q && !text.includes(q)) return;
+
         usersBox.innerHTML += `
         <div class="card">
-            <b>👤 ${username}</b><br><br>
-            Gói hiện tại: <span class="badge">${plan}</span><br><br>
-            Gmail: ${u.email || "Chưa có"}<br>
-            SĐT/Zalo: ${u.phone || "Chưa có"}<br>
-            Ngày đăng ký: ${u.registered_at || "Chưa có"}<br>
-            Hết hạn: ${u.expires_at || (plan === "lifetime" ? "Vĩnh viễn" : "Chưa có")}<br><br>
-            Đã dùng: ${u.used || 0} lượt<br><br>
+            <h3>👤 ${username}</h3>
+            <div>Gói: ${planBadge(u.plan || "free")}</div><br>
+            <div class="small">
+                Gmail: ${u.email || "Chưa có"}<br>
+                SĐT/Zalo: ${u.phone || "Chưa có"}<br>
+                Ngày đăng ký: ${u.registered_at || u.created_at || "Chưa có"}<br>
+                Hết hạn: ${expiredText(u)}<br>
+                Đã dùng: ${u.used || 0} lượt
+            </div><br>
+
             <select id="plan_${username}">
                 <option value="free">Free</option>
-                <option value="basic">Cơ Bản 99k</option>
-                <option value="pro">Chuyên Nghiệp 199k</option>
-                <option value="business">Doanh Nghiệp 399k</option>
+                <option value="basic">Cơ Bản 99k - 30 ngày</option>
+                <option value="pro">Chuyên Nghiệp 199k - 30 ngày</option>
+                <option value="business">Doanh Nghiệp 399k - 30 ngày</option>
                 <option value="lifetime">Vĩnh Viễn 599k</option>
             </select>
-            <button onclick="approve('${username}')">Cập nhật gói</button>
+
+            <div class="row">
+                <button class="green" onclick="approve('${username}')">💎 Cập nhật gói</button>
+                <button class="orange" onclick="extendUser('${username}',30)">📅 Gia hạn 30 ngày</button>
+            </div>
+            <div class="row">
+                <button class="gray" onclick="expireUser('${username}')">🚫 Cho hết hạn</button>
+                <button class="red" onclick="deleteUser('${username}')">🗑️ Xóa</button>
+            </div>
         </div>`;
     });
+}
 
+function renderSupport(){
     const paymentsBox = document.getElementById("payments");
     paymentsBox.innerHTML = "";
-    Object.keys(data.support).forEach(username=>{
-        data.support[username].slice().reverse().forEach(msg=>{
+    Object.keys(allData.support || {}).forEach(username=>{
+        allData.support[username].slice().reverse().forEach(msg=>{
             paymentsBox.innerHTML += `
             <div class="card">
-                <b>👤 ${username}</b><br><br>
-                ${msg.message}<br><br>
-                <button onclick="quickApprove('${username}','basic')">Duyệt Cơ Bản</button>
-                <button onclick="quickApprove('${username}','pro')">Duyệt Chuyên Nghiệp</button>
-                <button onclick="quickApprove('${username}','business')">Duyệt Doanh Nghiệp</button>
-                <button onclick="quickApprove('${username}','lifetime')">Duyệt Vĩnh Viễn</button>
+                <h3>👤 ${username}</h3>
+                <div class="small">${msg.message}</div><br>
+                <div class="row">
+                    <button onclick="quickApprove('${username}','basic')">Cơ Bản</button>
+                    <button onclick="quickApprove('${username}','pro')">Pro</button>
+                </div>
+                <div class="row">
+                    <button onclick="quickApprove('${username}','business')">Doanh Nghiệp</button>
+                    <button onclick="quickApprove('${username}','lifetime')">Vĩnh Viễn</button>
+                </div>
             </div>`;
         });
     });
 }
+
 async function approve(username){
     const password = document.getElementById("adminPassword").value;
     const plan = document.getElementById("plan_" + username).value;
@@ -930,6 +1032,7 @@ async function approve(username){
     alert(data.message);
     loadData();
 }
+
 async function quickApprove(username, plan){
     const password = document.getElementById("adminPassword").value;
     const res = await fetch("/admin-approve", {
@@ -941,6 +1044,46 @@ async function quickApprove(username, plan){
     alert(data.message);
     loadData();
 }
+
+async function extendUser(username, days){
+    const password = document.getElementById("adminPassword").value;
+    const res = await fetch("/admin-extend", {
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({username, admin_password:password, days})
+    });
+    const data = await res.json();
+    alert(data.message);
+    loadData();
+}
+
+async function expireUser(username){
+    if(!confirm("Cho tài khoản này hết hạn ngay?")) return;
+    const password = document.getElementById("adminPassword").value;
+    const res = await fetch("/admin-expire", {
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({username, admin_password:password})
+    });
+    const data = await res.json();
+    alert(data.message);
+    loadData();
+}
+
+async function deleteUser(username){
+    if(!confirm("Xóa tài khoản này khỏi hệ thống?")) return;
+    const password = document.getElementById("adminPassword").value;
+    const res = await fetch("/admin-delete", {
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({username, admin_password:password})
+    });
+    const data = await res.json();
+    alert(data.message);
+    loadData();
+}
+
+loadData();
 </script>
 </body>
 </html>
@@ -962,6 +1105,7 @@ def admin_approve(req: AdminApproveRequest):
 
     users[username]["plan"] = req.plan
     users[username]["used"] = 0
+
     if req.plan == "lifetime":
         users[username]["expires_at"] = None
     elif req.plan == "free":
@@ -975,6 +1119,76 @@ def admin_approve(req: AdminApproveRequest):
 
     expire_msg = "vĩnh viễn" if req.plan == "lifetime" else (f"đến ngày {users[username].get('expires_at')}" if req.plan != "free" else "")
     return {"success": True, "message": f"Đã cập nhật tài khoản {username} thành gói {PLAN_LABELS.get(req.plan, req.plan)} {expire_msg}."}
+
+@app.post("/admin-extend")
+def admin_extend(req: AdminExtendRequest):
+    if req.admin_password != ADMIN_PASSWORD:
+        return {"success": False, "message": "Sai mật khẩu admin."}
+
+    users = load_users()
+    username = safe_username(req.username)
+    if username not in users:
+        return {"success": False, "message": "Không tìm thấy tài khoản."}
+
+    user = users[username]
+    current_exp = parse_date(user.get("expires_at"))
+    base_date = current_exp if current_exp and current_exp >= date.today() else date.today()
+    new_exp = str(base_date + timedelta(days=max(1, int(req.days))))
+
+    if user.get("plan", "free") == "free":
+        user["plan"] = "pro"
+
+    if user.get("plan") == "lifetime":
+        return {"success": True, "message": f"Tài khoản {username} là gói vĩnh viễn, không cần gia hạn."}
+
+    user["expires_at"] = new_exp
+    user["used"] = 0
+
+    if supabase_enabled():
+        supabase_update_user(username, {"plan": user.get("plan", "pro"), "used": 0, "expires_at": new_exp})
+    save_users(users)
+
+    return {"success": True, "message": f"Đã gia hạn {req.days} ngày cho {username}. Hạn mới: {new_exp}."}
+
+@app.post("/admin-expire")
+def admin_expire(req: AdminExpireRequest):
+    if req.admin_password != ADMIN_PASSWORD:
+        return {"success": False, "message": "Sai mật khẩu admin."}
+
+    users = load_users()
+    username = safe_username(req.username)
+    if username not in users:
+        return {"success": False, "message": "Không tìm thấy tài khoản."}
+
+    users[username]["plan"] = "free"
+    users[username]["expires_at"] = str(date.today() - timedelta(days=1))
+    users[username]["used"] = FREE_LIMIT
+
+    if supabase_enabled():
+        supabase_update_user(username, {"plan": "free", "used": FREE_LIMIT, "expires_at": users[username]["expires_at"]})
+    save_users(users)
+
+    return {"success": True, "message": f"Đã cho tài khoản {username} hết hạn."}
+
+@app.post("/admin-delete")
+def admin_delete(req: AdminDeleteRequest):
+    if req.admin_password != ADMIN_PASSWORD:
+        return {"success": False, "message": "Sai mật khẩu admin."}
+
+    users = load_users()
+    username = safe_username(req.username)
+    if username not in users:
+        return {"success": False, "message": "Không tìm thấy tài khoản."}
+
+    if supabase_enabled():
+        supabase_delete_user(username)
+
+    local_users = load_json(USERS_FILE)
+    if username in local_users:
+        del local_users[username]
+        save_json(USERS_FILE, local_users)
+
+    return {"success": True, "message": f"Đã xóa tài khoản {username}."}
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8005))
