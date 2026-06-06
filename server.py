@@ -991,6 +991,7 @@ function renderUsers(){
                 <button class="orange" onclick="extendUser('${username}',30)">📅 Gia hạn 30 ngày</button>
             </div>
             <div class="row">
+                <button class="green" onclick="quickApprove('${username}','lifetime')">♾️ Gói vĩnh viễn</button>
                 <button class="gray" onclick="expireUser('${username}')">🚫 Cho hết hạn</button>
                 <button class="red" onclick="deleteUser('${username}')">🗑️ Xóa</button>
             </div>
@@ -1013,7 +1014,7 @@ function renderSupport(){
                 </div>
                 <div class="row">
                     <button onclick="quickApprove('${username}','business')">Doanh Nghiệp</button>
-                    <button onclick="quickApprove('${username}','lifetime')">Vĩnh Viễn</button>
+                    <button class="green" onclick="quickApprove('${username}','lifetime')">♾️ Vĩnh Viễn</button>
                 </div>
             </div>`;
         });
