@@ -337,8 +337,9 @@ button{
 }
 
 .check{
-    color:#22c55e;
-    font-weight:bold;
+    color:#fbbf24;
+    font-weight:900;
+    font-size:18px;
 }
 
 .blue .plan-price,.blue .plan-name{color:#38bdf8}
@@ -836,7 +837,8 @@ button{
 
 .check{
     color:#fbbf24!important;
-    font-size:16px;
+    font-size:18px;
+    font-weight:900;
 }
 
 @media(max-width:1100px){
@@ -1065,9 +1067,228 @@ button{
     margin-right:auto!important;
 }
 
+
+/* ===== EXACT PREMIUM SALES MODULE ===== */
+.premium-showcase{
+    max-width:1000px;
+    margin:34px auto 0;
+    padding:24px;
+    border-radius:24px;
+    background:linear-gradient(180deg,#0f172a,#071126);
+    border:1px solid rgba(251,191,36,.38);
+    box-shadow:0 0 40px rgba(251,191,36,.10);
+    text-align:left;
+}
+.premium-showcase h2{
+    text-align:center;
+    color:#fbbf24;
+    margin:0 0 20px;
+    font-size:28px;
+    letter-spacing:.3px;
+}
+.premium-showcase-grid{
+    display:grid;
+    grid-template-columns:repeat(2,1fr);
+    gap:18px;
+}
+.premium-box{
+    background:#111827;
+    border:1px solid #334155;
+    border-radius:20px;
+    padding:20px;
+    transition:.25s;
+}
+.premium-box:hover{
+    transform:translateY(-5px);
+    border-color:#38bdf8;
+    box-shadow:0 0 28px rgba(56,189,248,.18);
+}
+.premium-box h3{
+    margin:0 0 12px;
+    color:#38bdf8;
+    font-size:20px;
+}
+.premium-box p{
+    color:#f8fafc;
+    margin:0 0 8px;
+    font-weight:800;
+}
+.premium-box ul{
+    margin:10px 0 16px;
+    padding-left:20px;
+    color:#cbd5e1;
+    line-height:1.75;
+}
+.premium-box button{
+    width:100%;
+    border-radius:14px;
+    padding:14px;
+}
+.premium-compare{
+    max-width:1000px;
+    margin:28px auto 0;
+    padding:24px;
+    border-radius:24px;
+    background:#0f172a;
+    border:1px solid #334155;
+    box-shadow:0 0 28px rgba(56,189,248,.08);
+}
+.premium-compare h2{
+    text-align:center;
+    color:#fbbf24;
+    margin:0 0 18px;
+}
+.premium-compare table{
+    width:100%;
+    border-collapse:collapse;
+    color:white;
+    overflow:hidden;
+    border-radius:18px;
+}
+.premium-compare th,.premium-compare td{
+    border:1px solid #334155;
+    padding:14px;
+    text-align:center;
+}
+.premium-compare th{
+    background:#111827;
+    color:#38bdf8;
+}
+.premium-compare td:first-child{
+    text-align:left;
+    font-weight:800;
+    color:#e5e7eb;
+}
+.premium-feature-modal{
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,.75);
+    display:none;
+    align-items:center;
+    justify-content:center;
+    z-index:100003;
+}
+.premium-feature-card{
+    width:620px;
+    max-width:calc(100vw - 30px);
+    max-height:90vh;
+    overflow:auto;
+    background:#0f172a;
+    border:1px solid #334155;
+    border-radius:24px;
+    padding:24px;
+    color:white;
+    box-shadow:0 24px 90px rgba(0,0,0,.75);
+}
+.premium-feature-card h2{
+    color:#fbbf24;
+    margin-top:0;
+    text-align:center;
+}
+.premium-feature-body{
+    background:#020617;
+    border:1px solid #334155;
+    border-radius:18px;
+    padding:18px;
+    white-space:pre-wrap;
+    line-height:1.7;
+    color:#e5e7eb;
+}
+.premium-feature-actions{
+    display:flex;
+    gap:10px;
+    margin-top:15px;
+}
+.premium-feature-actions button{
+    flex:1;
+}
+.exit-premium-offer{
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,.75);
+    display:none;
+    align-items:center;
+    justify-content:center;
+    z-index:100004;
+}
+.exit-premium-card{
+    width:540px;
+    max-width:calc(100vw - 30px);
+    background:#0f172a;
+    border:1px solid rgba(251,191,36,.45);
+    border-radius:24px;
+    padding:24px;
+    color:white;
+    text-align:center;
+    box-shadow:0 24px 90px rgba(0,0,0,.75);
+}
+.exit-premium-card h2{
+    color:#fbbf24;
+    margin-top:0;
+}
+.exit-premium-card p{
+    color:#cbd5e1;
+    line-height:1.65;
+}
+@media(max-width:900px){
+    .premium-showcase-grid{grid-template-columns:1fr}
+}
+
+
+/* ===== PUBLIC LANDING PAGE BEFORE LOGIN - FIXED ===== */
+.public-landing{width:100%;height:100vh;overflow-y:auto;background:radial-gradient(circle at top left,rgba(56,189,248,.18),transparent 35%),radial-gradient(circle at top right,rgba(251,191,36,.14),transparent 32%),linear-gradient(135deg,#020617,#0f172a);color:white;display:block}
+.landing-wrap{max-width:1180px;margin:0 auto;padding:28px 22px 60px}
+.landing-nav{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:36px}
+.landing-logo{font-size:28px;font-weight:900;color:#38bdf8}.landing-nav-actions{display:flex;gap:10px;flex-wrap:wrap}
+.landing-btn{border:none;border-radius:999px;padding:14px 20px;font-weight:900;cursor:pointer;color:white;background:linear-gradient(135deg,#2563eb,#06b6d4)}
+.landing-btn.orange{background:linear-gradient(135deg,#f59e0b,#ef4444)}.landing-btn.dark{background:#111827;border:1px solid #334155}
+.landing-hero{display:grid;grid-template-columns:1.1fr .9fr;gap:26px;align-items:center}
+.landing-kicker{display:inline-block;padding:8px 14px;border-radius:999px;background:rgba(251,191,36,.12);border:1px solid rgba(251,191,36,.35);color:#fbbf24;font-weight:900;margin-bottom:14px}
+.landing-title{font-size:50px;line-height:1.08;margin:0 0 18px;font-weight:900}.landing-title span{color:#38bdf8}
+.landing-desc{color:#cbd5e1;font-size:18px;line-height:1.65;margin-bottom:22px}.landing-cta-row{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:18px}
+.landing-trust{color:#94a3b8;font-size:14px;line-height:1.6}
+.landing-card{background:rgba(15,23,42,.88);border:1px solid #334155;border-radius:26px;padding:22px;box-shadow:0 24px 80px rgba(0,0,0,.35)}
+.landing-card h3{margin:0 0 12px;color:#fbbf24;font-size:24px}.problem-list,.benefit-list{display:grid;gap:10px;margin-top:12px}
+.problem-item,.benefit-item{padding:12px;border-radius:14px;background:#111827;border:1px solid #334155;color:#e5e7eb;line-height:1.5}.problem-item{border-left:4px solid #ef4444}.benefit-item{border-left:4px solid #22c55e}
+.landing-section{margin-top:38px}.landing-section h2{text-align:center;color:#fbbf24;font-size:32px;margin:0 0 18px}
+.landing-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}.landing-tool-card{background:linear-gradient(180deg,#111827,#0b1224);border:1px solid #334155;border-radius:20px;padding:18px;cursor:pointer;transition:.25s;min-height:210px}
+.landing-tool-card:hover{transform:translateY(-5px);border-color:#38bdf8;box-shadow:0 0 26px rgba(56,189,248,.18)}.landing-tool-card h3{margin:0 0 10px;color:#38bdf8}.landing-tool-card p{color:#cbd5e1;line-height:1.6;font-size:14px}
+.landing-compare{width:100%;border-collapse:collapse;background:#0f172a;border-radius:20px;overflow:hidden}.landing-compare th,.landing-compare td{border:1px solid #334155;padding:14px;text-align:center}.landing-compare th{background:#111827;color:#38bdf8}.landing-compare td:first-child{text-align:left;font-weight:800}
+.landing-proof{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}.landing-proof-card{background:#111827;border:1px solid #334155;border-radius:20px;padding:18px;color:#cbd5e1;line-height:1.6}.landing-proof-card b{color:#fbbf24}
+.landing-final{text-align:center;margin-top:38px;padding:30px;border-radius:26px;background:linear-gradient(135deg,rgba(37,99,235,.18),rgba(249,115,22,.16));border:1px solid rgba(251,191,36,.35)}
+.landing-final h2{color:#fbbf24;margin-top:0}.landing-mini-note{color:#94a3b8;font-size:13px;margin-top:12px}
+@media(max-width:1000px){.landing-hero{grid-template-columns:1fr}.landing-grid{grid-template-columns:1fr 1fr}.landing-proof{grid-template-columns:1fr}.landing-title{font-size:38px}}
+@media(max-width:620px){.landing-grid{grid-template-columns:1fr}.landing-nav{align-items:flex-start;flex-direction:column}.landing-title{font-size:32px}}
+
 </style>
 <!-- Google Analytics -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-1ZNYNTMNYC"></script>
+
+<div id="premiumFeatureModal" class="premium-feature-modal">
+    <div class="premium-feature-card">
+        <h2 id="premiumFeatureTitle">AI PREMIUM</h2>
+        <div id="premiumFeatureBody" class="premium-feature-body"></div>
+        <div class="premium-feature-actions">
+            <button class="close-btn" onclick="closePremiumFeature()">Đóng</button>
+            <button onclick="closePremiumFeature();openPremium()">💎 Nâng cấp ngay</button>
+        </div>
+    </div>
+</div>
+
+<div id="exitPremiumOffer" class="exit-premium-offer">
+    <div class="exit-premium-card">
+        <h2>🔥 Bạn sắp rời khỏi GPT Mini Premium</h2>
+        <p>
+            Nhận ngay toàn bộ Facebook Ads, TikTok Ads, Landing Page và AI Automation chỉ từ
+            <b style="color:#fbbf24;">99.000đ/tháng</b>.
+            <br><br>
+            Bạn có muốn xem lại ưu đãi không?
+        </p>
+        <button class="close-btn" onclick="closeExitPremiumOffer()">Để sau</button>
+        <button onclick="closeExitPremiumOffer();openPremium()">💎 Xem ưu đãi Premium</button>
+    </div>
+</div>
+
 <script>
 window.dataLayer = window.dataLayer || [];
 function gtag(){dataLayer.push(arguments);}
@@ -1079,7 +1300,85 @@ gtag('config', 'G-1ZNYNTMNYC');
 
 <body>
 
-<div id="authScreen" class="auth-screen">
+<div id="landingPage" class="public-landing">
+ <div class="landing-wrap">
+  <div class="landing-nav">
+   <div class="landing-logo">⚡ GPT Mini Premium</div>
+   <div class="landing-nav-actions">
+    <button class="landing-btn dark" onclick="openAuth('login')">Đăng nhập</button>
+    <button class="landing-btn orange" onclick="openAuth('register')">Dùng thử miễn phí</button>
+   </div>
+  </div>
+  <div class="landing-hero">
+   <div>
+    <div class="landing-kicker">🚀 AI chuyên cho Marketing • Content • Automation • Kinh doanh online</div>
+    <h1 class="landing-title">Tạo content, quảng cáo và kịch bản bán hàng <span>nhanh hơn mỗi ngày</span></h1>
+    <div class="landing-desc">GPT Mini Premium giúp chủ shop, người bán dịch vụ và nhà quảng cáo tạo nội dung Facebook, TikTok, chốt sale inbox, landing page và kế hoạch marketing chuyên nghiệp chỉ trong vài phút.</div>
+    <div class="landing-cta-row">
+     <button class="landing-btn orange" onclick="openAuth('register')">🔥 Bắt đầu dùng thử</button>
+     <button class="landing-btn" onclick="openAuth('login')">💎 Vào tài khoản</button>
+     <button class="landing-btn dark" onclick="scrollToLandingPricing()">Xem Free / Premium</button>
+    </div>
+    <div class="landing-trust">📞 Zalo hỗ trợ: <b>036 338 2629</b> | ✉️ Email: <b>gptminipro@gmail.com</b><br>Đăng ký miễn phí, nâng cấp Premium khi cần dùng bộ công cụ chuyên sâu.</div>
+   </div>
+   <div class="landing-card">
+    <h3>🚨 Bạn đang gặp vấn đề?</h3>
+    <div class="problem-list">
+     <div class="problem-item">🚨 Đăng bài đều nhưng không ra đơn</div>
+     <div class="problem-item">🚨 Chạy quảng cáo tốn tiền nhưng ít khách</div>
+     <div class="problem-item">🚨 Không biết viết content bán hàng</div>
+     <div class="problem-item">🚨 Khách hỏi rồi im lặng, khó chốt đơn</div>
+    </div>
+    <h3 style="margin-top:20px;">💎 GPT Mini giúp bạn</h3>
+    <div class="benefit-list">
+     <div class="benefit-item">◆ Viết bài Facebook, TikTok, Zalo</div>
+     <div class="benefit-item">◆ Tạo kịch bản video bán hàng</div>
+     <div class="benefit-item">◆ Trả lời inbox và xử lý từ chối</div>
+     <div class="benefit-item">◆ Lên lịch content và kế hoạch marketing</div>
+    </div>
+   </div>
+  </div>
+  <div class="landing-section">
+   <h2>🔥 Bộ công cụ nổi bật</h2>
+   <div class="landing-grid">
+    <div class="landing-tool-card" onclick="openAuth('register')"><h3>📘 AI Facebook Ads</h3><p>Viết mẫu quảng cáo, phân tích khách hàng, gợi ý nội dung tăng inbox và tối ưu chiến dịch.</p><button class="landing-btn">Mở công cụ</button></div>
+    <div class="landing-tool-card" onclick="openAuth('register')"><h3>🎬 AI TikTok Viral</h3><p>Tạo hook mở đầu, kịch bản video, CTA chốt đơn và lịch đăng nội dung TikTok.</p><button class="landing-btn">Mở công cụ</button></div>
+    <div class="landing-tool-card" onclick="openAuth('register')"><h3>💬 AI Chốt Sale</h3><p>Soạn câu trả lời khi khách hỏi giá, chê đắt, chưa mua hoặc cần tư vấn thêm.</p><button class="landing-btn">Mở công cụ</button></div>
+    <div class="landing-tool-card" onclick="openAuth('register')"><h3>🌐 Landing Page</h3><p>Gợi ý bố cục, tiêu đề, nội dung thuyết phục và CTA cho trang bán hàng.</p><button class="landing-btn">Mở công cụ</button></div>
+   </div>
+  </div>
+  <div class="landing-section" id="landingPricing">
+   <h2>💎 So sánh Free và Premium</h2>
+   <table class="landing-compare">
+    <tr><th>Tính năng</th><th>Free</th><th>Premium</th></tr>
+    <tr><td>Chat AI cơ bản</td><td>Giới hạn</td><td>Hạn mức cao hơn</td></tr>
+    <tr><td>Facebook Ads chuyên sâu</td><td>—</td><td>💎</td></tr>
+    <tr><td>Kịch bản TikTok Viral</td><td>—</td><td>💎</td></tr>
+    <tr><td>Chốt sale / trả lời inbox</td><td>—</td><td>💎</td></tr>
+    <tr><td>Landing Page / Automation</td><td>—</td><td>💎</td></tr>
+    <tr><td>Hỗ trợ ưu tiên</td><td>—</td><td>💎</td></tr>
+   </table>
+  </div>
+  <div class="landing-section">
+   <h2>📈 Phù hợp cho ai?</h2>
+   <div class="landing-proof">
+    <div class="landing-proof-card"><b>🛍️ Chủ shop online</b><br>Tạo nội dung bán hàng đều đặn, có sẵn bài đăng, caption và kịch bản tư vấn khách.</div>
+    <div class="landing-proof-card"><b>📊 Người chạy quảng cáo</b><br>Gợi ý mẫu quảng cáo, chân dung khách hàng, ý tưởng test nội dung và tối ưu inbox.</div>
+    <div class="landing-proof-card"><b>💼 Người bán dịch vụ</b><br>Tạo bảng giá, kịch bản tư vấn, xử lý từ chối và nội dung tăng độ tin cậy.</div>
+   </div>
+  </div>
+  <div class="landing-final">
+   <h2>🚀 Sẵn sàng tăng tốc công việc bán hàng?</h2>
+   <p style="color:#cbd5e1;line-height:1.6;">Mở tài khoản miễn phí để trải nghiệm GPT Mini. Khi cần công cụ chuyên sâu, anh/chị có thể nâng cấp Premium ngay trong hệ thống.</p>
+   <button class="landing-btn orange" onclick="openAuth('register')">🚀 Đăng ký tài khoản ngay</button>
+   <button class="landing-btn dark" onclick="openAuth('login')">Tôi đã có tài khoản</button>
+   <div class="landing-mini-note">Thông tin đăng ký dùng để hỗ trợ tài khoản, kích hoạt Premium và chăm sóc khách hàng.</div>
+  </div>
+ </div>
+</div>
+
+
+<div id="authScreen" class="auth-screen" style="display:none;">
     <div class="auth-card">
         <h1>⚡ GPT Mini Premium</h1>
         <p style="text-align:center;color:#94a3b8;">Đăng nhập để sử dụng trợ lý AI cao cấp</p>
@@ -1126,7 +1425,7 @@ gtag('config', 'G-1ZNYNTMNYC');
 
             <input id="regPassword2" type="password" placeholder="Nhập lại mật khẩu" oninput="checkPasswordStrength()">
 
-            <button onclick="submitRegister()">✅ Tạo tài khoản ngay</button>
+            <button onclick="submitRegister()">🚀 Tạo tài khoản ngay</button>
             <button class="back-login-btn" onclick="showLoginForm()">← Quay lại đăng nhập</button>
 
             <div class="register-secure">
@@ -1478,6 +1777,32 @@ gtag('config', 'G-1ZNYNTMNYC');
     </div>
 </div>
 
+
+<div id="premiumFeatureModal" class="premium-feature-modal">
+    <div class="premium-feature-card">
+        <h2 id="premiumFeatureTitle">AI PREMIUM</h2>
+        <div id="premiumFeatureBody" class="premium-feature-body"></div>
+        <div class="premium-feature-actions">
+            <button class="close-btn" onclick="closePremiumFeature()">Đóng</button>
+            <button onclick="closePremiumFeature();openPremium()">💎 Nâng cấp ngay</button>
+        </div>
+    </div>
+</div>
+
+<div id="exitPremiumOffer" class="exit-premium-offer">
+    <div class="exit-premium-card">
+        <h2>🔥 Bạn sắp rời khỏi GPT Mini Premium</h2>
+        <p>
+            Nhận ngay toàn bộ Facebook Ads, TikTok Ads, Landing Page và AI Automation chỉ từ
+            <b style="color:#fbbf24;">99.000đ/tháng</b>.
+            <br><br>
+            Bạn có muốn xem lại ưu đãi không?
+        </p>
+        <button class="close-btn" onclick="closeExitPremiumOffer()">Để sau</button>
+        <button onclick="closeExitPremiumOffer();openPremium()">💎 Xem ưu đãi Premium</button>
+    </div>
+</div>
+
 <script>
 const API = location.protocol === "file:" ? "http://localhost:8005" : location.origin;
 
@@ -1507,7 +1832,32 @@ function saveChats(){
     localStorage.setItem("optima_chats",JSON.stringify(chats));
 }
 
+
+function openLanding(){
+  const landing=document.getElementById("landingPage");
+  const auth=document.getElementById("authScreen");
+  const app=document.getElementById("app");
+  if(landing) landing.style.display="block";
+  if(auth) auth.style.display="none";
+  if(app) app.style.display="none";
+}
+function openAuth(mode="login"){
+  const landing=document.getElementById("landingPage");
+  const auth=document.getElementById("authScreen");
+  const app=document.getElementById("app");
+  if(landing) landing.style.display="none";
+  if(auth) auth.style.display="flex";
+  if(app) app.style.display="none";
+  if(mode === "register"){showRegisterForm();}else{showLoginForm();}
+}
+function scrollToLandingPricing(){
+  const el=document.getElementById("landingPricing");
+  if(el) el.scrollIntoView({behavior:"smooth"});
+}
+
 function showApp(){
+  const landing=document.getElementById("landingPage");
+  if(landing) landing.style.display="none";
   document.getElementById("authScreen").style.display="none";
   document.getElementById("app").style.display="flex";
   document.getElementById("usernameText").innerText=username||"";
@@ -1522,8 +1872,7 @@ function showApp(){
 }
 
 function showAuth(){
-  document.getElementById("authScreen").style.display="flex";
-  document.getElementById("app").style.display="none";
+  openAuth("login");
 }
 
 function showRegisterForm(){
@@ -1717,7 +2066,7 @@ function logout(){
     localStorage.removeItem("optima_username");
     token=null;
     username=null;
-    showAuth();
+    openLanding();
 }
 
 async function loadStatus(){
@@ -1943,6 +2292,85 @@ function renderMessages(){
                 <span>Chọn gói phù hợp theo nhu cầu và ngân sách.</span>
             </div>
         </div>
+
+        <div class="premium-showcase">
+            <h2>🔥 MỞ KHÓA TOÀN BỘ HỆ THỐNG AI PREMIUM</h2>
+
+            <div class="premium-showcase-grid">
+                <div class="premium-box">
+                    <h3>📘 AI FACEBOOK ADS CHUYÊN GIA</h3>
+
+                    <p>Khách hàng thường gặp:</p>
+
+                    <ul>
+                        <li>Chạy quảng cáo không ra đơn</li>
+                        <li>Giá tin nhắn quá cao</li>
+                        <li>Tốn ngân sách nhưng không có khách</li>
+                        <li>Không biết tối ưu chiến dịch</li>
+                    </ul>
+
+                    <button onclick="showPremiumFeature('AI FACEBOOK ADS', premiumFacebookContent)">🚀 Mở Công Cụ Facebook Ads</button>
+                </div>
+
+                <div class="premium-box">
+                    <h3>🎬 AI TIKTOK CHUYÊN GIA</h3>
+
+                    <p>Khách hàng thường gặp:</p>
+
+                    <ul>
+                        <li>Video ít view</li>
+                        <li>Không lên xu hướng</li>
+                        <li>Không biết viết hook</li>
+                        <li>Không biết làm video bán hàng</li>
+                    </ul>
+
+                    <button onclick="showPremiumFeature('AI TIKTOK', premiumTikTokContent)">🚀 Mở Công Cụ TikTok</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="premium-compare">
+            <h2>💎 SO SÁNH FREE & PREMIUM</h2>
+
+            <table>
+                <tr>
+                    <th>Tính năng</th>
+                    <th>FREE</th>
+                    <th>PREMIUM</th>
+                </tr>
+
+                <tr>
+                    <td>Lượt AI</td>
+                    <td>Giới hạn</td>
+                    <td>Không giới hạn</td>
+                </tr>
+
+                <tr>
+                    <td>Facebook Ads</td>
+                    <td>❌</td>
+                    <td>✔️</td>
+                </tr>
+
+                <tr>
+                    <td>TikTok Ads</td>
+                    <td>❌</td>
+                    <td>✔️</td>
+                </tr>
+
+                <tr>
+                    <td>Landing Page</td>
+                    <td>❌</td>
+                    <td>✔️</td>
+                </tr>
+
+                <tr>
+                    <td>Automation</td>
+                    <td>❌</td>
+                    <td>✔️</td>
+                </tr>
+            </table>
+        </div>
+
     </div>`;
     initPremiumTools();
 initAppNav();
@@ -2530,6 +2958,18 @@ if(token&&username){
 }else{
     showAuth();
 }
+</script>
+
+
+<script>
+window.addEventListener("load", function(){
+  const savedToken = localStorage.getItem("optima_token");
+  if(savedToken){
+    if(typeof showApp === "function") showApp();
+  }else{
+    if(typeof openLanding === "function") openLanding();
+  }
+});
 </script>
 
 </body>
