@@ -32,21 +32,21 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 os.makedirs(REPORT_DIR, exist_ok=True)
 os.makedirs(BACKUP_DIR, exist_ok=True)
 
-app = Flask(**name**)
+app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 100 * 1024 * 1024
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "").strip()
 PAGES_JSON = os.getenv("PAGES_JSON", "[]").strip()
 
 try:
-PAGES = json.loads(PAGES_JSON)
+    PAGES = json.loads(PAGES_JSON)
 except Exception:
-PAGES = []
+    PAGES = []
 
 if GEMINI_API_KEY:
-genai.configure(api_key=GEMINI_API_KEY)
+    genai.configure(api_key=GEMINI_API_KEY)
 
-client = genai
+client = genai if GEMINI_API_KEY else None
 
 
 CONTENT_LIBRARY = {
@@ -624,8 +624,9 @@ def safe_ai_generate(prompt, fallback=""):
             "trong file .env hoặc liên hệ kỹ thuật để được hỗ trợ."
         )
     try:
-        res = client.models.generate_content(model="gemini-2.0-flash", contents=prompt)
-        return res.text.strip()
+        model = genai.GenerativeModel("gemini-1.5-flash")
+        res = model.generate_content(prompt)
+        return (res.text or "").strip()
     except Exception as e:
         if fallback:
             return fallback + "\\n\\n" + friendly_ai_error(e)
@@ -3674,32 +3675,37 @@ function closeLockedFeature(){
 
 
 <div class="nav">
-  <div class="v2-nav-title">V3 Enterprise Suite</div>
-  <a class="v2-nav-link" href="#dashboard"><span class="v2-nav-ico">🏠</span><span class="v2-nav-text">Dashboard CEO</span></a>
-  <a class="v2-nav-link" href="#facebook_center" onclick="openModule('facebook_center')"><span class="v2-nav-ico">📢</span><span class="v2-nav-text">Facebook Center</span><span class="v2-nav-tag">Core</span></a>
-  <div class="v2-nav-title">V5 Seller AI Modules</div>
+  <div class="v2-nav-title">MENU CHÍNH</div>
+  <a class="v2-nav-link" href="#dashboard"><span class="v2-nav-ico">🏠</span><span class="v2-nav-text">Dashboard CEO</span><span class="v2-nav-tag">Home</span></a>
+
+  <div class="v2-nav-title">FACEBOOK CENTER</div>
+  <a class="v2-nav-link" href="#facebook_center" onclick="openModule('facebook_center')"><span class="v2-nav-ico">📣</span><span class="v2-nav-text">Facebook Center</span><span class="v2-nav-tag">Core</span></a>
+  <a class="v2-nav-link" href="#post" onclick="openModule('post')"><span class="v2-nav-ico">📝</span><span class="v2-nav-text">Đăng bài Facebook</span></a>
   <a class="v2-nav-link" href="#fanpage_manager" onclick="openModule('fanpage_manager')"><span class="v2-nav-ico">📄</span><span class="v2-nav-text">Quản lý Fanpage</span><span class="v2-nav-tag">V5</span></a>
   <a class="v2-nav-link" href="#group_marketing" onclick="openModule('group_marketing')"><span class="v2-nav-ico">👥</span><span class="v2-nav-text">Quản lý Group</span><span class="v2-nav-tag">V5</span></a>
-  <a class="v2-nav-link" href="#comment_manager" onclick="openModule('comment_manager')"><span class="v2-nav-ico">💬</span><span class="v2-nav-text">AI Comment</span><span class="v2-nav-tag">AI</span></a>
-  <a class="v2-nav-link" href="#messenger_ai" onclick="openModule('messenger_ai')"><span class="v2-nav-ico">📨</span><span class="v2-nav-text">AI Messenger</span><span class="v2-nav-tag">AI</span></a>
-  <a class="v2-nav-link" href="#crm_sales" onclick="openModule('crm_sales')"><span class="v2-nav-ico">📊</span><span class="v2-nav-text">CRM Kanban</span><span class="v2-nav-tag">CRM</span></a>
-  <a class="v2-nav-link" href="#marketing_director" onclick="openModule('marketing_director')"><span class="v2-nav-ico">🧠</span><span class="v2-nav-text">AI Marketing Director</span><span class="v2-nav-tag">HOT</span></a>
-  <a class="v2-nav-link" href="#ai_studio" onclick="openModule('ai_studio')"><span class="v2-nav-ico">🤖</span><span class="v2-nav-text">AI Studio</span><span class="v2-nav-tag">AI</span></a>
-  <a class="v2-nav-link" href="#creative_center" onclick="openModule('creative_center')"><span class="v2-nav-ico">🎨</span><span class="v2-nav-text">Creative Center</span></a>
-  <a class="v2-nav-link" href="#crm_sales" onclick="openModule('crm_sales')"><span class="v2-nav-ico">👥</span><span class="v2-nav-text">CRM Sales</span></a>
-  <a class="v2-nav-link" href="#analytics" onclick="openModule('analytics')"><span class="v2-nav-ico">📊</span><span class="v2-nav-text">Analytics</span></a>
-  <a class="v2-nav-link" href="#automation_center" onclick="openModule('automation_center')"><span class="v2-nav-ico">⚙️</span><span class="v2-nav-text">Automation</span></a>
-  <a class="v2-nav-link" href="#success_center" onclick="openModule('success_center')"><span class="v2-nav-ico">🏆</span><span class="v2-nav-text">Success Center</span><span class="v2-nav-tag">NEW</span></a>
-  <a class="v2-nav-link" href="#premium" onclick="openModule('premium')"><span class="v2-nav-ico">💎</span><span class="v2-nav-text">Premium Center</span><span class="v2-nav-tag">VIP</span></a>
 
-  <div class="v2-nav-title">Công cụ cũ đã gộp</div>
-  <a class="v2-nav-link" href="#post" onclick="openModule('post')"><span class="v2-nav-ico">📝</span><span class="v2-nav-text">Đăng bài</span></a>
-  <a class="v2-nav-link" href="#token" onclick="openModule('token')"><span class="v2-nav-ico">🔑</span><span class="v2-nav-text">Token</span></a>
-  <a class="v2-nav-link" href="#history" onclick="openModule('history')"><span class="v2-nav-ico">🕘</span><span class="v2-nav-text">Lịch sử</span></a>
+  <div class="v2-nav-title">SELLER AI</div>
+  <a class="v2-nav-link" href="#comment_manager" onclick="openModule('comment_manager')"><span class="v2-nav-ico">🤖</span><span class="v2-nav-text">AI Comment</span><span class="v2-nav-tag">AI</span></a>
+  <a class="v2-nav-link" href="#messenger_ai" onclick="openModule('messenger_ai')"><span class="v2-nav-ico">💬</span><span class="v2-nav-text">AI Messenger</span><span class="v2-nav-tag">AI</span></a>
+  <a class="v2-nav-link" href="#crm_sales" onclick="openModule('crm_sales')"><span class="v2-nav-ico">📋</span><span class="v2-nav-text">CRM Kanban</span><span class="v2-nav-tag">CRM</span></a>
+  <a class="v2-nav-link" href="#marketing_director" onclick="openModule('marketing_director')"><span class="v2-nav-ico">🧠</span><span class="v2-nav-text">AI Marketing Director</span><span class="v2-nav-tag">HOT</span></a>
+
+  <div class="v2-nav-title">AI STUDIO</div>
+  <a class="v2-nav-link" href="#ai_studio" onclick="openModule('ai_studio')"><span class="v2-nav-ico">🎨</span><span class="v2-nav-text">AI Studio</span><span class="v2-nav-tag">Pro</span></a>
+  <a class="v2-nav-link" href="#creative_center" onclick="openModule('creative_center')"><span class="v2-nav-ico">🖼️</span><span class="v2-nav-text">Image / Video / Voice</span></a>
+
+  <div class="v2-nav-title">AI BUSINESS</div>
+  <a class="v2-nav-link" href="#ai_studio" onclick="openModule('ai_studio')"><span class="v2-nav-ico">🚀</span><span class="v2-nav-text">AI Facebook</span></a>
+  <a class="v2-nav-link" href="#marketing_director" onclick="openModule('marketing_director')"><span class="v2-nav-ico">💼</span><span class="v2-nav-text">AI Kinh Doanh</span></a>
+
+  <div class="v2-nav-title">HỆ THỐNG</div>
+  <a class="v2-nav-link" href="#premium" onclick="openModule('premium')"><span class="v2-nav-ico">💎</span><span class="v2-nav-text">Premium</span><span class="v2-nav-tag">VIP</span></a>
+  <a class="v2-nav-link" href="#analytics" onclick="openModule('analytics')"><span class="v2-nav-ico">📈</span><span class="v2-nav-text">Thống kê</span></a>
+  <a class="v2-nav-link" href="#automation_center" onclick="openModule('automation_center')"><span class="v2-nav-ico">⚙️</span><span class="v2-nav-text">Cài đặt Automation</span></a>
 
   <div class="v2-side-card">
-    🚀 Mkt Automation Pro V3<br>
-    Dashboard • Facebook • AI Studio • CRM Sales • Automation • Premium.
+    🚀 Mkt Automation Pro V5<br>
+    Fanpage • Group • Comment • Messenger • CRM • Marketing Director.
   </div>
 </div>
 </aside>
@@ -3707,7 +3713,7 @@ function closeLockedFeature(){
 <main class="main">
 
 <section class="top-hero" id="dashboard">
-  <h1>Mkt Automation Pro V4 Enterprise AI Suite</h1>
+  <h1>Mkt Automation Pro V5 Seller AI Suite</h1>
 
 <div class="app-install-banner">
   <b>📲 App Mini đã sẵn sàng</b><br>
@@ -3792,15 +3798,15 @@ function closeLockedFeature(){
   </div>
 
   <div class="module-hub v3-main-hub">
-    <div class="module-card" onclick="openModule('facebook_center')"><div class="icon">📢</div><h3>Facebook Center</h3><p>Đăng ngay, đăng hàng loạt, nhiều Page, ảnh/video, Scheduler, Fanpage Manager, Group Marketing, Comment Manager, Messenger AI.</p><span class="module-pill">Mở Facebook Center</span></div>
-    <div class="module-card" onclick="openModule('ai_studio')"><div class="icon">🤖</div><h3>AI Studio</h3><p>AI Content, Viral Lab, Facebook Ads AI, Marketing Director, Competitor Scanner, Sales Script, Landing Page Builder.</p><span class="module-pill">Mở AI Studio</span></div>
-    <div class="module-card" onclick="openModule('creative_center')"><div class="icon">🎨</div><h3>Creative Center</h3><p>AI Image Center, AI Video Center, AI Voice Studio, Banner, Avatar, Cover, Poster.</p><span class="module-pill">Mở Creative</span></div>
-    <div class="module-card" onclick="openModule('crm_sales')"><div class="icon">👥</div><h3>CRM Sales</h3><p>Khách hàng, Pipeline Kanban, lịch chăm sóc, nhắc lịch và quản lý nguồn khách.</p><span class="module-pill">Mở CRM Sales</span></div>
-    <div class="module-card" onclick="openModule('analytics')"><div class="icon">📊</div><h3>Analytics</h3><p>Dashboard CEO, doanh thu, bài đăng, Fanpage, CRM, PDF, Excel, KPI nhân viên và chiến dịch.</p><span class="module-pill">Mở Analytics</span></div>
-    <div class="module-card" onclick="openModule('automation_center')"><div class="icon">⚙️</div><h3>Automation</h3><p>Auto Campaign 30 ngày content, tự xếp lịch, Notification Center, Backup và Restore.</p><span class="module-pill">Mở Automation</span></div>
-    <div class="module-card" onclick="openModule('success_center')"><div class="icon">🏆</div><h3>Success Center</h3><p>Case Study, khách hàng thành công, mẫu Fanpage, mẫu quảng cáo và content chuyển đổi cao.</p><span class="module-pill">Mở Success</span></div>
-    <div class="module-card" onclick="openModule('premium')"><div class="icon">💎</div><h3>Premium Center</h3><p>Khởi Động 159K, 1 năm 859K phổ biến nhất, vĩnh viễn 1.959K trọn đời.</p><span class="module-pill">Xem gói</span></div>
-    <div class="module-card" onclick="openModule('post')"><div class="icon">📝</div><h3>Công cụ đăng bài cũ</h3><p>Giữ lại engine đăng bài cũ để không phá chức năng đã hoạt động.</p><span class="module-pill">Mở công cụ</span></div>
+    <div class="module-card" onclick="openModule('facebook_center')"><div class="icon">📣</div><h3>Facebook Center</h3><p>Trung tâm đăng bài, lên lịch, quản lý Fanpage, Group, Token và lịch sử đăng.</p><span class="module-pill">Mở Facebook Center</span></div>
+    <div class="module-card" onclick="openModule('fanpage_manager')"><div class="icon">📄</div><h3>Quản lý Fanpage</h3><p>Kiểm tra Page, Token, quyền đăng bài và trạng thái hoạt động.</p><span class="module-pill">Mở Fanpage</span></div>
+    <div class="module-card" onclick="openModule('group_marketing')"><div class="icon">👥</div><h3>Quản lý Group</h3><p>Lưu Group, tạo lịch đăng Group và viết bài seeding mềm.</p><span class="module-pill">Mở Group</span></div>
+    <div class="module-card" onclick="openModule('comment_manager')"><div class="icon">🤖</div><h3>AI Comment</h3><p>Ẩn số điện thoại, trả lời bình luận, gắn nhãn khách nóng/ấm/lạnh và chuyển CRM.</p><span class="module-pill">Mở AI Comment</span></div>
+    <div class="module-card" onclick="openModule('messenger_ai')"><div class="icon">💬</div><h3>AI Messenger</h3><p>Tạo kịch bản inbox, chốt sale, xử lý từ chối và chăm sóc lại.</p><span class="module-pill">Mở AI Messenger</span></div>
+    <div class="module-card" onclick="openModule('crm_sales')"><div class="icon">📋</div><h3>CRM Kanban</h3><p>Quản lý khách theo các cột: mới, tư vấn, báo giá, theo dõi, đã chốt.</p><span class="module-pill">Mở CRM</span></div>
+    <div class="module-card" onclick="openModule('marketing_director')"><div class="icon">🧠</div><h3>AI Marketing Director</h3><p>Lập kế hoạch 30 ngày, Ads, Content, Funnel, KPI và chiến lược tăng doanh thu.</p><span class="module-pill">Mở Marketing Director</span></div>
+    <div class="module-card" onclick="openModule('ai_studio')"><div class="icon">🎨</div><h3>AI Studio</h3><p>Gộp AI Facebook, AI Image, AI Video, AI Giọng Nói và AI Livestream vào một khu vực.</p><span class="module-pill">Mở AI Studio</span></div>
+    <div class="module-card" onclick="openModule('premium')"><div class="icon">💎</div><h3>Premium</h3><p>Mở khóa hạn mức cao hơn, module nâng cao và hỗ trợ ưu tiên.</p><span class="module-pill">Xem gói</span></div>
   </div>
 </section>
 
@@ -5273,22 +5279,8 @@ def pwa_icon_512():
     return send_file("pwa-icon-512.png", mimetype="image/png")
 
 
-if **name** == "**main**":
-init_db()
-
-```
-threading.Thread(
-    target=scheduler_loop,
-    daemon=True
-).start()
-
-port = int(os.environ.get("PORT", 10000))
-
-app.run(
-    host="0.0.0.0",
-    port=port,
-    debug=False
-)
-```
-
-
+if __name__ == "__main__":
+    init_db()
+    threading.Thread(target=scheduler_loop, daemon=True).start()
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host="0.0.0.0", port=port, debug=False)
