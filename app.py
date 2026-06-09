@@ -1917,7 +1917,7 @@ Tạo kế hoạch Tăng tương tác thông minh gồm:
 4. 5 mẫu phản hồi comment để kéo khách vào inbox
 5. Cách nhận diện bài ít tương tác và việc admin cần làm
 6. Kịch bản chăm sóc lại khách đã comment
-7. Lưu ý an toàn: không auto like hàng loạt, không dùng nhiều tài khoản, không tạo tương tác giả.
+7. Lưu ý: ưu tiên tương tác thật, chăm sóc khách thật và nội dung phù hợp.
 Trình bày rõ ràng, dễ copy, không cam kết quá đà.
 """
     if tool == 'comment_reply':
@@ -4734,7 +4734,7 @@ function closeLockedFeature(){
   <div class="v2-nav-title">💎 PREMIUM CENTER</div>
   <a class="v2-nav-link" href="#premium" onclick="openModule('premium')"><span class="v2-nav-ico">💎</span><span class="v2-nav-text">Bảng giá Premium</span><span class="v2-nav-tag">VIP</span></a>
   <a class="v2-nav-link" href="#premium" onclick="openModule('premium')"><span class="v2-nav-ico">💳</span><span class="v2-nav-text">Gửi xác nhận thanh toán</span></a>
-  <a class="v2-nav-link" href="#premium" onclick="openModule('premium')"><span class="v2-nav-ico">✅</span><span class="v2-nav-text">Trạng thái kích hoạt</span></a>
+  <a class="v2-nav-link" href="#premium" onclick="openModule('premium')"><span class="v2-nav-ico">🟢</span><span class="v2-nav-text">Trạng thái kích hoạt</span></a>
   <a class="v2-nav-link" href="/install" target="_blank"><span class="v2-nav-ico">📲</span><span class="v2-nav-text">Cài đặt App</span><span class="v2-nav-tag">App</span></a>
 
   <div class="v2-nav-title">⚙️ TÀI KHOẢN</div>
@@ -4865,21 +4865,16 @@ function closeLockedFeature(){
 
 
 <section class="panel module-section" id="facebook_center">
-  <div class="section-open-note">Bạn đang mở: Facebook Center Pro.</div>
   <h2>📣 Facebook Center</h2>
-  <p class="small">Trung tâm đăng bài Fanpage, lên lịch, quản lý nội dung, nhật ký đăng bài, tăng tương tác thông minh và AI trả lời comment.</p>
   <div class="fb-submenu-pro">
     <button onclick="openModule('facebook_publisher_pro')">🚀 Đăng bài Fanpage</button>
     <button onclick="openModule('scheduler')">🗓️ Lên lịch đăng bài</button>
-    <button onclick="openModule('library')">🗂️ Quản lý nội dung</button>
+    <button onclick="openModule('library')">📚 Kho Content +50.000</button>
     <button onclick="openModule('history')">📜 Nhật ký đăng bài</button>
     <button onclick="openModule('smart_engagement')">⚡ Tăng tương tác thông minh</button>
     <button onclick="openModule('comment_manager')">💬 AI trả lời comment</button>
   </div>
 
-  <div class="fb-safe-note">
-    Hệ thống không dùng auto like hàng loạt, không tương tác giả bằng nhiều tài khoản. Thay vào đó dùng chiến lược tăng tương tác thông minh: giờ đăng tốt, caption kéo comment, câu hỏi tương tác, theo dõi bài yếu và nhắc admin chăm sóc khách thật.
-  </div>
 
   <div class="v3-feature-grid">
     <div class="fb-pro-card"><div class="fb-pro-badge">🚀 Facebook Publisher Pro</div><h3>Đăng bài Fanpage chuyên nghiệp</h3><ul><li>Chọn Fanpage</li><li>Soạn bài</li><li>Upload ảnh/video</li><li>Đăng ngay</li><li>Lên lịch đăng</li><li>Lưu nháp</li><li>Nhật ký đăng bài</li><li>Báo lỗi token/page rõ ràng</li></ul><button onclick="openModule('facebook_publisher_pro')">Mở Publisher Pro</button></div>
@@ -4887,9 +4882,6 @@ function closeLockedFeature(){
     <div class="fb-pro-card"><div class="fb-pro-badge">⚡ Safe Growth</div><h3>Tăng tương tác thông minh</h3><ul><li>Gợi ý giờ đăng tốt</li><li>Gợi ý caption tăng comment</li><li>Tạo câu hỏi kéo tương tác</li><li>Gợi ý trả lời comment</li><li>Theo dõi bài ít tương tác</li><li>Nhắc chăm sóc khách đã comment</li></ul><button onclick="openModule('smart_engagement')">Mở Smart Engagement</button></div>
   </div>
 
-  <div class="fb-danger-note">
-    Không tích hợp: tự động like hàng loạt, tự động like bằng nhiều tài khoản, tự động tương tác để tăng reach giả. Đây là nhóm hành vi dễ checkpoint, giảm uy tín Page và rủi ro khóa tài khoản.
-  </div>
 </section>
 
 <section class="panel module-section" id="facebook_publisher_pro">
@@ -4906,7 +4898,7 @@ function closeLockedFeature(){
 <section class="panel module-section" id="smart_engagement">
   <div class="section-open-note">Bạn đang mở: Tăng tương tác thông minh.</div>
   <h2>⚡ Tăng tương tác thông minh</h2>
-  <p class="small">Thay thế an toàn cho auto like: tăng tương tác bằng nội dung, giờ đăng, CTA và chăm sóc comment thật.</p>
+  <p class="small">Tăng tương tác bằng nội dung, giờ đăng, CTA và chăm sóc comment thật.</p>
   <div class="smart-chip-row"><span class="smart-chip">Gợi ý giờ đăng tốt</span><span class="smart-chip">Caption tăng comment</span><span class="smart-chip">Câu hỏi kéo tương tác</span><span class="smart-chip">Gợi ý trả lời comment</span><span class="smart-chip">Theo dõi bài ít tương tác</span><span class="smart-chip">Nhắc chăm sóc khách</span></div>
   <form method="post" action="/v3_ai_tool">
     <input type="hidden" name="tool" value="smart_engagement">
@@ -4915,7 +4907,6 @@ function closeLockedFeature(){
     <button>AI tạo kế hoạch tăng tương tác</button>
     <button type="button" class="secondary" onclick="openModule('comment_manager')">Mở AI trả lời comment</button>
   </form>
-  <div class="fb-safe-note">Mục này chỉ tạo gợi ý và nhắc admin xử lý tương tác thật. Không tự động like hàng loạt, không dùng nhiều tài khoản, không tạo reach giả.</div>
 </section>
 
 <section class="panel module-section" id="fanpage_manager">
@@ -5193,8 +5184,8 @@ Content 3..."></textarea>
 </section>
 
 <section class="panel module-section" id="library">
-  <div class="section-open-note">Bạn đang mở: Kho Content 50.000+.</div>
-  <h2>Kho Content 10.000+ Dùng Thử</h2>
+  <div class="section-open-note">Bạn đang mở: Kho Content +50.000.</div>
+  <h2>📚 Kho Content +50.000</h2>
   <p class="small">Bản demo nạp sẵn một số mẫu. Sau này có thể import 10.000 content thật từ JSON/CSV.</p>
   <form method="get" action="/">
     <select name="industry">
@@ -5353,7 +5344,7 @@ Tạo: {{ c[4] }}</div>
 
   <div class="analytics-kpi-grid">
     <div class="analytics-kpi"><span>📌 Tổng bài</span><b>{{ analytics.summary.total_posts }}</b><small>Toàn bộ bài đã tạo</small></div>
-    <div class="analytics-kpi"><span>✅ Đã đăng</span><b>{{ analytics.summary.posted }}</b><small>Tỷ lệ đăng: {{ analytics.summary.conversion_rate }}%</small></div>
+    <div class="analytics-kpi"><span>• Đã đăng</span><b>{{ analytics.summary.posted }}</b><small>Tỷ lệ đăng: {{ analytics.summary.conversion_rate }}%</small></div>
     <div class="analytics-kpi"><span>⏰ Chờ đăng</span><b>{{ analytics.summary.scheduled }}</b><small>Bài đang lên lịch</small></div>
     <div class="analytics-kpi"><span>⚠️ Lỗi đăng</span><b>{{ analytics.summary.errors }}</b><small>Tỷ lệ lỗi: {{ analytics.summary.error_rate }}%</small></div>
     <div class="analytics-kpi"><span>👥 Lead CRM</span><b>{{ analytics.summary.crm_total + analytics.summary.pipeline_total }}</b><small>Tổng khách hàng ghi nhận</small></div>
@@ -5846,7 +5837,7 @@ Thời gian tạo: {{ h[9] }}
     <span>📌 Tổng bài</span><b>{{ s.total }}</b>
   </div>
   <div class="activity-card">
-    <span>✅ Đã đăng</span><b>{{ s.posted }}</b>
+    <span>• Đã đăng</span><b>{{ s.posted }}</b>
   </div>
   <div class="activity-card">
     <span>⏰ Chờ đăng</span><b>{{ s.scheduled }}</b>
@@ -7090,8 +7081,8 @@ function isStandalone(){{ return (window.matchMedia && window.matchMedia('(displ
 function isIOS(){{ return /iphone|ipad|ipod/i.test(navigator.userAgent); }}
 function isAndroid(){{ return /android/i.test(navigator.userAgent); }}
 function markInstalled(){{
-  statusEl.innerText='✅ GPT MKT Pro đã được cài đặt. Biểu tượng ứng dụng đã có trên màn hình chính.';
-  installBtn.innerText='✅ Đã cài đặt GPT MKT Pro';
+  statusEl.innerText='• GPT MKT Pro đã được cài đặt. Biểu tượng ứng dụng đã có trên màn hình chính.';
+  installBtn.innerText='• Đã cài đặt GPT MKT Pro';
   installBtn.classList.add('installed');
   installBtn.disabled=true;
 }}
