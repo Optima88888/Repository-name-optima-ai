@@ -471,7 +471,9 @@ def init_db():
         niche TEXT,
         note TEXT,
         status TEXT DEFAULT 'active',
-        created_at TEXT
+        created_at TEXT,
+        allowed_page_ids TEXT DEFAULT '',
+        can_post_public INTEGER DEFAULT 0
     )
     """)
     c.execute("""
@@ -1703,20 +1705,58 @@ Trình bày theo Ngày 1 đến Ngày {days}.
 
 
 
-def add_fb_group(group_name, group_id, niche, note):
+def ensure_fb_group_permission_columns():
+    """Bổ sung cấu hình quyền Page -> Group cho dữ liệu cũ."""
+    conn = db(); c = conn.cursor()
+    try:
+        c.execute("ALTER TABLE fb_groups ADD COLUMN allowed_page_ids TEXT DEFAULT ''")
+    except Exception:
+        pass
+    try:
+        c.execute("ALTER TABLE fb_groups ADD COLUMN can_post_public INTEGER DEFAULT 0")
+    except Exception:
+        pass
+    conn.commit(); conn.close()
+
+def add_fb_group(group_name, group_id, niche, note, allowed_page_ids='', can_post_public=0):
     if not group_name and not group_id:
         return
+    ensure_fb_group_permission_columns()
     conn = db(); c = conn.cursor()
     c.execute("""
-    INSERT INTO fb_groups(group_name,group_id,niche,note,status,created_at)
-    VALUES(?,?,?,?,?,?)
-    """, (group_name, group_id, niche, note, 'active', datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
+    INSERT INTO fb_groups(group_name,group_id,niche,note,status,created_at,allowed_page_ids,can_post_public)
+    VALUES(?,?,?,?,?,?,?,?)
+    """, (group_name, group_id, niche, note, 'active', datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'), allowed_page_ids, int(can_post_public or 0)))
     conn.commit(); conn.close()
 
 def get_fb_groups(limit=80):
+    ensure_fb_group_permission_columns()
     conn = db(); c = conn.cursor()
-    c.execute("SELECT id,group_name,group_id,niche,note,status,created_at FROM fb_groups ORDER BY id DESC LIMIT ?", (limit,))
+    c.execute("SELECT id,group_name,group_id,niche,note,status,created_at,allowed_page_ids,can_post_public FROM fb_groups ORDER BY id DESC LIMIT ?", (limit,))
     rows = c.fetchall(); conn.close(); return rows
+
+def group_allowed_page_ids(group):
+    try:
+        raw = str(group[7] or '')
+    except Exception:
+        raw = ''
+    return [x.strip() for x in raw.replace(';', ',').split(',') if x.strip()]
+
+def group_can_post_with_selected_pages(group, pages):
+    """Chỉ cho đưa Group vào hàng đợi nếu đã cấu hình Page tham gia Group và Group cho đăng công khai."""
+    try:
+        can_public = int(group[8] or 0) == 1
+    except Exception:
+        can_public = False
+    allowed = set(group_allowed_page_ids(group))
+    selected_page_ids = {str(p.get('id','')).strip() for p in pages if str(p.get('id','')).strip()}
+    if not can_public:
+        return False, 'Group chưa bật cấu hình cho Page đăng bài công khai.'
+    if not allowed:
+        return False, 'Group chưa lưu Page được phép đăng. Hãy cấu hình Page đã tham gia Group trước.'
+    if not selected_page_ids.intersection(allowed):
+        return False, 'Page đã chọn chưa được cấu hình là Page tham gia Group này.'
+    return True, 'Đủ điều kiện đưa vào hàng đợi đăng Group.'
 
 def add_group_schedule(group_name, group_id, content, schedule_time):
     if not content:
@@ -1728,10 +1768,82 @@ def add_group_schedule(group_name, group_id, content, schedule_time):
     """, (group_name, group_id, content, schedule_time, 'scheduled', datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
     conn.commit(); conn.close()
 
+def add_group_schedule_status(group_name, group_id, content, schedule_time, status='scheduled'):
+    if not content:
+        return
+    conn = db(); c = conn.cursor()
+    c.execute("""
+    INSERT INTO group_schedules(group_name,group_id,content,schedule_time,status,created_at)
+    VALUES(?,?,?,?,?,?)
+    """, (group_name, group_id, content, schedule_time, status, datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
+    conn.commit(); conn.close()
+
 def get_group_schedules(limit=50):
     conn = db(); c = conn.cursor()
     c.execute("SELECT id,group_name,group_id,content,schedule_time,status,created_at FROM group_schedules ORDER BY id DESC LIMIT ?", (limit,))
     rows = c.fetchall(); conn.close(); return rows
+
+
+def update_group_schedule_status(row_id, status):
+    try:
+        row_id = int(row_id)
+    except Exception:
+        return False, "ID hàng đợi không hợp lệ."
+    conn = db(); c = conn.cursor()
+    c.execute("UPDATE group_schedules SET status=? WHERE id=?", (status, row_id))
+    conn.commit(); conn.close()
+    return True, "Đã cập nhật trạng thái hàng đợi."
+
+def get_publisher_dashboard():
+    conn = db(); c = conn.cursor()
+    def one(q, params=()):
+        try:
+            c.execute(q, params); r=c.fetchone(); return r[0] if r and r[0] is not None else 0
+        except Exception:
+            return 0
+    data = {
+        "pages_saved": one("SELECT COUNT(*) FROM fanpages"),
+        "groups_saved": one("SELECT COUNT(*) FROM fb_groups"),
+        "groups_public_ready": one("SELECT COUNT(*) FROM fb_groups WHERE can_post_public=1"),
+        "posts_total": one("SELECT COUNT(*) FROM posts"),
+        "posted": one("SELECT COUNT(*) FROM posts WHERE status='posted'"),
+        "scheduled": one("SELECT COUNT(*) FROM posts WHERE status='scheduled'"),
+        "errors": one("SELECT COUNT(*) FROM posts WHERE status='error'"),
+        "group_waiting": one("SELECT COUNT(*) FROM group_schedules WHERE status IN ('scheduled','ready_now')"),
+        "group_draft": one("SELECT COUNT(*) FROM group_schedules WHERE status='draft'"),
+    }
+    conn.close(); return data
+
+def make_smart_variant(content, index):
+    """Tạo biến thể nhẹ để chống trùng khi khách thiếu nội dung."""
+    content = (content or "").strip()
+    hooks = ["🔥", "✨", "📌", "🚀", "💡", "🎯"]
+    ctas = [
+        "Inbox để được tư vấn nhanh.",
+        "Nhắn tin để nhận gợi ý phù hợp.",
+        "Để lại nhu cầu, đội ngũ sẽ hỗ trợ chi tiết.",
+        "Liên hệ để nhận phương án tối ưu hơn.",
+        "Comment hoặc inbox để được hỗ trợ ngay."
+    ]
+    prefix = hooks[index % len(hooks)] + " "
+    cta = ctas[index % len(ctas)]
+    if cta.lower() not in content.lower():
+        content = content + "\n\n" + cta
+    return prefix + content
+
+def prepare_bulk_contents(contents, target_count, anti_duplicate=False):
+    """Nếu bật chống trùng, tự tạo biến thể đủ số kênh; nếu tắt thì giữ nguyên và không lặp."""
+    clean = [c.strip() for c in contents if c.strip()]
+    if not anti_duplicate or not clean:
+        return clean[:target_count]
+    result = []
+    for i in range(target_count):
+        base = clean[i % len(clean)]
+        if i < len(clean):
+            result.append(base)
+        else:
+            result.append(make_smart_variant(base, i))
+    return result
 
 
 def selected_groups(group_indexes):
@@ -4183,11 +4295,57 @@ button,.btn,.safe-pricing-action,.support-send{
 .group-check-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin:12px 0}
 .group-check-item{background:#fff;border:1px solid rgba(37,99,235,.12);border-radius:16px;padding:12px;color:#0F172A;font-weight:800;box-shadow:0 10px 24px rgba(15,23,42,.05)}
 .group-check-item span{display:block;color:#64748B;font-size:12px;font-weight:700;margin-top:4px}
-.scheduler-tip{font-size:13px;color:#475569;line-height:1.6;font-weight:700;margin:8px 0}
+.target-panel-pro{margin:14px 0;padding:16px;border-radius:20px;background:rgba(255,255,255,.82);border:1px solid rgba(37,99,235,.14);box-shadow:0 14px 36px rgba(15,23,42,.06)}
+.target-panel-pro h4{margin:0 0 10px;color:#1E1B4B;font-size:17px;font-weight:950;letter-spacing:-.2px}
+.bulk-action-row{display:flex;gap:12px;flex-wrap:wrap;margin-top:14px}
+.bulk-action-row button{flex:1;min-width:190px;font-size:16px;font-weight:950}
+.bulk-action-row .schedule-btn{background:linear-gradient(135deg,#7C3AED,#2563EB)}
+.bulk-action-row .save-btn{background:linear-gradient(135deg,#0EA5E9,#14B8A6)}
+.publisher-mode-note{margin-top:12px;padding:12px 14px;border-radius:14px;background:linear-gradient(135deg,#ECFEFF,#EEF2FF);color:#1E3A8A;font-weight:800;line-height:1.55;border:1px solid rgba(14,165,233,.18)}
+.select-mini-actions{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 12px}.select-mini-actions button{padding:8px 12px;border-radius:12px;font-size:13px;background:#EEF2FF;color:#1E3A8A;box-shadow:none}.select-mini-actions button:hover{transform:none}
+ .scheduler-tip{font-size:13px;color:#475569;line-height:1.6;font-weight:700;margin:8px 0}
+
+/* ===== BULK PUBLISHER PRO SMART LEVEL 2 ===== */
+.bulk-dashboard-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:14px 0}
+.bulk-stat-card{padding:14px;border-radius:18px;background:linear-gradient(135deg,#FFFFFF,#F8FAFC);border:1px solid rgba(37,99,235,.14);box-shadow:0 12px 26px rgba(15,23,42,.05);color:#1E1B4B;font-weight:900}
+.bulk-stat-card b{display:block;font-size:24px;color:#2563EB;line-height:1.1;margin-top:6px}.bulk-stat-card span{font-size:12px;color:#64748B;font-weight:800;text-transform:uppercase;letter-spacing:.04em}
+.group-permission-note{display:block;margin-top:6px;padding:7px 9px;border-radius:10px;background:#F8FAFC;color:#334155!important;font-size:12px!important;font-weight:800!important;line-height:1.45!important}
+.group-permission-ready{border-color:rgba(20,184,166,.35)!important;background:linear-gradient(135deg,#F0FDFA,#FFFFFF)!important}
+.group-permission-lock{border-color:rgba(239,68,68,.28)!important;background:linear-gradient(135deg,#FEF2F2,#FFFFFF)!important}
+.inline-publish-actions{display:flex;gap:10px;flex-wrap:wrap;margin:12px 0 0}
+.inline-publish-actions button{min-width:170px;font-size:14px;font-weight:950}
+.permission-config-box{margin-top:10px;padding:12px;border-radius:16px;background:linear-gradient(135deg,#F8FAFC,#EEF2FF);border:1px solid rgba(37,99,235,.14)}
+.permission-config-box label{display:block;font-weight:850;color:#0F172A;margin:8px 0}.permission-config-box small{display:block;color:#64748B;font-weight:700;margin-top:4px}
+.bulk-pro-options{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin:14px 0}.bulk-pro-option{padding:12px 14px;border-radius:16px;background:#fff;border:1px solid rgba(37,99,235,.12);font-weight:850;color:#0F172A;box-shadow:0 10px 24px rgba(15,23,42,.045)}
+.bulk-pro-option small{display:block;color:#64748B;font-size:12px;font-weight:700;line-height:1.45;margin-top:4px}.bulk-pro-option input{margin-right:8px;transform:scale(1.1)}
+.queue-board{margin-top:20px;padding:18px;border-radius:22px;background:linear-gradient(135deg,#F8FAFC,#EEF2FF);border:1px solid rgba(37,99,235,.14);box-shadow:0 16px 40px rgba(15,23,42,.06)}
+.queue-board h3{margin:0 0 12px;color:#1E1B4B;font-weight:950}.queue-table{width:100%;border-collapse:separate;border-spacing:0 8px}.queue-table th{text-align:left;color:#1E3A8A;font-size:13px}.queue-table td{background:#fff;padding:12px;border-top:1px solid rgba(37,99,235,.10);border-bottom:1px solid rgba(37,99,235,.10);font-size:13px;color:#0F172A}.queue-table td:first-child{border-left:1px solid rgba(37,99,235,.10);border-radius:14px 0 0 14px}.queue-table td:last-child{border-right:1px solid rgba(37,99,235,.10);border-radius:0 14px 14px 0}.queue-status{display:inline-flex;padding:5px 10px;border-radius:999px;font-weight:900;background:#DBEAFE;color:#1D4ED8}.queue-status.ready_now{background:#DCFCE7;color:#047857}.queue-status.paused{background:#FEF3C7;color:#B45309}.queue-status.cancelled{background:#FEE2E2;color:#B91C1C}.queue-actions{display:flex;gap:6px;flex-wrap:wrap}.queue-actions button{padding:7px 9px;border-radius:10px;font-size:12px;box-shadow:none}.queue-empty{padding:13px 15px;background:#fff;border-radius:16px;color:#64748B;font-weight:800}.calendar-mini-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-top:10px}.calendar-mini-item{background:#fff;border:1px solid rgba(37,99,235,.12);border-radius:16px;padding:12px;color:#0F172A;font-weight:850}.calendar-mini-item b{display:block;color:#7C3AED;margin-bottom:5px}.nav-collapsed .v2-nav-link{display:none}.v2-nav-title{cursor:pointer;user-select:none;position:relative}.v2-nav-title:after{content:'▾';float:right;opacity:.8}.nav-collapsed.v2-nav-title:after{content:'▸'}
 
 </style>
 
 <script>
+function fillBulkContentSample(){
+  const box=document.querySelector('textarea[name="bulk_content"]');
+  if(box && !box.value.trim()){
+    box.value='Nội dung 1: Ưu đãi hôm nay cho khách cần tăng đơn online. Inbox để được tư vấn.\n\nNội dung 2: Giải pháp marketing giúp shop tiếp cận đúng khách hàng và tối ưu chi phí.\n\nNội dung 3: Muốn đăng bài đều hơn, chăm sóc khách nhanh hơn? Dùng AI để tiết kiệm thời gian.';
+    box.focus();
+  }
+}
+function initCollapsibleNav(){
+  document.querySelectorAll('.v2-nav-title').forEach(function(title){
+    title.addEventListener('click',function(){
+      let n=title.nextElementSibling;
+      const hide = !title.classList.contains('nav-collapsed');
+      title.classList.toggle('nav-collapsed', hide);
+      while(n && !n.classList.contains('v2-nav-title') && !n.classList.contains('v2-side-card')){
+        if(n.classList && n.classList.contains('v2-nav-link')) n.style.display=hide?'none':'flex';
+        n=n.nextElementSibling;
+      }
+    });
+  });
+}
+document.addEventListener('DOMContentLoaded',initCollapsibleNav);
+
 function copyText(id){
   const el=document.getElementById(id);
   navigator.clipboard.writeText(el.innerText);
@@ -4815,7 +4973,7 @@ function closeLockedFeature(){
   <div class="v2-nav-title">💎 PREMIUM CENTER</div>
   <a class="v2-nav-link" href="#premium" onclick="openModule('premium')"><span class="v2-nav-ico">💎</span><span class="v2-nav-text">Bảng giá Premium</span><span class="v2-nav-tag">VIP</span></a>
   <a class="v2-nav-link" href="#premium" onclick="openModule('premium')"><span class="v2-nav-ico">💳</span><span class="v2-nav-text">Gửi xác nhận thanh toán</span></a>
-  <a class="v2-nav-link" href="#premium" onclick="openModule('premium')"><span class="v2-nav-ico">✅</span><span class="v2-nav-text">Trạng thái kích hoạt</span></a>
+  <a class="v2-nav-link" href="#premium" onclick="openModule('premium')"><span class="v2-nav-ico">💬</span><span class="v2-nav-text">Trạng thái kích hoạt</span></a>
   <a class="v2-nav-link" href="/install" target="_blank"><span class="v2-nav-ico">📲</span><span class="v2-nav-text">Cài đặt App</span><span class="v2-nav-tag">App</span></a>
 
   <div class="v2-nav-title">⚙️ TÀI KHOẢN</div>
@@ -5044,32 +5202,101 @@ function closeLockedFeature(){
   <h2>👥 Quản lý Group & Lịch đăng nhiều Group</h2>
   <p class="small">Chọn nhiều Group, nhập nhiều nội dung, hệ thống tự chia mỗi nội dung cho mỗi Group, có khoảng cách thời gian và không tự lặp lại nội dung để tránh trùng bài.</p>
   <div class="grid">
-    <form method="post" action="/fb_group"><h3>Thêm Group</h3><input name="group_name" placeholder="Tên Group"><input name="group_id" placeholder="Group ID"><input name="niche" placeholder="Ngành / tệp khách"><textarea name="note" rows="2" placeholder="Ghi chú"></textarea><button>Lưu Group</button></form>
+    <form method="post" action="/fb_group"><h3>Thêm Group</h3><input name="group_name" placeholder="Tên Group"><input name="group_id" placeholder="Group ID"><input name="niche" placeholder="Ngành / tệp khách"><textarea name="note" rows="2" placeholder="Ghi chú"></textarea>
+      <div class="permission-config-box">
+        <b>💬 Cấu hình Page được phép đăng Group</b>
+        <small>Chỉ chọn Page đã tham gia Group và Group đã bật quyền cho Page đăng bài công khai.</small>
+        {% for p in pages %}
+        <label><input type="checkbox" name="allowed_page_ids" value="{{ p.id }}"> {{ p.name }} — {{ p.id }}</label>
+        {% endfor %}
+        <label><input type="checkbox" name="can_post_public" value="1"> Group này cho Page đăng bài công khai</label>
+      </div>
+      <button>Lưu Group</button></form>
     <form method="post" action="/v3_ai_tool"><h3>AI viết bài Group</h3><input type="hidden" name="tool" value="group_content"><textarea name="topic" rows="4" placeholder="Ví dụ: Tôi bán Proxy cho người chạy quảng cáo Facebook"></textarea><button>Tạo bài Group</button></form>
   </div>
 
   <div class="bulk-smart-box">
-    <h3>🚀 Đăng lịch nhiều Group không trùng nội dung</h3>
-    <div class="bulk-smart-note">Mỗi dòng hoặc mỗi đoạn cách dòng trống là 1 nội dung riêng. Hệ thống sẽ chia lần lượt: Nội dung 1 → Group 1, Nội dung 2 → Group 2... Nếu thiếu nội dung, hệ thống không lặp lại để tránh trùng bài.</div>
-    <form method="post" action="/group_bulk_schedule">
-      <div class="group-check-grid">
-        {% for g in fb_groups %}
-        <label class="group-check-item">
-          <input type="checkbox" name="group_indexes" value="{{ loop.index0 }}">
-          {{ g[1] }}
-          <span>{{ g[2] }} • {{ g[3] }}</span>
-        </label>
-        {% endfor %}
+    <h3>🚀 Đăng bài hàng loạt Pro: Page + Group</h3>
+    <div class="bulk-smart-note">
+      Chọn một lần nhiều Fanpage và nhiều Group đã lưu. Nhập nhiều nội dung; mỗi dòng hoặc mỗi đoạn cách dòng trống là 1 bài riêng. Hệ thống chia lần lượt để hạn chế trùng nội dung.
+    </div>
+
+    <div class="bulk-dashboard-grid">
+      <div class="bulk-stat-card"><span>Fanpage đã lưu</span><b>{{ publisher_dashboard.pages_saved }}</b></div>
+      <div class="bulk-stat-card"><span>Group đã lưu</span><b>{{ publisher_dashboard.groups_saved }}</b></div>
+      <div class="bulk-stat-card"><span>Group đủ quyền</span><b>{{ publisher_dashboard.groups_public_ready }}</b></div>
+      <div class="bulk-stat-card"><span>Chờ đăng</span><b>{{ publisher_dashboard.scheduled + publisher_dashboard.group_waiting }}</b></div>
+      <div class="bulk-stat-card"><span>Thành công</span><b>{{ publisher_dashboard.posted }}</b></div>
+      <div class="bulk-stat-card"><span>Lỗi</span><b>{{ publisher_dashboard.errors }}</b></div>
+    </div>
+
+    <form method="post" action="/bulk_publisher_pro" enctype="multipart/form-data">
+      <div class="target-panel-pro">
+        <h4>📣 Chọn nhiều Fanpage đã lưu</h4>
+        <div class="select-mini-actions">
+          <button type="button" onclick="document.querySelectorAll('.bulk-page-check').forEach(x=>x.checked=true)">Chọn tất cả Page</button>
+          <button type="button" onclick="document.querySelectorAll('.bulk-page-check').forEach(x=>x.checked=false)">Bỏ chọn Page</button>
+        </div>
+        <div class="group-check-grid">
+          {% for p in pages %}
+          <label class="group-check-item">
+            <input class="bulk-page-check" type="checkbox" name="page_indexes" value="{{ loop.index0 }}">
+            {{ p.name }}
+            <span>{{ p.id }} • {{ p.token_mask }}</span>
+          </label>
+          {% endfor %}
+        </div>
       </div>
-      <textarea name="bulk_content" rows="10" placeholder="Nội dung 1 cho Group 1
 
-Nội dung 2 cho Group 2
+      <div class="target-panel-pro">
+        <h4>👥 Chọn nhiều Group đã lưu</h4>
+        <div class="select-mini-actions">
+          <button type="button" onclick="document.querySelectorAll('.bulk-group-check').forEach(x=>x.checked=true)">Chọn tất cả Group</button>
+          <button type="button" onclick="document.querySelectorAll('.bulk-group-check').forEach(x=>x.checked=false)">Bỏ chọn Group</button>
+        </div>
+        <div class="group-check-grid">
+          {% for g in fb_groups %}
+          <label class="group-check-item {% if g[8] %}group-permission-ready{% else %}group-permission-lock{% endif %}">
+            <input class="bulk-group-check" type="checkbox" name="group_indexes" value="{{ loop.index0 }}">
+            {{ g[1] }}
+            <span>{{ g[2] }} • {{ g[3] }}</span>
+            {% if g[8] %}
+            <span class="group-permission-note">💬 Đã bật quyền đăng công khai • Page hợp lệ: {{ g[7] or 'Chưa gán Page' }}</span>
+            {% else %}
+            <span class="group-permission-note">🔒 Chưa bật cấu hình Page đăng Group. Cần cấu hình trước khi đăng.</span>
+            {% endif %}
+          </label>
+          {% endfor %}
+        </div>
+      </div>
 
-Nội dung 3 cho Group 3"></textarea>
+      <div class="inline-publish-actions">
+        <button name="publish_mode" value="now">🚀 Đăng ngay Page/Group đã chọn</button>
+        <button class="schedule-btn" name="publish_mode" value="schedule">🕒 Đăng hẹn giờ</button>
+        <button class="save-btn" name="publish_mode" value="draft">💾 Lưu chiến dịch</button>
+      </div>
+
+      <textarea name="bulk_content" rows="12" placeholder="Nội dung 1 cho Page/Group 1
+
+Nội dung 2 cho Page/Group 2
+
+Nội dung 3 cho Page/Group 3"></textarea>
+      <div class="select-mini-actions">
+        <button type="button" onclick="fillBulkContentSample()">Điền mẫu nhanh</button>
+        <button type="button" onclick="openModule('smart_engagement')">AI gợi ý tăng tương tác</button>
+        <button type="button" onclick="openModule('facebook_publisher_pro')">AI kiểm tra trước khi đăng</button>
+      </div>
+      <div class="bulk-pro-options">
+        <label class="bulk-pro-option"><input type="checkbox" name="use_ai_anti_duplicate" value="1" checked>AI chống trùng nội dung<small>Nếu thiếu nội dung so với số Page/Group, hệ thống tạo biến thể CTA/icon khác để hạn chế trùng.</small></label>
+        <label class="bulk-pro-option"><input type="checkbox" name="score_before_post" value="1" checked>Chấm điểm trước khi đăng<small>Kiểm tra CTA, hashtag, từ rủi ro và lưu điểm nội dung vào nhật ký.</small></label>
+        <label class="bulk-pro-option"><input type="checkbox" name="skip_token_error" value="1">Bỏ qua Page lỗi token<small>Khi đăng ngay, Page lỗi token sẽ được ghi lỗi, Page tốt vẫn tiếp tục.</small></label>
+      </div>
+
       <div class="grid">
-        <input name="start_time" type="datetime-local" placeholder="Giờ bắt đầu">
+        <input name="start_time" type="datetime-local" placeholder="Khung giờ bắt đầu nếu hẹn giờ">
         <select name="gap_minutes">
           <option value="5">Cách nhau 5 phút</option>
+          <option value="10">Cách nhau 10 phút</option>
           <option value="15">Cách nhau 15 phút</option>
           <option value="30">Cách nhau 30 phút</option>
           <option value="60" selected>Cách nhau 1 giờ</option>
@@ -5077,14 +5304,23 @@ Nội dung 3 cho Group 3"></textarea>
           <option value="180">Cách nhau 3 giờ</option>
         </select>
       </div>
-      <input name="campaign" placeholder="Tên chiến dịch / ghi chú nhóm bài">
-      <p class="scheduler-tip">Lưu ý an toàn: hệ thống tạo lịch và chia nội dung thông minh. Việc đăng Group thực tế cần quyền/phiên Facebook hợp lệ theo chính sách nền tảng.</p>
-      <button>Lưu lịch nhiều Group</button>
+      <div class="grid">
+        <input name="campaign" placeholder="Tên chiến dịch / ghi chú">
+        <input type="file" name="images" accept="image/*,video/mp4,video/quicktime" multiple>
+      </div>
+      <div class="publisher-mode-note">
+        Đăng ngay: Fanpage sẽ đăng trực tiếp nếu Token hợp lệ; Group chỉ được đưa vào hàng đợi khi đã cấu hình Page tham gia Group và Group cho đăng bài công khai. Đăng hẹn giờ: lưu lịch theo khung giờ và khoảng cách đã chọn.
+      </div>
+      <div class="bulk-action-row">
+        <button name="publish_mode" value="now">🚀 Đăng ngay</button>
+        <button class="schedule-btn" name="publish_mode" value="schedule">🕒 Đăng hẹn giờ</button>
+        <button class="save-btn" name="publish_mode" value="draft">💾 Lưu chiến dịch</button>
+      </div>
     </form>
   </div>
 
   <form method="post" action="/group_schedule"><h3>Lịch đăng Group thủ công</h3><div class="grid"><input name="group_name" placeholder="Tên Group"><input name="group_id" placeholder="Group ID"><input name="schedule_time" type="datetime-local"></div><textarea name="content" rows="4" placeholder="Nội dung cần lên lịch đăng Group"></textarea><button>Lưu lịch Group</button></form>
-  <h3>Danh sách Group</h3>{% for g in fb_groups %}<div class="history"><b>{{ g[1] }}</b> • {{ g[2] }} • {{ g[3] }}<br>{{ g[4] }}</div>{% endfor %}
+  <h3>Danh sách Group</h3>{% for g in fb_groups %}<div class="history"><b>{{ g[1] }}</b> • {{ g[2] }} • {{ g[3] }}<br>{{ g[4] }}<br><span class="group-permission-note">{% if g[8] %}💬 Cho Page đăng công khai • Page hợp lệ: {{ g[7] or 'Chưa gán Page' }}{% else %}🔒 Chưa cấu hình quyền Page đăng Group{% endif %}</span></div>{% endfor %}
   <h3>Lịch Group gần nhất</h3>{% for gs in group_schedules %}<div class="history"><b>{{ gs[1] }}</b> • {{ gs[4] }} • {{ gs[5] }}<br>{{ gs[3] }}</div>{% endfor %}
 </section>
 
@@ -5507,7 +5743,7 @@ Tạo: {{ c[4] }}</div>
 
   <div class="analytics-kpi-grid">
     <div class="analytics-kpi"><span>📌 Tổng bài</span><b>{{ analytics.summary.total_posts }}</b><small>Toàn bộ bài đã tạo</small></div>
-    <div class="analytics-kpi"><span>✅ Đã đăng</span><b>{{ analytics.summary.posted }}</b><small>Tỷ lệ đăng: {{ analytics.summary.conversion_rate }}%</small></div>
+    <div class="analytics-kpi"><span>💬 Đã đăng</span><b>{{ analytics.summary.posted }}</b><small>Tỷ lệ đăng: {{ analytics.summary.conversion_rate }}%</small></div>
     <div class="analytics-kpi"><span>⏰ Chờ đăng</span><b>{{ analytics.summary.scheduled }}</b><small>Bài đang lên lịch</small></div>
     <div class="analytics-kpi"><span>⚠️ Lỗi đăng</span><b>{{ analytics.summary.errors }}</b><small>Tỷ lệ lỗi: {{ analytics.summary.error_rate }}%</small></div>
     <div class="analytics-kpi"><span>👥 Lead CRM</span><b>{{ analytics.summary.crm_total + analytics.summary.pipeline_total }}</b><small>Tổng khách hàng ghi nhận</small></div>
@@ -6000,7 +6236,7 @@ Thời gian tạo: {{ h[9] }}
     <span>📌 Tổng bài</span><b>{{ s.total }}</b>
   </div>
   <div class="activity-card">
-    <span>✅ Đã đăng</span><b>{{ s.posted }}</b>
+    <span>💬 Đã đăng</span><b>{{ s.posted }}</b>
   </div>
   <div class="activity-card">
     <span>⏰ Chờ đăng</span><b>{{ s.scheduled }}</b>
@@ -6349,7 +6585,7 @@ def render(content="", message="", ok=True, selected_industry="spa", analysis=""
         industry_labels=INDUSTRY_LABELS, selected_industry=selected_industry,
         library_items=current_library(selected_industry)[:10], locked_count=max(0, 500 - len(current_library(selected_industry)[:10])),
         score=score, warnings=warnings, token_warning=token_warning,
-        analysis=analysis, plan=plan, v3=v3_ceo_summary(), pipeline_rows=get_pipeline_leads(), customer_tasks=get_customer_tasks(), notifications=get_notifications(), fb_groups=get_fb_groups(), group_schedules=get_group_schedules(), comment_leads=get_comment_leads(), messenger_scripts=get_messenger_scripts(), success_assets=get_success_assets()
+        analysis=analysis, plan=plan, v3=v3_ceo_summary(), pipeline_rows=get_pipeline_leads(), customer_tasks=get_customer_tasks(), notifications=get_notifications(), fb_groups=get_fb_groups(), group_schedules=get_group_schedules(), comment_leads=get_comment_leads(), messenger_scripts=get_messenger_scripts(), success_assets=get_success_assets(), publisher_dashboard=get_publisher_dashboard()
     )
 
 @app.route("/")
@@ -6677,6 +6913,116 @@ def smart_schedule_route():
     return render(message=msg, ok=True)
 
 
+@app.route("/bulk_publisher_pro", methods=["POST"])
+def bulk_publisher_pro_route():
+    free = get_free_status()
+    if free.get("is_expired"):
+        return render(message="Phiên miễn phí đã giới hạn. Quý khách vui lòng nâng cấp Premium để dùng đăng bài hàng loạt Pro.", ok=False)
+
+    publish_mode = request.form.get("publish_mode", "schedule")
+    bulk_content = request.form.get("bulk_content", "").strip()
+    start_time = request.form.get("start_time", "").replace("T", " ")
+    gap_minutes = request.form.get("gap_minutes", "60")
+    campaign = request.form.get("campaign", "").strip()
+    pages = selected_pages(request.form.getlist("page_indexes"))
+    groups = selected_groups(request.form.getlist("group_indexes"))
+    contents = split_bulk_contents(bulk_content)
+    media_paths = save_uploads(request.files.getlist("images"))
+    use_ai_anti_duplicate = request.form.get("use_ai_anti_duplicate") == "1"
+    skip_token_error = request.form.get("skip_token_error") == "1"
+
+    if not pages and not groups:
+        return render(message="Chưa chọn Page hoặc Group để đăng.", ok=False)
+    if not contents:
+        return render(message="Chưa nhập nội dung. Mỗi dòng hoặc mỗi đoạn cách dòng trống là 1 nội dung riêng.", ok=False)
+    if free.get("is_trial") and (len(pages) + len(groups)) > 1:
+        return render(message="Gói dùng thử chỉ xử lý tối đa 1 kênh. Vui lòng nâng cấp Premium để đăng nhiều Page/Group cùng lúc.", ok=False)
+    if publish_mode == "schedule" and not start_time:
+        return render(message="Chưa chọn khung giờ bắt đầu để hẹn giờ đăng.", ok=False)
+
+    # Xác thực quyền Group trước khi tạo hàng đợi: Page phải được cấu hình đã tham gia Group và Group cho đăng công khai.
+    invalid_groups = []
+    valid_groups = []
+    if groups:
+        if not pages:
+            return render(message="Muốn đăng Group cần chọn ít nhất 1 Fanpage đã cấu hình tham gia Group đó.", ok=False)
+        for g in groups:
+            ok_group, reason = group_can_post_with_selected_pages(g, pages)
+            if ok_group:
+                valid_groups.append(g)
+            else:
+                invalid_groups.append(f"💬 {g[1]}: {reason}")
+        if invalid_groups:
+            return render(message="Một số Group chưa đủ điều kiện đăng công khai bằng Page. Vui lòng cấu hình Page tham gia Group trước:\n" + "\n".join(invalid_groups), ok=False)
+        groups = valid_groups
+
+    targets = []
+    for p in pages:
+        targets.append(("page", p))
+    for g in groups:
+        targets.append(("group", g))
+
+    prepared_contents = prepare_bulk_contents(contents, len(targets), use_ai_anti_duplicate)
+    max_jobs = min(len(targets), len(prepared_contents))
+    if max_jobs <= 0:
+        return render(message="Chưa đủ nội dung để chia cho Page/Group.", ok=False)
+
+    now_s = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
+    times = smart_schedule_times_from_start(start_time or now_s, max_jobs, gap_minutes)
+    used_media = set()
+    messages = []
+
+    if publish_mode == "now" and pages:
+        token_errors = []
+        for page in pages:
+            token_status = check_single_page_token(page)
+            if token_status["status"] != "SỐNG":
+                token_errors.append(f"{page.get('name')}: {token_status['detail']}")
+        if token_errors:
+            return render(message="Token/Page chưa đủ quyền, hệ thống dừng đăng ngay để tránh lỗi hàng loạt:\n" + "\n".join(token_errors), ok=False)
+
+    for i in range(max_jobs):
+        target_type, target = targets[i]
+        content = prepared_contents[i]
+        item_time = times[i]
+        if target_type == "page":
+            image_path = choose_best_media_for_content(content, media_paths, used_media)
+            score = score_content(content)
+            if publish_mode == "now":
+                result = post_to_facebook(target, content, image_path)
+                if "id" in result or "post_id" in result:
+                    post_id = result.get("post_id") or result.get("id")
+                    save_post(target["name"], target["id"], content, "posted", post_id, "", image_path, campaign, score)
+                    messages.append(f"💬 Đã đăng Fanpage {target['name']}: {post_id}")
+                else:
+                    save_post(target["name"], target["id"], content, "error", str(result), "", image_path, campaign, score)
+                    messages.append(f"❌ Lỗi Fanpage {target['name']}: {result}")
+            elif publish_mode == "draft":
+                save_post(target["name"], target["id"], content, "draft", "", "", image_path, campaign, score)
+                messages.append(f"💾 Đã lưu nháp Fanpage {target['name']}")
+            else:
+                save_post(target["name"], target["id"], content, "scheduled", "", item_time, image_path, campaign, score)
+                messages.append(f"🕒 Đã hẹn giờ Fanpage {target['name']} lúc {item_time}")
+        else:
+            group_name, group_id = target[1], target[2]
+            note_prefix = f"[{campaign}] " if campaign else ""
+            if publish_mode == "now":
+                add_group_schedule_status(group_name, group_id, note_prefix + content, now_s, "ready_now")
+                messages.append(f"🚀 Đã đưa Group {group_name} vào hàng đợi đăng ngay")
+            elif publish_mode == "draft":
+                add_group_schedule_status(group_name, group_id, note_prefix + content, "", "draft")
+                messages.append(f"💾 Đã lưu nháp Group {group_name}")
+            else:
+                add_group_schedule_status(group_name, group_id, note_prefix + content, item_time, "scheduled")
+                messages.append(f"🕒 Đã hẹn giờ Group {group_name} lúc {item_time}")
+
+    if len(targets) > len(contents) and use_ai_anti_duplicate:
+        messages.append(f"🧠 AI chống trùng đã tạo thêm {len(targets)-len(contents)} biến thể để đủ số Page/Group.")
+    elif len(targets) > len(contents):
+        messages.append(f"⚠️ Có {len(targets)-len(contents)} Page/Group chưa được tạo bài vì thiếu nội dung. Hệ thống không tự lặp để tránh trùng bài.")
+
+    return render(message="\n".join(messages), ok=True)
+
 @app.route("/group_bulk_schedule", methods=["POST"])
 def group_bulk_schedule_route():
     free = get_free_status()
@@ -6704,7 +7050,7 @@ def group_bulk_schedule_route():
     messages = []
     for i in range(max_jobs):
         group = groups[i]
-        content = contents[i]
+        content = prepared_contents[i]
         item_time = times[i]
         note_prefix = f"[{campaign}] " if campaign else ""
         add_group_schedule(group[1], group[2], note_prefix + content, item_time)
@@ -6714,6 +7060,15 @@ def group_bulk_schedule_route():
         messages.append(f"Lưu ý: Có {len(groups)-len(contents)} Group chưa tạo lịch vì thiếu nội dung. Hệ thống không tự lặp để tránh trùng bài.")
 
     return render(message="\n".join(messages), ok=True)
+
+@app.route("/publisher_queue_status", methods=["POST"])
+def publisher_queue_status_route():
+    status = request.form.get("status", "scheduled")
+    allowed = {"scheduled", "paused", "cancelled", "ready_now", "draft"}
+    if status not in allowed:
+        status = "scheduled"
+    ok, msg = update_group_schedule_status(request.form.get("row_id", ""), status)
+    return render(message=msg, ok=ok)
 
 @app.route("/page_cluster", methods=["POST"])
 def page_cluster_route():
@@ -6774,8 +7129,17 @@ def notification_route():
 
 @app.route("/fb_group", methods=["POST"])
 def fb_group_route():
-    add_fb_group(request.form.get("group_name", "").strip(), request.form.get("group_id", "").strip(), request.form.get("niche", "").strip(), request.form.get("note", "").strip())
-    return render(message="Đã lưu Group vào Group Marketing.", ok=True)
+    allowed_page_ids = ",".join([x.strip() for x in request.form.getlist("allowed_page_ids") if x.strip()])
+    can_post_public = 1 if request.form.get("can_post_public") == "1" else 0
+    add_fb_group(
+        request.form.get("group_name", "").strip(),
+        request.form.get("group_id", "").strip(),
+        request.form.get("niche", "").strip(),
+        request.form.get("note", "").strip(),
+        allowed_page_ids,
+        can_post_public
+    )
+    return render(message="💬 Đã lưu Group và cấu hình quyền Page đăng Group.", ok=True)
 
 @app.route("/group_schedule", methods=["POST"])
 def group_schedule_route():
@@ -7298,8 +7662,8 @@ function isStandalone(){{ return (window.matchMedia && window.matchMedia('(displ
 function isIOS(){{ return /iphone|ipad|ipod/i.test(navigator.userAgent); }}
 function isAndroid(){{ return /android/i.test(navigator.userAgent); }}
 function markInstalled(){{
-  statusEl.innerText='✅ GPT MKT Pro đã được cài đặt. Biểu tượng ứng dụng đã có trên màn hình chính.';
-  installBtn.innerText='✅ Đã cài đặt GPT MKT Pro';
+  statusEl.innerText='💬 GPT MKT Pro đã được cài đặt. Biểu tượng ứng dụng đã có trên màn hình chính.';
+  installBtn.innerText='💬 Đã cài đặt GPT MKT Pro';
   installBtn.classList.add('installed');
   installBtn.disabled=true;
 }}
