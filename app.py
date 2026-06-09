@@ -2831,6 +2831,22 @@ button:hover{
   display:block;
 }
 
+
+.premium-badge{
+  display:inline-flex;align-items:center;justify-content:center;
+  background:linear-gradient(135deg,#FFD700,#F59E0B);
+  color:#1F1300!important;font-size:10px;font-weight:1000;
+  padding:3px 7px;border-radius:999px;margin-left:auto;
+  box-shadow:0 0 0 1px rgba(255,255,255,.22),0 8px 16px rgba(245,158,11,.25);
+  letter-spacing:.3px;white-space:nowrap;
+}
+.v2-nav-link.premium-menu-item{border-color:rgba(255,215,0,.28)!important;}
+.premium-device-card{background:linear-gradient(135deg,rgba(255,255,255,.10),rgba(255,215,0,.10));border:1px solid rgba(255,215,0,.30);border-radius:18px;padding:13px;margin:12px 0 15px;color:#F8FAFC;}
+.device-title{font-size:12px;font-weight:1000;color:#FDE68A;margin-bottom:7px;}
+.device-id-line{font-size:14px;font-weight:1000;color:#FFFFFF;word-break:break-all;background:rgba(15,23,42,.35);border-radius:12px;padding:8px;margin:6px 0;}
+.device-status-line{font-size:12px;color:#E5E7EB;font-weight:800}.device-help-text{font-size:11px;color:#CBD5E1;line-height:1.35;margin-top:7px;}
+.plan-detail-box{display:none;margin-top:12px;background:#FFF7ED;border:1px solid #FED7AA;border-radius:16px;padding:12px;color:#7C2D12;font-size:13px;line-height:1.55}.plan-detail-box.open{display:block;}
+
 .v2-nav-link.active{
   background:linear-gradient(135deg,rgba(56,189,248,.18),rgba(139,92,246,.22))!important;
   border-color:rgba(56,189,248,.45)!important;
@@ -4625,6 +4641,7 @@ function getOrCreateDeviceId(){
     localStorage.setItem("mkt_device_id", id);
   }
   MKT_DEVICE_ID = id;
+  try{ document.cookie = "mkt_device_id=" + encodeURIComponent(id) + "; path=/; max-age=" + (60*60*24*365*5) + "; SameSite=Lax"; }catch(e){}
   document.querySelectorAll(".device-id-text").forEach(function(el){el.innerText=id;});
   return id;
 }
@@ -4635,7 +4652,7 @@ async function checkPremiumStatus(){
     const res = await fetch("/premium_status?device_id=" + encodeURIComponent(id));
     const data = await res.json();
     MKT_PREMIUM_ACTIVE = !!data.active;
-    const label = data.active ? "Premium: 👑 GÓI NHÀ BÁN HÀNG CHUYÊN NGHIỆP" : "Dùng thử / chờ duyệt";
+    const label = data.active ? "👑 Premium đang hoạt động" : "🎁 Dùng thử 3 ngày";
     document.querySelectorAll(".premium-status-text").forEach(function(el){el.innerText=label;});
     if(data.active){
       document.body.classList.add("premium-active");
@@ -4644,7 +4661,7 @@ async function checkPremiumStatus(){
       document.body.classList.remove("premium-active");
     }
   }catch(e){
-    document.querySelectorAll(".premium-status-text").forEach(function(el){el.innerText="Dùng thử / chờ duyệt";});
+    document.querySelectorAll(".premium-status-text").forEach(function(el){el.innerText="🎁 Dùng thử 3 ngày";});
   }
 }
 
@@ -4739,7 +4756,9 @@ function openModule(moduleId){
   }
 
   if(!trialAllowed.includes(moduleId) && premiumLocked[moduleId] && !MKT_PREMIUM_ACTIVE){
-    openLockedFeature(premiumLocked[moduleId], "Gói 1 tháng / 3 tháng / 6 tháng / 1 năm / Nhà bán hàng chuyên nghiệp");
+    scrollToPricing();
+    const note = document.getElementById("premiumJumpNotice");
+    if(note){ note.innerText = "Tính năng " + premiumLocked[moduleId] + " cần nâng cấp Premium. Vui lòng chọn gói phù hợp bên dưới."; }
     return false;
   }
 
@@ -4786,6 +4805,33 @@ function scrollToPricing(){
   }
 }
 
+
+function showPricingDetail(planKey, btn){
+  planKey = planKey || "monthly";
+  const card = btn ? btn.closest(".premium-plan") : null;
+  if(card){
+    const box = card.querySelector(".plan-detail-box");
+    if(box){ box.classList.toggle("open"); }
+  }
+  return false;
+}
+function openPlanDetail(planKey){ return showPricingDetail(planKey || "monthly", null); }
+function openPricingDetail(planKey){ return showPricingDetail(planKey || "monthly", null); }
+function showPlanDetail(planKey){ return showPricingDetail(planKey || "monthly", null); }
+function markPremiumMenuBadges(){
+  const lockedIds = ["messenger_ai","crm_sales","marketing_director","ai_studio","creative_center","scheduler","plan","analytics","automation_center","success_center","batch","factory","clusters","campaign","smart_engagement"];
+  document.querySelectorAll(".v2-nav-link[href^='#']").forEach(function(link){
+    const id=(link.getAttribute("href")||"").replace("#","").trim();
+    if(lockedIds.includes(id)){
+      link.classList.add("premium-menu-item");
+      if(!link.querySelector(".premium-badge")){
+        const b=document.createElement("span"); b.className="premium-badge"; b.innerText="PREMIUM"; link.appendChild(b);
+      }
+    }
+  });
+}
+document.addEventListener("DOMContentLoaded", markPremiumMenuBadges);
+setTimeout(markPremiumMenuBadges, 600);
 
 const premiumPlans = {
   trial:{
@@ -5111,10 +5157,11 @@ function closeLockedFeature(){
   <div class="logo">Marketing<br>Automation Pro</div>
   <div class="subtitle">V5 Enterprise Seller AI Suite</div>
 
-  <div class="device-status-card">
-    🖥 <b>ID thiết bị</b><br>
-    <b class="device-id-text">Đang tạo...</b><br>
-    <span>Trạng thái: <span class="premium-status-text">Dùng thử / chờ duyệt</span></span>
+  <div class="device-status-card premium-device-card">
+    <div class="device-title">🖥 ID THIẾT BỊ</div>
+    <div class="device-id-line device-id-text">Đang tạo...</div>
+    <div class="device-status-line">Trạng thái: <span class="premium-status-text">🎁 Dùng thử 3 ngày</span></div>
+    <div class="device-help-text">Khách gửi ID này để Admin duyệt và mở gói Premium đúng thiết bị.</div>
   </div>
 
 <div class="nav">
@@ -5304,9 +5351,6 @@ function closeLockedFeature(){
     <button onclick="openModule('comment_manager')">💬 AI trả lời comment</button>
   </div>
 
-  <div class="fb-safe-note">
-    Hệ thống không dùng auto like hàng loạt, không tương tác giả bằng nhiều tài khoản. Thay vào đó dùng chiến lược tăng tương tác thông minh: giờ đăng tốt, caption kéo comment, câu hỏi tương tác, theo dõi bài yếu và nhắc admin chăm sóc khách thật.
-  </div>
 
   <div class="v3-feature-grid">
     <div class="fb-pro-card"><div class="fb-pro-badge">🚀 Facebook Publisher Pro</div><h3>Đăng bài Fanpage chuyên nghiệp</h3><ul><li>Chọn Fanpage</li><li>Soạn bài</li><li>Upload ảnh/video</li><li>Đăng ngay</li><li>Lên lịch đăng</li><li>Lưu nháp</li><li>Nhật ký đăng bài</li><li>Báo lỗi token/page rõ ràng</li></ul><button onclick="openModule('facebook_publisher_pro')">Mở Publisher Pro</button></div>
@@ -6091,7 +6135,7 @@ Ghi chú: {{ r[5] }}</div>
 <section class="panel module-section" id="token">
   <div class="section-open-note">Bạn đang mở: Token Manager.</div>
   <h2>Token Center Pro</h2>
-  <p class="small">Thêm, cập nhật và kiểm tra Page Token trực tiếp trong tool. Không cần vào Render Environment để sửa PAGES_JSON nữa.</p>
+  <p class="small">Quản lý Fanpage, Page ID và Page Token ngay trong Token Center. Có thể kiểm tra token trực tiếp trước khi đăng bài.</p>
 
   <div class="grid">
     <form method="post" action="/fanpage_token_add">
@@ -6192,6 +6236,7 @@ Thời gian tạo: {{ h[9] }}
       <span class="mini">V5 SELLER AI PREMIUM</span>
       <h2>Bảng Giá Premium</h2>
       <p>Thiết kế theo giá trị nhận được: tiết kiệm thời gian, giảm chi phí thuê ngoài và mở khóa AI Marketing chuyên nghiệp.</p>
+      <div id="premiumJumpNotice" class="premium-note-box" style="display:block;margin:14px auto 0;max-width:820px">Bấm vào menu có nhãn PREMIUM để xem và chọn gói phù hợp.</div>
     </div>
 
     <div class="v4-pricing-stats">
@@ -6245,6 +6290,8 @@ Thời gian tạo: {{ h[9] }}
           <li class="open">Token Manager</li>
         </ul>
         <button class="plan-button premium-btn" onclick="openPayment('monthly')">Mở khóa gói 1 tháng</button>
+        <button type="button" class="plan-button light" onclick="showPricingDetail('monthly', this);event.stopPropagation();">Chi tiết gói</button>
+        <div class="plan-detail-box">Mở các công cụ đăng bài, token, lịch đăng cơ bản và AI Content Studio cho người mới bắt đầu.</div>
       </div>
 
       <div class="premium-plan v4-plan">
@@ -6265,6 +6312,8 @@ Thời gian tạo: {{ h[9] }}
           <span>Viết content + lập kế hoạch + báo cáo cơ bản cho shop nhỏ.</span>
         </div>
         <button class="plan-button premium-btn" onclick="openPayment('quarterly')">Đăng ký 3 tháng</button>
+        <button type="button" class="plan-button light" onclick="showPricingDetail('quarterly', this);event.stopPropagation();">Chi tiết gói</button>
+        <div class="plan-detail-box">Phù hợp shop cần lập kế hoạch, quản lý chiến dịch, kho content Premium và báo cáo cơ bản.</div>
       </div>
 
       <div class="premium-plan v4-plan">
@@ -6285,6 +6334,8 @@ Thời gian tạo: {{ h[9] }}
           <span>Tối ưu quy trình tư vấn, gom khách và chăm sóc khách hàng.</span>
         </div>
         <button class="plan-button premium-btn" onclick="openPayment('halfyear')">Đăng ký 6 tháng</button>
+        <button type="button" class="plan-button light" onclick="showPricingDetail('halfyear', this);event.stopPropagation();">Chi tiết gói</button>
+        <div class="plan-detail-box">Mở thêm CRM Pro, AI Sales Bot, quản lý khách hàng và quy trình chăm sóc comment.</div>
       </div>
 
       <div class="premium-plan featured v4-plan v4-yearly">
@@ -6303,6 +6354,8 @@ Thời gian tạo: {{ h[9] }}
         </ul>
         <div class="v4-save-box">🚀 Tiết kiệm ~12.000.000đ/năm chi phí thuê nhân sự</div>
         <button class="plan-button premium-btn" onclick="openPayment('yearly')">Chọn gói phổ biến nhất</button>
+        <button type="button" class="plan-button light" onclick="showPricingDetail('yearly', this);event.stopPropagation();">Chi tiết gói</button>
+        <div class="plan-detail-box">Gói tối ưu nhất cho nhà bán hàng cần AI Marketing Director, Ads Chuyên Gia, CRM và Automation.</div>
       </div>
 
       <div class="premium-plan featured v4-plan v4-lifetime">
@@ -6325,6 +6378,8 @@ Thời gian tạo: {{ h[9] }}
         </ul>
         <div class="v4-save-box gold">💰 Tiết kiệm hơn 10.000.000đ chi phí sử dụng lâu dài</div>
         <button class="plan-button premium-btn" onclick="openPayment('lifetime')">Mở khóa trọn đời</button>
+        <button type="button" class="plan-button light" onclick="showPricingDetail('lifetime', this);event.stopPropagation();">Chi tiết gói</button>
+        <div class="plan-detail-box">Gói cao nhất: mở toàn bộ AI hiện tại, AI tương lai, dashboard enterprise, export, backup và ưu tiên hỗ trợ.</div>
       </div>
     </div>
 
@@ -6525,7 +6580,7 @@ function toggleMenuGroup(el){
       });
       var action = card.querySelector('.plan-button,.safe-pricing-action');
       if(action) {
-        action.innerText = action.innerText.replace('','Xem chi tiết gói');
+        if(!action.innerText.trim()){ action.innerText = 'Xem chi tiết gói'; }
       }
     });
   }
@@ -6874,12 +6929,6 @@ setInterval(function(){if(document.getElementById('supportPanel')&&document.getE
   function bindSafeMenu(){
     const nav = document.querySelector('.nav');
     if(!nav) return;
-    if(!nav.querySelector('.menu-health-box')){
-      const box=document.createElement('div');
-      box.className='menu-health-box';
-      box.innerHTML='Menu đã bật chế độ ổn định: bấm tiêu đề để mở/thu nhóm, bấm mục con để mở chức năng.';
-      nav.insertBefore(box, nav.firstChild);
-    }
     document.querySelectorAll('.v2-nav-title').forEach(function(title){
       if(title.dataset.safeBound==='1') return;
       title.dataset.safeBound='1';
@@ -8312,6 +8361,91 @@ window.addEventListener('load', function(){{
     setTimeout(function(){{ addPremiumBadges(); bindPricingFixed(); }}, 2200);
   }});
 }})();
+
+
+/* PATCH V59 - Menu/Premium stability bridge */
+(function(){{
+  function safeId(){{
+    let id = localStorage.getItem('mkt_device_id');
+    if(!id){{
+      const d = new Date();
+      const ymd = d.getFullYear().toString()+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0');
+      id = 'MP-' + ymd + '-' + Math.random().toString(16).slice(2,8).toUpperCase();
+      localStorage.setItem('mkt_device_id', id);
+    }}
+    try{{ document.cookie='mkt_device_id='+encodeURIComponent(id)+'; path=/; max-age='+(60*60*24*365*5)+'; SameSite=Lax'; }}catch(e){{}}
+    window.MKT_DEVICE_ID = id;
+    document.querySelectorAll('.device-id-text,[data-device-id]').forEach(function(el){{ el.innerText = id; }});
+    document.querySelectorAll('input[name="device_id"]').forEach(function(el){{ el.value = id; }});
+    return id;
+  }}
+  window.getMktDeviceId = window.getOrCreateDeviceId = function(){{ return safeId(); }};
+  window.scrollToPricingFinal = window.scrollToPricingFinal || function(){{
+    if(typeof window.scrollToPricing === 'function') return window.scrollToPricing();
+    const el = document.getElementById('pricing') || document.getElementById('premium');
+    if(el){{ el.style.display='block'; el.scrollIntoView({{behavior:'smooth', block:'start'}}); }}
+    return false;
+  }};
+  window.safeOpenPaymentFinal = window.safeOpenPaymentFinal || function(planKey){{
+    planKey = planKey || window.MKT_SELECTED_PLAN || 'monthly';
+    if(typeof window.openPayment === 'function') return window.openPayment(planKey);
+    window.MKT_SELECTED_PLAN = planKey;
+    window.scrollToPricingFinal();
+    return false;
+  }};
+  window.closePremiumConversionFinal = window.closePremiumConversionFinal || function(){{
+    ['premiumConversionModal','premiumConversionFinal','premiumModal','lockedFeatureModal'].forEach(function(id){{
+      const el = document.getElementById(id);
+      if(el){{ el.style.display='none'; el.classList.remove('open','active','show'); }}
+    }});
+    document.body.classList.remove('modal-open');
+    return false;
+  }};
+  function markPremium(){{
+    const lockedIds = ['messenger_ai','crm_sales','marketing_director','ai_studio','creative_center','scheduler','plan','analytics','automation_center','success_center','batch','factory','clusters','campaign','smart_engagement','studio','library','post_edit','v9center','crm'];
+    document.querySelectorAll('.v2-nav-link[href^="#"]').forEach(function(link){{
+      const id=(link.getAttribute('href')||'').replace('#','').trim();
+      if(lockedIds.indexOf(id)>=0){{
+        link.classList.add('premium-menu-item');
+        if(!link.querySelector('.premium-badge')){{
+          const b=document.createElement('span'); b.className='premium-badge'; b.innerText='PREMIUM'; link.appendChild(b);
+        }}
+      }}
+    }});
+  }}
+  const oldOpen = window.openModule;
+  window.openModule = function(moduleId){{
+    safeId();
+    moduleId = (moduleId || '').replace('#','').trim();
+    const target = document.getElementById(moduleId);
+    if(!target){{ window.scrollToPricingFinal(); return false; }}
+    const lockedIds = ['messenger_ai','crm_sales','marketing_director','ai_studio','creative_center','scheduler','plan','analytics','automation_center','success_center','batch','factory','clusters','campaign','smart_engagement','studio','library','post_edit','v9center','crm'];
+    if(lockedIds.indexOf(moduleId)>=0 && !window.MKT_PREMIUM_ACTIVE){{
+      const note=document.getElementById('premiumJumpNotice');
+      if(note){{ note.innerText='Tính năng này cần Premium. Vui lòng chọn gói phù hợp bên dưới để mở khóa.'; }}
+      window.scrollToPricingFinal();
+      return false;
+    }}
+    if(typeof oldOpen === 'function') return oldOpen(moduleId);
+    document.querySelectorAll('.module-section').forEach(function(el){{el.classList.remove('active-module');}});
+    target.classList.add('active-module');
+    target.scrollIntoView({{behavior:'smooth', block:'start'}});
+    return false;
+  }};
+  function bindSafeClicks(){{
+    safeId();
+    markPremium();
+    document.querySelectorAll('form').forEach(function(form){{
+      if(!form.querySelector('input[name="device_id"]')){{
+        const h=document.createElement('input'); h.type='hidden'; h.name='device_id'; h.value=safeId(); form.appendChild(h);
+      }}
+    }});
+  }}
+  document.addEventListener('DOMContentLoaded', bindSafeClicks);
+  setTimeout(bindSafeClicks, 500);
+  setTimeout(bindSafeClicks, 1500);
+}})();
+
 </script>
 </body>
 </html>
