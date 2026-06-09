@@ -545,6 +545,21 @@ def init_db():
     )
     """)
 
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS support_messages (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        device_id TEXT,
+        phone TEXT,
+        email TEXT,
+        sender TEXT DEFAULT 'customer',
+        message TEXT,
+        admin_reply TEXT,
+        status TEXT DEFAULT 'new',
+        created_at TEXT,
+        replied_at TEXT
+    )
+    """)
+
     conn.commit()
     conn.close()
 
@@ -5724,6 +5739,49 @@ let draggedKanbanCard=null;
 function dragKanban(ev){ draggedKanbanCard=ev.target; }
 function dropKanban(ev){ ev.preventDefault(); const col=ev.currentTarget; if(draggedKanbanCard){ col.appendChild(draggedKanbanCard); draggedKanbanCard=null; } }
 </script>
+
+
+<!-- Mini Chat Support - lưu tin nhắn để Admin trả lời trong /admin -->
+<style>
+.support-float{position:fixed;right:22px;bottom:88px;z-index:9999;font-family:Arial,sans-serif}.support-btn{background:linear-gradient(135deg,#2563eb,#38bdf8);color:white;border:0;border-radius:999px;padding:13px 18px;font-weight:900;box-shadow:0 12px 32px rgba(37,99,235,.35);cursor:pointer}.support-panel{display:none;width:340px;max-width:calc(100vw - 30px);background:#0f172a;color:#e5e7eb;border:1px solid #334155;border-radius:20px;box-shadow:0 18px 60px rgba(0,0,0,.45);overflow:hidden}.support-panel.open{display:block}.support-head{background:#1e1b4b;padding:14px 16px;font-weight:900;color:#bfdbfe}.support-body{padding:14px}.support-log{height:170px;overflow-y:auto;background:#020617;border:1px solid #1f2937;border-radius:14px;padding:10px;margin-bottom:10px;font-size:13px}.support-log .me{background:#1d4ed8;margin:6px 0 6px 35px;padding:8px;border-radius:12px}.support-log .ad{background:#14532d;margin:6px 35px 6px 0;padding:8px;border-radius:12px}.support-body input,.support-body textarea{width:100%;background:#020617;color:white;border:1px solid #334155;border-radius:12px;padding:10px;margin:5px 0}.support-body textarea{height:78px}.support-send{width:100%;background:#22c55e;color:white;border:0;border-radius:12px;padding:11px;font-weight:900;cursor:pointer}.support-note{font-size:12px;color:#94a3b8;margin-top:8px}
+</style>
+<div class="support-float">
+  <button class="support-btn" onclick="toggleSupportChat()">💬 mini chat support</button>
+  <div class="support-panel" id="supportPanel">
+    <div class="support-head">💬 Hỗ trợ khách hàng trực tiếp</div>
+    <div class="support-body">
+      <div class="support-log" id="supportLog"><div class="ad">Admin sẵn sàng hỗ trợ. Anh/chị để lại SĐT/Email và nội dung cần xử lý.</div></div>
+      <input id="supportPhone" placeholder="SĐT/Zalo của anh/chị">
+      <input id="supportEmail" placeholder="Email/Gmail">
+      <textarea id="supportMessage" placeholder="Nhập nội dung cần hỗ trợ..."></textarea>
+      <button class="support-send" onclick="sendSupportMessage()">Gửi cho Admin</button>
+      <div class="support-note" id="supportNote">Tin nhắn sẽ hiển thị trong Web Admin để kỹ thuật trả lời.</div>
+    </div>
+  </div>
+</div>
+<script>
+function getMktDeviceId(){
+  let id=localStorage.getItem('mkt_device_id');
+  if(!id){id='MP-'+new Date().toISOString().slice(0,10).replaceAll('-','')+'-'+Math.random().toString(16).slice(2,8).toUpperCase();localStorage.setItem('mkt_device_id',id)}
+  return id;
+}
+let lastSupportId=0;
+function toggleSupportChat(){document.getElementById('supportPanel').classList.toggle('open');pollSupportReplies();}
+function addSupportBubble(type,text){const log=document.getElementById('supportLog');const div=document.createElement('div');div.className=type;div.innerText=text;log.appendChild(div);log.scrollTop=log.scrollHeight;}
+async function sendSupportMessage(){
+  const msg=document.getElementById('supportMessage').value.trim();
+  if(!msg){alert('Vui lòng nhập nội dung cần hỗ trợ.');return;}
+  addSupportBubble('me',msg);document.getElementById('supportMessage').value='';
+  const payload={device_id:getMktDeviceId(),phone:document.getElementById('supportPhone').value,email:document.getElementById('supportEmail').value,message:msg};
+  const res=await fetch('/support_message',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}).then(r=>r.json()).catch(()=>({success:false,message:'Không gửi được tin nhắn, vui lòng thử lại.'}));
+  document.getElementById('supportNote').innerText=res.message||'Đã gửi.';
+}
+async function pollSupportReplies(){
+  const data=await fetch('/support_poll?device_id='+encodeURIComponent(getMktDeviceId())+'&after_id='+lastSupportId).then(r=>r.json()).catch(()=>({messages:[]}));
+  (data.messages||[]).forEach(function(m){lastSupportId=Math.max(lastSupportId,m.id||0); if(m.admin_reply){addSupportBubble('ad','Admin: '+m.admin_reply);}});
+}
+setInterval(function(){if(document.getElementById('supportPanel')&&document.getElementById('supportPanel').classList.contains('open')) pollSupportReplies();},5000);
+</script>
 </body>
 </html>
 """
@@ -6188,6 +6246,114 @@ def api_templates():
 
 
 
+
+def ensure_support_tables():
+    conn = sqlite3.connect(DB)
+    c = conn.cursor()
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS support_messages (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        device_id TEXT,
+        phone TEXT,
+        email TEXT,
+        sender TEXT DEFAULT 'customer',
+        message TEXT,
+        admin_reply TEXT,
+        status TEXT DEFAULT 'new',
+        created_at TEXT,
+        replied_at TEXT
+    )
+    """)
+    conn.commit()
+    conn.close()
+
+
+def add_support_message(device_id, phone, email, message):
+    ensure_support_tables()
+    device_id = (device_id or '').strip()
+    phone = (phone or '').strip()
+    email = (email or '').strip().lower()
+    message = (message or '').strip()
+    if not message:
+        return False, 'Vui lòng nhập nội dung cần hỗ trợ.'
+    now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    conn = sqlite3.connect(DB)
+    c = conn.cursor()
+    c.execute("""
+    INSERT INTO support_messages(device_id,phone,email,sender,message,status,created_at)
+    VALUES(?,?,?,?,?,?,?)
+    """, (device_id, phone, email, 'customer', message, 'new', now))
+    conn.commit()
+    conn.close()
+    return True, 'Đã gửi tin nhắn đến Admin. Vui lòng chờ phản hồi trong khung chat này.'
+
+
+def get_support_messages(limit=120):
+    ensure_support_tables()
+    conn = sqlite3.connect(DB)
+    c = conn.cursor()
+    c.execute("""
+    SELECT id,device_id,phone,email,sender,message,admin_reply,status,created_at,replied_at
+    FROM support_messages
+    ORDER BY id DESC LIMIT ?
+    """, (limit,))
+    rows = c.fetchall()
+    conn.close()
+    return rows
+
+
+def reply_support_message(message_id, admin_reply):
+    ensure_support_tables()
+    admin_reply = (admin_reply or '').strip()
+    if not admin_reply:
+        return False, 'Vui lòng nhập nội dung trả lời.'
+    now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    conn = sqlite3.connect(DB)
+    c = conn.cursor()
+    c.execute("""
+    UPDATE support_messages
+    SET admin_reply=?, status='replied', replied_at=?
+    WHERE id=?
+    """, (admin_reply, now, int(message_id or 0)))
+    ok = c.rowcount > 0
+    conn.commit()
+    conn.close()
+    return ok, 'Đã trả lời khách hàng.' if ok else 'Không tìm thấy tin nhắn.'
+
+
+def get_support_replies_for_device(device_id, after_id=0):
+    ensure_support_tables()
+    conn = sqlite3.connect(DB)
+    c = conn.cursor()
+    c.execute("""
+    SELECT id,message,admin_reply,status,created_at,replied_at
+    FROM support_messages
+    WHERE device_id=? AND id>?
+    ORDER BY id ASC LIMIT 50
+    """, ((device_id or '').strip(), int(after_id or 0)))
+    rows = c.fetchall()
+    conn.close()
+    return rows
+
+
+@app.post('/support_message')
+def support_message_route():
+    data = request.get_json(silent=True) or {}
+    ok, msg = add_support_message(data.get('device_id',''), data.get('phone',''), data.get('email',''), data.get('message',''))
+    return jsonify({'success': ok, 'message': msg})
+
+
+@app.get('/support_poll')
+def support_poll_route():
+    device_id = request.args.get('device_id','')
+    after_id = request.args.get('after_id','0')
+    rows = get_support_replies_for_device(device_id, after_id)
+    return jsonify({'messages': [
+        {'id': r[0], 'message': r[1], 'admin_reply': r[2], 'status': r[3], 'created_at': r[4], 'replied_at': r[5]}
+        for r in rows
+    ]})
+
+
 @app.post("/premium_request")
 def premium_request_route():
     data = request.get_json(silent=True) or {}
@@ -6225,14 +6391,19 @@ def admin_premium_page():
         </body></html>
         """
 
-    rows = get_premium_requests(120)
+    rows = get_premium_requests(200)
+    chats = get_support_messages(200)
+    token_checks = get_latest_token_checks(80)
     pending_count = sum(1 for r in rows if r[8] == 'pending')
     approved_count = sum(1 for r in rows if r[8] == 'approved')
+    chat_new_count = sum(1 for r in chats if r[7] == 'new')
+    error_posts = [r for r in get_history(200) if str(r[3]).lower() == 'error']
 
     def esc(x):
-        return str(x or "").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+        return str(x or "").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', '&quot;')
 
     html_rows = ""
+    payment_rows = ""
     for r in rows:
         status = r[8] or "pending"
         badge = "#22c55e" if status == "approved" else "#f59e0b"
@@ -6245,42 +6416,91 @@ def admin_premium_page():
               <button class='ok'>Kích hoạt Premium</button>
             </form>
             """
+        plan_name = esc(r[5] or r[4] or 'Gói Premium')
+        amount = f"{int(r[6] or 0):,}đ"
         html_rows += f"""
         <tr>
           <td>{r[0]}</td>
           <td><b>{esc(r[1])}</b></td>
           <td>{esc(r[2])}</td>
           <td>{esc(r[3])}</td>
-          <td>{esc(r[5] or r[4])}<br><small>{int(r[6] or 0):,}đ</small></td>
+          <td><b class='plan-name'>👑 {plan_name}</b><br><small>{amount}</small></td>
           <td>{esc(r[7])}</td>
           <td><span style='background:{badge};color:white;padding:6px 10px;border-radius:999px;font-weight:bold'>{esc(status)}</span><br><small>{esc(r[11])}</small></td>
           <td>{esc(r[10] or '')}</td>
           <td>{approve_btn}</td>
         </tr>
         """
+        payment_rows += f"""
+        <tr><td>{r[0]}</td><td>{esc(r[2])}</td><td>{esc(r[3])}</td><td>{plan_name}</td><td>{amount}</td><td>{esc(r[7])}</td><td>{esc(status)}</td><td>{esc(r[12] or '')}</td></tr>
+        """
+
+    chat_rows = ""
+    for m in chats:
+        status = m[7] or 'new'
+        badge = '#f59e0b' if status == 'new' else '#22c55e'
+        reply_box = ''
+        if status != 'replied':
+            reply_box = f"""
+            <form method='post' action='/admin/reply_support' class='reply-form'>
+              <input type='hidden' name='password' value='{esc(password)}'>
+              <input type='hidden' name='message_id' value='{m[0]}'>
+              <textarea name='admin_reply' placeholder='Nhập nội dung trả lời khách...' required></textarea>
+              <button class='ok'>Gửi trả lời</button>
+            </form>
+            """
+        else:
+            reply_box = f"<div class='reply-done'><b>Admin đã trả lời:</b><br>{esc(m[6])}<br><small>{esc(m[9])}</small></div>"
+        chat_rows += f"""
+        <div class='chat-card'>
+          <div class='chat-head'><b>#{m[0]} - {esc(m[2] or m[3] or m[1] or 'Khách chưa có thông tin')}</b><span style='background:{badge}'>{esc(status)}</span></div>
+          <small>Device: {esc(m[1])} • Email: {esc(m[3])} • {esc(m[8])}</small>
+          <div class='customer-msg'>{esc(m[5])}</div>
+          {reply_box}
+        </div>
+        """
+
+    token_rows = ''.join(f"<tr><td>{esc(t[0])}</td><td>{esc(t[1])}</td><td>{esc(t[2])}</td><td>{esc(t[3])}</td><td>{esc(t[4])}</td></tr>" for t in token_checks)
+    error_rows = ''.join(f"<tr><td>{e[0]}</td><td>{esc(e[1])}</td><td>{esc(e[3])}</td><td>{esc(e[4])}</td><td>{esc(e[9])}</td></tr>" for e in error_posts[:80])
 
     return f"""
     <html><head><meta charset='UTF-8'><title>Premium Admin</title>
     <style>
-      body{{font-family:Arial;background:#0f172a;color:#e5e7eb;margin:0;padding:24px}}
-      h1{{color:#38bdf8}} .cards{{display:flex;gap:14px;margin:18px 0}}
-      .card{{background:#1e293b;border:1px solid #334155;border-radius:18px;padding:18px;min-width:180px}}
-      .card b{{font-size:28px;color:#fbbf24}}
-      table{{width:100%;border-collapse:collapse;background:#111827;border-radius:18px;overflow:hidden}}
-      th,td{{border-bottom:1px solid #334155;padding:12px;text-align:left;vertical-align:top}}
-      th{{background:#1e1b4b;color:#c4b5fd}}
-      .ok{{background:#22c55e;color:white;border:0;padding:10px 14px;border-radius:10px;font-weight:bold;cursor:pointer}}
-      small{{color:#94a3b8}}
+      *{{box-sizing:border-box}} body{{font-family:Arial;background:#0f172a;color:#e5e7eb;margin:0}} a{{color:inherit;text-decoration:none}}
+      .layout{{display:flex;min-height:100vh}} .admin-side{{width:250px;background:#0b1224;border-right:1px solid #1e293b;padding:22px;position:sticky;top:0;height:100vh;overflow-y:auto}}
+      .admin-side h2{{color:#38bdf8;margin-top:0}} .admin-side a{{display:block;padding:12px;border-radius:12px;margin:6px 0;background:#111827;border:1px solid #1f2937}}
+      .admin-side a:hover{{background:#1e293b;color:#38bdf8}} .main{{flex:1;padding:24px;overflow:auto}}
+      h1{{color:#38bdf8;font-size:36px;text-shadow:0 2px 0 #075985,0 0 18px rgba(56,189,248,.35)}} h2{{color:#c4b5fd;margin-top:34px}}
+      .cards{{display:grid;grid-template-columns:repeat(4,minmax(160px,1fr));gap:14px;margin:18px 0}}
+      .card{{background:#1e293b;border:1px solid #334155;border-radius:18px;padding:18px;min-height:98px}} .card b{{font-size:30px;color:#fbbf24}}
+      table{{width:100%;border-collapse:collapse;background:#111827;border-radius:18px;overflow:hidden;margin-bottom:20px}}
+      th,td{{border-bottom:1px solid #334155;padding:12px;text-align:left;vertical-align:top}} th{{background:#1e1b4b;color:#c4b5fd;position:sticky;top:0}}
+      .ok{{background:#22c55e;color:white;border:0;padding:10px 14px;border-radius:10px;font-weight:bold;cursor:pointer}} small{{color:#94a3b8}}
+      .plan-name{{color:#38bdf8;text-shadow:0 1px 0 #075985,0 0 13px rgba(59,130,246,.65)}}
+      .chat-card{{background:#111827;border:1px solid #334155;border-radius:18px;padding:16px;margin:12px 0}} .chat-head{{display:flex;justify-content:space-between;gap:10px}}
+      .chat-head span{{color:white;padding:5px 10px;border-radius:999px;font-weight:bold}} .customer-msg{{background:#0b1224;border:1px solid #1f2937;border-radius:14px;padding:12px;margin:10px 0;white-space:pre-wrap}}
+      .reply-form textarea{{width:100%;height:90px;background:#020617;color:white;border:1px solid #334155;border-radius:12px;padding:12px;margin:8px 0}} .reply-done{{background:#052e16;border:1px solid #166534;border-radius:14px;padding:12px;margin-top:10px}}
+      @media(max-width:900px){{.layout{{display:block}}.admin-side{{width:100%;height:auto;position:relative}}.cards{{grid-template-columns:1fr 1fr}}}}
     </style></head><body>
-      <h1>Premium Admin Center</h1>
-      <div class='cards'>
-        <div class='card'>Chờ duyệt<br><b>{pending_count}</b></div>
-        <div class='card'>Đã kích hoạt<br><b>{approved_count}</b></div>
+      <div class='layout'>
+        <aside class='admin-side'>
+          <h2>Admin Center</h2>
+          <a href='#overview'>🏠 Tổng quan</a><a href='#premium'>👑 Yêu cầu Premium</a><a href='#payments'>💳 Lịch sử thanh toán</a><a href='#chat'>💬 Chat khách hàng</a><a href='#errors'>📣 Lỗi đăng Fanpage</a><a href='#tokens'>🔑 Token Fanpage</a>
+        </aside>
+        <main class='main'>
+          <h1 id='overview'>Premium Admin Center</h1>
+          <div class='cards'>
+            <div class='card'>Chờ duyệt<br><b>{pending_count}</b></div><div class='card'>Đã kích hoạt<br><b>{approved_count}</b></div><div class='card'>Tin chat mới<br><b>{chat_new_count}</b></div><div class='card'>Lỗi đăng bài<br><b>{len(error_posts)}</b></div>
+          </div>
+          <h2 id='premium'>👑 Yêu cầu Premium</h2>
+          <table><tr><th>ID</th><th>Device ID</th><th>SĐT</th><th>Email</th><th>Gói</th><th>Ghi chú</th><th>Trạng thái</th><th>Hết hạn</th><th>Duyệt</th></tr>{html_rows or '<tr><td colspan="9">Chưa có yêu cầu Premium.</td></tr>'}</table>
+          <h2 id='payments'>💳 Lịch sử thanh toán</h2>
+          <table><tr><th>ID</th><th>SĐT</th><th>Email</th><th>Gói</th><th>Số tiền</th><th>Nội dung CK</th><th>Trạng thái</th><th>Ngày duyệt</th></tr>{payment_rows or '<tr><td colspan="8">Chưa có lịch sử thanh toán.</td></tr>'}</table>
+          <h2 id='chat'>💬 Chat khách hàng</h2>{chat_rows or '<div class="chat-card">Chưa có tin nhắn hỗ trợ.</div>'}
+          <h2 id='errors'>📣 Lỗi đăng Fanpage</h2><table><tr><th>ID</th><th>Fanpage</th><th>Trạng thái</th><th>Chi tiết lỗi</th><th>Thời gian</th></tr>{error_rows or '<tr><td colspan="5">Chưa có lỗi đăng bài.</td></tr>'}</table>
+          <h2 id='tokens'>🔑 Token Fanpage</h2><table><tr><th>Fanpage</th><th>Page ID</th><th>Trạng thái</th><th>Chi tiết</th><th>Thời gian</th></tr>{token_rows or '<tr><td colspan="5">Chưa có dữ liệu kiểm tra token.</td></tr>'}</table>
+        </main>
       </div>
-      <table>
-        <tr><th>ID</th><th>Device ID</th><th>SĐT</th><th>Email</th><th>Gói</th><th>Ghi chú</th><th>Trạng thái</th><th>Hết hạn</th><th>Duyệt</th></tr>
-        {html_rows or '<tr><td colspan="9">Chưa có yêu cầu Premium.</td></tr>'}
-      </table>
     </body></html>
     """
 
@@ -6293,6 +6513,17 @@ def admin_approve_premium_route():
         return "Sai mật khẩu admin.", 403
     ok, msg = approve_premium_request(request.form.get("request_id", "0"))
     return f"<meta charset='UTF-8'><script>alert({json.dumps(msg)});location.href='/admin?password={password}';</script>"
+
+
+
+@app.post('/admin/reply_support')
+def admin_reply_support_route():
+    admin_password = os.getenv('ADMIN_PASSWORD', 'admin123')
+    password = request.form.get('password', '')
+    if password != admin_password:
+        return 'Sai mật khẩu admin.', 403
+    ok, msg = reply_support_message(request.form.get('message_id', '0'), request.form.get('admin_reply', ''))
+    return f"<meta charset='UTF-8'><script>alert({json.dumps(msg)});location.href='/admin?password={password}#chat';</script>"
 
 
 @app.get("/manifest.json")
