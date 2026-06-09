@@ -1,1058 +1,4973 @@
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, HTMLResponse
-from pydantic import BaseModel
+from flask import Flask, request, render_template_string, jsonify, send_file
+from dotenv import load_dotenv
 from google import genai
-from datetime import date, datetime, timedelta
-import uvicorn
-import json
-import os
-import hashlib
-import uuid
-import re
-import requests
+from werkzeug.utils import secure_filename
+import os, json, requests, sqlite3, datetime, threading, time, tempfile, csv, random, io, shutil
 
-# ======================================================
-# GPT MINI PREMIUM SERVER
-# KHÔNG DÁN API KEY THẬT VÀO FILE NÀY.
-# Trên Render thêm Environment Variable:
-# GEMINI_API_KEY = API key Gemini của bạn
-# ADMIN_PASSWORD = mật khẩu admin nếu muốn đổi
-# ======================================================
+try:
+    import openpyxl
+except Exception:
+    openpyxl = None
 
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+load_dotenv()
 
-SUPABASE_URL = (os.getenv("SUPABASE_URL") or "").rstrip("/")
-SUPABASE_KEY = os.getenv("SUPABASE_KEY", "")
+APP_TITLE = "Mkt Automation Pro V4 Enterprise AI Suite"
+DB = "marketing_automation_pro_v10.db"
+UPLOAD_DIR = "uploads"
+REPORT_DIR = "reports"
+BACKUP_DIR = "backups"
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+os.makedirs(REPORT_DIR, exist_ok=True)
+os.makedirs(BACKUP_DIR, exist_ok=True)
 
-SUPABASE_TABLE = os.getenv("SUPABASE_TABLE", "users")
-COL_USERNAME = os.getenv("SUPABASE_COL_USERNAME", "username")
-COL_EMAIL = os.getenv("SUPABASE_COL_EMAIL", "email")
-COL_PHONE = os.getenv("SUPABASE_COL_PHONE", "phone")
-COL_PASSWORD = os.getenv("SUPABASE_COL_PASSWORD", "password")
-COL_PLAN = os.getenv("SUPABASE_COL_PLAN", "plan")
-COL_TOKEN = os.getenv("SUPABASE_COL_TOKEN", "token")
-COL_USED = os.getenv("SUPABASE_COL_USED", "used")
-COL_DATE = os.getenv("SUPABASE_COL_DATE", "date")
-COL_REGISTERED_AT = os.getenv("SUPABASE_COL_REGISTERED_AT", "registered_at")
-COL_EXPIRES_AT = os.getenv("SUPABASE_COL_EXPIRES_AT", "expires_at")
+app = Flask(__name__)
+app.config["MAX_CONTENT_LENGTH"] = 100 * 1024 * 1024
 
-app = FastAPI(title="GPT Mini Premium")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "").strip()
+PAGES_JSON = os.getenv("PAGES_JSON", "[]").strip()
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+try:
+    PAGES = json.loads(PAGES_JSON)
+except Exception:
+    PAGES = []
 
-USERS_FILE = "users.json"
-SUPPORT_FILE = "support_messages.json"
-FREE_LIMIT = 10
-ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "admin123")
+client = genai.Client(api_key=GEMINI_API_KEY) if GEMINI_API_KEY else None
 
-SUPPORT_ZALO = "036 338 2629"
-SUPPORT_EMAIL = "gptminipro@gmail.com"
-
-PLAN_LABELS = {
-    "free": "FREE",
-    "basic": "CƠ BẢN",
-    "pro": "CHUYÊN NGHIỆP",
-    "business": "DOANH NGHIỆP",
-    "lifetime": "VĨNH VIỄN",
-    "premium": "PREMIUM"
+CONTENT_LIBRARY = {
+    "spa": [
+        "Làn da đẹp không đến từ may mắn, mà đến từ chăm sóc đúng cách. Inbox để được tư vấn liệu trình phù hợp.",
+        "Da xỉn màu, thiếu sức sống? Một liệu trình chăm sóc chuyên sâu có thể giúp bạn tự tin hơn mỗi ngày.",
+        "Dành chút thời gian chăm sóc bản thân hôm nay, bạn sẽ thấy mình rạng rỡ hơn vào ngày mai.",
+        "Không cần trang điểm quá nhiều khi làn da đã được chăm sóc đúng cách.",
+        "Bạn xứng đáng có một làn da khỏe, mịn và đầy sức sống."
+    ],
+    "nha_khoa": [
+        "Nụ cười đẹp giúp bạn tự tin hơn trong giao tiếp mỗi ngày. Inbox để được tư vấn nha khoa.",
+        "Răng đều, trắng sáng và khỏe mạnh bắt đầu từ việc thăm khám đúng lúc.",
+        "Đừng để vấn đề răng miệng nhỏ trở thành nỗi lo lớn.",
+        "Một nụ cười tự tin có thể thay đổi cách người khác nhìn bạn.",
+        "Chăm sóc răng miệng định kỳ là đầu tư cho sức khỏe và sự tự tin lâu dài."
+    ],
+    "bat_dong_san": [
+        "Cơ hội sở hữu bất động sản vị trí đẹp, pháp lý rõ ràng, tiềm năng tăng giá tốt.",
+        "Bạn đang tìm căn hộ để ở hoặc đầu tư? Nhắn tin để nhận bảng giá mới.",
+        "Bất động sản tốt không chờ đợi quá lâu. Liên hệ ngay để được tư vấn.",
+        "Vị trí đẹp, tiện ích đầy đủ, pháp lý minh bạch.",
+        "Đầu tư bất động sản cần đúng thời điểm và đúng sản phẩm."
+    ],
+    "facebook_ads": [
+        "Chạy quảng cáo không ra đơn không phải lúc nào cũng do sản phẩm.",
+        "Inbox cao, đơn thấp? Đã đến lúc xem lại nội dung, tệp khách hàng và hành trình chốt đơn.",
+        "Một chiến dịch quảng cáo hiệu quả cần đúng thông điệp, đúng khách hàng và đúng thời điểm.",
+        "Đừng để ngân sách quảng cáo bị tiêu hao mà không tạo ra kết quả.",
+        "Muốn giảm chi phí tin nhắn và tăng tỷ lệ chốt đơn? Bắt đầu từ nội dung và tệp khách."
+    ],
+    "proxy": [
+        "Cần proxy ổn định cho công việc online? Tham khảo gói proxy tốc độ cao, hỗ trợ nhanh.",
+        "Proxy phù hợp giúp công việc quảng cáo, quản lý tài khoản và automation ổn định hơn.",
+        "Tìm proxy Việt Nam ổn định, tốc độ tốt, hỗ trợ nhanh? Nhắn tin để nhận bảng giá.",
+        "Giải pháp proxy linh hoạt cho cá nhân và doanh nghiệp.",
+        "Proxy chất lượng giúp giảm gián đoạn khi làm việc nhiều tài khoản."
+    ],
+    "tiktok_shop": [
+        "Muốn TikTok Shop vận hành hiệu quả hơn? Bắt đầu từ nội dung đúng sản phẩm, đúng khách hàng.",
+        "Sản phẩm tốt cần nội dung đủ cuốn hút để khách dừng lại, xem và mua.",
+        "TikTok Shop không chỉ cần sản phẩm, mà cần cách trình bày khiến khách muốn mua ngay.",
+        "Tối ưu nội dung, hình ảnh và kịch bản bán hàng giúp shop tăng chuyển đổi.",
+        "Đang bán TikTok Shop nhưng chưa ra đơn đều? Hãy tối ưu nội dung và phễu bán hàng."
+    ],
+    "website": [
+        "Website chuyên nghiệp giúp khách hàng tin tưởng hơn trước khi quyết định mua hàng.",
+        "Một website tốt không chỉ đẹp, mà còn phải rõ thông tin, dễ dùng và hỗ trợ chuyển đổi.",
+        "Bạn cần website bán hàng, giới thiệu dịch vụ hoặc landing page chạy quảng cáo?",
+        "Đừng để khách rời đi vì website thiếu chuyên nghiệp.",
+        "Website là tài sản số quan trọng cho mọi doanh nghiệp."
+    ],
+    "noi_that": [
+        "Không gian đẹp bắt đầu từ thiết kế phù hợp nhu cầu sống và gu thẩm mỹ của bạn.",
+        "Một bộ sofa phù hợp có thể thay đổi cảm giác của cả căn phòng.",
+        "Nội thất không chỉ để dùng, mà còn tạo nên phong cách sống.",
+        "Tối ưu không gian sống với giải pháp nội thất hiện đại, tiện nghi và thẩm mỹ.",
+        "Bạn muốn nhà đẹp hơn nhưng chưa biết bắt đầu từ đâu? Inbox để được tư vấn."
+    ],
+    "oto": [
+        "Chăm sóc xe định kỳ giúp xe bền hơn, vận hành ổn định hơn và giữ giá trị tốt hơn.",
+        "Xe sạch, bóng, nội thất thơm tho giúp mỗi chuyến đi dễ chịu hơn.",
+        "Phụ kiện phù hợp giúp chiếc xe tiện nghi, an toàn và cá tính hơn.",
+        "Bạn đang tìm camera hành trình, phụ kiện hoặc dịch vụ chăm sóc xe?",
+        "Đừng chờ xe xuống cấp mới chăm sóc. Bảo dưỡng đúng lúc giúp tiết kiệm chi phí."
+    ],
+    "giao_duc": [
+        "Học đúng phương pháp giúp tiết kiệm thời gian và cải thiện kết quả nhanh hơn.",
+        "Bạn muốn nâng cấp kỹ năng nhưng chưa biết bắt đầu từ đâu?",
+        "Một khóa học tốt không chỉ cung cấp kiến thức, mà còn giúp ứng dụng thực tế.",
+        "Đầu tư vào kiến thức là khoản đầu tư có giá trị lâu dài.",
+        "Học online linh hoạt, tiết kiệm thời gian, phù hợp người bận rộn."
+    ],
+    "du_lich": [
+        "Một chuyến đi đẹp bắt đầu từ kế hoạch phù hợp.",
+        "Bạn muốn du lịch thư giãn nhưng ngại tự lên lịch?",
+        "Khám phá điểm đến mới với lịch trình tối ưu, chi phí hợp lý.",
+        "Cần đặt tour, khách sạn, vé máy bay hoặc visa?",
+        "Đi để nghỉ ngơi, trải nghiệm và nạp lại năng lượng."
+    ]
 }
 
-PREMIUM_CODES = {
-    "OPTIMA-BASIC-99000": "basic",
-    "OPTIMA-PRO-199000": "pro",
-    "OPTIMA-BUSINESS-399000": "business",
-    "OPTIMA-LIFETIME-599000": "lifetime",
-    "GPTMINI-BASIC-99000": "basic",
-    "GPTMINI-PRO-199000": "pro",
-    "GPTMINI-BUSINESS-399000": "business",
-    "GPTMINI-LIFETIME-599000": "lifetime",
-    "GPTMINI-VIP-2026": "business"
+
+# Kho content V9 mở rộng 15 ngành. Demo hiển thị 10 mẫu miễn phí/ngành, phần còn lại khóa Premium.
+EXTENDED_CONTENT_LIBRARY = {
+    "thoi_trang": [
+        "Phong cách đẹp bắt đầu từ outfit phù hợp. Inbox để được tư vấn mẫu mới hôm nay.",
+        "Một set đồ chỉn chu giúp bạn tự tin hơn trong mọi cuộc gặp.",
+        "Thời trang không chỉ là mặc đẹp, mà còn là cách bạn thể hiện cá tính.",
+        "Mẫu mới về liên tục, chất vải đẹp, form dễ mặc. Nhắn tin để xem ảnh thật.",
+        "Đổi mới phong cách mỗi ngày với những thiết kế trẻ trung, dễ phối.",
+        "Bạn cần outfit đi làm, đi chơi hay dự tiệc? Inbox để được gợi ý.",
+        "Hàng đẹp, form chuẩn, giá hợp lý. Số lượng có hạn, nhắn tin ngay.",
+        "Tủ đồ của bạn sẽ thú vị hơn với những mẫu mới đang hot.",
+        "Đẹp tự nhiên, mặc thoải mái, phù hợp nhiều dáng người.",
+        "Inbox để nhận bảng mẫu mới và ưu đãi hôm nay."
+    ],
+    "giay_dep": [
+        "Một đôi giày phù hợp có thể nâng tầm cả outfit của bạn.",
+        "Giày đẹp, êm chân, dễ phối đồ cho cả đi làm và đi chơi.",
+        "Bạn đang tìm giày bền, đẹp, giá hợp lý? Nhắn tin để xem mẫu.",
+        "Mẫu mới về liên tục, size đầy đủ, hỗ trợ tư vấn chọn size.",
+        "Đừng để đôi giày không thoải mái làm bạn mất tự tin.",
+        "Giày chuẩn form, đi êm, phù hợp nhiều phong cách.",
+        "Inbox để nhận ảnh thật và bảng size chi tiết.",
+        "Nâng cấp phong cách hằng ngày chỉ từ một đôi giày đẹp.",
+        "Chọn đúng giày, mỗi bước đi đều tự tin hơn.",
+        "Mẫu hot hôm nay số lượng có hạn, nhắn tin giữ size."
+    ],
+    "tui_xach": [
+        "Một chiếc túi đẹp giúp outfit của bạn nổi bật hơn.",
+        "Túi xách thời trang, dễ phối đồ, phù hợp đi làm và đi chơi.",
+        "Bạn cần túi sang, đẹp, tiện dụng? Inbox để xem mẫu mới.",
+        "Thiết kế tinh tế, chất liệu đẹp, phù hợp nhiều phong cách.",
+        "Túi không chỉ để đựng đồ, mà còn tạo điểm nhấn cho phong cách.",
+        "Mẫu mới đang có sẵn, nhắn tin để nhận ảnh thật.",
+        "Túi đẹp giúp bạn tự tin hơn mỗi khi ra ngoài.",
+        "Phối đồ dễ hơn với những mẫu túi thanh lịch, hiện đại.",
+        "Số lượng có hạn, inbox để được tư vấn mẫu phù hợp.",
+        "Tặng bản thân một chiếc túi mới để làm mới phong cách."
+    ],
+    "dong_ho": [
+        "Đồng hồ đẹp là điểm nhấn tinh tế cho phong cách của bạn.",
+        "Một chiếc đồng hồ phù hợp giúp bạn trông chỉn chu hơn mỗi ngày.",
+        "Thiết kế sang trọng, dễ phối, phù hợp đi làm và gặp khách hàng.",
+        "Bạn cần đồng hồ làm quà tặng? Inbox để được tư vấn mẫu phù hợp.",
+        "Đồng hồ không chỉ xem giờ, mà còn thể hiện gu thẩm mỹ.",
+        "Mẫu mới về, thiết kế đẹp, giá hợp lý.",
+        "Tối giản nhưng nổi bật, phù hợp nhiều phong cách.",
+        "Inbox để xem ảnh thật và nhận tư vấn lựa chọn.",
+        "Một món phụ kiện nhỏ nhưng tạo khác biệt lớn.",
+        "Chọn đồng hồ phù hợp để hoàn thiện vẻ ngoài chuyên nghiệp."
+    ],
+    "phu_kien": [
+        "Phụ kiện nhỏ có thể làm outfit của bạn nổi bật hơn rất nhiều.",
+        "Đừng bỏ qua chi tiết, vì phụ kiện tạo nên phong cách riêng.",
+        "Mẫu phụ kiện mới, dễ phối, phù hợp nhiều phong cách.",
+        "Inbox để xem mẫu hot và nhận tư vấn phối đồ.",
+        "Một món phụ kiện đẹp giúp bạn tự tin hơn khi ra ngoài.",
+        "Thiết kế tinh tế, giá dễ mua, phù hợp làm quà tặng.",
+        "Nâng cấp outfit chỉ với một điểm nhấn nhỏ.",
+        "Phụ kiện đẹp giúp phong cách của bạn có dấu ấn riêng.",
+        "Mẫu mới cập nhật mỗi ngày, nhắn tin để xem ngay.",
+        "Chọn phụ kiện phù hợp để hoàn thiện vẻ ngoài của bạn."
+    ],
+    "tham_my_vien": [
+        "Vẻ đẹp tự tin bắt đầu từ lựa chọn chăm sóc đúng cách.",
+        "Bạn muốn cải thiện diện mạo nhưng chưa biết bắt đầu từ đâu? Inbox để được tư vấn.",
+        "Thẩm mỹ an toàn, tư vấn rõ ràng, phù hợp từng nhu cầu.",
+        "Làm đẹp là đầu tư cho sự tự tin và chất lượng cuộc sống.",
+        "Đừng để khuyết điểm nhỏ làm bạn kém tự tin mỗi ngày.",
+        "Đội ngũ tư vấn sẽ giúp bạn chọn giải pháp phù hợp nhất.",
+        "Inbox để nhận tư vấn liệu trình và ưu đãi mới.",
+        "Chăm sóc vẻ ngoài đúng cách giúp bạn rạng rỡ hơn.",
+        "Đẹp tự nhiên, an toàn, phù hợp với từng khách hàng.",
+        "Đặt lịch tư vấn để hiểu rõ giải pháp phù hợp."
+    ],
+    "trung_tam_tieng_anh": [
+        "Tiếng Anh tốt mở ra nhiều cơ hội học tập và công việc hơn.",
+        "Bạn mất gốc tiếng Anh? Bắt đầu lại với lộ trình phù hợp.",
+        "Học đúng phương pháp giúp bạn tiến bộ nhanh và bền vững.",
+        "Lớp học linh hoạt, giáo viên hỗ trợ sát sao, phù hợp người bận rộn.",
+        "Inbox để kiểm tra trình độ và nhận tư vấn lộ trình học.",
+        "Đừng học lan man, hãy học theo mục tiêu rõ ràng.",
+        "Giao tiếp tự tin hơn với lộ trình học thực tế.",
+        "Tiếng Anh không khó nếu bạn có phương pháp phù hợp.",
+        "Đăng ký tư vấn miễn phí để chọn lớp phù hợp.",
+        "Nâng cấp tiếng Anh hôm nay để mở rộng cơ hội ngày mai."
+    ],
+    "khoa_hoc_online": [
+        "Học online linh hoạt giúp bạn nâng cấp kỹ năng mọi lúc mọi nơi.",
+        "Đầu tư vào kiến thức là khoản đầu tư có giá trị lâu dài.",
+        "Bạn muốn học nhưng không có nhiều thời gian? Khóa online là lựa chọn phù hợp.",
+        "Nội dung dễ hiểu, ứng dụng thực tế, học theo tốc độ của bạn.",
+        "Inbox để nhận lộ trình học phù hợp với mục tiêu.",
+        "Nâng cấp kỹ năng để tăng cơ hội công việc và thu nhập.",
+        "Học đúng thứ bạn cần, tiết kiệm thời gian và chi phí.",
+        "Khóa học thiết kế cho người mới bắt đầu và người muốn nâng cao.",
+        "Bắt đầu hôm nay, kết quả sẽ khác sau vài tuần.",
+        "Nhắn tin để nhận tư vấn khóa học phù hợp."
+    ],
+    "showroom_oto": [
+        "Tìm xe phù hợp nhu cầu và tài chính chưa bao giờ dễ hơn.",
+        "Showroom cập nhật nhiều mẫu xe mới, hỗ trợ tư vấn tận tình.",
+        "Bạn cần xe gia đình, xe dịch vụ hay xe cá nhân? Inbox để được tư vấn.",
+        "Xe đẹp, hồ sơ rõ ràng, hỗ trợ thủ tục nhanh chóng.",
+        "Lựa chọn xe đúng giúp bạn yên tâm hơn trên mọi hành trình.",
+        "Inbox để nhận báo giá và chương trình ưu đãi mới nhất.",
+        "Tư vấn tài chính, trả góp, hồ sơ nhanh gọn.",
+        "Mẫu xe hot đang có sẵn, liên hệ để xem xe trực tiếp.",
+        "Một chiếc xe phù hợp sẽ đồng hành cùng bạn lâu dài.",
+        "Nhắn tin để được tư vấn mẫu xe phù hợp nhất."
+    ],
+    "phong_kham": [
+        "Sức khỏe là tài sản quan trọng nhất, đừng chờ có triệu chứng mới kiểm tra.",
+        "Thăm khám định kỳ giúp phát hiện và xử lý vấn đề sớm hơn.",
+        "Phòng khám hỗ trợ tư vấn, đặt lịch nhanh, tiết kiệm thời gian.",
+        "Bạn cần kiểm tra sức khỏe? Inbox để được hướng dẫn đặt lịch.",
+        "Chăm sóc sức khỏe đúng lúc giúp bạn yên tâm hơn mỗi ngày.",
+        "Dịch vụ thăm khám chuyên nghiệp, tư vấn rõ ràng.",
+        "Đặt lịch trước để được hỗ trợ nhanh và thuận tiện hơn.",
+        "Sức khỏe tốt bắt đầu từ sự chủ động của bạn.",
+        "Inbox để nhận thông tin gói khám phù hợp.",
+        "Đừng trì hoãn việc chăm sóc sức khỏe của bản thân."
+    ],
 }
 
-chat_memory = {}
+CONTENT_LIBRARY.update(EXTENDED_CONTENT_LIBRARY)
 
-class RegisterRequest(BaseModel):
-    username: str
-    password: str
-    email: str = ""
-    phone: str = ""
+INDUSTRY_LABELS = {
+    "spa": "Spa / Chăm sóc da",
+    "nha_khoa": "Nha khoa",
+    "bat_dong_san": "Bất động sản",
+    "facebook_ads": "Facebook Ads",
+    "proxy": "Proxy",
+    "tiktok_shop": "TikTok Shop",
+    "website": "Thiết kế website",
+    "noi_that": "Nội thất",
+    "oto": "Ô tô - Chăm sóc xe",
+    "giao_duc": "Giáo dục",
+    "du_lich": "Du lịch",
+    "thoi_trang": "Thời trang",
+    "giay_dep": "Giày dép",
+    "tui_xach": "Túi xách",
+    "dong_ho": "Đồng hồ",
+    "phu_kien": "Phụ kiện thời trang",
+    "tham_my_vien": "Thẩm mỹ viện",
+    "trung_tam_tieng_anh": "Trung tâm tiếng Anh",
+    "khoa_hoc_online": "Khóa học online",
+    "showroom_oto": "Showroom ô tô",
+    "phong_kham": "Phòng khám"
+}
 
-class LoginRequest(BaseModel):
-    username: str
-    password: str
+def init_db():
+    conn = sqlite3.connect(DB)
+    c = conn.cursor()
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS posts (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        page_name TEXT,
+        page_id TEXT,
+        content TEXT,
+        status TEXT,
+        post_id TEXT,
+        schedule_time TEXT,
+        image_path TEXT,
+        campaign TEXT,
+        score INTEGER,
+        created_at TEXT
+    )
+    """)
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS campaigns (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT UNIQUE,
+        industry TEXT,
+        goal TEXT,
+        note TEXT,
+        created_at TEXT
+    )
+    """)
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS crm (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT,
+        phone TEXT,
+        zalo TEXT,
+        source TEXT,
+        note TEXT,
+        created_at TEXT
+    )
+    """)
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS token_checks (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        page_name TEXT,
+        page_id TEXT,
+        status TEXT,
+        detail TEXT,
+        checked_at TEXT
+    )
+    """)
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS page_clusters (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT UNIQUE,
+        page_names TEXT,
+        note TEXT,
+        created_at TEXT
+    )
+    """)
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS subscriptions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER,
+        package_name TEXT,
+        start_date TEXT,
+        end_date TEXT,
+        status TEXT,
+        created_at TEXT
+    )
+    """)
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS users_trial (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT UNIQUE,
+        package_name TEXT DEFAULT 'free',
+        trial_start_date TEXT,
+        trial_end_date TEXT,
+        status TEXT DEFAULT 'active',
+        created_at TEXT
+    )
+    """)
 
-class GoogleLoginRequest(BaseModel):
-    name: str = ""
-    email: str
+    # V3 Enterprise AI Suite tables
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS lead_pipeline (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        customer_name TEXT,
+        phone TEXT,
+        zalo TEXT,
+        source TEXT,
+        stage TEXT DEFAULT 'Khách mới',
+        value INTEGER DEFAULT 0,
+        note TEXT,
+        created_at TEXT
+    )
+    """)
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS customer_tasks (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        customer_name TEXT,
+        task TEXT,
+        due_date TEXT,
+        status TEXT DEFAULT 'pending',
+        created_at TEXT
+    )
+    """)
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS notifications (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT,
+        detail TEXT,
+        level TEXT DEFAULT 'info',
+        status TEXT DEFAULT 'new',
+        created_at TEXT
+    )
+    """)
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS competitors (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        page_url TEXT,
+        analysis TEXT,
+        created_at TEXT
+    )
+    """)
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS sales_scripts (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        topic TEXT,
+        script_type TEXT,
+        content TEXT,
+        created_at TEXT
+    )
+    """)
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS landing_pages (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        service_name TEXT,
+        headline TEXT,
+        content TEXT,
+        created_at TEXT
+    )
+    """)
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS workflows (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT,
+        trigger_name TEXT,
+        action_name TEXT,
+        status TEXT DEFAULT 'draft',
+        created_at TEXT
+    )
+    """)
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS user_roles (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT,
+        role TEXT DEFAULT 'staff',
+        note TEXT,
+        created_at TEXT
+    )
+    """)
+    conn.commit()
+    conn.close()
 
-class ChatRequest(BaseModel):
-    token: str
-    message: str
+def db():
+    return sqlite3.connect(DB)
 
-class ActivateRequest(BaseModel):
-    token: str
-    code: str
+def save_post(page_name, page_id, content, status, post_id="", schedule_time="", image_path="", campaign="", score=0):
+    conn = db(); c = conn.cursor()
+    c.execute("""
+    INSERT INTO posts(page_name,page_id,content,status,post_id,schedule_time,image_path,campaign,score,created_at)
+    VALUES(?,?,?,?,?,?,?,?,?,?)
+    """, (page_name, page_id, content, status, post_id, schedule_time, image_path, campaign, score,
+          datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
+    conn.commit(); conn.close()
 
-class SupportRequest(BaseModel):
-    token: str
-    message: str
+def update_post(row_id, status, post_id=""):
+    conn = db(); c = conn.cursor()
+    c.execute("UPDATE posts SET status=?, post_id=? WHERE id=?", (status, post_id, row_id))
+    conn.commit(); conn.close()
 
-class AdminReplyRequest(BaseModel):
-    username: str
-    admin_password: str
-    message: str
+def get_history(limit=60):
+    conn = db(); c = conn.cursor()
+    c.execute("""
+    SELECT id,page_name,content,status,post_id,schedule_time,image_path,campaign,score,created_at
+    FROM posts ORDER BY id DESC LIMIT ?
+    """, (limit,))
+    rows = c.fetchall(); conn.close()
+    return rows
 
-class AdminCloseTicketRequest(BaseModel):
-    username: str
-    admin_password: str
+def get_campaigns():
+    conn = db(); c = conn.cursor()
+    c.execute("SELECT id,name,industry,goal,note,created_at FROM campaigns ORDER BY id DESC")
+    rows = c.fetchall(); conn.close()
+    return rows
 
-class AdminApproveRequest(BaseModel):
-    username: str
-    admin_password: str
-    plan: str = "business"
+def add_campaign(name, industry, goal, note):
+    if not name:
+        return
+    conn = db(); c = conn.cursor()
+    c.execute("""
+    INSERT OR IGNORE INTO campaigns(name,industry,goal,note,created_at)
+    VALUES(?,?,?,?,?)
+    """, (name, industry, goal, note, datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
+    conn.commit(); conn.close()
 
-def today() -> str:
-    return str(date.today())
+def get_stats():
+    conn = db(); c = conn.cursor()
+    c.execute("SELECT COUNT(*) FROM posts"); total = c.fetchone()[0]
+    c.execute("SELECT COUNT(*) FROM posts WHERE status='posted'"); posted = c.fetchone()[0]
+    c.execute("SELECT COUNT(*) FROM posts WHERE status='scheduled'"); scheduled = c.fetchone()[0]
+    c.execute("SELECT COUNT(*) FROM posts WHERE status='error'"); error = c.fetchone()[0]
+    c.execute("SELECT COUNT(*) FROM campaigns"); campaigns = c.fetchone()[0]
+    c.execute("SELECT COUNT(*) FROM crm")
+    crm = c.fetchone()[0]
+    conn.close()
+    return {"total": total, "posted": posted, "scheduled": scheduled, "error": error, "campaigns": campaigns, "crm": crm}
 
-def add_days(days: int) -> str:
-    return str(date.today() + timedelta(days=days))
-
-def parse_date(value: str):
-    if not value:
-        return None
-    try:
-        return datetime.strptime(str(value)[:10], "%Y-%m-%d").date()
-    except Exception:
-        return None
-
-def is_expired(user: dict) -> bool:
-    plan = user.get("plan", "free")
-    if plan in ["free", "lifetime"]:
-        return False
-
-    expires_at = parse_date(user.get("expires_at"))
-    if not expires_at:
-        return False
-
-    return date.today() > expires_at
-
-def days_left(user: dict):
-    plan = user.get("plan", "free")
-    if plan == "lifetime":
-        return "Vĩnh viễn"
-    expires_at = parse_date(user.get("expires_at"))
-    if not expires_at:
-        return ""
-    return max(0, (expires_at - date.today()).days)
-
-def safe_username(text: str) -> str:
-    return text.strip().lower().replace(" ", "_")
-
-def hash_password(password: str) -> str:
-    return hashlib.sha256(password.encode("utf-8")).hexdigest()
-
-def password_error_message(password: str) -> str:
-    if len(password) < 8:
-        return "Mật khẩu phải có tối thiểu 8 ký tự."
-    if not re.search(r"[A-Z]", password):
-        return "Mật khẩu phải chứa ít nhất 1 chữ in hoa."
-    if not re.search(r"[a-z]", password):
-        return "Mật khẩu phải chứa ít nhất 1 chữ thường."
-    if not re.search(r"[0-9]", password):
-        return "Mật khẩu phải chứa ít nhất 1 số."
-    if not re.search(r"[@!#$%&*]", password):
-        return "Mật khẩu phải chứa ít nhất 1 ký tự đặc biệt như @ ! # $ % & *."
-    return ""
-
-def load_json(file_path: str):
-    if not os.path.exists(file_path):
-        return {}
-    try:
-        with open(file_path, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except Exception:
-        return {}
-
-def save_json(file_path: str, data):
-    with open(file_path, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=4)
-
-def supabase_enabled() -> bool:
-    return bool(SUPABASE_URL and SUPABASE_KEY)
-
-def supabase_headers(prefer: str = ""):
-    headers = {
-        "apikey": SUPABASE_KEY,
-        "Authorization": f"Bearer {SUPABASE_KEY}",
-        "Content-Type": "application/json"
-    }
-    if prefer:
-        headers["Prefer"] = prefer
-    return headers
-
-def supabase_table_url() -> str:
-    return f"{SUPABASE_URL}/rest/v1/{SUPABASE_TABLE}"
-
-def normalize_supabase_user(row: dict):
-    if not row:
-        return None
-    return {
-        "id": row.get("id") or row.get("nhận dạng"),
-        "username": row.get("username") or row.get(COL_USERNAME) or row.get("tên người dùng"),
-        "email": row.get("email") or row.get(COL_EMAIL) or row.get("e-mail"),
-        "phone": row.get("phone") or row.get(COL_PHONE) or row.get("điện thoại"),
-        "password": row.get("password") or row.get(COL_PASSWORD) or row.get("mật khẩu"),
-        "token": row.get(COL_TOKEN) or row.get("token"),
-        "plan": row.get(COL_PLAN) or row.get("plan") or "free",
-        "used": row.get(COL_USED) or row.get("used") or 0,
-        "date": row.get(COL_DATE) or row.get("date") or today(),
-        "registered_at": row.get(COL_REGISTERED_AT) or row.get("registered_at") or row.get("created_at") or today(),
-        "expires_at": row.get(COL_EXPIRES_AT) or row.get("expires_at"),
-        "_raw": row
-    }
-
-def supabase_find_user_by_username(username: str):
-    if not supabase_enabled():
-        return None
-    try:
-        res = requests.get(
-            supabase_table_url(),
-            headers=supabase_headers(),
-            params={"select": "*", COL_USERNAME: f"eq.{username}"},
-            timeout=12
-        )
-        if res.status_code >= 400:
-            return None
-        data = res.json()
-        return normalize_supabase_user(data[0]) if data else None
-    except Exception:
-        return None
-
-def supabase_email_or_phone_exists(email: str, clean_phone: str):
-    if not supabase_enabled():
-        return False, ""
-    try:
-        res = requests.get(supabase_table_url(), headers=supabase_headers(), params={"select": "*"}, timeout=12)
-        if res.status_code >= 400:
-            return False, ""
-        for row in res.json():
-            user = normalize_supabase_user(row)
-            if not user:
-                continue
-            if (user.get("email") or "").lower() == email:
-                return True, "Gmail này đã được dùng để đăng ký tài khoản khác."
-            if (user.get("phone") or "").replace(" ", "").replace("-", "") == clean_phone:
-                return True, "Số điện thoại này đã được dùng để đăng ký tài khoản khác."
-        return False, ""
-    except Exception:
-        return False, ""
-
-def supabase_insert_user(user: dict):
-    if not supabase_enabled():
-        return False, "Chưa cấu hình Supabase."
-    payload_full = {
-        COL_USERNAME: user["username"],
-        COL_EMAIL: user.get("email", ""),
-        COL_PHONE: user.get("phone", ""),
-        COL_PASSWORD: user.get("password", ""),
-        COL_TOKEN: user.get("token", ""),
-        COL_PLAN: user.get("plan", "free"),
-        COL_USED: user.get("used", 0),
-        COL_DATE: user.get("date", today()),
-        COL_REGISTERED_AT: user.get("registered_at", today()),
-        COL_EXPIRES_AT: user.get("expires_at")
-    }
-    payload_basic = {
-        COL_USERNAME: user["username"],
-        COL_EMAIL: user.get("email", ""),
-        COL_PHONE: user.get("phone", ""),
-        COL_PASSWORD: user.get("password", ""),
-        COL_PLAN: user.get("plan", "free"),
-        COL_EXPIRES_AT: user.get("expires_at")
-    }
-    try:
-        res = requests.post(supabase_table_url(), headers=supabase_headers("return=minimal"), json=payload_full, timeout=12)
-        if res.status_code < 400:
-            return True, ""
-        res2 = requests.post(supabase_table_url(), headers=supabase_headers("return=minimal"), json=payload_basic, timeout=12)
-        if res2.status_code < 400:
-            return True, ""
-        return False, res2.text
-    except Exception as e:
-        return False, str(e)
-
-def supabase_update_user(username: str, updates: dict):
-    if not supabase_enabled():
-        return False
-    mapping = {
-        "token": COL_TOKEN, "plan": COL_PLAN, "used": COL_USED, "date": COL_DATE,
-        "registered_at": COL_REGISTERED_AT, "expires_at": COL_EXPIRES_AT, "password": COL_PASSWORD,
-        "email": COL_EMAIL, "phone": COL_PHONE, "username": COL_USERNAME
-    }
-    payload = {mapping.get(k, k): v for k, v in updates.items()}
-    try:
-        res = requests.patch(
-            supabase_table_url(),
-            headers=supabase_headers("return=minimal"),
-            params={COL_USERNAME: f"eq.{username}"},
-            json=payload,
-            timeout=12
-        )
-        return res.status_code < 400
-    except Exception:
-        return False
-
-def load_users():
-    if supabase_enabled():
+def selected_pages(page_indexes):
+    result = []
+    for idx in page_indexes:
         try:
-            res = requests.get(supabase_table_url(), headers=supabase_headers(), params={"select": "*"}, timeout=12)
-            if res.status_code < 400:
-                users = {}
-                for row in res.json():
-                    user = normalize_supabase_user(row)
-                    if user and user.get("username"):
-                        users[user["username"]] = user
-                return users
+            i = int(idx)
+            if 0 <= i < len(PAGES):
+                result.append(PAGES[i])
         except Exception:
             pass
-    return load_json(USERS_FILE)
-
-def save_users(users):
-    save_json(USERS_FILE, users)
-
-def find_user_by_token(users, token):
-    for username, user in users.items():
-        if user.get("token") == token:
-            return username, user
-    return None, None
-
-def reset_daily_if_needed(user):
-    if user.get("date") != today():
-        user["date"] = today()
-        user["used"] = 0
-
-def is_paid_plan(plan: str) -> bool:
-    return plan in ["basic", "pro", "business", "lifetime", "premium"]
-
-def remaining_text(user):
-    if is_paid_plan(user.get("plan", "free")):
-        return "Không giới hạn"
-    return max(0, FREE_LIMIT - int(user.get("used", 0)))
-
-def smart_fallback_reply(message: str):
-    text = message.lower()
-
-    if any(k in text for k in ["content", "bài viết", "facebook", "caption", "bán hàng"]):
-        return """📘 MẪU HỖ TRỢ CONTENT BÁN HÀNG
-
-Để tôi viết nội dung chính xác hơn, anh/chị vui lòng gửi:
-
-◆ Sản phẩm/dịch vụ đang bán
-◆ Khách hàng mục tiêu
-◆ Giá hoặc ưu đãi hiện tại
-◆ Mục tiêu bài viết: tăng inbox, chốt đơn hay xây dựng thương hiệu
-
-Gợi ý nhanh:
-Anh/chị có thể nhập: "Viết bài Facebook bán [sản phẩm] cho [khách hàng mục tiêu] với ưu đãi [ưu đãi]."
-
-📞 Cần hỗ trợ triển khai chuyên sâu: Zalo 036 338 2629
-✉️ Email hỗ trợ: gptminipro@gmail.com"""
-
-    if any(k in text for k in ["quảng cáo", "ads", "facebook ads", "tiktok", "chạy ads"]):
-        return """📈 TƯ VẤN QUẢNG CÁO FACEBOOK / TIKTOK
-
-Để tư vấn đúng chiến dịch, anh/chị vui lòng cung cấp:
-
-◆ Ngành hàng/sản phẩm
-◆ Ngân sách dự kiến mỗi ngày
-◆ Khu vực muốn chạy quảng cáo
-◆ Mục tiêu: inbox, đơn hàng, tăng follow hay nhận diện thương hiệu
-
-Gợi ý:
-Với shop mới, nên bắt đầu bằng chiến dịch tin nhắn/inbox ngân sách nhỏ để test tệp khách hàng trước.
-
-📞 Cần hỗ trợ chạy quảng cáo trực tiếp: Zalo 036 338 2629
-✉️ Email hỗ trợ: gptminipro@gmail.com"""
-
-    if any(k in text for k in ["premium", "nâng cấp", "kích hoạt", "gói", "thanh toán"]):
-        return """💎 HỖ TRỢ PREMIUM
-
-GPT Mini Premium hiện có các gói:
-
-◆ Cơ Bản: 99.000đ/tháng
-◆ Chuyên Nghiệp: 199.000đ/tháng
-◆ Doanh Nghiệp: 399.000đ/tháng
-◆ Vĩnh Viễn: 599.000đ
-
-Nếu anh/chị đã thanh toán, vui lòng gửi:
-◆ Tên tài khoản đăng nhập
-◆ Gói đã thanh toán
-◆ Mã giao dịch hoặc nội dung chuyển khoản
-
-📞 Zalo hỗ trợ kích hoạt nhanh: 036 338 2629
-✉️ Email hỗ trợ: gptminipro@gmail.com"""
-
-    if any(k in text for k in ["website", "landing", "trang bán hàng"]):
-        return """🌐 TƯ VẤN WEBSITE / LANDING PAGE
-
-Để xây dựng landing page bán hàng hiệu quả, anh/chị nên chuẩn bị:
-
-◆ Tên sản phẩm/dịch vụ
-◆ Ưu điểm nổi bật
-◆ Hình ảnh/video sản phẩm
-◆ Chính sách bảo hành/ưu đãi
-◆ Số điện thoại/Zalo nhận khách
-
-GPT Mini Premium có thể hỗ trợ lên bố cục, nội dung và kịch bản chuyển đổi.
-
-📞 Hỗ trợ trực tiếp: Zalo 036 338 2629
-✉️ Email hỗ trợ: gptminipro@gmail.com"""
-
-    return """⚠️ Hệ thống đang xử lý nhiều yêu cầu.
-
-Vui lòng thử lại sau ít phút.
-
-Cần hỗ trợ nhanh:
-📱 Zalo: 036 338 2629
-📧 Email: gptminipro@gmail.com
-
-Khi liên hệ, vui lòng gửi tên tài khoản, Gmail đăng ký và ảnh lỗi nếu có."""
-
-def friendly_ai_error(message: str = ""):
-    return smart_fallback_reply(message)
-
-def expired_plan_message(user=None):
-    expires_at = user.get("expires_at") if user else ""
-    return f"""🔒 GÓI PREMIUM ĐÃ HẾT HẠN
-
-Gói dịch vụ của tài khoản đã hết hạn{f" vào ngày {expires_at}" if expires_at else ""}.
-
-━━━━━━━━━━━━━━━━━━━━━━
-
-💎 VUI LÒNG GIA HẠN ĐỂ TIẾP TỤC SỬ DỤNG
-
-◆ Tiếp tục truy cập AI không giới hạn
-◆ Duy trì tốc độ phản hồi ưu tiên
-◆ Mở lại toàn bộ tính năng Premium
-◆ Được hỗ trợ kỹ thuật khi cần
-
-━━━━━━━━━━━━━━━━━━━━━━
-
-📞 Zalo hỗ trợ gia hạn: 036 338 2629
-✉️ Email hỗ trợ: gptminipro@gmail.com
-
-Sau khi thanh toán, vui lòng gửi tên tài khoản và ảnh giao dịch để được kích hoạt nhanh nhất."""
-
-def free_limit_message():
-    return """🔒 TÀI KHOẢN ĐÃ HẾT LƯỢT SỬ DỤNG
-
-Bạn đã sử dụng toàn bộ lượt truy cập miễn phí được cấp cho tài khoản hiện tại.
-
-━━━━━━━━━━━━━━━━━━━━━━
-
-💎 NÂNG CẤP PREMIUM ĐỂ TIẾP TỤC SỬ DỤNG
-
-◆ Truy cập AI ổn định và liên tục
-◆ Hạn mức sử dụng cao hơn
-◆ Tốc độ phản hồi nhanh hơn
-◆ Ưu tiên tài nguyên hệ thống
-◆ Hỗ trợ kỹ thuật ưu tiên
-◆ Trải nghiệm đầy đủ các công cụ AI nâng cao
-
-━━━━━━━━━━━━━━━━━━━━━━
-
-📞 Zalo hỗ trợ kích hoạt nhanh: 036 338 2629
-✉️ Email hỗ trợ: gptminipro@gmail.com"""
-
-@app.get("/")
-def home():
-    if os.path.exists("index.html"):
-        return FileResponse("index.html")
-    return {"message": "GPT Mini Premium server is running."}
-
-@app.get("/health")
-def health():
-    return {"success": True, "message": "GPT Mini Premium is live."}
-
-@app.post("/register")
-def register(req: RegisterRequest):
-    username = safe_username(req.username)
-    password = req.password.strip()
-    email = req.email.strip().lower()
-    phone = req.phone.strip()
-
-    if len(username) < 3:
-        return {"success": False, "message": "Tên đăng nhập phải có ít nhất 3 ký tự."}
-    pass_msg = password_error_message(password)
-    if pass_msg:
-        return {"success": False, "message": pass_msg + " Ví dụ mật khẩu hợp lệ: Aa@078912"}
-    if not email.endswith("@gmail.com") or "@" not in email:
-        return {"success": False, "message": "Vui lòng nhập đúng địa chỉ Gmail để đăng ký."}
-
-    clean_phone = phone.replace(" ", "").replace("-", "")
-    if not (clean_phone.startswith("0") or clean_phone.startswith("+84")) or len(clean_phone) < 9:
-        return {"success": False, "message": "Vui lòng nhập đúng số điện thoại/Zalo để đăng ký."}
-
-    if supabase_enabled():
-        if supabase_find_user_by_username(username):
-            return {"success": False, "message": "Tài khoản đã tồn tại."}
-        exists, msg = supabase_email_or_phone_exists(email, clean_phone)
-        if exists:
-            return {"success": False, "message": msg}
-
-        token = str(uuid.uuid4())
-        user = {
-            "username": username,
-            "email": email,
-            "phone": phone,
-            "password": hash_password(password),
-            "token": token,
-            "login_type": "password",
-            "plan": "free",
-            "used": 0,
-            "date": today(),
-            "registered_at": today(),
-            "expires_at": None
-        }
-        ok, err = supabase_insert_user(user)
-        if ok:
-            return {"success": True, "message": "Đăng ký thành công. Thông tin đã được lưu vào Supabase.", "token": token, "username": username, "plan": "free", "plan_label": "FREE", "remaining": FREE_LIMIT}
-        return {"success": False, "message": "Supabase chưa ghi được dữ liệu. Kiểm tra tên bảng/cột hoặc chính sách RLS."}
-
-    users = load_json(USERS_FILE)
-    if username in users:
-        return {"success": False, "message": "Tài khoản đã tồn tại."}
-    for _, existing in users.items():
-        if existing.get("email", "").lower() == email:
-            return {"success": False, "message": "Gmail này đã được dùng để đăng ký tài khoản khác."}
-        if existing.get("phone", "").replace(" ", "").replace("-", "") == clean_phone:
-            return {"success": False, "message": "Số điện thoại này đã được dùng để đăng ký tài khoản khác."}
-
-    token = str(uuid.uuid4())
-    users[username] = {
-        "username": username, "email": email, "phone": phone,
-        "password": hash_password(password), "token": token,
-        "login_type": "password", "plan": "free", "used": 0,
-        "date": today(), "registered_at": today(), "expires_at": None
-    }
-    save_json(USERS_FILE, users)
-    return {"success": True, "message": "Đăng ký thành công. Thông tin Gmail và số điện thoại đã được ghi nhận để hỗ trợ tài khoản.", "token": token, "username": username, "plan": "free", "plan_label": "FREE", "remaining": FREE_LIMIT}
-
-@app.post("/login")
-def login(req: LoginRequest):
-    username = safe_username(req.username)
-    password = req.password.strip()
-
-    if supabase_enabled():
-        user = supabase_find_user_by_username(username)
-        if not user:
-            return {"success": False, "message": "Tài khoản không tồn tại."}
-        if user.get("password") != hash_password(password):
-            return {"success": False, "message": "Mật khẩu không đúng."}
-
-        reset_daily_if_needed(user)
-        if not user.get("token"):
-            user["token"] = str(uuid.uuid4())
-        supabase_update_user(username, {
-            "token": user.get("token"),
-            "date": user.get("date", today()),
-            "used": user.get("used", 0),
-            "plan": user.get("plan", "free")
-        })
-
-        plan = user.get("plan", "free")
-        return {"success": True, "message": "Đăng nhập thành công.", "token": user["token"], "username": username, "plan": plan, "plan_label": PLAN_LABELS.get(plan, plan.upper()), "remaining": remaining_text(user)}
-
-    users = load_json(USERS_FILE)
-    if username not in users:
-        return {"success": False, "message": "Tài khoản không tồn tại."}
-    user = users[username]
-    if user.get("password") != hash_password(password):
-        return {"success": False, "message": "Mật khẩu không đúng."}
-
-    reset_daily_if_needed(user)
-    save_json(USERS_FILE, users)
-    plan = user.get("plan", "free")
-    return {"success": True, "message": "Đăng nhập thành công.", "token": user["token"], "username": username, "plan": plan, "plan_label": PLAN_LABELS.get(plan, plan.upper()), "remaining": remaining_text(user)}
-
-@app.post("/google-login")
-def google_login(req: GoogleLoginRequest):
-    email = req.email.strip().lower()
-
-    if not email or "@" not in email:
-        return {"success": False, "message": "Email Google không hợp lệ."}
-
-    username = safe_username(email.split("@")[0])
-
-    if supabase_enabled():
-        user = supabase_find_user_by_username(username)
-        if not user:
-            token = str(uuid.uuid4())
-            user = {
-                "username": username,
-                "email": email,
-                "phone": "",
-                "password": "",
-                "token": token,
-                "login_type": "google-demo",
-                "plan": "free",
-                "used": 0,
-                "date": today(),
-                "registered_at": today(),
-                "expires_at": None
-            }
-            ok, err = supabase_insert_user(user)
-            if not ok:
-                return {"success": False, "message": "Chưa lưu được tài khoản Google vào Supabase. Kiểm tra cột dữ liệu hoặc RLS."}
-        reset_daily_if_needed(user)
-        if not user.get("token"):
-            user["token"] = str(uuid.uuid4())
-        supabase_update_user(username, {"token": user["token"], "date": user.get("date", today()), "used": user.get("used", 0), "plan": user.get("plan", "free")})
-        plan = user.get("plan", "free")
-        return {"success": True, "message": "Đăng nhập Google demo thành công.", "token": user["token"], "username": username, "plan": plan, "plan_label": PLAN_LABELS.get(plan, plan.upper()), "remaining": remaining_text(user)}
-
-    users = load_json(USERS_FILE)
-
-    if username not in users:
-        users[username] = {
-            "username": username,
-            "email": email,
-            "name": req.name.strip(),
-            "password": "",
-            "token": str(uuid.uuid4()),
-            "login_type": "google-demo",
-            "plan": "free",
-            "used": 0,
-            "date": today()
-        }
-
-    user = users[username]
-    reset_daily_if_needed(user)
-    save_json(USERS_FILE, users)
-
-    plan = user.get("plan", "free")
-    return {"success": True, "message": "Đăng nhập Google demo thành công.", "token": user["token"], "username": username, "plan": plan, "plan_label": PLAN_LABELS.get(plan, plan.upper()), "remaining": remaining_text(user)}
-
-@app.get("/status/{token}")
-def status(token: str):
-    users = load_users()
-    username, user = find_user_by_token(users, token)
-    if not user:
-        return {"success": False, "message": "Chưa đăng nhập."}
-
-    reset_daily_if_needed(user)
-    if supabase_enabled() and username:
-        supabase_update_user(username, {"date": user.get("date", today()), "used": user.get("used", 0)})
-    save_users(users)
-    plan = user.get("plan", "free")
-
-    if is_expired(user):
-        user["plan"] = "free"
-        if supabase_enabled() and username:
-            supabase_update_user(username, {"plan": "free"})
-        save_users(users)
-        return {
-            "success": True,
-            "username": username,
-            "plan": "expired",
-            "plan_label": "HẾT HẠN",
-            "used": user.get("used", 0),
-            "remaining": 0,
-            "expired": True,
-            "expires_at": user.get("expires_at"),
-            "message": "Gói Premium đã hết hạn. Vui lòng gia hạn để tiếp tục sử dụng đầy đủ tính năng."
-        }
-
-    return {"success": True, "username": username, "plan": plan, "plan_label": PLAN_LABELS.get(plan, plan.upper()), "used": user.get("used", 0), "remaining": remaining_text(user), "expires_at": user.get("expires_at"), "days_left": days_left(user)}
-
-@app.post("/activate")
-def activate(req: ActivateRequest):
-    users = load_users()
-    username, user = find_user_by_token(users, req.token)
-    if not user:
-        return {"success": False, "message": "Bạn cần đăng nhập trước."}
-
-    code = req.code.strip()
-    if code not in PREMIUM_CODES:
-        return {"success": False, "message": "Mã Premium không đúng. Vui lòng kiểm tra lại hoặc liên hệ Zalo 036 338 2629 / Email gptminipro@gmail.com."}
-
-    plan = PREMIUM_CODES[code]
-    user["plan"] = plan
-    user["used"] = 0
-    if plan == "lifetime":
-        user["expires_at"] = None
-    else:
-        user["expires_at"] = add_days(30)
-
-    if supabase_enabled() and username:
-        supabase_update_user(username, {"plan": plan, "used": 0, "expires_at": user.get("expires_at")})
-    save_users(users)
-
-    expire_msg = "vĩnh viễn" if plan == "lifetime" else f"đến ngày {user.get('expires_at')}"
-    return {"success": True, "message": f"Kích hoạt thành công gói {PLAN_LABELS.get(plan, plan)} {expire_msg}.", "plan": plan, "plan_label": PLAN_LABELS.get(plan, plan), "remaining": "Không giới hạn", "expires_at": user.get("expires_at"), "days_left": days_left(user)}
-
-@app.post("/chat")
-def chat(req: ChatRequest):
-    users = load_users()
-    username, user = find_user_by_token(users, req.token)
-
-    if not user:
-        return {"reply": "Bạn cần đăng nhập để sử dụng GPT Mini Premium.", "need_login": True}
-
-    reset_daily_if_needed(user)
-    plan = user.get("plan", "free")
-
-    if is_expired(user):
-        user["plan"] = "free"
-        if supabase_enabled() and username:
-            supabase_update_user(username, {"plan": "free"})
-        save_users(users)
-        return {
-            "reply": expired_plan_message(user),
-            "expired": True,
-            "limit_reached": True,
-            "plan": "expired",
-            "remaining": 0
-        }
-
-    if not is_paid_plan(plan):
-        if int(user.get("used", 0)) >= FREE_LIMIT:
-            return {"reply": free_limit_message(), "limit_reached": True, "plan": plan, "remaining": 0}
-
-        user["used"] = int(user.get("used", 0)) + 1
-        if supabase_enabled() and username:
-            supabase_update_user(username, {"used": user.get("used", 0), "date": user.get("date", today())})
-        save_users(users)
-
-    if not GEMINI_API_KEY:
-        return {"reply": "🔔 Hệ thống AI chưa được cấu hình API Key. Vui lòng liên hệ quản trị viên.", "config_error": True}
-
-    try:
-        client = genai.Client(api_key=GEMINI_API_KEY)
-
-        if username not in chat_memory:
-            chat_memory[username] = []
-
-        user_message = req.message.strip()
-        chat_memory[username].append({"role": "user", "text": user_message})
-
-        history_text = ""
-        for msg in chat_memory[username][-10:]:
-            if msg["role"] == "user":
-                history_text += f"Người dùng: {msg['text']}\\n"
-            else:
-                history_text += f"AI: {msg['text']}\\n"
-
-        prompt = f"""
-Bạn là GPT Mini Premium.
-
-Nhiệm vụ:
-- Hỗ trợ Marketing, Content bán hàng, Facebook Ads, TikTok Ads.
-- Hỗ trợ thiết kế hình ảnh, Website, Landing Page, AI Automation.
-- Tư vấn kinh doanh online ngắn gọn, thực tế, dễ áp dụng.
-
-QUY TẮC TRẢ LỜI:
-1. Luôn trả lời bằng tiếng Việt.
-2. Trả lời trực tiếp vào câu hỏi, không lan man.
-3. Ưu tiên câu trả lời dưới 10 dòng nếu người dùng không yêu cầu chi tiết.
-4. Không tự giới thiệu lại ở mỗi tin nhắn.
-5. Không dùng các câu mở đầu dài dòng như:
-   - Tuyệt vời!
-   - Rất vui được hỗ trợ bạn.
-   - Tôi là GPT Mini Premium.
-   - Cảm ơn bạn đã liên hệ.
-   - Thiết kế hình ảnh đóng vai trò rất quan trọng...
-6. Chỉ hỏi thêm thông tin khi thật sự cần.
-7. Nếu không đủ thông tin, trả lời:
-   "Vui lòng cung cấp thêm thông tin để tôi hỗ trợ chính xác."
-
-GỢI Ý TRẢ LỜI THEO TÌNH HUỐNG:
-- Nếu hỏi thiết kế ảnh: hỏi loại ảnh, nội dung, kích thước, màu chủ đạo.
-- Nếu hỏi quảng cáo: hỏi sản phẩm, ngân sách, khu vực, mục tiêu.
-- Nếu hỏi content: hỏi sản phẩm, khách hàng mục tiêu, ưu đãi.
-- Nếu hỏi website: ưu tiên tốc độ, bảo mật, SEO, trải nghiệm người dùng.
-- Nếu hỏi Premium: tư vấn gói phù hợp ngắn gọn.
-
-THÔNG TIN HỖ TRỢ:
-- Zalo: 036 338 2629
-- Email: gptminipro@gmail.com
-
-LỊCH SỬ NGẮN:
-{history_text}
-
-CÂU HỎI MỚI NHẤT:
-{user_message}
-
-TRẢ LỜI NGẮN GỌN, CHUYÊN NGHIỆP:
-"""
-
-        response = client.models.generate_content(model="gemini-2.5-flash-lite", contents=prompt)
-        reply = response.text.strip() if response and response.text else "AI không có phản hồi."
-
-        chat_memory[username].append({"role": "ai", "text": reply})
-        return {"reply": reply, "plan": user.get("plan", "free"), "remaining": remaining_text(user)}
-
-    except Exception as e:
-        # Ẩn mọi lỗi kỹ thuật: 429 quota, RESOURCE_EXHAUSTED, API error...
-        return {
-            "reply": """⚠️ Hệ thống đang xử lý nhiều yêu cầu.
-
-Vui lòng thử lại sau ít phút.
-
-📧 Email hỗ trợ:
-gptminipro@gmail.com
-
-📱 Zalo:
-036 338 2629""",
-            "ai_overload": True
-        }
-
-@app.post("/support")
-def support(req: SupportRequest):
-    users = load_users()
-    username, user = find_user_by_token(users, req.token)
-    if not user:
-        return {"success": False, "message": "Bạn cần đăng nhập để gửi hỗ trợ."}
-
-    messages = load_json(SUPPORT_FILE)
-    if username not in messages:
-        messages[username] = []
-
-    if isinstance(messages.get(username), dict):
-        ticket = messages[username]
-    else:
-        ticket = {
-            "status": "open",
-            "created_at": today(),
-            "messages": messages.get(username, [])
-        }
-
-    ticket["status"] = "open"
-    ticket["updated_at"] = today()
-    ticket.setdefault("messages", [])
-    ticket["messages"].append({
-        "from": "customer",
-        "sender": username,
-        "message": req.message.strip(),
-        "date": today()
-    })
-
-    messages[username] = ticket
-    save_json(SUPPORT_FILE, messages)
-
-    return {"success": True, "message": "Đã ghi nhận hỗ trợ. Bộ phận kỹ thuật sẽ kiểm tra trong thời gian sớm nhất."}
-
-
-@app.get("/support-thread/{token}")
-def support_thread(token: str):
-    users = load_users()
-    username, user = find_user_by_token(users, token)
-    if not user:
-        return {"success": False, "message": "Bạn cần đăng nhập để xem hỗ trợ."}
-
-    support = load_json(SUPPORT_FILE)
-    ticket = support.get(username)
-
-    if not ticket:
-        return {"success": True, "username": username, "status": "empty", "messages": []}
-
-    if isinstance(ticket, dict):
-        return {
-            "success": True,
-            "username": username,
-            "status": ticket.get("status", "open"),
-            "messages": ticket.get("messages", [])
-        }
-
-    return {"success": True, "username": username, "status": "open", "messages": ticket}
-
-@app.get("/support-messages")
-def support_messages():
-    return load_json(SUPPORT_FILE)
-
-
-@app.get("/supabase-test")
-def supabase_test():
-    if not supabase_enabled():
-        return {"success": False, "message": "Chưa có SUPABASE_URL hoặc SUPABASE_KEY trong Render Environment."}
-    try:
-        res = requests.get(
-            supabase_table_url(),
-            headers=supabase_headers(),
-            params={"select": "*", "limit": "1"},
-            timeout=12
+    return result
+
+def score_content(content):
+    score = 50
+    text = content.lower()
+    if len(content) >= 120: score += 10
+    if any(x in text for x in ["inbox", "nhắn tin", "liên hệ", "đặt lịch", "zalo"]): score += 15
+    if any(x in content for x in ["🔥", "🚀", "📩", "💎", "✨"]): score += 5
+    if "#" in content: score += 5
+    if any(x in text for x in ["cam kết 100%", "chắc chắn", "đảm bảo ra đơn", "trị khỏi", "hiệu quả tuyệt đối"]): score -= 25
+    return max(0, min(100, score))
+
+def policy_check(content):
+    warnings = []
+    risky = ["cam kết 100%", "chắc chắn", "đảm bảo ra đơn", "trị khỏi", "hiệu quả tuyệt đối", "thần tốc"]
+    for word in risky:
+        if word in content.lower():
+            warnings.append(f"Nên tránh cụm từ: {word}")
+    if content.count("#") > 5:
+        warnings.append("Hashtag hơi nhiều, nên giảm xuống 2-4 hashtag.")
+    if len(content) > 1200:
+        warnings.append("Nội dung khá dài, nên rút gọn để dễ đọc hơn.")
+    if not warnings:
+        warnings.append("Nội dung tương đối an toàn, vẫn nên kiểm tra lại trước khi đăng.")
+    return warnings
+
+
+def friendly_ai_error(error):
+    raw = str(error)
+    low = raw.lower()
+
+    if "429" in raw or "resource_exhausted" in low or "quota" in low or "rate-limit" in low or "rate limit" in low:
+        return (
+            "Hệ thống AI đang quá tải hoặc đã đạt giới hạn xử lý tạm thời. "
+            "Vui lòng thử lại sau ít phút. Nếu anh/chị cần sử dụng ổn định hơn, "
+            "vui lòng nâng cấp Premium để được ưu tiên hỗ trợ và hạn chế gián đoạn."
         )
-        return {
-            "success": res.status_code < 400,
-            "status_code": res.status_code,
-            "table": SUPABASE_TABLE,
-            "url": supabase_table_url(),
-            "response": res.text[:500]
-        }
-    except Exception as e:
-        return {"success": False, "message": str(e)}
 
-@app.get("/admin", response_class=HTMLResponse)
-def admin_page():
-    return """
+    if "api_key" in low or "invalid" in low or "permission" in low or "unauthorized" in low:
+        return (
+            "Hệ thống AI chưa được cấu hình đầy đủ hoặc khóa API chưa hợp lệ. "
+            "Vui lòng liên hệ kỹ thuật để được kiểm tra và kích hoạt lại."
+        )
+
+    if "timeout" in low or "connection" in low or "network" in low:
+        return (
+            "Kết nối AI đang chậm hoặc mạng tạm thời không ổn định. "
+            "Vui lòng thử lại sau ít phút."
+        )
+
+    return (
+        "Hệ thống AI đang bận xử lý. Vui lòng thử lại sau ít phút "
+        "hoặc liên hệ Zalo 036 338 2629 để được hỗ trợ nhanh."
+    )
+
+def safe_ai_generate(prompt, fallback=""):
+    if not client:
+        if fallback:
+            return fallback
+        return (
+            "Hệ thống AI chưa được kích hoạt. Vui lòng kiểm tra GEMINI_API_KEY "
+            "trong file .env hoặc liên hệ kỹ thuật để được hỗ trợ."
+        )
+    try:
+        res = client.models.generate_content(model="gemini-2.0-flash", contents=prompt)
+        return res.text.strip()
+    except Exception as e:
+        if fallback:
+            return fallback + "\\n\\n" + friendly_ai_error(e)
+        return friendly_ai_error(e)
+
+def generate_content(idea, style="gần gũi", length="120", variants=1):
+    fallback = f"""
+Nội dung gợi ý:
+
+{idea}
+
+Anh/chị có thể dùng nội dung này làm bản nháp, sau đó chỉnh lại theo sản phẩm/dịch vụ thực tế.
+
+CTA:
+Inbox để được tư vấn chi tiết.
+
+Hashtag:
+#Marketing #KinhDoanhOnline
+""".strip()
+
+    prompt = f"""
+Viết {variants} bài đăng Facebook bằng tiếng Việt.
+
+Chủ đề: {idea}
+Phong cách: {style}
+Độ dài mỗi bài: dưới {length} từ
+
+Yêu cầu:
+- Tự nhiên, dễ hiểu, phù hợp bán hàng/dịch vụ online
+- Có emoji vừa phải
+- Có lời kêu gọi inbox/liên hệ
+- Không spam hashtag
+- Không cam kết quá đà
+- Không vi phạm chính sách Facebook
+- Nếu viết nhiều phiên bản, đánh số Phiên bản 1, Phiên bản 2...
+"""
+    return safe_ai_generate(prompt, fallback)
+
+def ai_plan_30_days(industry, goal):
+    if not client:
+        # fallback không tốn AI
+        lines = []
+        base = CONTENT_LIBRARY.get(industry, CONTENT_LIBRARY["spa"])
+        for i in range(1, 31):
+            lines.append(f"Ngày {i}: {random.choice(base)}")
+        return "\n".join(lines)
+    prompt = f"""
+Tạo kế hoạch marketing Facebook 30 ngày bằng tiếng Việt.
+Ngành: {industry}
+Mục tiêu: {goal}
+
+Yêu cầu:
+- Mỗi ngày 1 ý tưởng bài đăng
+- Có CTA ngắn
+- Có hashtag gợi ý
+- Trình bày theo Ngày 1 đến Ngày 30
+- Phù hợp chủ shop/doanh nghiệp nhỏ
+"""
+    return safe_ai_generate(prompt, "\n".join(lines) if 'lines' in locals() else "")
+
+def analyze_fanpage(name, avatar, cover, bio, post_frequency, cta):
+    score = 50
+    notes = []
+    if avatar == "co": score += 10
+    else: notes.append("Nên có ảnh đại diện rõ thương hiệu.")
+    if cover == "co": score += 10
+    else: notes.append("Nên có ảnh bìa thể hiện dịch vụ/sản phẩm chính.")
+    if len(bio.strip()) > 50: score += 10
+    else: notes.append("Phần mô tả Fanpage còn ngắn, nên bổ sung lợi ích và thông tin liên hệ.")
+    if post_frequency in ["hang_ngay", "3_5_bai_tuan"]: score += 10
+    else: notes.append("Tần suất đăng chưa đều, nên có lịch đăng cố định.")
+    if cta == "co": score += 10
+    else: notes.append("Nên có CTA rõ: Inbox, Zalo, Website hoặc đặt lịch.")
+    score = min(score, 100)
+    if not notes:
+        notes.append("Fanpage đang có nền tảng tốt, nên tối ưu thêm nội dung và lịch đăng.")
+    return score, notes
+
+def spin_content_local(content):
+    endings = [
+        "Nhắn tin ngay để được tư vấn chi tiết hơn.",
+        "Inbox để nhận thông tin và báo giá phù hợp.",
+        "Liên hệ ngay hôm nay để được hỗ trợ nhanh.",
+        "Để lại tin nhắn, đội ngũ tư vấn sẽ hỗ trợ bạn.",
+        "Bạn cần thêm thông tin? Inbox ngay nhé."
+    ]
+    text = content.strip().replace("Inbox", "Nhắn tin").replace("Liên hệ", "Kết nối")
+    return text + "\n\n" + random.choice(endings)
+
+def post_to_facebook(page, content, image_path=""):
+    if image_path and os.path.exists(image_path):
+        ext = os.path.splitext(image_path)[1].lower()
+        if ext in [".mp4", ".mov", ".m4v"]:
+            url = f"https://graph-video.facebook.com/v23.0/{page['id']}/videos"
+            with open(image_path, "rb") as video:
+                res = requests.post(url, data={"description": content, "access_token": page["token"]},
+                                    files={"source": video}, timeout=300)
+            return res.json()
+        url = f"https://graph.facebook.com/v23.0/{page['id']}/photos"
+        with open(image_path, "rb") as img:
+            res = requests.post(url, data={"message": content, "access_token": page["token"]},
+                                files={"source": img}, timeout=90)
+        return res.json()
+
+    url = f"https://graph.facebook.com/v23.0/{page['id']}/feed"
+    res = requests.post(url, data={"message": content, "access_token": page["token"]}, timeout=60)
+    return res.json()
+
+
+def save_uploads(file_list):
+    paths = []
+    for file_obj in file_list:
+        if not file_obj or file_obj.filename == "":
+            continue
+        filename = secure_filename(file_obj.filename)
+        path = os.path.join(UPLOAD_DIR, datetime.datetime.now().strftime("%Y%m%d_%H%M%S_%f_") + filename)
+        file_obj.save(path)
+        paths.append(path)
+    return paths
+
+def pick_media_for_job(media_paths, index):
+    if not media_paths:
+        return ""
+    return media_paths[index % len(media_paths)]
+
+def save_upload(file_obj):
+    if not file_obj or file_obj.filename == "":
+        return ""
+    filename = secure_filename(file_obj.filename)
+    path = os.path.join(UPLOAD_DIR, datetime.datetime.now().strftime("%Y%m%d_%H%M%S_") + filename)
+    file_obj.save(path)
+    return path
+
+def scheduler_loop():
+    while True:
+        try:
+            now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
+            conn = db(); c = conn.cursor()
+            c.execute("""
+            SELECT id,page_name,page_id,content,schedule_time,image_path
+            FROM posts
+            WHERE status='scheduled' AND schedule_time<=?
+            """, (now,))
+            jobs = c.fetchall(); conn.close()
+            for row_id, page_name, page_id, content, schedule_time, image_path in jobs:
+                page = next((p for p in PAGES if str(p["id"]) == str(page_id)), None)
+                if not page:
+                    update_post(row_id, "error", "Không tìm thấy Page trong .env")
+                    continue
+                result = post_to_facebook(page, content, image_path)
+                if "id" in result or "post_id" in result:
+                    update_post(row_id, "posted", result.get("post_id") or result.get("id"))
+                else:
+                    update_post(row_id, "error", str(result))
+        except Exception as e:
+            print("Scheduler error:", e)
+        time.sleep(30)
+
+def read_batch_file(file_obj):
+    filename = file_obj.filename.lower()
+    if filename.endswith(".csv"):
+        text = file_obj.read().decode("utf-8-sig", errors="ignore").splitlines()
+        return list(csv.DictReader(text))
+    if filename.endswith(".xlsx"):
+        if openpyxl is None:
+            raise RuntimeError("Chưa cài openpyxl. Chạy: pip install openpyxl")
+        tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".xlsx")
+        file_obj.save(tmp.name)
+        wb = openpyxl.load_workbook(tmp.name)
+        ws = wb.active
+        headers = [str(c.value).strip() if c.value else "" for c in ws[1]]
+        rows = []
+        for r in ws.iter_rows(min_row=2, values_only=True):
+            item = {}
+            for i, h in enumerate(headers):
+                item[h] = r[i] if i < len(r) else ""
+            rows.append(item)
+        return rows
+    raise RuntimeError("Chỉ hỗ trợ file .xlsx hoặc .csv")
+
+def export_csv():
+    rows = get_history(10000)
+    path = os.path.join(REPORT_DIR, "report_posts.csv")
+    with open(path, "w", newline="", encoding="utf-8-sig") as f:
+        writer = csv.writer(f)
+        writer.writerow(["id","page_name","content","status","post_id","schedule_time","image_path","campaign","score","created_at"])
+        writer.writerows(rows)
+    return path
+
+
+def add_crm(name, phone, zalo, source, note):
+    if not name and not phone and not zalo:
+        return
+    conn = sqlite3.connect(DB)
+    c = conn.cursor()
+    c.execute("""
+    INSERT INTO crm(name,phone,zalo,source,note,created_at)
+    VALUES(?,?,?,?,?,?)
+    """, (name, phone, zalo, source, note, datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
+    conn.commit()
+    conn.close()
+
+def get_crm(limit=30):
+    conn = sqlite3.connect(DB)
+    c = conn.cursor()
+    c.execute("SELECT id,name,phone,zalo,source,note,created_at FROM crm ORDER BY id DESC LIMIT ?", (limit,))
+    rows = c.fetchall()
+    conn.close()
+    return rows
+
+
+def save_token_check(page_name, page_id, status, detail):
+    conn = sqlite3.connect(DB)
+    c = conn.cursor()
+    c.execute("""
+    INSERT INTO token_checks(page_name,page_id,status,detail,checked_at)
+    VALUES(?,?,?,?,?)
+    """, (page_name, page_id, status, detail, datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
+    conn.commit()
+    conn.close()
+
+def get_latest_token_checks(limit=30):
+    conn = sqlite3.connect(DB)
+    c = conn.cursor()
+    c.execute("""
+    SELECT page_name,page_id,status,detail,checked_at
+    FROM token_checks
+    ORDER BY id DESC
+    LIMIT ?
+    """, (limit,))
+    rows = c.fetchall()
+    conn.close()
+    return rows
+
+def check_single_page_token(page):
+    page_name = page.get("name", "No name")
+    page_id = str(page.get("id", ""))
+    token = page.get("token", "")
+
+    if not page_id or not token:
+        return {"page_name": page_name, "page_id": page_id, "status": "LỖI", "detail": "Thiếu Page ID hoặc Page Token trong file .env."}
+
+    try:
+        url = f"https://graph.facebook.com/v23.0/{page_id}"
+        params = {"fields": "id,name", "access_token": token}
+        res = requests.get(url, params=params, timeout=20)
+        data = res.json()
+
+        if res.status_code < 400 and data.get("id"):
+            return {"page_name": data.get("name", page_name), "page_id": data.get("id", page_id), "status": "SỐNG", "detail": "Token hoạt động bình thường."}
+
+        err = data.get("error", {})
+        code = err.get("code", "")
+        subcode = err.get("error_subcode", "")
+        message = err.get("message", str(data))
+        if str(code) == "190":
+            detail = f"Token giới hạn hoặc phiên đã giới hạn. OAuth code 190. Subcode: {subcode}. Nội dung: {message}"
+        else:
+            detail = f"Lỗi Facebook API. Code: {code}. Subcode: {subcode}. Nội dung: {message}"
+
+        return {"page_name": page_name, "page_id": page_id, "status": "CHẾT", "detail": detail}
+
+    except Exception as e:
+        return {"page_name": page_name, "page_id": page_id, "status": "LỖI", "detail": str(e)}
+
+def check_all_page_tokens():
+    results = []
+    for page in PAGES:
+        item = check_single_page_token(page)
+        save_token_check(item["page_name"], item["page_id"], item["status"], item["detail"])
+        results.append(item)
+    return results
+
+def add_page_cluster(name, page_names, note):
+    if not name:
+        return
+    conn = sqlite3.connect(DB)
+    c = conn.cursor()
+    c.execute("""
+    INSERT OR REPLACE INTO page_clusters(name,page_names,note,created_at)
+    VALUES(?,?,?,?)
+    """, (name, page_names, note, datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
+    conn.commit()
+    conn.close()
+
+def get_page_clusters():
+    conn = sqlite3.connect(DB)
+    c = conn.cursor()
+    c.execute("SELECT id,name,page_names,note,created_at FROM page_clusters ORDER BY id DESC")
+    rows = c.fetchall()
+    conn.close()
+    return rows
+
+def get_analytics_summary():
+    conn = sqlite3.connect(DB)
+    c = conn.cursor()
+    c.execute("SELECT page_name, COUNT(*) FROM posts GROUP BY page_name ORDER BY COUNT(*) DESC LIMIT 10")
+    by_page = c.fetchall()
+    c.execute("SELECT campaign, COUNT(*) FROM posts WHERE campaign!='' GROUP BY campaign ORDER BY COUNT(*) DESC LIMIT 10")
+    by_campaign = c.fetchall()
+    c.execute("SELECT substr(created_at,1,10), COUNT(*) FROM posts GROUP BY substr(created_at,1,10) ORDER BY substr(created_at,1,10) DESC LIMIT 7")
+    by_day = c.fetchall()
+    conn.close()
+    return {"by_page": by_page, "by_campaign": by_campaign, "by_day": by_day}
+
+def generate_many_contents(idea, count, style="bán hàng tự nhiên", length="80"):
+    count = max(1, min(int(count), 50))
+    if not client:
+        base = [
+            f"{idea} - Giải pháp phù hợp cho khách hàng đang cần tối ưu công việc. Inbox để được tư vấn.",
+            f"Bạn đang cần {idea}? Hãy chọn giải pháp ổn định, dễ dùng và được hỗ trợ nhanh.",
+            f"{idea} giúp công việc online thuận tiện hơn. Nhắn tin để nhận tư vấn chi tiết."
+        ]
+        return "\\n\\n".join(base[i % len(base)] for i in range(count))
+
+    prompt = f"""
+Viết {count} content Facebook bằng tiếng Việt.
+Chủ đề: {idea}
+Phong cách: {style}
+Mỗi bài dưới {length} từ.
+
+Yêu cầu:
+- Mỗi content khác nhau
+- Có CTA inbox/liên hệ
+- Có emoji vừa phải
+- Không cam kết quá đà
+- Tách mỗi content bằng dòng trống
+"""
+    return safe_ai_generate(prompt, "\n\n".join(base[i % len(base)] for i in range(count)) if 'base' in locals() else "")
+
+def smart_schedule_times(start_time, count, gap_minutes):
+    times = []
+    try:
+        base = datetime.datetime.strptime(start_time.replace("T", " "), "%Y-%m-%d %H:%M")
+    except Exception:
+        base = datetime.datetime.now() + datetime.timedelta(minutes=10)
+    gap = int(gap_minutes or 60)
+    for i in range(count):
+        times.append((base + datetime.timedelta(minutes=i * gap)).strftime("%Y-%m-%d %H:%M"))
+    return times
+
+
+def ai_spin_content(content):
+    if not content:
+        return ""
+    if client:
+        prompt = f"""
+Viết lại content sau khác khoảng 70-80% nhưng giữ ý chính, giọng tự nhiên, không cam kết quá đà.
+Thêm CTA riêng và hashtag riêng.
+Content gốc:
+{content}
+"""
+        try:
+            return safe_ai_generate(prompt, content)
+        except Exception as e:
+            return friendly_ai_error(e)
+    endings = [
+        "Inbox để được tư vấn chi tiết và nhận báo giá phù hợp.",
+        "Nhắn tin ngay để được hỗ trợ nhanh nhất hôm nay.",
+        "Liên hệ để nhận thông tin mới và ưu đãi phù hợp.",
+        "Để lại tin nhắn, đội ngũ tư vấn sẽ hỗ trợ bạn.",
+    ]
+    return content.strip().replace("Inbox", "Nhắn tin").replace("Liên hệ", "Kết nối") + "\n\n" + random.choice(endings) + "\n#Marketing #KinhDoanhOnline"
+
+def auto_cta_hashtag(content, industry="marketing"):
+    text = content.lower()
+    cta = "Inbox để được tư vấn nhanh."
+    if "zalo" in text:
+        cta = "Kết nối Zalo để được hỗ trợ chi tiết."
+    elif "đặt lịch" in text or "spa" in text or "nha khoa" in text:
+        cta = "Đặt lịch tư vấn ngay hôm nay."
+    elif "proxy" in text:
+        cta = "Nhắn tin để nhận bảng giá proxy phù hợp."
+    hashtags = f"#{industry.replace('_','')} #Marketing #KinhDoanhOnline"
+    return cta, hashtags
+
+def choose_best_media_for_content(content, media_paths, used_indexes):
+    if not media_paths:
+        return ""
+    # Bản local: ưu tiên không trùng ảnh; nếu hết ảnh thì quay vòng.
+    for i, path in enumerate(media_paths):
+        if i not in used_indexes:
+            used_indexes.add(i)
+            return path
+    idx = len(used_indexes) % len(media_paths)
+    return media_paths[idx]
+
+def backup_database():
+    if not os.path.exists(DB):
+        return ""
+    name = "backup_" + datetime.datetime.now().strftime("%Y%m%d_%H%M%S") + "_" + DB
+    path = os.path.join(BACKUP_DIR, name)
+    shutil.copy2(DB, path)
+    return path
+
+def export_pdf_report():
+    # PDF tối giản dạng text để tránh phụ thuộc thư viện ngoài.
+    rows = get_history(500)
+    path = os.path.join(REPORT_DIR, "report_posts.pdf")
+    try:
+        from reportlab.lib.pagesizes import A4
+        from reportlab.pdfgen import canvas
+        c = canvas.Canvas(path, pagesize=A4)
+        width, height = A4
+        y = height - 40
+        c.setFont("Helvetica-Bold", 14)
+        c.drawString(40, y, "Marketing Automation Pro V9 - Report")
+        y -= 30
+        c.setFont("Helvetica", 9)
+        for r in rows[:80]:
+            line = f"ID {r[0]} | Page: {r[1]} | Status: {r[3]} | Campaign: {r[7]} | Time: {r[9]}"
+            c.drawString(40, y, line[:110])
+            y -= 14
+            if y < 40:
+                c.showPage()
+                y = height - 40
+                c.setFont("Helvetica", 9)
+        c.save()
+        return path
+    except Exception:
+        txt_path = os.path.join(REPORT_DIR, "report_posts_pdf_fallback.txt")
+        with open(txt_path, "w", encoding="utf-8") as f:
+            f.write("Marketing Automation Pro V9 Report\n\n")
+            for r in rows:
+                f.write(f"ID {r[0]} | Page: {r[1]} | Status: {r[3]} | Campaign: {r[7]} | Time: {r[9]}\n")
+        return txt_path
+
+def premium_visible_items(items, free_limit=10):
+    return items[:free_limit], max(0, len(items) - free_limit)
+
+
+def get_free_status():
+    # Chế độ miễn phí không ép giới hạn cơ bản.
+    # Một số tính năng nâng cao sẽ hiển thị yêu cầu Premium theo từng công cụ.
+    return {
+        "package_name": "trial",
+        "status": "active",
+        "free_end": "",
+        "days": 3,
+        "hours": 72,
+        "percent": 100,
+        "is_trial": True,
+        "is_expired": False,
+        "label": "🎁 Dùng thử miễn phí",
+        "note": "Còn lại 3 ngày • 10/10 Content AI • 1/1 Fanpage"
+    }
+
+def plan_required_message(feature_name, plans):
+    return (
+        f"Tính năng nâng cao: {feature_name}\n\n"
+        f"Công cụ này thuộc nhóm Premium.\n"
+        f"Gói đề xuất: {plans}\n\n"
+        "Anh/chị có thể nâng cấp để mở khóa đầy đủ tính năng, hạn mức cao hơn và hỗ trợ ưu tiên."
+    )
+
+def token_manager_report():
+    reports = []
+    for p in PAGES:
+        token = p.get("token", "")
+        status = "Có token" if token and token.startswith("EA") else "Thiếu token hoặc sai định dạng"
+        reports.append(f"{p.get('name','No name')} | {p.get('id','No ID')} | {status}")
+    if not reports:
+        reports.append("Chưa có Fanpage trong PAGES_JSON.")
+    return "\\n".join(reports)
+
+def ai_planner_v6(industry, goal, days):
+    if not client:
+        base = CONTENT_LIBRARY.get(industry, list(CONTENT_LIBRARY.values())[0])
+        return "\\n".join([f"Ngày {i}: {random.choice(base)}\\nCTA: Inbox để được tư vấn.\\nHashtag: #{industry} #Marketing" for i in range(1, int(days)+1)])
+    prompt = f"""
+Tạo kế hoạch marketing Facebook {days} ngày bằng tiếng Việt.
+Ngành: {industry}
+Mục tiêu: {goal}
+
+Mỗi ngày gồm:
+- Chủ đề bài đăng
+- Nội dung ngắn
+- CTA
+- Hashtag
+- Gợi ý khung giờ đăng
+Trình bày theo Ngày 1 đến Ngày {days}.
+"""
+    return safe_ai_generate(prompt, "")
+
+
+
+def v3_ceo_summary():
+    s = get_stats()
+    token_checks = get_latest_token_checks(200)
+    live_tokens = sum(1 for t in token_checks if str(t[2]).upper() == 'SỐNG')
+    dead_tokens = sum(1 for t in token_checks if str(t[2]).upper() in ['CHẾT','LỖI'])
+    today = datetime.datetime.now().strftime('%Y-%m-%d')
+    conn = db(); c = conn.cursor()
+    c.execute("SELECT COUNT(*) FROM posts WHERE substr(created_at,1,10)=?", (today,))
+    posts_today = c.fetchone()[0]
+    c.execute("SELECT COUNT(*) FROM crm WHERE substr(created_at,1,10)=?", (today,))
+    leads_today = c.fetchone()[0]
+    conn.close()
+    return {
+        'fanpages': len(PAGES),
+        'posts': s.get('total', 0),
+        'posted': s.get('posted', 0),
+        'scheduled': s.get('scheduled', 0),
+        'crm': s.get('crm', 0),
+        'campaigns': s.get('campaigns', 0),
+        'posts_today': posts_today,
+        'leads_today': leads_today,
+        'revenue_month': '0đ',
+        'premium': get_free_status().get('label','🎁 Dùng thử miễn phí'),
+        'token_live': live_tokens,
+        'token_dead': dead_tokens,
+        'token_total': len(PAGES)
+    }
+
+def add_pipeline_lead(customer_name, phone, zalo, source, stage, value, note):
+    if not customer_name and not phone and not zalo:
+        return
+    conn = db(); c = conn.cursor()
+    c.execute("""
+    INSERT INTO lead_pipeline(customer_name,phone,zalo,source,stage,value,note,created_at)
+    VALUES(?,?,?,?,?,?,?,?)
+    """, (customer_name, phone, zalo, source, stage or 'Khách mới', int(value or 0), note, datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
+    conn.commit(); conn.close()
+
+def get_pipeline_leads(limit=120):
+    conn = db(); c = conn.cursor()
+    c.execute("SELECT id,customer_name,phone,zalo,source,stage,value,note,created_at FROM lead_pipeline ORDER BY id DESC LIMIT ?", (limit,))
+    rows = c.fetchall(); conn.close()
+    if not rows:
+        # fallback dùng dữ liệu CRM cũ để Kanban vẫn có nội dung
+        return [(r[0], r[1], r[2], r[3], r[4], 'Khách mới', 0, r[5], r[6]) for r in get_crm(30)]
+    return rows
+
+def add_customer_task(customer_name, task, due_date):
+    if not task:
+        return
+    conn = db(); c = conn.cursor()
+    c.execute("INSERT INTO customer_tasks(customer_name,task,due_date,status,created_at) VALUES(?,?,?,?,?)", (customer_name, task, due_date, 'pending', datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
+    conn.commit(); conn.close()
+
+def get_customer_tasks(limit=50):
+    conn = db(); c = conn.cursor()
+    c.execute("SELECT id,customer_name,task,due_date,status,created_at FROM customer_tasks ORDER BY id DESC LIMIT ?", (limit,))
+    rows = c.fetchall(); conn.close(); return rows
+
+def add_notification(title, detail, level='info'):
+    if not title:
+        return
+    conn = db(); c = conn.cursor()
+    c.execute("INSERT INTO notifications(title,detail,level,status,created_at) VALUES(?,?,?,?,?)", (title, detail, level, 'new', datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
+    conn.commit(); conn.close()
+
+def get_notifications(limit=30):
+    conn = db(); c = conn.cursor()
+    c.execute("SELECT id,title,detail,level,status,created_at FROM notifications ORDER BY id DESC LIMIT ?", (limit,))
+    rows = c.fetchall(); conn.close(); return rows
+
+def v3_ai_tool_prompt(tool, topic, extra=''):
+    if tool == 'marketing_director':
+        return f"""
+Bạn là AI Marketing Director. Lập kế hoạch bằng tiếng Việt cho: {topic}
+Yêu cầu xuất đầy đủ:
+1. Phân tích sản phẩm/dịch vụ
+2. Tệp khách hàng mục tiêu
+3. 30 content Facebook/TikTok ngắn
+4. 10 mẫu quảng cáo Facebook Ads
+5. Kế hoạch marketing 30 ngày
+6. CTA và hashtag gợi ý
+7. Ngân sách quảng cáo đề xuất theo 3 mức
+Không cam kết quá đà, không dùng lời hứa chắc chắn ra đơn.
+Thông tin thêm: {extra}
+"""
+    if tool == 'facebook_ads_ai':
+        return f"""
+Bạn là chuyên gia Facebook Ads. Phân tích và tạo bộ quảng cáo cho: {topic}
+Gồm: chấm điểm nội dung, 5 mẫu ads inbox, 5 mẫu ads chuyển đổi, target khách hàng, CTA, gợi ý ngân sách, lỗi cần tránh.
+Thông tin thêm: {extra}
+"""
+    if tool == 'competitor_scanner':
+        return f"""
+Phân tích Fanpage đối thủ dựa trên mô tả/link này: {topic}
+Trả về: điểm mạnh, điểm yếu, phong cách nội dung, CTA, ý tưởng vượt đối thủ, 10 nội dung có thể triển khai.
+Thông tin thêm: {extra}
+"""
+    if tool == 'sales_script':
+        return f"""
+Tạo bộ kịch bản bán hàng cho: {topic}
+Gồm: kịch bản inbox, kịch bản chốt sale, xử lý từ chối, chăm sóc lại khách cũ, tin nhắn nhắc thanh toán, tin nhắn hậu mãi.
+Thông tin thêm: {extra}
+"""
+    if tool == 'landing_page':
+        return f"""
+Tạo nội dung landing page cho dịch vụ/sản phẩm: {topic}
+Gồm: tiêu đề, mô tả, ưu điểm, form thu khách, CTA, FAQ, lý do nên chọn, nội dung hero section.
+Thông tin thêm: {extra}
+"""
+    if tool == 'prompt_premium':
+        return f"""
+Tạo 50 prompt Premium cho: {topic}
+Chia nhóm: Facebook Ads, TikTok Ads, Seeding, Chốt sale, Content Viral.
+"""
+    return f"Tạo nội dung marketing chuyên nghiệp cho: {topic}. {extra}"
+
+HTML = """
 <!DOCTYPE html>
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
-<title>GPT Mini Premium Admin</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{ title }}</title>
+
+<meta name="theme-color" content="#0F172A">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Mkt Automation Pro">
+<link rel="manifest" href="/manifest.json">
+<link rel="apple-touch-icon" href="/pwa-icon-192.png">
+
 <style>
+:root{
+  --blue:#2563EB;
+  --blue2:#3B82F6;
+  --purple:#7C3AED;
+  --purple2:#A855F7;
+  --deep:#1E1B4B;
+  --navy:#0F172A;
+  --bg:#F8FAFC;
+  --soft:#EEF2FF;
+  --card:#FFFFFF;
+  --text:#111827;
+  --muted:#64748B;
+  --border:#E5E7EB;
+}
 *{box-sizing:border-box}
-body{font-family:Arial;background:#020617;color:white;margin:0;padding:26px}
-h1{color:#38bdf8;margin-top:0}
-.grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
-.card{background:#0f172a;border:1px solid #334155;border-radius:18px;padding:18px;margin:14px 0}
-button{padding:12px 18px;border:none;border-radius:12px;background:#2563eb;color:white;font-weight:bold;cursor:pointer;margin:5px}
-.btn-green{background:#22c55e}.btn-red{background:#ef4444}
-input,select,textarea{width:100%;padding:13px;border-radius:12px;border:1px solid #334155;background:#020617;color:white;margin:6px 0}
-textarea{min-height:86px;resize:vertical}
-.badge{padding:5px 10px;border-radius:999px;background:#2563eb;font-size:13px}
-.badge-open{background:#f97316}.badge-closed{background:#334155}.badge-pro{background:#16a34a}.badge-free{background:#64748b}
-.small{color:#94a3b8;font-size:13px;line-height:1.6}
-.msg{padding:12px;border-radius:14px;margin:8px 0;line-height:1.5}
-.customer{background:#1e293b;border-left:4px solid #38bdf8}
-.admin{background:#052e16;border-left:4px solid #22c55e}
-.quick{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
-.topbar{display:flex;gap:10px;align-items:center;margin-bottom:16px}.topbar input{max-width:260px}
-@media(max-width:900px){.grid{grid-template-columns:1fr}.quick{grid-template-columns:1fr}}
+html{scroll-behavior:smooth}
+body{
+  margin:0;
+  font-family:Arial,sans-serif;
+  background:
+    radial-gradient(circle at top left,rgba(124,58,237,.18),transparent 32%),
+    radial-gradient(circle at top right,rgba(37,99,235,.16),transparent 30%),
+    linear-gradient(135deg,#FFFFFF,#EEF2FF 52%,#F8FAFC);
+  color:var(--text);
+}
+.layout{
+  display:grid;
+  grid-template-columns:270px 1fr 330px;
+  gap:20px;
+  max-width:1560px;
+  margin:auto;
+  padding:20px;
+}
+.sidebar{
+  position:sticky;
+  top:20px;
+  height:calc(100vh - 40px);
+  padding:22px;
+  background:linear-gradient(180deg,#111827,#1E1B4B);
+  border:1px solid rgba(255,255,255,.12);
+  border-radius:28px;
+  box-shadow:0 20px 55px rgba(30,27,75,.25);
+}
+.logo{
+  font-size:25px;
+  font-weight:900;
+  color:white;
+  line-height:1.12;
+}
+.logo:after{
+  content:"";
+  display:block;
+  width:86px;
+  height:5px;
+  margin-top:12px;
+  border-radius:999px;
+  background:linear-gradient(135deg,var(--blue),var(--purple2));
+}
+.subtitle{
+  font-size:12px;
+  color:#CBD5E1;
+  margin:12px 0 18px;
+}
+.nav a{
+  display:block;
+  padding:13px 14px;
+  border-radius:16px;
+  color:#F8FAFC;
+  text-decoration:none;
+  margin:7px 0;
+  background:rgba(255,255,255,.06);
+  border:1px solid rgba(255,255,255,.08);
+}
+.nav a:hover{
+  background:linear-gradient(135deg,var(--blue),var(--purple));
+  color:white;
+  transform:translateX(3px);
+}
+.main{min-width:0}
+.panel,.rightbar{
+  background:rgba(255,255,255,.94);
+  backdrop-filter:blur(16px);
+  border:1px solid rgba(226,232,240,.9);
+  border-radius:28px;
+  box-shadow:0 18px 45px rgba(30,41,59,.10);
+}
+.panel{
+  padding:25px;
+  margin-bottom:20px;
+}
+.rightbar{
+  position:sticky;
+  top:20px;
+  height:calc(100vh - 40px);
+  padding:20px;
+  overflow:auto;
+}
+.badge{
+  display:inline-block;
+  background:linear-gradient(135deg,var(--blue),var(--purple));
+  color:white;
+  padding:10px 16px;
+  border-radius:999px;
+  font-weight:900;
+  box-shadow:0 10px 26px rgba(124,58,237,.26);
+}
+h1{
+  font-size:42px;
+  color:transparent;
+  background:linear-gradient(135deg,var(--blue),var(--purple));
+  -webkit-background-clip:text;
+  background-clip:text;
+  margin:16px 0 8px;
+  letter-spacing:-.6px;
+}
+h2{
+  margin-top:0;
+  color:var(--deep);
+}
+p{color:var(--muted)}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.grid4{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px}
+.stat{
+  background:#FFFFFF;
+  border:1px solid var(--border);
+  border-left:5px solid var(--purple);
+  border-radius:22px;
+  padding:18px;
+  box-shadow:0 12px 28px rgba(124,58,237,.08);
+}
+.stat span{color:var(--muted);font-size:14px}
+.stat b{
+  font-size:30px;
+  color:var(--purple);
+}
+textarea,select,input{
+  width:100%;
+  margin:8px 0;
+  padding:15px;
+  border:1px solid var(--border);
+  background:#FFFFFF;
+  color:var(--text);
+  border-radius:16px;
+  font-size:15px;
+  outline:none;
+}
+textarea:focus,select:focus,input:focus{
+  border-color:var(--purple);
+  box-shadow:0 0 0 4px rgba(124,58,237,.12);
+}
+button{
+  background:linear-gradient(135deg,var(--blue),var(--purple));
+  color:white;
+  border:none;
+  padding:14px 20px;
+  border-radius:16px;
+  font-weight:900;
+  cursor:pointer;
+  margin:8px 6px 8px 0;
+  box-shadow:0 12px 28px rgba(37,99,235,.20);
+}
+button:hover{
+  transform:translateY(-1px);
+  box-shadow:0 16px 32px rgba(124,58,237,.25);
+}
+.secondary{
+  background:linear-gradient(135deg,#E0E7FF,#F3E8FF);
+  color:#4C1D95;
+  border:1px solid #DDD6FE;
+  box-shadow:none;
+}
+.success{
+  color:#047857;
+  background:#ECFDF5;
+  border:1px solid #A7F3D0;
+  padding:12px;
+  border-radius:14px;
+}
+.error{
+  color:#B91C1C;
+  background:#FEF2F2;
+  border:1px solid #FCA5A5;
+  padding:12px;
+  border-radius:14px;
+}
+.page-list{
+  display:grid;
+  grid-template-columns:repeat(2,1fr);
+  gap:10px;
+  margin:10px 0;
+}
+.page-item{
+  background:#F8FAFC;
+  color:var(--text);
+  border:1px solid var(--border);
+  border-radius:18px;
+  padding:13px;
+}
+.history{
+  white-space:pre-wrap;
+  background:#F8FAFC;
+  color:var(--text);
+  border-radius:18px;
+  padding:15px;
+  margin:10px 0;
+  border:1px solid var(--border);
+}
+.small{font-size:13px;color:var(--muted)}
+.preview{
+  background:white;
+  color:#111827;
+  border-radius:22px;
+  padding:18px;
+  max-width:570px;
+  border:1px solid var(--border);
+  box-shadow:0 14px 32px rgba(30,41,59,.10);
+}
+.preview-head{display:flex;align-items:center;gap:10px}
+.avatar{
+  width:44px;
+  height:44px;
+  border-radius:50%;
+  background:linear-gradient(135deg,var(--blue),var(--purple));
+}
+.preview-name{font-weight:900}
+.preview-content{white-space:pre-wrap;margin-top:12px;line-height:1.48}
+.library-grid{
+  display:grid;
+  grid-template-columns:repeat(2,1fr);
+  gap:12px;
+}
+.template-card{
+  background:#FFFFFF;
+  color:var(--text);
+  border:1px solid var(--border);
+  border-top:4px solid var(--purple);
+  border-radius:20px;
+  padding:16px;
+  box-shadow:0 12px 26px rgba(124,58,237,.08);
+}
+.rightbar h2{
+  color:transparent;
+  background:linear-gradient(135deg,var(--blue),var(--purple));
+  -webkit-background-clip:text;
+  background-clip:text;
+}
+.rightbar hr{border:none;border-top:1px solid var(--border);margin:18px 0}
+.pricing-grid{
+  display:grid;
+  grid-template-columns:repeat(5,1fr);
+  gap:14px;
+}
+.price-card{
+  background:#FFFFFF;
+  color:#111827;
+  border:1px solid var(--border);
+  border-radius:22px;
+  padding:18px;
+  position:relative;
+  box-shadow:0 18px 38px rgba(124,58,237,.10);
+}
+.price-card h3{
+  margin:0 0 8px;
+  font-size:18px;
+  color:var(--deep);
+}
+.price{
+  font-size:22px;
+  font-weight:800;
+  line-height:1.2;
+  color:transparent;
+  background:linear-gradient(135deg,var(--blue),var(--purple));
+  -webkit-background-clip:text;
+  background-clip:text;
+}
+.price-card ul{
+  padding-left:18px;
+  line-height:1.7;
+  color:#334155;
+}
+.popular{
+  border:2px solid var(--purple);
+  transform:translateY(-6px);
+}
+.ribbon{
+  position:absolute;
+  top:-13px;
+  left:18px;
+  background:linear-gradient(135deg,var(--blue),var(--purple));
+  color:white;
+  padding:6px 12px;
+  border-radius:999px;
+  font-weight:900;
+  font-size:12px;
+}
+.premium-lock{
+  background:linear-gradient(135deg,#EEF2FF,#F5F3FF);
+  color:#1E1B4B;
+  border-radius:22px;
+  padding:20px;
+  border:1px solid #DDD6FE;
+}
+.mobilebar{display:none}
+@media(max-width:1100px){
+  .layout{grid-template-columns:230px 1fr}
+  .rightbar{display:none}
+  .grid4{grid-template-columns:repeat(2,1fr)}
+  .pricing-grid{grid-template-columns:repeat(2,1fr)}
+}
+@media(max-width:820px){
+  .layout{display:block;padding:12px}
+  .sidebar,.rightbar{display:none}
+  .grid,.grid4,.page-list,.library-grid,.pricing-grid{grid-template-columns:1fr}
+  h1{font-size:30px}
+  .panel{padding:18px;border-radius:22px}
+  button{width:100%;font-size:16px}
+  textarea{min-height:160px}
+  .popular{transform:none}
+  .mobilebar{
+    display:flex;
+    position:fixed;
+    bottom:0;
+    left:0;
+    right:0;
+    background:#FFFFFF;
+    border-top:1px solid var(--border);
+    z-index:999;
+    box-shadow:0 -8px 25px rgba(30,41,59,.10);
+  }
+  .mobilebar a{
+    flex:1;
+    text-align:center;
+    color:#1E1B4B;
+    text-decoration:none;
+    padding:10px 4px;
+    font-size:12px;
+  }
+  .mobilebar a:hover{color:var(--purple)}
+  body{padding-bottom:68px}
+}
+
+.analytics-grid{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:14px;
+}
+.analytics-box{
+  background:#F8FAFC;
+  border:1px solid var(--border);
+  border-radius:18px;
+  padding:16px;
+}
+.analytics-row{
+  display:flex;
+  justify-content:space-between;
+  gap:10px;
+  padding:8px 0;
+  border-bottom:1px solid #E5E7EB;
+}
+.premium-center{
+  background:linear-gradient(135deg,#EEF2FF,#F5F3FF);
+  border:1px solid #DDD6FE;
+  border-radius:22px;
+  padding:18px;
+}
+.token-live{color:#047857;font-weight:900}
+.token-dead{color:#B91C1C;font-weight:900}
+@media(max-width:820px){.analytics-grid{grid-template-columns:1fr}}
+
+
+.v9-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
+.v9-card{background:#fff;border:1px solid var(--border);border-radius:20px;padding:16px;box-shadow:0 12px 28px rgba(124,58,237,.08)}
+.lock-card{background:linear-gradient(135deg,#1E1B4B,#312E81);color:white;border-radius:22px;padding:20px;border:1px solid #A78BFA}
+.modal-price{display:none;position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:9999;align-items:center;justify-content:center;padding:20px}
+.modal-inner{background:white;border-radius:28px;max-width:980px;width:100%;max-height:90vh;overflow:auto;padding:22px;color:#111827}
+.close-btn{float:right;background:#F3F4F6;color:#111827;box-shadow:none}
+@media(max-width:820px){.v9-grid{grid-template-columns:1fr}}
+
+
+/* V10 Floating Support Bot + Live Trust Bar */
+.live-trust-bar{
+  position:fixed;
+  top:16px;
+  left:50%;
+  transform:translateX(-50%);
+  z-index:9998;
+  background:rgba(255,255,255,.96);
+  border:1px solid #DDD6FE;
+  box-shadow:0 14px 35px rgba(30,41,59,.14);
+  border-radius:999px;
+  padding:10px 18px;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  color:#1E1B4B;
+  font-weight:800;
+  backdrop-filter:blur(14px);
+}
+.live-dot{
+  width:10px;
+  height:10px;
+  background:#22C55E;
+  border-radius:50%;
+  box-shadow:0 0 0 6px rgba(34,197,94,.14);
+  animation:pulseLive 1.4s infinite;
+}
+@keyframes pulseLive{
+  0%{transform:scale(1);opacity:1}
+  70%{transform:scale(1.35);opacity:.65}
+  100%{transform:scale(1);opacity:1}
+}
+.floating-bot{
+  position:fixed;
+  right:22px;
+  bottom:22px;
+  z-index:9999;
+  font-family:Arial,sans-serif;
+}
+.bot-bubble{
+  width:66px;
+  height:66px;
+  border-radius:50%;
+  border:none;
+  cursor:pointer;
+  background:linear-gradient(135deg,#2563EB,#7C3AED);
+  box-shadow:0 18px 45px rgba(124,58,237,.35);
+  color:white;
+  font-size:30px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  position:relative;
+  animation:botFloat 2.2s ease-in-out infinite;
+}
+@keyframes botFloat{
+  0%,100%{transform:translateY(0)}
+  50%{transform:translateY(-6px)}
+}
+.bot-status{
+  position:absolute;
+  right:0;
+  bottom:2px;
+  width:18px;
+  height:18px;
+  border-radius:50%;
+  background:#22C55E;
+  border:3px solid white;
+}
+.bot-panel{
+  display:none;
+  position:absolute;
+  right:0;
+  bottom:82px;
+  width:340px;
+  max-width:calc(100vw - 28px);
+  background:white;
+  border:1px solid #DDD6FE;
+  border-radius:24px;
+  box-shadow:0 22px 55px rgba(30,41,59,.22);
+  overflow:hidden;
+}
+.bot-head{
+  background:linear-gradient(135deg,#2563EB,#7C3AED);
+  color:white;
+  padding:16px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+}
+.bot-title{
+  font-weight:900;
+}
+.bot-online{
+  font-size:12px;
+  opacity:.95;
+  display:flex;
+  align-items:center;
+  gap:6px;
+}
+.typing-dots{
+  display:inline-flex;
+  gap:3px;
+  margin-left:4px;
+}
+.typing-dots span{
+  width:5px;
+  height:5px;
+  border-radius:50%;
+  background:white;
+  display:block;
+  animation:typingDot 1s infinite ease-in-out;
+}
+.typing-dots span:nth-child(2){animation-delay:.15s}
+.typing-dots span:nth-child(3){animation-delay:.3s}
+@keyframes typingDot{
+  0%,80%,100%{transform:translateY(0);opacity:.55}
+  40%{transform:translateY(-4px);opacity:1}
+}
+.bot-close{
+  background:rgba(255,255,255,.18);
+  border:none;
+  color:white;
+  box-shadow:none;
+  width:32px;
+  height:32px;
+  border-radius:50%;
+  padding:0;
+  margin:0;
+}
+.bot-body{
+  padding:16px;
+  max-height:360px;
+  overflow:auto;
+  background:#F8FAFC;
+}
+.bot-msg{
+  background:white;
+  border:1px solid #E5E7EB;
+  border-radius:18px;
+  padding:12px;
+  margin-bottom:10px;
+  line-height:1.45;
+  color:#111827;
+}
+.bot-msg.ai{
+  border-left:4px solid #7C3AED;
+}
+.bot-actions{
+  display:grid;
+  grid-template-columns:1fr;
+  gap:8px;
+  padding:14px 16px 16px;
+  background:white;
+}
+.bot-actions button,.bot-actions a{
+  display:block;
+  text-align:center;
+  text-decoration:none;
+  background:linear-gradient(135deg,#2563EB,#7C3AED);
+  color:white;
+  border-radius:14px;
+  padding:12px;
+  font-weight:900;
+  border:none;
+  box-shadow:0 10px 22px rgba(37,99,235,.18);
+}
+.bot-actions .light{
+  background:#EEF2FF;
+  color:#4C1D95;
+  border:1px solid #DDD6FE;
+  box-shadow:none;
+}
+.bot-input{
+  display:flex;
+  gap:8px;
+  padding:0 16px 16px;
+  background:white;
+}
+.bot-input input{
+  flex:1;
+  margin:0;
+}
+.bot-input button{
+  margin:0;
+  padding:12px 14px;
+}
+@media(max-width:820px){
+  .live-trust-bar{
+    top:8px;
+    width:calc(100vw - 24px);
+    justify-content:center;
+    font-size:12px;
+    padding:9px 10px;
+  }
+  .floating-bot{right:14px;bottom:78px}
+  .bot-panel{width:320px}
+}
+
+
+/* V10 SaaS Center Layout */
+.top-hero{
+  padding:34px;
+  border-radius:32px;
+  background:
+    radial-gradient(circle at top left,rgba(37,99,235,.18),transparent 34%),
+    radial-gradient(circle at top right,rgba(124,58,237,.18),transparent 32%),
+    rgba(255,255,255,.96);
+  border:1px solid #DDD6FE;
+  box-shadow:0 22px 55px rgba(30,41,59,.12);
+  margin-bottom:20px;
+}
+.hero-line{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding:10px 16px;
+  background:#EEF2FF;
+  border:1px solid #DDD6FE;
+  color:#4C1D95;
+  border-radius:999px;
+  font-weight:900;
+}
+.hero-actions{
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+  margin-top:18px;
+}
+.module-hub{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:16px;
+  margin-top:18px;
+}
+.module-card{
+  background:#FFFFFF;
+  border:1px solid #E5E7EB;
+  border-radius:24px;
+  padding:20px;
+  min-height:158px;
+  cursor:pointer;
+  box-shadow:0 14px 32px rgba(30,41,59,.08);
+  transition:.18s ease;
+  position:relative;
+  overflow:hidden;
+}
+.module-card:before{
+  content:"";
+  position:absolute;
+  inset:0;
+  background:linear-gradient(135deg,rgba(37,99,235,.08),rgba(124,58,237,.08));
+  opacity:0;
+  transition:.18s ease;
+}
+.module-card:hover{
+  transform:translateY(-5px);
+  border-color:#A78BFA;
+  box-shadow:0 20px 45px rgba(124,58,237,.16);
+}
+.module-card:hover:before{opacity:1}
+.module-card .icon{
+  font-size:32px;
+  margin-bottom:10px;
+  position:relative;
+}
+.module-card h3{
+  margin:0 0 8px;
+  color:#1E1B4B;
+  position:relative;
+}
+.module-card p{
+  margin:0;
+  color:#64748B;
+  font-size:13px;
+  line-height:1.45;
+  position:relative;
+}
+.module-pill{
+  display:inline-block;
+  margin-top:12px;
+  font-size:12px;
+  font-weight:900;
+  color:#4C1D95;
+  background:#F5F3FF;
+  border:1px solid #DDD6FE;
+  border-radius:999px;
+  padding:6px 10px;
+  position:relative;
+}
+.module-section{
+  display:none;
+}
+.module-section.active-module{
+  display:block;
+}
+.section-open-note{
+  margin-bottom:14px;
+  background:#EEF2FF;
+  border:1px solid #DDD6FE;
+  border-radius:18px;
+  padding:12px 14px;
+  color:#4C1D95;
+  font-weight:800;
+}
+.price-bottom-title{
+  text-align:center;
+  margin:34px 0 18px;
+}
+.price-bottom-title h2{
+  font-size:34px;
+  margin-bottom:8px;
+  background:linear-gradient(135deg,#2563EB,#7C3AED);
+  color:transparent;
+  -webkit-background-clip:text;
+  background-clip:text;
+}
+@media(max-width:1200px){
+  .module-hub{grid-template-columns:repeat(3,1fr)}
+}
+@media(max-width:820px){
+  .module-hub{grid-template-columns:repeat(2,1fr)}
+  .top-hero{padding:22px}
+  .module-card{min-height:140px;padding:16px}
+}
+@media(max-width:520px){
+  .module-hub{grid-template-columns:1fr}
+}
+
+
+#ai-output-box{
+  border:2px solid #DDD6FE;
+  box-shadow:0 22px 50px rgba(124,58,237,.14);
+}
+#aiGeneratedContent{
+  font-size:15px;
+  line-height:1.65;
+  max-height:520px;
+  overflow:auto;
+  background:#FFFFFF;
+}
+.pricing-visible{
+  display:block !important;
+}
+
+
+/* Premium Pricing Pro */
+.premium-pricing-pro{
+  background:
+    radial-gradient(circle at top left,rgba(37,99,235,.18),transparent 32%),
+    radial-gradient(circle at top right,rgba(124,58,237,.18),transparent 30%),
+    linear-gradient(135deg,#FFFFFF,#F8FAFC);
+  border:1px solid #DDD6FE;
+  border-radius:32px;
+  padding:30px;
+  box-shadow:0 24px 60px rgba(30,41,59,.12);
+}
+.premium-title{
+  text-align:center;
+  margin-bottom:24px;
+}
+.premium-title .mini{
+  display:inline-block;
+  background:linear-gradient(135deg,#2563EB,#7C3AED);
+  color:white;
+  padding:9px 16px;
+  border-radius:999px;
+  font-weight:900;
+  margin-bottom:10px;
+}
+.premium-title h2{
+  font-size:38px;
+  margin:6px 0;
+  color:transparent;
+  background:linear-gradient(135deg,#2563EB,#7C3AED);
+  -webkit-background-clip:text;
+  background-clip:text;
+}
+.premium-title p{
+  max-width:760px;
+  margin:8px auto 0;
+}
+.premium-grid-pro{
+  display:grid;
+  grid-template-columns:repeat(5,1fr);
+  gap:16px;
+  align-items:stretch;
+}
+.premium-plan{
+  background:white;
+  border:1px solid #E5E7EB;
+  border-radius:26px;
+  padding:20px;
+  position:relative;
+  box-shadow:0 18px 42px rgba(30,41,59,.10);
+  transition:.18s ease;
+  display:flex;
+  flex-direction:column;
+}
+.premium-plan:hover{
+  transform:translateY(-6px);
+  border-color:#A78BFA;
+  box-shadow:0 24px 55px rgba(124,58,237,.18);
+}
+.premium-plan.featured{
+  border:2px solid #7C3AED;
+  background:linear-gradient(180deg,#FFFFFF,#F5F3FF);
+}
+.plan-ribbon{
+  position:absolute;
+  top:-14px;
+  left:18px;
+  background:linear-gradient(135deg,#2563EB,#7C3AED);
+  color:white;
+  padding:7px 13px;
+  border-radius:999px;
+  font-size:12px;
+  font-weight:900;
+}
+.plan-name{
+  font-size:18px;
+  font-weight:900;
+  color:#1E1B4B;
+  margin-top:8px;
+}
+.plan-price{
+  font-size:24px;
+  font-weight:900;
+  margin:8px 0 4px;
+  color:transparent;
+  background:linear-gradient(135deg,#2563EB,#7C3AED);
+  -webkit-background-clip:text;
+  background-clip:text;
+}
+.plan-desc{
+  font-size:13px;
+  color:#64748B;
+  min-height:42px;
+}
+.benefit-title{
+  font-weight:900;
+  color:#1E1B4B;
+  margin:12px 0 8px;
+}
+.benefit-list{
+  list-style:none;
+  padding:0;
+  margin:0;
+  font-size:13px;
+  line-height:1.55;
+}
+.benefit-list li{
+  padding:5px 0;
+  border-bottom:1px dashed #EEF2FF;
+}
+.benefit-list .open:before{content:"✓ ";color:#047857;font-weight:900}
+.benefit-list .lock:before{content:"🔒 ";color:#B45309;font-weight:900}
+.plan-button{
+  margin-top:auto;
+  width:100%;
+}
+.premium-note-box{
+  margin-top:20px;
+  background:#EEF2FF;
+  border:1px solid #DDD6FE;
+  color:#4C1D95;
+  border-radius:22px;
+  padding:16px;
+  line-height:1.55;
+}
+.payment-modal{
+  display:none;
+  position:fixed;
+  inset:0;
+  background:rgba(15,23,42,.65);
+  z-index:10000;
+  align-items:center;
+  justify-content:center;
+  padding:18px;
+}
+.payment-inner{
+  width:min(980px,96vw);
+  max-height:92vh;
+  overflow:auto;
+  background:white;
+  border-radius:32px;
+  box-shadow:0 30px 85px rgba(15,23,42,.38);
+  border:1px solid #DDD6FE;
+  padding:0;
+}
+.payment-head{
+  background:
+    radial-gradient(circle at top left,rgba(255,255,255,.25),transparent 35%),
+    linear-gradient(135deg,#2563EB,#7C3AED);
+  color:white;
+  padding:24px;
+  display:flex;
+  justify-content:space-between;
+  gap:14px;
+  align-items:flex-start;
+}
+.payment-head h2{
+  color:white;
+  margin:0 0 6px;
+}
+.payment-close{
+  background:rgba(255,255,255,.18);
+  color:white;
+  box-shadow:none;
+  border:1px solid rgba(255,255,255,.25);
+  width:auto;
+  margin:0;
+}
+.payment-body{
+  display:grid;
+  grid-template-columns:330px 1fr;
+  gap:22px;
+  padding:24px;
+}
+.qr-card{
+  background:#F8FAFC;
+  border:1px solid #E5E7EB;
+  border-radius:26px;
+  padding:18px;
+  text-align:center;
+}
+.qr-card img{
+  width:250px;
+  max-width:100%;
+  border-radius:18px;
+  border:1px solid #E5E7EB;
+  background:white;
+  padding:8px;
+}
+.bank-info{
+  margin-top:12px;
+  text-align:left;
+  background:white;
+  border:1px solid #E5E7EB;
+  border-radius:18px;
+  padding:14px;
+  line-height:1.7;
+}
+.payment-detail{
+  background:white;
+  border:1px solid #E5E7EB;
+  border-radius:26px;
+  padding:18px;
+}
+.payment-detail h3{
+  margin-top:0;
+  color:#1E1B4B;
+}
+.pay-amount{
+  font-size:34px;
+  font-weight:900;
+  color:transparent;
+  background:linear-gradient(135deg,#2563EB,#7C3AED);
+  -webkit-background-clip:text;
+  background-clip:text;
+}
+.payment-benefits{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+  margin:12px 0;
+}
+.payment-benefits div{
+  background:#F8FAFC;
+  border:1px solid #E5E7EB;
+  border-radius:14px;
+  padding:10px;
+  font-size:13px;
+}
+.payment-alert{
+  margin-top:14px;
+  background:#FFF7ED;
+  border:1px solid #FDBA74;
+  color:#9A3412;
+  border-radius:18px;
+  padding:14px;
+  line-height:1.55;
+}
+.payment-actions{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  margin-top:14px;
+}
+.payment-actions a{
+  display:inline-block;
+  text-decoration:none;
+  background:linear-gradient(135deg,#2563EB,#7C3AED);
+  color:white;
+  padding:13px 16px;
+  border-radius:14px;
+  font-weight:900;
+}
+.payment-actions .light{
+  background:#EEF2FF;
+  color:#4C1D95;
+  border:1px solid #DDD6FE;
+}
+.permission-db{
+  margin-top:20px;
+  background:#0F172A;
+  color:#E5E7EB;
+  border-radius:22px;
+  padding:18px;
+  overflow:auto;
+  font-size:13px;
+}
+.permission-db code{
+  color:#A7F3D0;
+  white-space:pre-wrap;
+}
+@media(max-width:1200px){
+  .premium-grid-pro{grid-template-columns:repeat(2,1fr)}
+}
+@media(max-width:820px){
+  .premium-pricing-pro{padding:18px}
+  .premium-grid-pro{grid-template-columns:1fr}
+  .payment-body{grid-template-columns:1fr}
+  .payment-benefits{grid-template-columns:1fr}
+}
+
+
+/* Free + Premium Stable */
+.free-status-card{
+  background:linear-gradient(135deg,#EEF2FF,#F5F3FF);
+  border:1px solid #DDD6FE;
+  color:#1E1B4B;
+  border-radius:22px;
+  padding:16px;
+  margin:14px 0;
+}
+.free-progress{
+  width:100%;
+  height:12px;
+  background:#E5E7EB;
+  border-radius:999px;
+  overflow:hidden;
+  margin:10px 0;
+}
+.free-progress span{
+  display:block;
+  height:100%;
+  background:linear-gradient(135deg,#2563EB,#7C3AED);
+  border-radius:999px;
+}
+.free-expired{
+  background:#FEF2F2;
+  border-color:#FCA5A5;
+  color:#991B1B;
+}
+.premium-story{
+  margin:20px 0;
+  background:linear-gradient(135deg,#0F172A,#1E1B4B);
+  color:white;
+  border-radius:28px;
+  padding:24px;
+  box-shadow:0 22px 55px rgba(30,27,75,.20);
+}
+.premium-story h3{
+  margin-top:0;
+  color:white;
+  font-size:26px;
+}
+.premium-story p{
+  color:#E0E7FF;
+  line-height:1.65;
+}
+.why-premium{
+  margin-top:22px;
+  display:grid;
+  grid-template-columns:repeat(2,1fr);
+  gap:12px;
+}
+.why-item{
+  background:white;
+  border:1px solid #E5E7EB;
+  border-radius:18px;
+  padding:14px;
+  color:#1E1B4B;
+  box-shadow:0 12px 28px rgba(30,41,59,.06);
+  font-weight:800;
+}
+.locked-demo{
+  background:#FFF7ED;
+  border:1px solid #FDBA74;
+  color:#9A3412;
+  border-radius:18px;
+  padding:14px;
+  margin-top:12px;
+}
+.lock-modal{
+  display:none;
+  position:fixed;
+  inset:0;
+  background:rgba(15,23,42,.65);
+  z-index:10001;
+  align-items:center;
+  justify-content:center;
+  padding:18px;
+}
+.lock-inner{
+  background:white;
+  border-radius:28px;
+  max-width:560px;
+  width:100%;
+  padding:24px;
+  box-shadow:0 30px 80px rgba(15,23,42,.35);
+  border:1px solid #DDD6FE;
+}
+.lock-inner h2{
+  margin-top:0;
+  color:#1E1B4B;
+}
+@media(max-width:820px){
+  .why-premium{grid-template-columns:1fr}
+}
+
+
+/* ===== GPT MINI MENU UPGRADE - PROFESSIONAL SAAS ===== */
+.menu-upgrade-note{
+  margin-top:14px;
+  padding:14px;
+  border-radius:18px;
+  background:linear-gradient(135deg,rgba(37,99,235,.12),rgba(124,58,237,.12));
+  border:1px solid rgba(167,139,250,.45);
+  color:#E0E7FF;
+  font-size:12px;
+  line-height:1.55;
+}
+.menu-mini-group{
+  margin:10px 0;
+  border-radius:18px;
+  overflow:hidden;
+  border:1px solid rgba(255,255,255,.08);
+  background:rgba(255,255,255,.045);
+}
+.menu-mini-title{
+  padding:12px 14px;
+  color:#FFFFFF;
+  font-weight:900;
+  cursor:pointer;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+}
+.menu-mini-title small{
+  color:#CBD5E1;
+  font-weight:700;
+}
+.menu-mini-title:hover{
+  background:linear-gradient(135deg,rgba(37,99,235,.55),rgba(124,58,237,.55));
+}
+.menu-mini-items{
+  display:none;
+  padding:6px 8px 10px;
+}
+.menu-mini-group.open .menu-mini-items{
+  display:block;
+}
+.menu-mini-item{
+  display:block;
+  padding:10px 12px;
+  margin:5px 0;
+  border-radius:14px;
+  color:#E5E7EB;
+  text-decoration:none;
+  font-size:13px;
+  background:rgba(255,255,255,.05);
+  border:1px solid rgba(255,255,255,.06);
+}
+.menu-mini-item:hover{
+  color:white;
+  background:linear-gradient(135deg,#2563EB,#7C3AED);
+  transform:translateX(3px);
+}
+.clean-hero-pro{
+  padding:34px;
+  border-radius:32px;
+  background:
+    radial-gradient(circle at top left,rgba(37,99,235,.20),transparent 34%),
+    radial-gradient(circle at top right,rgba(124,58,237,.18),transparent 32%),
+    rgba(255,255,255,.97);
+  border:1px solid #DDD6FE;
+  box-shadow:0 22px 55px rgba(30,41,59,.12);
+  margin-bottom:20px;
+}
+.clean-hero-pro h1{
+  margin-top:12px;
+}
+.clean-pill-row{
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+  margin-top:18px;
+}
+.clean-pill{
+  padding:10px 14px;
+  border-radius:999px;
+  background:#EEF2FF;
+  color:#4C1D95;
+  font-weight:900;
+  border:1px solid #DDD6FE;
+  font-size:13px;
+}
+.free-status-box{
+  background:linear-gradient(135deg,#EEF2FF,#F5F3FF);
+  border:1px solid #DDD6FE;
+  color:#4C1D95;
+  border-radius:18px;
+  padding:14px;
+  font-weight:800;
+  line-height:1.55;
+}
+
+
+/* ===== SAFE CLEAN MENU + PRICING ONLY ===== */
+.safe-menu-title{
+  margin:14px 0 8px;
+  padding:0 6px;
+  font-size:11px;
+  font-weight:900;
+  letter-spacing:.08em;
+  color:#A5B4FC;
+  text-transform:uppercase;
+}
+.safe-menu-link{
+  display:flex!important;
+  align-items:center;
+  gap:10px;
+  padding:13px 14px!important;
+  border-radius:16px!important;
+  color:#F8FAFC!important;
+  text-decoration:none!important;
+  margin:7px 0!important;
+  background:rgba(255,255,255,.06)!important;
+  border:1px solid rgba(255,255,255,.08)!important;
+  transition:.18s ease!important;
+}
+.safe-menu-link:hover{
+  background:linear-gradient(135deg,#2563EB,#7C3AED)!important;
+  transform:translateX(3px)!important;
+}
+.safe-menu-link .safe-ico{
+  width:26px;
+  height:26px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  border-radius:10px;
+  background:rgba(255,255,255,.10);
+}
+.safe-menu-link .safe-text{
+  flex:1;
+  font-weight:800;
+}
+.safe-menu-link .safe-tag{
+  font-size:10px;
+  padding:4px 7px;
+  border-radius:999px;
+  color:#DDD6FE;
+  background:rgba(124,58,237,.18);
+  border:1px solid rgba(221,214,254,.18);
+}
+.safe-premium-box{
+  margin-top:14px;
+  padding:14px;
+  border-radius:18px;
+  background:linear-gradient(135deg,rgba(37,99,235,.15),rgba(124,58,237,.16));
+  border:1px solid rgba(221,214,254,.22);
+  color:#E0E7FF;
+  font-size:12px;
+  line-height:1.55;
+}
+.safe-pricing-action{
+  display:block;
+  width:100%;
+  margin-top:12px;
+  text-align:center;
+  border-radius:14px;
+  padding:12px 14px;
+  font-weight:900;
+  cursor:pointer;
+  background:linear-gradient(135deg,#2563EB,#7C3AED);
+  color:white;
+  text-decoration:none;
+  border:0;
+}
+.price-card,.premium-plan{
+  cursor:pointer;
+}
+.price-card:hover,.premium-plan:hover{
+  transform:translateY(-4px);
+  border-color:#A78BFA!important;
+}
+
+
+/* ===== MKT AUTOMATION PRO - APP MINI PWA MODE ===== */
+:root{
+  --app-dark:#0F172A;
+  --app-primary:#2563EB;
+  --app-premium:#7C3AED;
+  --app-accent:#06B6D4;
+}
+.app-shell-top{
+  position:sticky;
+  top:0;
+  z-index:9000;
+  background:rgba(15,23,42,.94);
+  backdrop-filter:blur(16px);
+  color:white;
+  border-bottom:1px solid rgba(255,255,255,.10);
+  padding:14px 16px;
+  display:none;
+}
+.app-shell-brand{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+}
+.app-shell-brand b{
+  font-size:17px;
+}
+.app-shell-status{
+  font-size:11px;
+  color:#C7D2FE;
+  margin-top:4px;
+}
+.app-quick-grid{
+  display:grid;
+  grid-template-columns:repeat(2,1fr);
+  gap:12px;
+  margin:18px 0;
+}
+.app-quick-card{
+  border:1px solid #E5E7EB;
+  border-radius:22px;
+  background:white;
+  padding:18px;
+  box-shadow:0 14px 30px rgba(15,23,42,.08);
+  cursor:pointer;
+}
+.app-quick-card:hover{
+  transform:translateY(-3px);
+  border-color:#A78BFA;
+}
+.app-quick-card .app-ico{
+  width:44px;
+  height:44px;
+  border-radius:16px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:linear-gradient(135deg,#2563EB,#7C3AED);
+  color:white;
+  font-size:22px;
+  margin-bottom:10px;
+}
+.app-quick-card b{
+  color:#0F172A;
+  display:block;
+  margin-bottom:6px;
+}
+.app-quick-card span{
+  color:#64748B;
+  font-size:12px;
+  line-height:1.45;
+}
+.app-bottom-nav{
+  display:none;
+  position:fixed;
+  left:0;
+  right:0;
+  bottom:0;
+  z-index:9998;
+  background:rgba(255,255,255,.96);
+  backdrop-filter:blur(14px);
+  border-top:1px solid #E5E7EB;
+  box-shadow:0 -10px 30px rgba(15,23,42,.12);
+}
+.app-bottom-nav a{
+  flex:1;
+  text-align:center;
+  padding:9px 3px 8px;
+  color:#475569;
+  text-decoration:none;
+  font-size:11px;
+  font-weight:800;
+}
+.app-bottom-nav a span{
+  display:block;
+  font-size:20px;
+  margin-bottom:2px;
+}
+.app-install-banner{
+  display:none;
+  background:linear-gradient(135deg,#0F172A,#312E81);
+  color:white;
+  border-radius:24px;
+  padding:18px;
+  margin:16px 0;
+  box-shadow:0 18px 45px rgba(15,23,42,.20);
+}
+.app-install-banner button{
+  margin-top:10px;
+  width:100%;
+}
+@media(max-width:820px){
+  body{
+    background:#F8FAFC!important;
+    padding-bottom:78px!important;
+  }
+  .app-shell-top{display:block}
+  .layout{
+    display:block!important;
+    padding:12px!important;
+    max-width:100%!important;
+  }
+  .sidebar,.rightbar,.live-trust-bar{
+    display:none!important;
+  }
+  .panel,.top-hero,.premium-pricing-pro{
+    border-radius:24px!important;
+    padding:18px!important;
+    margin-bottom:14px!important;
+  }
+  h1{
+    font-size:28px!important;
+    line-height:1.15!important;
+  }
+  .hero-actions{
+    display:grid!important;
+    grid-template-columns:1fr!important;
+  }
+  .module-hub,.grid4,.pricing-grid,.premium-grid-pro{
+    grid-template-columns:1fr!important;
+    gap:12px!important;
+  }
+  .app-bottom-nav{
+    display:flex!important;
+  }
+  .app-install-banner{
+    display:block!important;
+  }
+  .floating-bot{
+    bottom:88px!important;
+    right:14px!important;
+  }
+  .mobilebar{
+    display:none!important;
+  }
+}
+
+
+/* ===== MKT AUTOMATION PRO V2 - SAFE FINAL UI ===== */
+:root{
+  --v2-dark:#0F172A;
+  --v2-card:#FFFFFF;
+  --v2-blue:#2563EB;
+  --v2-purple:#7C3AED;
+  --v2-cyan:#06B6D4;
+  --v2-soft:#EEF2FF;
+  --v2-line:#E5E7EB;
+}
+.v2-desktop-shell{
+  display:block;
+}
+.v2-topbar{
+  position:sticky;
+  top:0;
+  z-index:8000;
+  display:none;
+  padding:14px 16px;
+  background:rgba(15,23,42,.95);
+  color:white;
+  backdrop-filter:blur(16px);
+  border-bottom:1px solid rgba(255,255,255,.10);
+}
+.v2-brand-row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+}
+.v2-brand-title{
+  font-size:17px;
+  font-weight:1000;
+}
+.v2-brand-sub{
+  font-size:11px;
+  color:#C7D2FE;
+  margin-top:3px;
+}
+.v2-status-pill{
+  font-size:11px;
+  font-weight:900;
+  padding:7px 10px;
+  border-radius:999px;
+  background:rgba(34,197,94,.16);
+  border:1px solid rgba(34,197,94,.24);
+  color:#BBF7D0;
+}
+.v2-nav-title{
+  margin:14px 0 8px;
+  padding:0 6px;
+  font-size:11px;
+  font-weight:900;
+  letter-spacing:.08em;
+  color:#A5B4FC;
+  text-transform:uppercase;
+}
+.v2-nav-link{
+  display:flex!important;
+  align-items:center;
+  gap:10px;
+  padding:13px 14px!important;
+  border-radius:16px!important;
+  color:#F8FAFC!important;
+  text-decoration:none!important;
+  margin:7px 0!important;
+  background:rgba(255,255,255,.06)!important;
+  border:1px solid rgba(255,255,255,.08)!important;
+  transition:.18s ease!important;
+}
+.v2-nav-link:hover{
+  background:linear-gradient(135deg,#2563EB,#7C3AED)!important;
+  transform:translateX(3px)!important;
+}
+.v2-nav-ico{
+  width:28px;
+  height:28px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  border-radius:10px;
+  background:rgba(255,255,255,.10);
+}
+.v2-nav-text{flex:1;font-weight:850}
+.v2-nav-tag{
+  font-size:10px;
+  padding:4px 7px;
+  border-radius:999px;
+  color:#DDD6FE;
+  background:rgba(124,58,237,.20);
+  border:1px solid rgba(221,214,254,.20);
+}
+.v2-side-card{
+  margin-top:14px;
+  padding:15px;
+  border-radius:20px;
+  background:linear-gradient(135deg,rgba(37,99,235,.16),rgba(124,58,237,.18));
+  border:1px solid rgba(221,214,254,.22);
+  color:#E0E7FF;
+  font-size:12px;
+  line-height:1.55;
+}
+.v2-hero{
+  background:
+    radial-gradient(circle at top left,rgba(37,99,235,.22),transparent 34%),
+    radial-gradient(circle at top right,rgba(124,58,237,.20),transparent 34%),
+    linear-gradient(135deg,#FFFFFF,#F8FAFC);
+  border:1px solid #DDD6FE;
+  border-radius:32px;
+  padding:28px;
+  margin-bottom:20px;
+  box-shadow:0 22px 55px rgba(30,41,59,.12);
+}
+.v2-hero-kicker{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding:10px 15px;
+  border-radius:999px;
+  background:#EEF2FF;
+  color:#4C1D95;
+  font-weight:1000;
+  border:1px solid #DDD6FE;
+}
+.v2-hero h1{
+  margin:14px 0 8px;
+}
+.v2-hero-desc{
+  max-width:820px;
+  color:#64748B;
+  font-size:15px;
+  line-height:1.6;
+}
+.v2-quick-grid{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:14px;
+  margin-top:20px;
+}
+.v2-quick-card{
+  background:white;
+  border:1px solid #E5E7EB;
+  border-radius:24px;
+  padding:18px;
+  box-shadow:0 14px 32px rgba(15,23,42,.08);
+  cursor:pointer;
+  transition:.18s ease;
+}
+.v2-quick-card:hover{
+  transform:translateY(-4px);
+  border-color:#A78BFA;
+  box-shadow:0 20px 45px rgba(124,58,237,.14);
+}
+.v2-quick-ico{
+  width:46px;
+  height:46px;
+  border-radius:17px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  color:white;
+  font-size:22px;
+  background:linear-gradient(135deg,#2563EB,#7C3AED);
+  margin-bottom:12px;
+}
+.v2-quick-card b{
+  display:block;
+  color:#0F172A;
+  margin-bottom:6px;
+}
+.v2-quick-card span{
+  color:#64748B;
+  font-size:12px;
+  line-height:1.45;
+}
+.v2-install-box{
+  display:none;
+  margin-top:16px;
+  border-radius:22px;
+  padding:16px;
+  color:white;
+  background:linear-gradient(135deg,#0F172A,#312E81);
+  box-shadow:0 18px 45px rgba(15,23,42,.18);
+}
+.v2-bottom-nav{
+  display:none;
+  position:fixed;
+  left:0;
+  right:0;
+  bottom:0;
+  z-index:9999;
+  background:rgba(255,255,255,.97);
+  backdrop-filter:blur(14px);
+  border-top:1px solid #E5E7EB;
+  box-shadow:0 -10px 30px rgba(15,23,42,.12);
+}
+.v2-bottom-nav a{
+  flex:1;
+  text-align:center;
+  padding:9px 3px 8px;
+  color:#475569;
+  text-decoration:none;
+  font-size:11px;
+  font-weight:900;
+}
+.v2-bottom-nav span{
+  display:block;
+  font-size:20px;
+  margin-bottom:2px;
+}
+.v2-pricing-action{
+  display:block;
+  width:100%;
+  margin-top:12px;
+  text-align:center;
+  border-radius:14px;
+  padding:12px 14px;
+  font-weight:1000;
+  cursor:pointer;
+  background:linear-gradient(135deg,#2563EB,#7C3AED);
+  color:white;
+  text-decoration:none;
+  border:0;
+}
+.price-card,.premium-plan{cursor:pointer}
+.price-card:hover,.premium-plan:hover{
+  transform:translateY(-5px);
+  border-color:#A78BFA!important;
+}
+@media(max-width:1100px){
+  .v2-quick-grid{grid-template-columns:repeat(2,1fr)}
+}
+@media(max-width:820px){
+  body{
+    background:#F8FAFC!important;
+    padding-bottom:78px!important;
+  }
+  .v2-topbar{display:block!important}
+  .layout{
+    display:block!important;
+    max-width:100%!important;
+    padding:12px!important;
+  }
+  .sidebar,.rightbar,.live-trust-bar,.mobilebar{
+    display:none!important;
+  }
+  .panel,.top-hero,.premium-pricing-pro,.v2-hero{
+    border-radius:24px!important;
+    padding:18px!important;
+    margin-bottom:14px!important;
+  }
+  h1{font-size:28px!important;line-height:1.15!important}
+  .v2-quick-grid,.module-hub,.grid4,.pricing-grid,.premium-grid-pro{
+    grid-template-columns:1fr!important;
+    gap:12px!important;
+  }
+  .v2-install-box{display:block!important}
+  .v2-bottom-nav{display:flex!important}
+  .floating-bot{
+    right:14px!important;
+    bottom:88px!important;
+  }
+}
+
+
+
+/* V3 Enterprise Add-on */
+.v3-kpi-title{margin-top:18px;background:#EEF2FF;border:1px solid #DDD6FE;color:#4C1D95;padding:12px 16px;border-radius:18px;font-weight:800}
+.v3-ceo-grid .stat small{display:block;color:#64748B;margin-top:6px;font-size:12px}
+.v3-feature-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin-top:14px}
+.v3-feature-card{background:#fff;border:1px solid var(--border);border-radius:22px;padding:18px;box-shadow:0 12px 28px rgba(30,41,59,.08)}
+.v3-feature-card h3{margin:0 0 8px;color:#1E1B4B}.v3-feature-card ul{margin:8px 0 0;padding-left:18px;line-height:1.65;color:#334155}
+.v3-premium-badge{display:inline-block;background:linear-gradient(135deg,#2563EB,#7C3AED);color:white;border-radius:999px;padding:6px 10px;font-size:12px;font-weight:900;margin-bottom:8px}
+.kanban-board{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-top:14px}.kanban-col{background:#F8FAFC;border:1px solid #E5E7EB;border-radius:18px;padding:12px;min-height:180px}.kanban-col h3{font-size:15px;margin:0 0 10px;color:#1E1B4B}.kanban-card{background:white;border:1px solid #DDD6FE;border-left:4px solid #7C3AED;border-radius:14px;padding:10px;margin-bottom:10px;cursor:grab;box-shadow:0 8px 18px rgba(124,58,237,.08)}
+.v3-mini-table{width:100%;border-collapse:collapse}.v3-mini-table td,.v3-mini-table th{border-bottom:1px solid #EEF2FF;padding:10px;text-align:left}.v3-mini-table th{color:#1E1B4B}
+@media(max-width:1000px){.kanban-board{grid-template-columns:1fr 1fr}.v3-feature-grid{grid-template-columns:1fr}}
+@media(max-width:620px){.kanban-board{grid-template-columns:1fr}}
+
+
+/* ===== V4 PREMIUM CONVERSION UPGRADE ===== */
+.v4-trust-grid,.v4-pricing-stats{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:14px;
+  margin:18px 0;
+}
+.v4-trust-card,.v4-pricing-stats div{
+  background:linear-gradient(135deg,#FFFFFF,#F8FAFC);
+  border:1px solid #DDD6FE;
+  border-radius:22px;
+  padding:16px;
+  text-align:center;
+  box-shadow:0 14px 32px rgba(30,41,59,.08);
+}
+.v4-trust-card b,.v4-pricing-stats b{
+  display:block;
+  font-size:26px;
+  color:transparent;
+  background:linear-gradient(135deg,#2563EB,#7C3AED);
+  -webkit-background-clip:text;
+  background-clip:text;
+}
+.v4-trust-card span,.v4-pricing-stats span{font-size:13px;color:#64748B;font-weight:800}
+.v4-premium-hero{
+  background:radial-gradient(circle at top left,rgba(37,99,235,.12),transparent 34%),linear-gradient(135deg,#FFFFFF,#F5F3FF)!important;
+  padding:26px!important;
+}
+.v4-hero-label,.value-badge{
+  display:inline-block;
+  background:linear-gradient(135deg,#2563EB,#7C3AED);
+  color:white;
+  padding:8px 13px;
+  border-radius:999px;
+  font-weight:900;
+  font-size:12px;
+  margin-bottom:10px;
+}
+.v4-value-grid{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:12px;
+  margin:18px 0;
+}
+.v4-value-grid div{
+  background:white;
+  border:1px solid #DDD6FE;
+  border-radius:20px;
+  padding:14px;
+}
+.v4-value-grid b{display:block;color:#4C1D95;font-size:22px}
+.v4-value-grid span{font-size:13px;color:#64748B;font-weight:800}
+.v4-pricing-shell{padding:32px!important}
+.v4-premium-grid{
+  grid-template-columns:repeat(auto-fit,minmax(250px,1fr))!important;
+  align-items:stretch;
+}
+.v4-plan{
+  border-radius:28px!important;
+  padding:22px!important;
+  overflow:hidden;
+}
+.v4-plan .plan-name{font-size:17px!important}
+.v4-plan .plan-price{
+  font-size:24px!important;
+  line-height:1.15!important;
+  margin:8px 0!important;
+}
+.price-sub{
+  color:#64748B;
+  font-size:13px;
+  font-weight:900;
+  margin-bottom:12px;
+}
+.v4-yearly{
+  transform:scale(1.03);
+  border:2px solid #7C3AED!important;
+  box-shadow:0 32px 75px rgba(124,58,237,.22)!important;
+}
+.v4-lifetime{
+  border:2px solid #F59E0B!important;
+  background:linear-gradient(180deg,#FFFFFF,#FFFBEB)!important;
+  box-shadow:0 32px 75px rgba(245,158,11,.18)!important;
+}
+.v4-save-box{
+  background:linear-gradient(135deg,#EEF2FF,#F5F3FF);
+  border:1px solid #DDD6FE;
+  border-radius:16px;
+  padding:12px;
+  color:#4C1D95;
+  font-weight:900;
+  margin:12px 0;
+  font-size:13px;
+}
+.v4-save-box.gold{
+  background:linear-gradient(135deg,#FEF3C7,#FFF7ED);
+  border-color:#FCD34D;
+  color:#92400E;
+}
+.v4-value-received{
+  background:#F8FAFC;
+  border:1px solid #E5E7EB;
+  border-radius:16px;
+  padding:12px;
+  margin:12px 0;
+}
+.v4-value-received b{display:block;color:#1E1B4B;margin-bottom:4px}
+.v4-value-received span{font-size:13px;color:#64748B}
+.premium-btn{
+  background:linear-gradient(135deg,#2563EB,#7C3AED)!important;
+  border-radius:16px!important;
+  font-weight:900!important;
+  box-shadow:0 14px 30px rgba(124,58,237,.20)!important;
+}
+.v4-outsourcing-box{
+  margin-top:22px;
+  background:white;
+  border:1px solid #DDD6FE;
+  border-radius:26px;
+  padding:22px;
+  box-shadow:0 18px 42px rgba(30,41,59,.08);
+}
+.v4-outsource-grid{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:12px;
+  margin:14px 0;
+}
+.v4-outsource-grid div{
+  background:#F8FAFC;
+  border:1px solid #E5E7EB;
+  border-radius:18px;
+  padding:14px;
+}
+.v4-outsource-grid b{display:block;color:#7C3AED}
+.v4-outsource-grid span{font-size:13px;color:#64748B;font-weight:800}
+.v4-success-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+  gap:14px;
+}
+.v4-success-card{
+  background:white;
+  border:1px solid #E5E7EB;
+  border-radius:24px;
+  padding:18px;
+  box-shadow:0 16px 36px rgba(30,41,59,.08);
+}
+.success-icon{
+  width:52px;height:52px;border-radius:18px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:26px;background:#F5F3FF;border:1px solid #DDD6FE;
+  margin-bottom:12px;
+}
+.v4-proof-box{
+  margin-top:16px;
+  background:linear-gradient(135deg,#EEF2FF,#F8FAFC);
+  border:1px solid #DDD6FE;
+  border-radius:24px;
+  padding:18px;
+}
+.v4-lock-hero .benefit-list{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:8px;
+}
+.v4-gold-card{
+  border:2px solid #F59E0B!important;
+  background:linear-gradient(180deg,#FFFFFF,#FFFBEB)!important;
+}
+.rec-price{font-size:24px!important;line-height:1.15!important}
+@media(max-width:820px){
+  .v4-trust-grid,.v4-pricing-stats,.v4-value-grid,.v4-outsource-grid,.locked-recommend-grid{grid-template-columns:1fr!important}
+  .v4-yearly{transform:none}
+  .v4-lock-hero .benefit-list{grid-template-columns:1fr}
+}
 </style>
+<script>
+function copyText(id){
+  const el=document.getElementById(id);
+  navigator.clipboard.writeText(el.innerText);
+  alert("Đã copy content mẫu");
+}
+
+function openPremiumPopup(){
+  const m=document.getElementById("premiumPopup");
+  if(m){m.style.display="flex";}
+}
+function closePremiumPopup(){
+  const m=document.getElementById("premiumPopup");
+  if(m){m.style.display="none";}
+}
+
+function toggleFloatingBot(){
+  const panel=document.getElementById("floatingBotPanel");
+  if(!panel) return;
+  const isOpen=panel.style.display==="block";
+  panel.style.display=isOpen?"none":"block";
+  if(!isOpen){
+    setTimeout(()=>appendBotGreeting(),250);
+  }
+}
+function closeFloatingBot(){
+  const panel=document.getElementById("floatingBotPanel");
+  if(panel) panel.style.display="none";
+}
+let botGreeted=false;
+function appendBotGreeting(){
+  if(botGreeted) return;
+  botGreeted=true;
+  const body=document.getElementById("floatingBotBody");
+  if(!body) return;
+  body.innerHTML += `
+    <div class="bot-msg ai">
+      Xin chào anh/chị 👋<br><br>
+      Em là trợ lý hỗ trợ của <b>Marketing Automation Pro V10</b>.<br>
+      Anh/chị cần tư vấn gói Premium, kích hoạt tài khoản, thanh toán hay hướng dẫn sử dụng tool thì em hỗ trợ ngay ạ.
+    </div>
+    <div class="bot-msg ai">
+      Hiện hệ thống có các gói: <b>1 tháng 159K</b>, <b>3 tháng 359K</b>, <b>6 tháng 559K</b>, <b>1 năm 859K</b> và <b>vĩnh viễn 1.959K</b>.<br>
+      Nếu đã thanh toán mà sau 5 phút chưa kích hoạt, vui lòng liên hệ Zalo <b>036 338 2629</b>.
+    </div>`;
+  body.scrollTop=body.scrollHeight;
+}
+function botQuick(text){
+  const body=document.getElementById("floatingBotBody");
+  if(!body) return;
+  body.innerHTML += `<div class="bot-msg"><b>Bạn:</b> ${text}</div>`;
+  let reply="Dạ em đã nhận yêu cầu. Nếu hệ thống AI báo quá tải hoặc hết lượt tạm thời, anh/chị vui lòng thử lại sau ít phút hoặc liên hệ Zalo để kỹ thuật hỗ trợ nhanh ạ.";
+  const lower=text.toLowerCase();
+  if(lower.includes("giá") || lower.includes("gói")){
+    reply="Dạ gói Premium hiện có: 1 tháng 159K, 3 tháng 359K, 6 tháng 559K, 1 năm 859K và vĩnh viễn 1.959K. Gói 1 năm đang phổ biến nhất, còn gói vĩnh viễn mở toàn bộ tính năng và cập nhật tương lai.";
+  }else if(lower.includes("thanh toán")){
+    reply="Anh/chị bấm Bảng Giá Premium, chọn gói cần mua, hệ thống sẽ mở popup thanh toán kèm QR Agribank, STK 8888363382629 - NGUYEN DANG THI XUAN. Nếu sau 5 phút chưa kích hoạt, liên hệ Zalo 036 338 2629.";
+  }else if(lower.includes("tính năng")){
+    reply="Tool hỗ trợ AI Content Brain, đăng nhiều Fanpage, lịch đăng, chia content/ảnh, CRM Pro, AI Sales Bot, Marketing Funnel, kho content 50.000+, xuất báo cáo và backup dữ liệu.";
+  }
+  body.innerHTML += `<div class="bot-msg ai"><b>Bot hỗ trợ:</b><br>${reply}</div>`;
+  body.scrollTop=body.scrollHeight;
+}
+function sendBotInput(){
+  const input=document.getElementById("botInputText");
+  if(!input || !input.value.trim()) return;
+  botQuick(input.value.trim());
+  input.value="";
+}
+function updateLiveTrust(){
+  const el=document.getElementById("liveMemberCount");
+  if(!el) return;
+  let base=Number(localStorage.getItem("v10_premium_count") || "231");
+  base = base + 1;
+  if(base > 999){ base = 231; }
+  localStorage.setItem("v10_premium_count", String(base));
+  el.innerText = base;
+}
+document.addEventListener("DOMContentLoaded",function(){
+  const el=document.getElementById("liveMemberCount");
+  if(el){ el.innerText = localStorage.getItem("v10_premium_count") || "231"; }
+  setInterval(updateLiveTrust,4500);
+});
+
+
+function openModule(moduleId){
+  document.querySelectorAll(".module-section").forEach(function(el){
+    el.classList.remove("active-module");
+  });
+  const target=document.getElementById(moduleId);
+  if(target){
+    target.classList.add("active-module");
+    target.scrollIntoView({behavior:"smooth",block:"start"});
+  }
+}
+function showAllModules(){
+  document.querySelectorAll(".module-section").forEach(function(el){
+    el.classList.add("active-module");
+  });
+}
+document.addEventListener("DOMContentLoaded",function(){
+  const first=document.getElementById("post");
+  if(first){first.classList.add("active-module");}
+});
+
+
+function scrollToPricing(){
+  const el=document.getElementById("pricing");
+  if(el){
+    el.style.display="block";
+    el.scrollIntoView({behavior:"smooth",block:"start"});
+  }else{
+    openPayment('monthly');
+  }
+}
+
+
+const premiumPlans = {
+  trial:{
+    title:"DÙNG THỬ MIỄN PHÍ – 3 NGÀY",
+    price:"0Đ",
+    amount:"0",
+    package:"trial",
+    desc:"Trải nghiệm hệ thống trong 3 ngày trước khi nâng cấp Premium.",
+    benefits:[
+      "Đăng thử 1 Fanpage",
+      "Tạo tối đa 10 content AI",
+      "Xem 10 content đầu tiên của mỗi ngành",
+      "Đăng bài cơ bản",
+      "Dashboard cơ bản"
+    ],
+  },
+  monthly:{
+    title:"💎 GÓI KHỞI ĐỘNG",
+    price:"159K",
+    amount:"159000",
+    package:"1THANG",
+    desc:"159.000đ • Chỉ 5.300đ/ngày • Phù hợp chủ shop mới, cá nhân kinh doanh online và người mới chạy quảng cáo.",
+    benefits:[
+      "AI Content Studio",
+      "Tạo 5 content/lần",
+      "Đăng Fanpage",
+      "Đăng ảnh",
+      "Đăng Video",
+      "Đăng Reel",
+      "Upload Excel / CSV",
+      "Lịch đăng cơ bản",
+      "Dashboard cơ bản",
+      "Token Manager"
+    ],
+    locked:[
+      "Campaign Manager",
+      "AI Marketing Planner",
+      "CRM Pro",
+      "AI Sales Bot",
+      "Comment Manager",
+      "AI Content Brain",
+      "AI Image / Video Center"
+    ]
+  },
+  quarterly:{
+    title:"GÓI 3 THÁNG",
+    price:"359K",
+    amount:"359000",
+    package:"3THANG",
+    desc:"Bao gồm toàn bộ gói 1 tháng và mở thêm công cụ chiến dịch, planner, kho content Premium.",
+    benefits:[
+      "Toàn bộ gói 1 tháng",
+      "Campaign Manager",
+      "AI Marketing Planner",
+      "Kho Content Premium",
+      "Token Center nâng cao",
+      "Báo cáo CSV",
+      "Lịch đăng nâng cao"
+    ],
+    locked:[
+      "CRM Pro",
+      "AI Sales Bot",
+      "Comment Manager",
+      "AI Content Brain",
+      "AI Image / Video Center"
+    ]
+  },
+  halfyear:{
+    title:"GÓI 6 THÁNG",
+    price:"559K",
+    amount:"559000",
+    package:"6THANG",
+    desc:"Bao gồm toàn bộ gói 3 tháng và mở thêm CRM Pro, Sales Bot, Comment Manager.",
+    benefits:[
+      "Toàn bộ gói 3 tháng",
+      "CRM Pro",
+      "AI Sales Bot",
+      "Comment Manager",
+      "Auto Tag khách hàng",
+      "Quản lý khách hàng",
+      "Chuyển khách sang CRM"
+    ],
+    locked:[
+      "AI Content Brain",
+      "AI phân tích đối thủ",
+      "AI tạo 100 content theo ngành",
+      "Marketing Funnel",
+      "Kho Content 50.000+",
+      "AI Image / Video Center"
+    ]
+  },
+  yearly:{
+    title:"⭐ GÓI 1 NĂM - PHỔ BIẾN NHẤT",
+    price:"859K",
+    amount:"859000",
+    package:"1NAM",
+    desc:"859.000đ • Chỉ 2.300đ/ngày • Mở AI Content Brain, Marketing Director, AI Ads, CRM Pro, Kho 50.000+ Content và Automation Marketing.",
+    benefits:[
+      "Toàn bộ gói 6 tháng",
+      "AI Content Brain",
+      "AI phân tích đối thủ",
+      "AI tạo 30 ngày content",
+      "AI tạo 100 content theo ngành",
+      "Marketing Funnel",
+      "Kho Content 50.000+"
+    ],
+    locked:[
+      "AI Image Center",
+      "AI Video Center",
+      "Multi User",
+      "Dashboard Enterprise nâng cao"
+    ]
+  },
+  lifetime:{
+    title:"👑 GÓI NHÀ BÁN HÀNG CHUYÊN NGHIỆP",
+    price:"1.959K",
+    amount:"1959000",
+    package:"VINHVIEN",
+    desc:"1.959.000đ • Thanh toán 1 lần • Sử dụng trọn đời • Mở toàn bộ AI hiện tại, AI tương lai, cập nhật miễn phí và ưu tiên hỗ trợ.",
+    benefits:[
+      "AI Content Brain",
+      "AI Image Center",
+      "AI Video Center",
+      "Marketing Funnel",
+      "CRM Pro",
+      "AI Sales Bot",
+      "Comment Manager",
+      "Multi User",
+      "Kho Content 50.000+",
+      "Dashboard Enterprise",
+      "Export PDF",
+      "Export Excel",
+      "Backup Database",
+      "Cập nhật tính năng mới miễn phí",
+      "Ưu tiên hỗ trợ kỹ thuật"
+    ],
+    locked:[]
+  },
+
+  // Alias giữ tương thích với code/nút cũ
+  basic:null,
+  pro:null,
+  business:null
+};
+premiumPlans.basic = premiumPlans.monthly;
+premiumPlans.pro = premiumPlans.quarterly;
+premiumPlans.business = premiumPlans.halfyear;
+
+function openPayment(planKey){
+  const plan=premiumPlans[planKey] || premiumPlans.basic;
+  const modal=document.getElementById("paymentModal");
+  if(!modal) return;
+
+  const amountText = Number(plan.amount).toLocaleString("vi-VN") + " VNĐ";
+  const addInfo = "PREMIUM " + plan.package.toUpperCase();
+  const qrUrl = "https://img.vietqr.io/image/970405-8888363382629-compact2.png?amount=" + encodeURIComponent(plan.amount) + "&addInfo=" + encodeURIComponent(addInfo) + "&accountName=" + encodeURIComponent("NGUYEN DANG THI XUAN");
+
+  document.getElementById("payPlanTitle").innerText=plan.title;
+  document.getElementById("payPlanPrice").innerText=amountText;
+  document.getElementById("payPlanDesc").innerText=plan.desc;
+  document.getElementById("payQr").src=qrUrl;
+  document.getElementById("payContent").innerText=addInfo;
+  document.getElementById("payBenefits").innerHTML=plan.benefits.map(x=>"<div>✓ "+x+"</div>").join("");
+  document.getElementById("payLocked").innerHTML=plan.locked.length ? plan.locked.map(x=>"<div>🔒 "+x+"</div>").join("") : "<div>✓ Không khóa tính năng</div>";
+  modal.style.display="flex";
+}
+function closePayment(){
+  const modal=document.getElementById("paymentModal");
+  if(modal) modal.style.display="none";
+}
+
+
+function openLockedFeature(feature, plans){
+  const modal=document.getElementById("lockedFeatureModal");
+  if(!modal) {
+    scrollToPricing();
+    return;
+  }
+
+  const featureMap = {
+    "Group Marketing": {
+      label:"Group Marketing AI",
+      benefits:["Quản lý danh sách group","Lên lịch nội dung nhóm","Gợi ý bài đăng group","Tối ưu kế hoạch group marketing"]
+    },
+    "Comment Manager": {
+      label:"Comment Manager AI",
+      benefits:["Tự động trả lời khách hàng","Tăng tốc độ phản hồi","Tăng tỷ lệ chốt đơn","Gợi ý phản hồi và hỗ trợ ẩn SĐT khi kết nối API/Webhook"]
+    },
+    "Messenger AI": {
+      label:"Messenger AI",
+      benefits:["Tạo chat mẫu","Gửi báo giá nhanh","FAQ bán hàng","Kịch bản chăm sóc và chốt sale"]
+    }
+  };
+
+  const info = featureMap[feature] || {
+    label: feature,
+    benefits:["Mở tính năng nâng cao","Tiết kiệm thời gian vận hành","Tối ưu quy trình bán hàng","Tăng cảm giác chuyên nghiệp cho hệ thống"]
+  };
+
+  document.getElementById("lockedFeatureTitle").innerText="🚀 Tính năng nâng cao";
+  document.getElementById("lockedFeaturePlans").innerHTML =
+    `<div class="premium-lock-hero v4-lock-hero">
+       <p>Bạn đang truy cập: <b>${info.label}</b></p>
+       <p><b>Tính năng này giúp:</b></p>
+       <ul class="benefit-list">${info.benefits.map(x=>`<li class="open">${x}</li>`).join("")}</ul>
+       <p><b>Khuyến nghị:</b></p>
+       <div class="locked-recommend-grid">
+         <div class="locked-recommend-card featured">
+           <div class="rec-label">⭐ PHỔ BIẾN NHẤT</div>
+           <h3>Gói 1 năm</h3>
+           <div class="rec-price">859.000đ</div>
+           <p>Chỉ 2.300đ/ngày. Mở AI Content Brain, AI Marketing Director, AI Ads Chuyên Gia, CRM Pro, Kho 50.000+ Content và Automation Marketing.</p>
+           <button onclick="closeLockedFeature();openPayment('yearly')">Chọn gói 1 năm</button>
+         </div>
+         <div class="locked-recommend-card v4-gold-card">
+           <div class="rec-label">👑 TRỌN ĐỜI</div>
+           <h3>Gói Vĩnh Viễn</h3>
+           <div class="rec-price">1.959.000đ</div>
+           <p>Thanh toán một lần, sử dụng trọn đời, không phí gia hạn, nhận toàn bộ AI hiện tại và AI tương lai.</p>
+           <button onclick="closeLockedFeature();openPayment('lifetime')">Mở khóa trọn đời</button>
+         </div>
+       </div>
+       <p class="small">Sau khi thanh toán 5 phút chưa kích hoạt, vui lòng gửi ảnh giao dịch qua Zalo 036 338 2629.</p>
+     </div>`;
+  modal.style.display="flex";
+}
+function closeLockedFeature(){
+  const modal=document.getElementById("lockedFeatureModal");
+  if(modal) modal.style.display="none";
+}
+
+</script>
+
+<style>
+.premium-grid-pro{grid-template-columns:repeat(auto-fit,minmax(230px,1fr)) !important;}
+.locked-plan-actions{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin:14px 0;}
+.premium-trial-stat{background:linear-gradient(135deg,#FFFFFF,#F5F3FF)!important;border-left-color:#F59E0B!important}
+.token-status-stat{background:linear-gradient(135deg,#FFFFFF,#ECFDF5)!important;border-left-color:#22C55E!important}
+.fb-submenu-pro{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;margin:14px 0 18px}
+.fb-submenu-pro button{width:100%;margin:0;box-shadow:none}
+.fb-submenu-pro .locked{background:linear-gradient(135deg,#EEF2FF,#F5F3FF);color:#4C1D95;border:1px solid #DDD6FE}
+.premium-lock-hero p{line-height:1.55}.locked-recommend-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:14px 0}.locked-recommend-card{background:white;border:1px solid #E5E7EB;border-radius:22px;padding:16px;box-shadow:0 14px 32px rgba(30,41,59,.10)}.locked-recommend-card.featured{border:2px solid #7C3AED;background:linear-gradient(180deg,#FFFFFF,#F5F3FF)}.rec-label{display:inline-block;background:linear-gradient(135deg,#2563EB,#7C3AED);color:white;border-radius:999px;padding:5px 10px;font-size:11px;font-weight:900}.rec-price{font-size:28px;font-weight:900;color:#7C3AED;margin:6px 0}@media(max-width:720px){.locked-recommend-grid{grid-template-columns:1fr}}
+.locked-plan-actions button{width:100%;margin:0;}
+</style>
+
 </head>
 <body>
-<h1>⚡ GPT Mini Premium Admin</h1>
-<div class="topbar">
-<input id="adminPassword" type="password" placeholder="Mật khẩu admin" value="admin123">
-<button onclick="loadData()">Tải dữ liệu</button>
+
+<div class="v2-topbar">
+  <div class="v2-brand-row">
+    <div>
+      <div class="v2-brand-title">🚀 Mkt Automation Pro V3</div>
+      <div class="v2-brand-sub">AI Marketing • Facebook • CRM • Automation</div>
+    </div>
+    <div class="v2-status-pill">Online</div>
+  </div>
 </div>
-<div class="grid"><div><h2>👥 Danh sách tài khoản</h2><div id="users"></div></div><div><h2>💳 Trung tâm hỗ trợ / Thanh toán</h2><div id="payments"></div></div></div>
+
+
+<div class="live-trust-bar">
+  <span class="live-dot"></span>
+  <span>Đã có <b id="liveMemberCount">231</b> khách hàng nâng cấp Premium</span>
+</div>
+
+<div class="floating-bot">
+  <div class="bot-panel" id="floatingBotPanel">
+    <div class="bot-head">
+      <div>
+        <div class="bot-title">Mini Chat Support</div>
+        <div class="bot-online">Đang trực tuyến
+          <span class="typing-dots"><span></span><span></span><span></span></span>
+        </div>
+      </div>
+      <button class="bot-close" onclick="closeFloatingBot()">×</button>
+    </div>
+    <div class="bot-body" id="floatingBotBody">
+      <div class="bot-msg ai">
+        <b>Bot hỗ trợ đang trực tuyến</b>
+        <span class="typing-dots" style="vertical-align:middle"><span></span><span></span><span></span></span>
+      </div>
+    </div>
+    <div class="bot-actions">
+      <button onclick="botQuick('Tư vấn giá gói Premium')">Tư vấn gói Premium</button>
+      <button class="light" onclick="botQuick('Hướng dẫn thanh toán')">Hướng dẫn thanh toán</button>
+      <button class="light" onclick="botQuick('Tôi muốn xem tính năng')">Xem tính năng nổi bật</button>
+      <a href="https://zalo.me/0363382629" target="_blank">Liên hệ Zalo 036 338 2629</a>
+    </div>
+    <div class="bot-input">
+      <input id="botInputText" placeholder="Nhập câu hỏi nhanh..." onkeydown="if(event.key==='Enter')sendBotInput()">
+      <button onclick="sendBotInput()">Gửi</button>
+    </div>
+  </div>
+  <button class="bot-bubble" onclick="toggleFloatingBot()">
+    🤖
+    <span class="bot-status"></span>
+  </button>
+</div>
+
+<div class="layout">
+<aside class="sidebar">
+  <div class="logo">Marketing<br>Automation Pro</div>
+  <div class="subtitle">V3 Enterprise</div>
+  
+
+
+<div class="nav">
+  <div class="v2-nav-title">V3 Enterprise Suite</div>
+  <a class="v2-nav-link" href="#dashboard"><span class="v2-nav-ico">🏠</span><span class="v2-nav-text">Dashboard CEO</span></a>
+  <a class="v2-nav-link" href="#facebook_center" onclick="openModule('facebook_center')"><span class="v2-nav-ico">📢</span><span class="v2-nav-text">Facebook Center</span><span class="v2-nav-tag">Core</span></a>
+  <a class="v2-nav-link" href="#ai_studio" onclick="openModule('ai_studio')"><span class="v2-nav-ico">🤖</span><span class="v2-nav-text">AI Studio</span><span class="v2-nav-tag">AI</span></a>
+  <a class="v2-nav-link" href="#creative_center" onclick="openModule('creative_center')"><span class="v2-nav-ico">🎨</span><span class="v2-nav-text">Creative Center</span></a>
+  <a class="v2-nav-link" href="#crm_sales" onclick="openModule('crm_sales')"><span class="v2-nav-ico">👥</span><span class="v2-nav-text">CRM Sales</span></a>
+  <a class="v2-nav-link" href="#analytics" onclick="openModule('analytics')"><span class="v2-nav-ico">📊</span><span class="v2-nav-text">Analytics</span></a>
+  <a class="v2-nav-link" href="#automation_center" onclick="openModule('automation_center')"><span class="v2-nav-ico">⚙️</span><span class="v2-nav-text">Automation</span></a>
+  <a class="v2-nav-link" href="#success_center" onclick="openModule('success_center')"><span class="v2-nav-ico">🏆</span><span class="v2-nav-text">Success Center</span><span class="v2-nav-tag">NEW</span></a>
+  <a class="v2-nav-link" href="#premium" onclick="openModule('premium')"><span class="v2-nav-ico">💎</span><span class="v2-nav-text">Premium Center</span><span class="v2-nav-tag">VIP</span></a>
+
+  <div class="v2-nav-title">Công cụ cũ đã gộp</div>
+  <a class="v2-nav-link" href="#post" onclick="openModule('post')"><span class="v2-nav-ico">📝</span><span class="v2-nav-text">Đăng bài</span></a>
+  <a class="v2-nav-link" href="#token" onclick="openModule('token')"><span class="v2-nav-ico">🔑</span><span class="v2-nav-text">Token</span></a>
+  <a class="v2-nav-link" href="#history" onclick="openModule('history')"><span class="v2-nav-ico">🕘</span><span class="v2-nav-text">Lịch sử</span></a>
+
+  <div class="v2-side-card">
+    🚀 Mkt Automation Pro V3<br>
+    Dashboard • Facebook • AI Studio • CRM Sales • Automation • Premium.
+  </div>
+</div>
+</aside>
+
+<main class="main">
+
+<section class="top-hero" id="dashboard">
+  <h1>Mkt Automation Pro V4 Enterprise AI Suite</h1>
+
+<div class="app-install-banner">
+  <b>📲 App Mini đã sẵn sàng</b><br>
+  Mở trên điện thoại rồi bấm “Thêm vào màn hình chính” để dùng như phần mềm.
+  <button onclick="showInstallGuide()">Hướng dẫn cài vào điện thoại</button>
+</div>
+
+<div class="app-quick-grid">
+  <div class="app-quick-card" onclick="openModule('post')">
+    <div class="app-ico">📢</div>
+    <b>Đăng bài Facebook</b>
+    <span>Soạn nội dung, chọn Page, đăng ngay hoặc lên lịch.</span>
+  </div>
+  <div class="app-quick-card" onclick="openModule('studio')">
+    <div class="app-ico">🤖</div>
+    <b>Tạo Content AI</b>
+    <span>Viết bài, caption, ý tưởng quảng cáo và nội dung bán hàng.</span>
+  </div>
+  <div class="app-quick-card" onclick="location.href='#crm'">
+    <div class="app-ico">👥</div>
+    <b>CRM Khách hàng</b>
+    <span>Lưu khách, số điện thoại, nguồn khách và ghi chú tư vấn.</span>
+  </div>
+  <div class="app-quick-card" onclick="location.href='#premium'">
+    <div class="app-ico">💎</div>
+    <b>Premium</b>
+    <span>Mở khóa hạn mức cao hơn và tính năng nâng cao.</span>
+  </div>
+</div>
+
+  <p>AI Marketing Automation Platform: tạo content, đăng Fanpage, chia lịch, quản lý CRM, phân tích đối thủ, tạo funnel và hỗ trợ bán hàng tự động.</p>
+
+  {% if message %}
+  <div class="{{ 'success' if ok else 'error' }}"><b>Thông báo:</b> {{ message }}</div>
+  {% endif %}
+
+  <div class="v3-kpi-title"><b>KPI tổng quan</b> • Fanpage đang hoạt động • Khách hàng mới hôm nay • Bài đăng hôm nay • Doanh thu tháng • Trạng thái Token</div>
+  <div class="grid4 v3-ceo-grid" style="margin-top:18px">
+    <div class="stat"><span>Fanpage</span><br><b>{{ v3.fanpages }}</b><small>đang hoạt động/cấu hình</small></div>
+    <div class="stat"><span>Bài đăng</span><br><b>{{ v3.posts }}</b><small>hôm nay: {{ v3.posts_today }}</small></div>
+    <div class="stat"><span>Khách hàng</span><br><b>{{ v3.crm }}</b><small>mới hôm nay: {{ v3.leads_today }}</small></div>
+    <div class="stat"><span>Doanh thu</span><br><b>{{ v3.revenue_month }}</b><small>Chưa phát sinh giao dịch</small></div>
+    <div class="stat premium-trial-stat"><span>Premium</span><br><b>🎁 Dùng thử miễn phí</b><small>Còn lại: 3 ngày • 10/10 Content AI • 1/1 Fanpage</small></div>
+    <div class="stat token-status-stat"><span>Token</span><br><b>🟢 {{ v3.token_live }} sống</b><small>🔴 {{ v3.token_dead }} lỗi • Tổng Page: {{ v3.token_total }}</small></div>
+  </div>
+
+  <div class="v4-trust-grid">
+    <div class="v4-trust-card"><b>2.381+</b><span>Khách hàng sử dụng</span></div>
+    <div class="v4-trust-card"><b>120.000+</b><span>Content đã tạo</span></div>
+    <div class="v4-trust-card"><b>98%</b><span>Đánh giá hài lòng</span></div>
+  </div>
+
+  <div class="hero-actions">
+    <button onclick="openModule('post')">Bắt đầu đăng bài</button>
+    <button class="secondary" onclick="openModule('studio')">Tạo content AI</button>
+    <button class="secondary" onclick="scrollToPricing()">Xem bảng giá</button>
+  </div>
+
+  <div class="module-hub v3-main-hub">
+    <div class="module-card" onclick="openModule('facebook_center')"><div class="icon">📢</div><h3>Facebook Center</h3><p>Đăng ngay, đăng hàng loạt, nhiều Page, ảnh/video, Scheduler, Fanpage Manager, Group Marketing, Comment Manager, Messenger AI.</p><span class="module-pill">Mở Facebook Center</span></div>
+    <div class="module-card" onclick="openModule('ai_studio')"><div class="icon">🤖</div><h3>AI Studio</h3><p>AI Content, Viral Lab, Facebook Ads AI, Marketing Director, Competitor Scanner, Sales Script, Landing Page Builder.</p><span class="module-pill">Mở AI Studio</span></div>
+    <div class="module-card" onclick="openModule('creative_center')"><div class="icon">🎨</div><h3>Creative Center</h3><p>AI Image Center, AI Video Center, AI Voice Studio, Banner, Avatar, Cover, Poster.</p><span class="module-pill">Mở Creative</span></div>
+    <div class="module-card" onclick="openModule('crm_sales')"><div class="icon">👥</div><h3>CRM Sales</h3><p>Khách hàng, Pipeline Kanban, lịch chăm sóc, nhắc lịch và quản lý nguồn khách.</p><span class="module-pill">Mở CRM Sales</span></div>
+    <div class="module-card" onclick="openModule('analytics')"><div class="icon">📊</div><h3>Analytics</h3><p>Dashboard CEO, doanh thu, bài đăng, Fanpage, CRM, PDF, Excel, KPI nhân viên và chiến dịch.</p><span class="module-pill">Mở Analytics</span></div>
+    <div class="module-card" onclick="openModule('automation_center')"><div class="icon">⚙️</div><h3>Automation</h3><p>Auto Campaign 30 ngày content, tự xếp lịch, Notification Center, Backup và Restore.</p><span class="module-pill">Mở Automation</span></div>
+    <div class="module-card" onclick="openModule('success_center')"><div class="icon">🏆</div><h3>Success Center</h3><p>Case Study, khách hàng thành công, mẫu Fanpage, mẫu quảng cáo và content chuyển đổi cao.</p><span class="module-pill">Mở Success</span></div>
+    <div class="module-card" onclick="openModule('premium')"><div class="icon">💎</div><h3>Premium Center</h3><p>Khởi Động 159K, 1 năm 859K phổ biến nhất, vĩnh viễn 1.959K trọn đời.</p><span class="module-pill">Xem gói</span></div>
+    <div class="module-card" onclick="openModule('post')"><div class="icon">📝</div><h3>Công cụ đăng bài cũ</h3><p>Giữ lại engine đăng bài cũ để không phá chức năng đã hoạt động.</p><span class="module-pill">Mở công cụ</span></div>
+  </div>
+</section>
+
+  {% if content %}
+  <div class="panel" id="ai-output-box">
+    <h2>Kết quả AI vừa tạo</h2>
+    <p class="small">Nội dung AI tạo sẽ hiển thị tại đây để khách xem, copy hoặc đưa sang phần đăng Fanpage.</p>
+    <div class="history" id="aiGeneratedContent">{{ content }}</div>
+    <button onclick="copyText('aiGeneratedContent')">Copy nội dung</button>
+    <button class="secondary" onclick="openModule('post')">Mở phần đăng Fanpage</button>
+  </div>
+  {% endif %}
+
+
+
+<section class="panel module-section" id="facebook_center">
+  <div class="section-open-note">Bạn đang mở: Facebook Center V3.</div>
+  <h2>📢 Facebook Center</h2>
+  <p class="small">Gộp toàn bộ công cụ Facebook vào một trung tâm: đăng bài, Scheduler, Fanpage Manager, Group Marketing, Comment Manager và Messenger AI.</p>
+  <div class="fb-submenu-pro">
+    <button onclick="openModule('post')">📢 Đăng bài</button>
+    <button onclick="openModule('scheduler')">📅 Scheduler</button>
+    <button onclick="openModule('token')">📄 Fanpage Manager</button>
+    <button class="locked" onclick="openLockedFeature('Group Marketing','Gói 1 năm / Vĩnh viễn')">👥 Group Marketing 🔒</button>
+    <button class="locked" onclick="openLockedFeature('Comment Manager','Gói 1 năm / Vĩnh viễn')">💬 Comment Manager 🔒</button>
+    <button class="locked" onclick="openLockedFeature('Messenger AI','Gói 1 năm / Vĩnh viễn')">🤖 Messenger AI 🔒</button>
+  </div>
+  <div class="v3-feature-grid">
+    <div class="v3-feature-card"><h3>Đăng bài</h3><ul><li>Đăng ngay</li><li>Đăng hàng loạt</li><li>Đăng nhiều Page</li><li>Đăng ảnh/video</li></ul><button onclick="openModule('post')">Mở công cụ đăng bài</button></div>
+    <div class="v3-feature-card"><h3>Scheduler</h3><ul><li>Lên lịch tự động</li><li>Đăng chiến dịch</li><li>Chia khung giờ</li><li>Tự lưu lịch</li></ul><button onclick="openModule('scheduler')">Mở lịch đăng</button></div>
+    <div class="v3-feature-card"><h3>Fanpage Manager</h3><ul><li>Quản lý Page</li><li>Kiểm tra token</li><li>Kiểm tra quyền</li><li>Token status</li></ul><button onclick="openModule('token')">Kiểm tra token</button></div>
+    <div class="v3-feature-card"><h3>Group Marketing</h3><ul><li>Quản lý group</li><li>Danh sách group</li><li>Lịch đăng group</li><li>Gợi ý nội dung nhóm</li></ul><button class="secondary" onclick="openLockedFeature('Group Marketing','Gói 6 tháng / Gói 1 năm / Vĩnh viễn')">Mở khóa</button></div>
+    <div class="v3-feature-card"><h3>Comment Manager</h3><ul><li>Trả lời comment</li><li>Ẩn SĐT</li><li>Quản lý tương tác</li><li>Gợi ý phản hồi</li></ul><button class="secondary" onclick="openLockedFeature('Comment Manager','Gói 6 tháng / Gói 1 năm / Vĩnh viễn')">Mở khóa</button></div>
+    <div class="v3-feature-card"><h3>Messenger AI</h3><ul><li>Chat mẫu</li><li>Gửi báo giá</li><li>Chăm sóc khách</li><li>FAQ bán hàng</li></ul><button class="secondary" onclick="openLockedFeature('Messenger AI','Gói 1 năm / Vĩnh viễn')">Mở khóa</button></div>
+  </div>
+</section>
+
+<section class="panel module-section" id="ai_studio">
+  <div class="section-open-note">Bạn đang mở: AI Studio V3.</div>
+  <h2>🤖 AI Studio</h2>
+  <div class="v3-feature-grid">
+    <div class="v3-feature-card"><h3>AI Content</h3><ul><li>Content Facebook</li><li>Content TikTok</li><li>Caption</li></ul><button onclick="openModule('studio')">Mở AI Content</button></div>
+    <div class="v3-feature-card"><h3>Viral Content Lab</h3><ul><li>Content Viral</li><li>Storytelling</li><li>Seeding</li></ul><form method="post" action="/v3_ai_tool"><input type="hidden" name="tool" value="prompt_premium"><textarea name="topic" rows="3" placeholder="Ví dụ: nội dung viral cho dịch vụ proxy"></textarea><button>Tạo ý tưởng viral</button></form></div>
+    <div class="v3-feature-card"><h3>Facebook Ads AI</h3><ul><li>Chấm điểm quảng cáo</li><li>Viết quảng cáo</li><li>Target khách hàng</li></ul><form method="post" action="/v3_ai_tool"><input type="hidden" name="tool" value="facebook_ads_ai"><textarea name="topic" rows="3" placeholder="Nhập sản phẩm/dịch vụ cần chạy ads"></textarea><button>Tạo Facebook Ads AI</button></form></div>
+    <div class="v3-feature-card"><span class="v3-premium-badge">VIP</span><h3>AI Marketing Director</h3><p>Khách nhập: Tôi bán mỹ phẩm. Hệ thống sinh 30 content, 10 quảng cáo, tệp khách hàng và kế hoạch marketing.</p><form method="post" action="/v3_ai_tool"><input type="hidden" name="tool" value="marketing_director"><textarea name="topic" rows="3" placeholder="Tôi bán mỹ phẩm / proxy / dịch vụ quảng cáo..."></textarea><button>Tạo kế hoạch tổng</button></form></div>
+    <div class="v3-feature-card"><h3>Competitor Scanner</h3><p>Nhập link Fanpage hoặc mô tả đối thủ. AI phân tích điểm mạnh, điểm yếu, nội dung và CTA.</p><form method="post" action="/v3_ai_tool"><input type="hidden" name="tool" value="competitor_scanner"><input name="topic" placeholder="Link Fanpage đối thủ"><button>Phân tích đối thủ</button></form></div>
+    <div class="v3-feature-card"><h3>AI Sales Script</h3><ul><li>Kịch bản chốt sale</li><li>Xử lý từ chối</li><li>Kịch bản inbox</li></ul><form method="post" action="/v3_ai_tool"><input type="hidden" name="tool" value="sales_script"><textarea name="topic" rows="3" placeholder="Sản phẩm/dịch vụ cần tư vấn"></textarea><button>Tạo kịch bản sale</button></form></div>
+    <div class="v3-feature-card"><h3>AI Landing Page Builder</h3><p>Nhập: Dịch vụ chạy quảng cáo Facebook. AI sinh tiêu đề, CTA, form và ưu điểm.</p><form method="post" action="/v3_ai_tool"><input type="hidden" name="tool" value="landing_page"><textarea name="topic" rows="3" placeholder="Dịch vụ chạy quảng cáo Facebook"></textarea><button>Tạo Landing Page</button></form></div>
+  </div>
+</section>
+
+<section class="panel module-section" id="creative_center">
+  <div class="section-open-note">Bạn đang mở: Creative Center.</div>
+  <h2>🎨 Creative Center</h2>
+  <div class="v3-feature-grid">
+    <div class="v3-feature-card"><h3>AI Image Center</h3><ul><li>Avatar</li><li>Cover</li><li>Banner</li><li>Poster</li></ul><button class="secondary" onclick="openLockedFeature('AI Image Center','Gói 1 năm / Vĩnh viễn')">Mở khóa</button></div>
+    <div class="v3-feature-card"><h3>AI Video Center</h3><ul><li>TikTok</li><li>Reels</li><li>Shorts</li></ul><button class="secondary" onclick="openLockedFeature('AI Video Center','Gói 1 năm / Vĩnh viễn')">Mở khóa</button></div>
+    <div class="v3-feature-card"><h3>AI Voice Studio</h3><ul><li>Giọng nữ</li><li>Giọng nam</li><li>MC quảng cáo</li></ul><button class="secondary" onclick="openLockedFeature('AI Voice Studio','Gói 1 năm / Vĩnh viễn')">Mở khóa</button></div>
+    <div class="v3-feature-card"><h3>Banner Builder</h3><p>Tạo ý tưởng ảnh quảng cáo, bố cục banner và nội dung poster.</p><form method="post" action="/v3_ai_tool"><input type="hidden" name="tool" value="landing_page"><textarea name="topic" rows="3" placeholder="Banner cho dịch vụ quảng cáo Facebook"></textarea><button>Tạo bố cục banner</button></form></div>
+  </div>
+</section>
+
+<section class="panel module-section" id="crm_sales">
+  <div class="section-open-note">Bạn đang mở: CRM Sales V3.</div>
+  <h2>👥 CRM Sales</h2>
+  <form method="post" action="/pipeline">
+    <div class="grid"><input name="customer_name" placeholder="Tên"><input name="phone" placeholder="SĐT"><input name="zalo" placeholder="Zalo"><input name="source" placeholder="Nguồn"></div>
+    <div class="grid"><select name="stage"><option>Khách mới</option><option>Đang tư vấn</option><option>Đã báo giá</option><option>Đang chốt</option><option>Đã mua</option></select><input name="value" type="number" placeholder="Doanh thu dự kiến"></div>
+    <textarea name="note" rows="3" placeholder="Ghi chú nhu cầu khách"></textarea><button>Lưu vào Pipeline</button>
+  </form>
+  <h3>Pipeline Kanban</h3>
+  <div class="kanban-board">
+    {% for stage in ['Khách mới','Đang tư vấn','Đã báo giá','Đang chốt','Đã mua'] %}
+    <div class="kanban-col" ondragover="event.preventDefault()" ondrop="dropKanban(event)"><h3>{{ stage }}</h3>
+      {% for r in pipeline_rows %}{% if r[5] == stage %}<div class="kanban-card" draggable="true" ondragstart="dragKanban(event)"><b>{{ r[1] }}</b><br><span class="small">{{ r[2] }} • {{ r[4] }}</span><br>{{ r[7] }}</div>{% endif %}{% endfor %}
+    </div>
+    {% endfor %}
+  </div>
+  <h3>Customer Care</h3>
+  <form method="post" action="/customer_task"><div class="grid"><input name="customer_name" placeholder="Tên khách"><input name="due_date" type="date"></div><textarea name="task" rows="2" placeholder="Lịch chăm sóc / nhắc lịch"></textarea><button>Tạo nhắc lịch</button></form>
+  {% for t in customer_tasks %}<div class="history">{{ t[1] }} | {{ t[2] }} | Hạn: {{ t[3] }} | {{ t[4] }}</div>{% endfor %}
+</section>
+
+<section class="panel module-section" id="automation_center">
+  <div class="section-open-note">Bạn đang mở: Automation Center.</div>
+  <h2>⚙️ Automation</h2>
+  <div class="v3-feature-grid">
+    <div class="v3-feature-card"><h3>Auto Campaign</h3><p>Tạo 30 ngày content và tự động lên lịch.</p><form method="post" action="/plan_30_days"><select name="industry">{% for key,label in industry_labels.items() %}<option value="{{ key }}">{{ label }}</option>{% endfor %}</select><input name="goal" placeholder="Mục tiêu"><input type="hidden" name="days" value="30"><button>Tạo 30 ngày content</button></form></div>
+    <div class="v3-feature-card"><h3>Notification Center</h3><ul><li>Bài sắp đăng</li><li>Token lỗi</li><li>Khách mới</li></ul><form method="post" action="/notification"><input name="title" placeholder="Tiêu đề thông báo"><textarea name="detail" rows="2" placeholder="Nội dung"></textarea><button>Lưu thông báo</button></form></div>
+    <div class="v3-feature-card"><h3>Backup Center</h3><ul><li>Backup</li><li>Restore</li></ul><a href="/backup"><button>Backup</button></a><a href="/export_pdf"><button class="secondary">Xuất PDF</button></a><a href="/export"><button class="secondary">Xuất Excel/CSV</button></a></div>
+  </div>
+  <h3>Thông báo gần nhất</h3>{% for n in notifications %}<div class="history"><b>{{ n[1] }}</b> • {{ n[3] }} • {{ n[5] }}<br>{{ n[2] }}</div>{% endfor %}
+</section>
+
+<section class="panel module-section" id="success_center">
+  <div class="section-open-note">Bạn đang mở: Success Center V4.</div>
+  <h2>🏆 Success Center</h2>
+  <p class="small">Tăng niềm tin cho khách trước khi nâng cấp Premium bằng case study, mẫu thành công và tài sản bán hàng đã được chuẩn hóa.</p>
+
+  <div class="v4-success-grid">
+    <div class="v4-success-card">
+      <div class="success-icon">📈</div>
+      <h3>Case Study</h3>
+      <p>Mẫu câu chuyện trước/sau: shop thiếu content, không đều bài, sau khi dùng AI có kế hoạch đăng 30 ngày.</p>
+      <button onclick="openLockedFeature('Case Study Premium')">Xem mẫu Premium</button>
+    </div>
+    <div class="v4-success-card">
+      <div class="success-icon">👥</div>
+      <h3>Khách hàng thành công</h3>
+      <p>Hiển thị các mô hình khách hàng: Spa, Proxy, TikTok Shop, Nha khoa, BĐS, Thời trang.</p>
+      <button onclick="openLockedFeature('Khách hàng thành công')">Mở thư viện</button>
+    </div>
+    <div class="v4-success-card">
+      <div class="success-icon">📄</div>
+      <h3>Mẫu Fanpage thành công</h3>
+      <p>Gợi ý bố cục avatar, cover, mô tả, CTA và lịch đăng giúp Fanpage nhìn uy tín hơn.</p>
+      <button onclick="openLockedFeature('Mẫu Fanpage thành công')">Xem mẫu</button>
+    </div>
+    <div class="v4-success-card">
+      <div class="success-icon">🎯</div>
+      <h3>Mẫu quảng cáo thành công</h3>
+      <p>Kho mẫu quảng cáo theo nỗi đau, lợi ích, bằng chứng, CTA và kịch bản kéo inbox.</p>
+      <button onclick="openLockedFeature('Mẫu quảng cáo thành công')">Mở mẫu Ads</button>
+    </div>
+    <div class="v4-success-card">
+      <div class="success-icon">🔥</div>
+      <h3>Mẫu content thành công</h3>
+      <p>Mẫu content bán hàng, storytelling, seeding, xử lý từ chối và remarketing.</p>
+      <button onclick="openLockedFeature('Mẫu content thành công')">Xem content</button>
+    </div>
+  </div>
+
+  <div class="v4-proof-box">
+    <b>🔥 Thành tích hệ thống</b>
+    <div class="v4-pricing-stats">
+      <div><b>2.381+</b><span>Khách hàng sử dụng</span></div>
+      <div><b>120.000+</b><span>Content đã tạo</span></div>
+      <div><b>98%</b><span>Đánh giá hài lòng</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="panel module-section" id="post">
+  <div class="section-open-note">Bạn đang mở: Đăng Fanpage tự chia nội dung.</div>
+  <h2>Đăng Fanpage Tự Chia Nội Dung</h2>
+  <p class="small">Nhập nhiều content, upload nhiều ảnh/video, chọn nhiều Page. Hệ thống tự chia từng content + từng ảnh cho từng Page để tránh trùng nội dung và trùng hình. Mặc định không thêm chữ, không spin, không tự chèn CTA/hashtag.</p>
+
+  <form method="post" action="/multi_post" enctype="multipart/form-data">
+    <div class="page-list">
+      {% for p in pages %}
+      <label class="page-item">
+        <input type="checkbox" name="page_indexes" value="{{ loop.index0 }}">
+        {{ p.name }}<br>
+        <span class="small">{{ p.id }}</span>
+      </label>
+      {% endfor %}
+    </div>
+
+    <textarea name="bulk_content" rows="12" placeholder="Content 1...
+
+Content 2...
+
+Content 3...
+
+Mỗi content cách nhau bằng một dòng trống. Nếu nhập từng dòng, mỗi dòng cũng được hiểu là một content riêng."></textarea>
+
+    <div class="grid">
+      <input type="text" name="campaign" placeholder="Tên chiến dịch, ví dụ: Spa tháng 6">
+      <input type="file" name="images" accept="image/*,video/mp4,video/quicktime" multiple>
+    </div>
+    <label class="page-item" style="display:block;margin-top:10px">
+      <input type="checkbox" name="use_ai_enhance" value="1">
+      Bật AI tối ưu từng bài: spin content, thêm CTA và hashtag riêng
+      <br><span class="small">Mặc định tắt để giữ nguyên 100% content đã nhập.</span>
+    </label>
+
+    <div class="premium-center" style="margin-top:12px">
+      <h3>Chọn cách đăng</h3>
+      <p class="small">Đăng ngay hoặc đặt lịch đều dùng cùng nội dung, cùng Page và cùng ảnh/video đã chọn ở trên.</p>
+
+      <div class="grid">
+        <div>
+          <h3>Đăng ngay</h3>
+          <p class="small">Tự chia content + ảnh/video và đăng ngay lên các Page đã chọn.</p>
+          <button type="submit" name="action" value="now">Tự chia và đăng ngay</button>
+        </div>
+
+        <div>
+          <h3>Đặt lịch đăng</h3>
+          <p class="small">Chọn thời gian, hệ thống lưu lịch và tự đăng khi đến giờ.</p>
+          <input type="datetime-local" name="schedule_time">
+          <button type="submit" name="action" value="schedule" class="secondary">Tự chia và lưu lịch</button>
+        </div>
+      </div>
+    </div>
+  </form>
+</section>
+
+<section class="panel module-section" id="scheduler">
+  <div class="section-open-note">Bạn đang mở: Lịch đăng nâng cao.</div>
+  <h2>Lịch đăng nâng cao</h2>
+  <p class="small">Nhập nhiều content, upload nhiều ảnh/video, chọn Page và giờ bắt đầu. Hệ thống tự chia lịch đăng theo khung giờ, không trùng content và không trùng ảnh.</p>
+  <form method="post" action="/smart_schedule" enctype="multipart/form-data">
+    <div class="page-list">
+      {% for p in pages %}
+      <label class="page-item">
+        <input type="checkbox" name="page_indexes" value="{{ loop.index0 }}">
+        {{ p.name }}<br><span class="small">{{ p.id }}</span>
+      </label>
+      {% endfor %}
+    </div>
+    <textarea name="bulk_content" rows="9" placeholder="Content 1...
+
+Content 2...
+
+Content 3..."></textarea>
+    <div class="grid">
+      <input type="datetime-local" name="start_time">
+      <select name="gap_minutes">
+        <option value="30">Cách nhau 30 phút</option>
+        <option value="60" selected>Cách nhau 1 giờ</option>
+        <option value="120">Cách nhau 2 giờ</option>
+        <option value="180">Cách nhau 3 giờ</option>
+      </select>
+    </div>
+    <input name="campaign" placeholder="Tên chiến dịch">
+    <input type="file" name="images" accept="image/*,video/mp4,video/quicktime" multiple>
+    <label class="page-item" style="display:block;margin-top:10px">
+      <input type="checkbox" name="use_ai_enhance" value="1">
+      Bật AI tối ưu từng bài: spin content, thêm CTA và hashtag riêng
+      <br><span class="small">Mặc định tắt để giữ nguyên 100% content đã nhập.</span>
+    </label>
+    <button type="submit">Tự chia lịch đăng</button>
+  </form>
+</section>
+
+
+<section class="panel module-section" id="studio">
+  <div class="section-open-note">Bạn đang mở: AI Content Studio.</div>
+  <h2>AI Content Studio</h2>
+  <form method="post" action="/generate">
+    <textarea name="idea" rows="4" placeholder="Nhập ý tưởng: spa trị nám, proxy chạy ads, nha khoa niềng răng, bất động sản căn hộ..."></textarea>
+    <div class="grid">
+      <select name="style">
+        <option value="gần gũi, tự nhiên, dễ ra inbox">Gần gũi</option>
+        <option value="bán hàng mạnh, chốt đơn tốt">Bán hàng mạnh</option>
+        <option value="chuyên nghiệp, uy tín">Chuyên nghiệp</option>
+        <option value="viral, ngắn gọn, thu hút">Viral ngắn gọn</option>
+        <option value="cao cấp, sang trọng">Cao cấp</option>
+      </select>
+      <select name="length">
+        <option value="80">Ngắn dưới 80 từ</option>
+        <option value="120">Vừa dưới 120 từ</option>
+        <option value="180">Dài dưới 180 từ</option>
+        <option value="250">Đầy đủ dưới 250 từ</option>
+      </select>
+    </div>
+    <button type="submit" name="variants" value="1">Tạo nội dung</button>
+    <button type="submit" name="variants" value="5" class="secondary">Tạo 5 phiên bản</button>
+  </form>
+</section>
+
+<section class="panel module-section" id="library">
+  <div class="section-open-note">Bạn đang mở: Kho Content 50.000+.</div>
+  <h2>Kho Content 10.000+ Dùng Thử</h2>
+  <p class="small">Bản demo nạp sẵn một số mẫu. Sau này có thể import 10.000 content thật từ JSON/CSV.</p>
+  <form method="get" action="/">
+    <select name="industry">
+      {% for key,label in industry_labels.items() %}
+      <option value="{{ key }}" {% if selected_industry==key %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+    <button type="submit">Xem mẫu content</button>
+  </form>
+  <div class="library-grid">
+    {% for item in library_items %}
+    <div class="template-card">
+      <div id="tpl{{ loop.index }}">{{ item }}</div>
+      <button onclick="copyText('tpl{{ loop.index }}')">Copy content</button>
+    </div>
+    {% endfor %}
+  </div>
+  <div class="lock-card" style="margin-top:16px">
+    <h3>Khóa Premium</h3>
+    <p>Bạn đang xem 10 content miễn phí đầu tiên.</p>
+    <p>Còn lại khoảng 490 content/ngành cần nâng cấp Premium để mở khóa.</p>
+    <button onclick="openPremiumPopup()">Xem bảng giá Premium</button>
+  </div>
+</section>
+
+<section class="panel module-section" id="fanpage">
+  <div class="section-open-note">Bạn đang mở: AI Phân tích Fanpage.</div>
+  <h2>AI Phân tích Fanpage</h2>
+  <form method="post" action="/analyze_fanpage">
+    <input name="page_name" placeholder="Tên Fanpage">
+    <div class="grid">
+      <select name="avatar"><option value="co">Có avatar rõ</option><option value="khong">Chưa tốt</option></select>
+      <select name="cover"><option value="co">Có ảnh bìa tốt</option><option value="khong">Chưa tốt</option></select>
+      <select name="post_frequency"><option value="hang_ngay">Đăng hằng ngày</option><option value="3_5_bai_tuan">3-5 bài/tuần</option><option value="it">Ít đăng</option></select>
+      <select name="cta"><option value="co">Có CTA rõ</option><option value="khong">Chưa có CTA</option></select>
+    </div>
+    <textarea name="bio" rows="3" placeholder="Mô tả ngắn về Fanpage, sản phẩm/dịch vụ, thông tin liên hệ..."></textarea>
+    <button type="submit">Phân tích Fanpage</button>
+  </form>
+</section>
+
+<section class="panel module-section" id="plan">
+  <div class="section-open-note">Bạn đang mở: AI Marketing Planner.</div>
+  <h2>AI Kế hoạch Marketing 30 ngày</h2>
+  <form method="post" action="/plan_30_days">
+    <select name="industry">
+      {% for key,label in industry_labels.items() %}
+      <option value="{{ key }}">{{ label }}</option>
+      {% endfor %}
+    </select>
+    <input name="goal" placeholder="Mục tiêu: tăng inbox, tăng đơn, tăng nhận diện, ra mắt sản phẩm...">\n    <select name="days"><option value="7">7 ngày</option><option value="30" selected>30 ngày</option><option value="90">90 ngày</option></select>
+    <button type="submit">Tạo kế hoạch</button>
+  </form>
+</section>
+
+<section class="panel module-section" id="campaign">
+  <div class="section-open-note">Bạn đang mở: Campaign Manager.</div>
+  <h2>Campaign Manager</h2>
+  <form method="post" action="/campaign">
+    <input name="name" placeholder="Tên chiến dịch, ví dụ: Proxy tháng 6">
+    <select name="industry">
+      {% for key,label in industry_labels.items() %}
+      <option value="{{ key }}">{{ label }}</option>
+      {% endfor %}
+    </select>
+    <input name="goal" placeholder="Mục tiêu chiến dịch">
+    <textarea name="note" rows="3" placeholder="Ghi chú chiến dịch"></textarea>
+    <button type="submit">Tạo chiến dịch</button>
+  </form>
+  {% for c in campaigns %}
+  <div class="history">ID: {{ c[0] }} | {{ c[1] }} | Ngành: {{ c[2] }} | Mục tiêu: {{ c[3] }} | Tạo: {{ c[5] }}</div>
+  {% endfor %}
+</section>
+
+{% if content %}
+<section class="panel module-section" id="post_edit">
+  <h2>Sửa bài, Preview Facebook, chọn Fanpage</h2>
+  <form method="post" action="/post" enctype="multipart/form-data">
+    <div class="page-list">
+      {% for p in pages %}
+      <label class="page-item"><input type="checkbox" name="page_indexes" value="{{ loop.index0 }}"> {{ p.name }}<br><span class="small">{{ p.id }}</span></label>
+      {% endfor %}
+    </div>
+    <textarea name="content" rows="12">{{ content }}</textarea>
+    <input type="text" name="campaign" placeholder="Tên chiến dịch">
+    <input type="file" name="image" accept="image/*,video/mp4,video/quicktime">
+    <button type="submit" name="action" value="now">Đăng ngay nhiều Page</button>
+    <h3>Đặt lịch đăng</h3>
+    <input type="datetime-local" name="schedule_time">
+    <button type="submit" name="action" value="schedule">Lưu lịch đăng</button>
+  </form>
+  <h3>Preview Facebook</h3>
+  <div class="preview">
+    <div class="preview-head"><div class="avatar"></div><div><div class="preview-name">Fanpage của bạn</div><div class="small">Vừa xong · Công khai</div></div></div>
+    <div class="preview-content">{{ content }}</div>
+  </div>
+  <p>Điểm content: <b>{{ score }}/100</b></p>
+  <ul>{% for w in warnings %}<li>{{ w }}</li>{% endfor %}</ul>
+</section>
+{% endif %}
+
+{% if analysis %}
+<section class="panel"><h2>Kết quả phân tích</h2><div class="history">{{ analysis }}</div></section>
+{% endif %}
+
+{% if plan %}
+<section class="panel"><h2>AI Marketing Planner</h2><div class="history">{{ plan }}</div></section>
+{% endif %}
+
+
+<section class="panel module-section" id="factory">
+  <div class="section-open-note">Bạn đang mở: Content Factory.</div>
+  <h2>AI Content Factory</h2>
+  <p class="small">Tạo hàng loạt 20-50 content khác nhau để chia cho nhiều Fanpage.</p>
+  <form method="post" action="/content_factory">
+    <textarea name="idea" rows="4" placeholder="Nhập chủ đề cần tạo hàng loạt, ví dụ: Proxy Việt Nam tốc độ cao cho chạy quảng cáo..."></textarea>
+    <div class="grid">
+      <select name="count">
+        <option value="10">Tạo 10 content</option>
+        <option value="20">Tạo 20 content</option>
+        <option value="30">Tạo 30 content</option>
+        <option value="50">Tạo 50 content</option>
+      </select>
+      <select name="style">
+        <option value="bán hàng tự nhiên">Bán hàng tự nhiên</option>
+        <option value="viral ngắn gọn">Viral ngắn gọn</option>
+        <option value="chuyên nghiệp">Chuyên nghiệp</option>
+        <option value="cao cấp">Cao cấp</option>
+      </select>
+    </div>
+    <button type="submit">Tạo hàng loạt content</button>
+  </form>
+</section>
+
+<section class="panel module-section" id="clusters">
+  <h2>Page Cluster</h2>
+  <p class="small">Tạo nhóm Page theo ngành như Proxy, Spa, BĐS, Nha khoa để quản lý dễ hơn.</p>
+  <form method="post" action="/page_cluster">
+    <input name="name" placeholder="Tên nhóm, ví dụ: Nhóm Proxy">
+    <input name="page_names" placeholder="Tên Page, ngăn cách bằng dấu phẩy">
+    <textarea name="note" rows="3" placeholder="Ghi chú nhóm Page"></textarea>
+    <button type="submit">Lưu nhóm Page</button>
+  </form>
+  {% for c in clusters %}
+  <div class="history">ID: {{ c[0] }} | Nhóm: {{ c[1] }}
+Page: {{ c[2] }}
+Ghi chú: {{ c[3] }}
+Tạo: {{ c[4] }}</div>
+  {% endfor %}
+</section>
+
+<section class="panel module-section" id="analytics">
+  <div class="section-open-note">Bạn đang mở: Analytics Pro.</div>
+  <h2>Analytics Pro</h2>
+  <div class="analytics-grid">
+    <div class="analytics-box">
+      <h3>Theo Fanpage</h3>
+      {% for r in analytics.by_page %}
+      <div class="analytics-row"><span>{{ r[0] }}</span><b>{{ r[1] }}</b></div>
+      {% endfor %}
+    </div>
+    <div class="analytics-box">
+      <h3>Theo chiến dịch</h3>
+      {% for r in analytics.by_campaign %}
+      <div class="analytics-row"><span>{{ r[0] }}</span><b>{{ r[1] }}</b></div>
+      {% endfor %}
+    </div>
+    <div class="analytics-box">
+      <h3>Theo ngày</h3>
+      {% for r in analytics.by_day %}
+      <div class="analytics-row"><span>{{ r[0] }}</span><b>{{ r[1] }}</b></div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<section class="panel module-section" id="premium">
+  <h2>💎 Premium Center V4</h2>
+  <div class="premium-center v4-premium-hero">
+    <div class="v4-hero-label">AI MARKETING PREMIUM</div>
+    <h3>Biến công cụ đăng bài thành trợ lý Marketing tự động</h3>
+    <p>Khách không chỉ mua phần mềm, khách mua thời gian, nội dung, quy trình bán hàng và hệ thống hỗ trợ tăng tốc kinh doanh online.</p>
+    <div class="v4-value-grid">
+      <div><b>159.000đ</b><span>Gói Khởi Động<br>chỉ 5.300đ/ngày</span></div>
+      <div><b>859.000đ</b><span>Gói 1 năm<br>phổ biến nhất</span></div>
+      <div><b>1.959.000đ</b><span>Gói trọn đời<br>không phí gia hạn</span></div>
+    </div>
+    <p><b>Giá trị nhận được:</b> tiết kiệm thời gian viết content, quản lý Fanpage, CRM khách hàng, AI Sales Script, Marketing Director và kho Content 50.000+.</p>
+    <button onclick="scrollToPricing()">Xem bảng giá chi tiết</button>
+    <button class="secondary" onclick="openPayment('yearly')">Chọn gói phổ biến nhất</button>
+  </div>
+</section>
+
+<section class="panel module-section" id="v9center">
+  <h2>V3 Enterprise Center</h2>
+  <div class="v9-grid">
+    <div class="v9-card">
+      <h3>AI Spin 70-80%</h3>
+      <p>Mỗi bài đăng được viết lại khác nhau, thêm CTA và hashtag riêng để giảm trùng lặp.</p>
+    </div>
+    <div class="v9-card">
+      <h3>AI Chọn ảnh phù hợp</h3>
+      <p>Bản local ưu tiên chia ảnh không trùng. Có thể nâng tiếp để AI phân loại ảnh theo nội dung.</p>
+    </div>
+    <div class="v9-card">
+      <h3>Auto 100 Content → 100 Page</h3>
+      <p>Hệ thống tự chia content, media và Page theo vòng quay, phù hợp đăng hàng loạt.</p>
+    </div>
+    <div class="v9-card">
+      <h3>Token Guard</h3>
+      <p>Kiểm tra token trước khi đăng ngay. Nếu token chết, hệ thống dừng để tránh lỗi hàng loạt.</p>
+    </div>
+  </div>
+  <div style="margin-top:14px">
+    <a href="/backup"><button>Backup Database</button></a>
+    <a href="/export_pdf"><button class="secondary">Xuất báo cáo PDF</button></a>
+    <a href="/export"><button class="secondary">Xuất báo cáo Excel/CSV</button></a>
+  </div>
+</section>
+
+
+<section class="panel module-section" id="crm">
+  <div class="section-open-note">Bạn đang mở: CRM Mini.</div>
+  <h2>CRM Mini</h2>
+  <p class="small">Lưu khách hàng tiềm năng từ comment, inbox, Zalo hoặc data thủ công.</p>
+  <form method="post" action="/crm">
+    <div class="grid">
+      <input name="name" placeholder="Tên khách hàng">
+      <input name="phone" placeholder="Số điện thoại">
+      <input name="zalo" placeholder="Zalo">
+      <input name="source" placeholder="Nguồn: Facebook, Zalo, TikTok...">
+    </div>
+    <textarea name="note" rows="3" placeholder="Ghi chú nhu cầu khách hàng"></textarea>
+    <button type="submit">Lưu khách hàng</button>
+  </form>
+  {% for r in crm_rows %}
+  <div class="history">ID: {{ r[0] }} | {{ r[1] }} | SĐT: {{ r[2] }} | Zalo: {{ r[3] }} | Nguồn: {{ r[4] }} | {{ r[6] }}
+Ghi chú: {{ r[5] }}</div>
+  {% endfor %}
+</section>
+
+<section class="panel module-section" id="token">
+  <div class="section-open-note">Bạn đang mở: Token Manager.</div>
+  <h2>Token Center Pro</h2>
+  <p class="small">Kiểm tra token từng Fanpage trước khi đăng hàng loạt. Nếu gặp OAuth 190 / Session expired thì cần lấy Page Token mới và thay vào file .env.</p>
+
+  <form method="post" action="/check_tokens">
+    <button type="submit">Kiểm tra toàn bộ Page Token</button>
+  </form>
+
+  <div class="history">{{ token_report }}</div>
+
+  <h3>Kết quả kiểm tra gần nhất</h3>
+  {% for t in token_checks %}
+  <div class="history">
+Page: {{ t[0] }}
+ID: {{ t[1] }}
+Trạng thái: {{ t[2] }}
+Chi tiết: {{ t[3] }}
+Thời gian: {{ t[4] }}
+  </div>
+  {% endfor %}
+
+  <div class="premium-center">
+    <h3>Hướng dẫn khi token giới hạn</h3>
+    <p>1. Vào Meta Graph API Explorer.</p>
+    <p>2. Generate User Token có quyền pages_show_list, pages_read_engagement, pages_manage_posts, pages_manage_metadata.</p>
+    <p>3. Gọi /me/accounts để lấy Page Access Token mới.</p>
+    <p>4. Dán token mới vào PAGES_JSON trong file .env.</p>
+    <p>5. Chạy lại app.py và bấm kiểm tra token.</p>
+  </div>
+</section>
+
+<section class="panel module-section" id="batch">
+  <div class="section-open-note">Bạn đang mở: Excel / CSV hàng loạt.</div>
+  <h2>Đăng hàng loạt Excel / CSV</h2>
+  <p class="small">Cột hỗ trợ: idea, content, page_names, schedule_time, campaign, image_path hoặc media_path. Nếu không điền page_names, hệ thống tự chia bài lần lượt qua các Page để tránh trùng.</p>
+  <form method="post" action="/batch" enctype="multipart/form-data">
+    <input type="file" name="batch_file" accept=".xlsx,.csv">
+    <button type="submit">Nhập file và lưu lịch</button>
+  </form>
+  <a href="/export"><button class="secondary">Xuất báo cáo CSV</button></a>
+</section>
+
+<section class="panel module-section" id="history">
+  <h2>Lịch sử bài đăng / lịch hẹn</h2>
+  {% for h in history %}
+  <div class="history">
+ID: {{ h[0] }}
+Page: {{ h[1] }}
+Trạng thái: {{ h[3] }}
+Post ID / lỗi: {{ h[4] }}
+Lịch đăng: {{ h[5] }}
+Chiến dịch: {{ h[7] }}
+Điểm content: {{ h[8] }}
+Thời gian tạo: {{ h[9] }}
+
+{{ h[2] }}
+  </div>
+  {% endfor %}
+</section>
+
+<section class="panel pricing-visible" id="pricing">
+  <div class="premium-pricing-pro v4-pricing-shell">
+    <div class="premium-title">
+      <span class="mini">V4 ENTERPRISE PREMIUM</span>
+      <h2>Bảng Giá Premium</h2>
+      <p>Thiết kế theo giá trị nhận được: tiết kiệm thời gian, giảm chi phí thuê ngoài và mở khóa AI Marketing chuyên nghiệp.</p>
+    </div>
+
+    <div class="v4-pricing-stats">
+      <div><b>2.381+</b><span>Khách hàng sử dụng</span></div>
+      <div><b>120.000+</b><span>Content đã tạo</span></div>
+      <div><b>98%</b><span>Đánh giá hài lòng</span></div>
+    </div>
+
+    <div class="premium-grid-pro v4-premium-grid">
+      <div class="premium-plan free-plan v4-plan">
+        <div class="plan-ribbon">DÙNG THỬ</div>
+        <div class="plan-name">Dùng thử miễn phí</div>
+        <div class="plan-price">3 ngày</div>
+        <div class="plan-desc">Trải nghiệm giao diện và tính năng cơ bản trước khi chọn gói phù hợp.</div>
+        <div class="benefit-title">Quyền lợi dùng thử</div>
+        <ul class="benefit-list">
+          <li class="open">Đăng thử 1 Fanpage</li>
+          <li class="open">Tạo tối đa 10 content AI</li>
+          <li class="open">Xem 10 content đầu tiên của mỗi ngành</li>
+          <li class="open">Đăng bài cơ bản</li>
+          <li class="open">Dashboard cơ bản</li>
+        </ul>
+      </div>
+
+      <div class="premium-plan v4-plan">
+        <div class="value-badge">💎 GÓI KHỞI ĐỘNG</div>
+        <div class="plan-name">Gói 1 tháng</div>
+        <div class="plan-price">159.000đ</div>
+        <div class="price-sub">Chỉ 5.300đ/ngày</div>
+        <div class="benefit-title">Phù hợp</div>
+        <ul class="benefit-list">
+          <li class="open">Chủ shop mới</li>
+          <li class="open">Cá nhân kinh doanh online</li>
+          <li class="open">Người mới chạy quảng cáo</li>
+        </ul>
+        <div class="benefit-title">Giá trị nhận được</div>
+        <div class="v4-save-box">🔥 Tiết kiệm 2-3 giờ mỗi ngày</div>
+        <ul class="benefit-list">
+          <li class="open">AI Content Studio</li>
+          <li class="open">Tạo 5 content/lần</li>
+          <li class="open">Đăng Fanpage, ảnh, Video, Reel</li>
+          <li class="open">Upload Excel / CSV</li>
+          <li class="open">Lịch đăng cơ bản</li>
+          <li class="open">Dashboard cơ bản</li>
+          <li class="open">Token Manager</li>
+        </ul>
+        <button class="plan-button premium-btn" onclick="openPayment('monthly')">Mở khóa gói Khởi Động</button>
+      </div>
+
+      <div class="premium-plan v4-plan">
+        <div class="plan-name">Gói 3 tháng</div>
+        <div class="plan-price">359.000đ</div>
+        <div class="price-sub">Tối ưu hơn gói tháng</div>
+        <div class="benefit-title">Bao gồm toàn bộ gói 1 tháng</div>
+        <ul class="benefit-list">
+          <li class="open">Campaign Manager</li>
+          <li class="open">AI Marketing Planner</li>
+          <li class="open">Kho Content Premium</li>
+          <li class="open">Token Center nâng cao</li>
+          <li class="open">Báo cáo CSV</li>
+          <li class="open">Lịch đăng nâng cao</li>
+        </ul>
+        <div class="v4-value-received">
+          <b>🎁 Giá trị nhận được</b>
+          <span>Viết content + lập kế hoạch + báo cáo cơ bản cho shop nhỏ.</span>
+        </div>
+        <button class="plan-button premium-btn" onclick="openPayment('quarterly')">Đăng ký 3 tháng</button>
+      </div>
+
+      <div class="premium-plan v4-plan">
+        <div class="plan-name">Gói 6 tháng</div>
+        <div class="plan-price">559.000đ</div>
+        <div class="price-sub">Mở CRM và Sales Bot</div>
+        <div class="benefit-title">Bao gồm toàn bộ gói 3 tháng</div>
+        <ul class="benefit-list">
+          <li class="open">CRM Pro</li>
+          <li class="open">AI Sales Bot</li>
+          <li class="open">Comment Manager</li>
+          <li class="open">Auto Tag khách hàng</li>
+          <li class="open">Quản lý khách hàng</li>
+          <li class="open">Chuyển khách sang CRM</li>
+        </ul>
+        <div class="v4-value-received">
+          <b>🎁 Giá trị nhận được</b>
+          <span>Tối ưu quy trình tư vấn, gom khách và chăm sóc khách hàng.</span>
+        </div>
+        <button class="plan-button premium-btn" onclick="openPayment('halfyear')">Đăng ký 6 tháng</button>
+      </div>
+
+      <div class="premium-plan featured v4-plan v4-yearly">
+        <div class="plan-ribbon">⭐ PHỔ BIẾN NHẤT</div>
+        <div class="plan-name">Gói 1 năm</div>
+        <div class="plan-price">859.000đ</div>
+        <div class="price-sub">Chỉ 2.300đ/ngày</div>
+        <div class="benefit-title">Giá trị thực tế</div>
+        <ul class="benefit-list">
+          <li class="open">AI Content Brain</li>
+          <li class="open">AI Marketing Director</li>
+          <li class="open">AI Ads Chuyên Gia</li>
+          <li class="open">CRM Pro</li>
+          <li class="open">Kho 50.000+ Content</li>
+          <li class="open">Automation Marketing</li>
+        </ul>
+        <div class="v4-save-box">🚀 Tiết kiệm ~12.000.000đ/năm chi phí thuê nhân sự</div>
+        <button class="plan-button premium-btn" onclick="openPayment('yearly')">Chọn gói phổ biến nhất</button>
+      </div>
+
+      <div class="premium-plan featured v4-plan v4-lifetime">
+        <div class="plan-ribbon">👑 TRỌN ĐỜI</div>
+        <div class="plan-name">Gói nhà bán hàng chuyên nghiệp</div>
+        <div class="plan-price">1.959.000đ</div>
+        <div class="price-sub">Thanh toán 1 lần • Sử dụng trọn đời</div>
+        <div class="benefit-title">Bao gồm</div>
+        <ul class="benefit-list">
+          <li class="open">Toàn bộ AI hiện tại</li>
+          <li class="open">Toàn bộ AI tương lai</li>
+          <li class="open">Cập nhật miễn phí</li>
+          <li class="open">Ưu tiên hỗ trợ</li>
+          <li class="open">Không phí gia hạn</li>
+          <li class="open">AI Image Center</li>
+          <li class="open">AI Video Center</li>
+          <li class="open">Dashboard Enterprise</li>
+          <li class="open">Export PDF / Excel</li>
+          <li class="open">Backup Database</li>
+        </ul>
+        <div class="v4-save-box gold">💰 Tiết kiệm hơn 10.000.000đ chi phí sử dụng lâu dài</div>
+        <button class="plan-button premium-btn" onclick="openPayment('lifetime')">Mở khóa trọn đời</button>
+      </div>
+    </div>
+
+    <div class="v4-outsourcing-box">
+      <h3>🎁 Giá trị nhận được nếu thuê ngoài</h3>
+      <div class="v4-outsource-grid">
+        <div><b>2.000.000đ/tháng</b><span>Viết content</span></div>
+        <div><b>3.000.000đ/tháng</b><span>Marketing</span></div>
+        <div><b>1.000.000đ/tháng</b><span>CRM</span></div>
+        <div><b>6.000.000đ+</b><span>Tổng giá trị</span></div>
+      </div>
+      <p>Bạn chỉ trả từ <b>159.000đ</b> để có hệ thống AI Marketing hỗ trợ tạo nội dung, quản lý khách và tối ưu bán hàng.</p>
+    </div>
+
+    <div class="premium-note-box">
+      Sau khi thanh toán, nếu 5 phút chưa kích hoạt tự động, vui lòng gửi ảnh giao dịch và nội dung thanh toán qua Zalo 036 338 2629 để được hỗ trợ nhanh.
+    </div>
+  </div>
+</section>
+
+<div class="payment-modal" id="paymentModal">
+  <div class="payment-inner">
+    <div class="payment-head">
+      <div>
+        <h2 id="payPlanTitle">GÓI PREMIUM</h2>
+        <div id="payPlanDesc">Thông tin gói Premium</div>
+      </div>
+      <button class="payment-close" onclick="closePayment()">Đóng</button>
+    </div>
+
+    <div class="payment-body">
+      <div class="qr-card">
+        <h3>Quét mã QR để thanh toán</h3>
+        <img id="payQr" src="https://img.vietqr.io/image/970405-8888363382629-compact2.png?amount=159000&addInfo=PREMIUM%201THANG&accountName=NGUYEN%20DANG%20THI%20XUAN" alt="QR Agribank">
+        <div class="bank-info">
+          <b>Ngân hàng:</b> Agribank<br>
+          <b>STK:</b> 8888363382629<br>
+          <b>Chủ TK:</b> NGUYEN DANG THI XUAN<br>
+          <b>Nội dung CK:</b> <span id="payContent">PREMIUM 1THANG</span>
+        </div>
+      </div>
+
+      <div class="payment-detail">
+        <h3>Số tiền cần thanh toán</h3>
+        <div class="pay-amount" id="payPlanPrice">159.000 VNĐ</div>
+
+        <h3>Quyền lợi gói này</h3>
+        <div class="payment-benefits" id="payBenefits"></div>
+
+        <h3>Tính năng chưa mở ở gói này</h3>
+        <div class="payment-benefits" id="payLocked"></div>
+
+        <div class="payment-alert">
+          Sau khi thanh toán, hệ thống sẽ tự động kích hoạt gói Premium của bạn.
+          Nếu sau <b>5 phút</b> vẫn chưa được kích hoạt tự động, vui lòng liên hệ Zalo
+          <b>036 338 2629</b> để đội ngũ kỹ thuật hỗ trợ nhanh nhất.
+          Khi liên hệ vui lòng gửi ảnh giao dịch hoặc nội dung chuyển khoản.
+        </div>
+
+        <div class="payment-actions">
+          <a href="https://zalo.me/0363382629" target="_blank">Liên hệ Zalo hỗ trợ</a>
+          <a class="light" href="#token" onclick="closePayment()">Tôi đã thanh toán</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="payment-modal" id="lockedFeatureModal">
+  <div class="payment-inner" style="max-width:760px">
+    <div class="payment-head">
+      <div>
+        <h2 id="lockedFeatureTitle">🔒 Tính năng Premium</h2>
+        <div>Tính năng nâng cao cần nâng cấp Premium để sử dụng.</div>
+      </div>
+      <button class="payment-close" onclick="closeLockedFeature()">Đóng</button>
+    </div>
+    <div class="payment-detail">
+      <div id="lockedFeaturePlans"></div>
+    </div>
+  </div>
+</div>
+
+</main>
+
+<aside class="rightbar">
+  <h2>Thống kê nhanh</h2>
+  <p>Tổng bài: <b>{{ s.total }}</b></p>
+  <p>Đã đăng: <b>{{ s.posted }}</b></p>
+  <p>Chờ đăng: <b>{{ s.scheduled }}</b></p>
+  <p>Lỗi: <b>{{ s.error }}</b></p>
+  <p>Chiến dịch: <b>{{ s.campaigns }}</b></p>
+  <p>CRM: <b>{{ s.crm }}</b></p>
+  
+  <div class="{{ 'free-status-card free-expired' if free_status.is_expired else 'free-status-card' }}">
+    <b>Gói hiện tại:</b> {{ 'Gói miễn phí' if free_status.package_name == 'free' else free_status.package_name }}<br>
+    {% if free_status.is_expired %}
+      <b>Trạng thái:</b> Giới hạn miễn phí<br>
+      Một số tính năng nâng cao yêu cầu Premium để tiếp tục sử dụng hệ thống.
+    {% elif free_status.is_trial %}
+      <b>Còn lại:</b> {{ free_status.days }} ngày {{ free_status.hours }} giờ
+      <div class="free-progress"><span style="width:{{ free_status.percent }}%"></span></div>
+      <button onclick="scrollToPricing()">Nâng cấp Premium</button>
+    {% else %}
+      <b>Trạng thái:</b> Premium đang hoạt động
+    {% endif %}
+  </div>
+
+  <hr>
+  <h2>Cảnh báo</h2>
+  <p>{{ token_warning }}</p>
+  <hr>
+  <h2>V3 Enterprise Modules</h2>
+  <p>Token Center Pro, Content Factory, Lịch đăng nâng cao, Page Cluster, Analytics Pro, Premium Center.</p>
+</aside>
+</div>
+
+<nav class="mobilebar">
+  <a href="#dashboard">🏠<br>Home</a>
+  <a href="#post">✍️<br>Đăng</a>
+  <a href="#library">📚<br>Kho</a>
+  <a href="#plan">🎯<br>Plan</a>
+  <a href="#history">📊<br>Lịch sử</a>
+</nav>
+
 <script>
-let GLOBAL_DATA = {};
-function esc(str){return String(str||"").replace(/[&<>"']/g,s=>({"&":"&amp;","<":"&lt;",">":"&gt;","\\"":"&quot;","'":"&#039;"}[s]));}
-function ticketMessages(ticket){if(!ticket)return[];if(Array.isArray(ticket))return ticket;if(Array.isArray(ticket.messages))return ticket.messages;return[];}
-async function loadData(){
- const res=await fetch("/admin-data"); const data=await res.json(); GLOBAL_DATA=data;
- const usersBox=document.getElementById("users"); usersBox.innerHTML="";
- Object.keys(data.users||{}).forEach(username=>{
-  const u=data.users[username]||{}; const plan=u.plan||"free"; const badge=plan==="free"?"badge-free":"badge-pro";
-  usersBox.innerHTML+=`<div class="card"><b>👤 ${esc(username)}</b><br><br>
-  Gói hiện tại: <span class="badge ${badge}">${esc(plan)}</span><br>
-  Hết hạn: <b>${esc(u.expires_at || (plan==="lifetime"?"Vĩnh viễn":"Chưa có"))}</b><br>
-  Gmail: ${esc(u.email||"Chưa có")}<br>SĐT/Zalo: ${esc(u.phone||"Chưa có")}<br>
-  Ngày đăng ký: ${esc(u.registered_at||"Chưa có")}<br>Đã dùng: ${esc(u.used||0)} lượt<br><br>
-  <select id="plan_${esc(username)}"><option value="free">Free</option><option value="basic">Cơ Bản 99k - 30 ngày</option><option value="pro">Pro 199k - 30 ngày</option><option value="business">Doanh Nghiệp 399k - 30 ngày</option><option value="lifetime">Vĩnh Viễn</option></select>
-  <button class="btn-green" onclick="approve('${esc(username)}')">✅ Cập nhật gói</button></div>`;
- });
- renderTickets(data);
+function toggleMenuGroup(el){
+  const box = el.closest('.menu-mini-group');
+  if(!box) return;
+  box.classList.toggle('open');
 }
-function renderTickets(data){
- const box=document.getElementById("payments"); box.innerHTML="";
- const support=data.support||{}; const names=Object.keys(support);
- if(!names.length){box.innerHTML='<div class="card small">Chưa có yêu cầu hỗ trợ nào.</div>';return;}
- names.reverse().forEach(username=>{
-  const ticket=support[username]; const status=ticket.status||"open"; const msgs=ticketMessages(ticket); const user=(GLOBAL_DATA.users||{})[username]||{};
-  let msgHtml=msgs.map(m=>{const role=(m.from==="admin")?"admin":"customer"; const who=(m.from==="admin")?"Admin":username; return `<div class="msg ${role}"><b>${esc(who)}</b> <span class="small">${esc(m.date||"")}</span><br>${esc(m.message)}</div>`;}).join("");
-  box.innerHTML+=`<div class="card"><b>👤 ${esc(username)}</b> <span class="badge ${status==="closed"?"badge-closed":"badge-open"}">${status==="closed"?"Đã xử lý":"Đang mở"}</span>
-  <div class="small">Gmail: ${esc(user.email||"Chưa có")}<br>SĐT: ${esc(user.phone||"Chưa có")}<br>Gói: ${esc(user.plan||"free")} | Hết hạn: ${esc(user.expires_at||"Chưa có")}</div>
-  <h3>💬 Hội thoại</h3>${msgHtml||'<div class="small">Chưa có nội dung.</div>'}
-  <textarea id="reply_${esc(username)}" placeholder="Nhập nội dung trả lời khách...">Xin chào anh/chị, em đã nhận được yêu cầu hỗ trợ. Em sẽ kiểm tra và phản hồi trong thời gian sớm nhất ạ.</textarea>
-  <div class="quick"><button onclick="fillReply('${esc(username)}','payment')">Mẫu đã nhận thanh toán</button><button onclick="fillReply('${esc(username)}','need_image')">Mẫu cần ảnh giao dịch</button><button onclick="fillReply('${esc(username)}','activated')">Mẫu đã kích hoạt</button><button onclick="fillReply('${esc(username)}','support')">Mẫu hỗ trợ kỹ thuật</button></div>
-  <button onclick="replyCustomer('${esc(username)}')">📨 Gửi trả lời</button><button class="btn-red" onclick="closeTicket('${esc(username)}')">🗑 Đóng ticket</button>
-  <hr style="border-color:#334155;margin:16px 0">
-  <div class="quick"><button onclick="quickApprove('${esc(username)}','basic')">Cơ Bản</button><button onclick="quickApprove('${esc(username)}','pro')">Pro</button><button onclick="quickApprove('${esc(username)}','business')">Doanh Nghiệp</button><button class="btn-green" onclick="quickApprove('${esc(username)}','lifetime')">∞ Vĩnh Viễn</button></div></div>`;
- });
+</script>
+
+
+<script>
+(function(){
+  function planKeyFromText(text){
+    text = (text || '').toLowerCase();
+    if(text.includes('1.959') || text.includes('1959') || text.includes('vĩnh') || text.includes('life')) return 'lifetime';
+    if(text.includes('859') || text.includes('1 năm') || text.includes('nam') || text.includes('year')) return 'yearly';
+    if(text.includes('559') || text.includes('6 tháng') || text.includes('business')) return 'halfyear';
+    if(text.includes('359') || text.includes('3 tháng') || text.includes('pro')) return 'quarterly';
+    if(text.includes('159') || text.includes('1 tháng') || text.includes('basic')) return 'monthly';
+    return 'yearly';
+  }
+  function bindSafePricing(){
+    document.querySelectorAll('.price-card,.premium-plan').forEach(function(card){
+      if(card.dataset.safePricingReady) return;
+      card.dataset.safePricingReady = '1';
+      card.title = 'Bấm để xem chi tiết gói';
+      card.addEventListener('click', function(e){
+        if(e.target && (e.target.tagName === 'A' || e.target.tagName === 'BUTTON')) return;
+        var key = planKeyFromText(card.innerText);
+        if(typeof openPremiumCheckout === 'function') openPremiumCheckout(key);
+        else if(typeof openPayment === 'function') openPayment(key);
+        else if(typeof openPremium === 'function') openPremium();
+      });
+      var action = card.querySelector('.plan-button,.safe-pricing-action');
+      if(action) {
+        action.innerText = action.innerText.replace('','Xem chi tiết gói');
+      }
+    });
+  }
+  document.addEventListener('DOMContentLoaded', bindSafePricing);
+  setTimeout(bindSafePricing, 600);
+  setTimeout(bindSafePricing, 1600);
+})();
+</script>
+
+
+<script>
+function showInstallGuide(){
+  alert("Cách cài App Mini:\\n\\nAndroid Chrome: bấm dấu 3 chấm → Thêm vào màn hình chính.\\n\\niPhone Safari: bấm Chia sẻ → Thêm vào MH chính.\\n\\nSau đó mở Mkt Automation Pro như một app trên điện thoại.");
 }
-function fillReply(username,type){const box=document.getElementById("reply_"+username); const t={payment:"Em đã nhận được thông tin thanh toán của anh/chị. Bộ phận kỹ thuật đang kiểm tra giao dịch và sẽ kích hoạt gói trong thời gian sớm nhất.",need_image:"Anh/chị vui lòng gửi thêm ảnh chụp màn hình giao dịch chuyển khoản hoặc nội dung chuyển khoản để bên em kiểm tra và kích hoạt nhanh hơn ạ.",activated:"Gói Premium của anh/chị đã được kích hoạt thành công. Anh/chị vui lòng đăng xuất rồi đăng nhập lại để hệ thống cập nhật gói mới.",support:"Em đã ghi nhận lỗi anh/chị đang gặp. Anh/chị vui lòng gửi thêm ảnh màn hình lỗi, tên tài khoản và thao tác đang thực hiện để bên em kiểm tra chính xác."}; box.value=t[type]||"";}
-async function approve(username){const password=document.getElementById("adminPassword").value; const plan=document.getElementById("plan_"+username).value; const res=await fetch("/admin-approve",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({username,admin_password:password,plan})}); const data=await res.json(); alert(data.message); loadData();}
-async function quickApprove(username,plan){const password=document.getElementById("adminPassword").value; if(!confirm("Xác nhận nâng cấp "+username+" lên gói "+plan+"?"))return; const res=await fetch("/admin-approve",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({username,admin_password:password,plan})}); const data=await res.json(); alert(data.message); loadData();}
-async function replyCustomer(username){const password=document.getElementById("adminPassword").value; const message=document.getElementById("reply_"+username).value; const res=await fetch("/admin-reply",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({username,admin_password:password,message})}); const data=await res.json(); alert(data.message); loadData();}
-async function closeTicket(username){const password=document.getElementById("adminPassword").value; const res=await fetch("/admin-close-ticket",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({username,admin_password:password})}); const data=await res.json(); alert(data.message); loadData();}
-</script></body></html>
+
+let deferredInstallPrompt = null;
+window.addEventListener('beforeinstallprompt', function(e){
+  e.preventDefault();
+  deferredInstallPrompt = e;
+});
+</script>
+
+
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function(){
+    navigator.serviceWorker.register('/service-worker.js').catch(function(err){
+      console.log('Service worker registration failed:', err);
+    });
+  });
+}
+</script>
+
+
+<script>
+function showInstallGuide(){
+  alert("Cách cài App Mini:\\n\\nAndroid Chrome: bấm dấu 3 chấm → Thêm vào màn hình chính.\\n\\niPhone Safari: bấm Chia sẻ → Thêm vào MH chính.\\n\\nSau đó mở Mkt Automation Pro V2 như một app.");
+}
+(function(){
+  function planKeyFromText(text){
+    text = (text || '').toLowerCase();
+    if(text.includes('1.959') || text.includes('1959') || text.includes('vĩnh') || text.includes('life')) return 'lifetime';
+    if(text.includes('859') || text.includes('1 năm') || text.includes('nam') || text.includes('year')) return 'yearly';
+    if(text.includes('559') || text.includes('6 tháng') || text.includes('business')) return 'halfyear';
+    if(text.includes('359') || text.includes('3 tháng') || text.includes('pro')) return 'quarterly';
+    if(text.includes('159') || text.includes('1 tháng') || text.includes('basic')) return 'monthly';
+    return 'yearly';
+  }
+  function bindV2Pricing(){
+    document.querySelectorAll('.price-card,.premium-plan').forEach(function(card){
+      if(card.dataset.v2PricingReady) return;
+      card.dataset.v2PricingReady = '1';
+      card.title = 'Bấm để xem chi tiết gói';
+      card.addEventListener('click', function(e){
+        if(e.target && (e.target.tagName === 'A' || e.target.tagName === 'BUTTON')) return;
+        var key = planKeyFromText(card.innerText);
+        if(typeof openPremiumCheckout === 'function') openPremiumCheckout(key);
+        else if(typeof openPayment === 'function') openPayment(key);
+        else if(typeof openPremium === 'function') openPremium();
+      });
+      card.querySelectorAll('button').forEach(function(btn){
+        if((btn.innerText || '').includes('Xem chi tiết gói')) btn.innerText = 'Xem chi tiết gói';
+      });
+    });
+  }
+  document.addEventListener('DOMContentLoaded', bindV2Pricing);
+  setTimeout(bindV2Pricing, 800);
+})();
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function(){
+    navigator.serviceWorker.register('/service-worker.js').catch(function(err){
+      console.log('Service worker failed:', err);
+    });
+  });
+}
+</script>
+
+
+<script>
+let draggedKanbanCard=null;
+function dragKanban(ev){ draggedKanbanCard=ev.target; }
+function dropKanban(ev){ ev.preventDefault(); const col=ev.currentTarget; if(draggedKanbanCard){ col.appendChild(draggedKanbanCard); draggedKanbanCard=null; } }
+</script>
+</body>
+</html>
 """
 
+def current_library(selected_industry):
+    return CONTENT_LIBRARY.get(selected_industry, CONTENT_LIBRARY["spa"])
 
-@app.post("/admin-reply")
-def admin_reply(req: AdminReplyRequest):
-    if req.admin_password != ADMIN_PASSWORD:
-        return {"success": False, "message": "Sai mật khẩu admin."}
+def render(content="", message="", ok=True, selected_industry="spa", analysis="", plan=""):
+    score = score_content(content) if content else 0
+    warnings = policy_check(content) if content else []
+    token_warning = "Cấu hình ổn." if PAGES and GEMINI_API_KEY else "Thiếu Gemini API hoặc PAGES_JSON trong file .env."
+    return render_template_string(
+        HTML, title=APP_TITLE, pages=PAGES, content=content, message=message, ok=ok,
+        history=get_history(), campaigns=get_campaigns(), s=get_stats(), crm_rows=get_crm(), token_report=token_manager_report(), token_checks=get_latest_token_checks(), clusters=get_page_clusters(), analytics=get_analytics_summary(), free_status=get_free_status(),
+        industry_labels=INDUSTRY_LABELS, selected_industry=selected_industry,
+        library_items=current_library(selected_industry)[:10], locked_count=max(0, 500 - len(current_library(selected_industry)[:10])),
+        score=score, warnings=warnings, token_warning=token_warning,
+        analysis=analysis, plan=plan, v3=v3_ceo_summary(), pipeline_rows=get_pipeline_leads(), customer_tasks=get_customer_tasks(), notifications=get_notifications()
+    )
 
-    username = safe_username(req.username)
-    message = req.message.strip()
-    if not message:
-        return {"success": False, "message": "Nội dung trả lời không được để trống."}
+@app.route("/")
+def home():
+    selected_industry = request.args.get("industry", "spa")
+    return render(selected_industry=selected_industry)
 
-    support = load_json(SUPPORT_FILE)
-    if isinstance(support.get(username), dict):
-        ticket = support[username]
-    else:
-        ticket = {"status": "open", "created_at": today(), "messages": support.get(username, [])}
+@app.route("/generate", methods=["POST"])
+def generate():
+    idea = request.form.get("idea", "").strip()
+    style = request.form.get("style", "gần gũi")
+    length = request.form.get("length", "120")
+    variants = int(request.form.get("variants", "1"))
+    if not idea:
+        return render(message="Vui lòng nhập ý tưởng bài viết.", ok=False)
+    try:
+        content = generate_content(idea, style, length, variants=variants)
+        return render(content=content, message="Đã tạo nội dung bằng Gemini Flash.", ok=True)
+    except Exception as e:
+        return render(message="Lỗi Gemini: " + str(e), ok=False)
 
-    ticket.setdefault("messages", [])
-    ticket["status"] = "open"
-    ticket["updated_at"] = today()
-    ticket["messages"].append({"from": "admin", "sender": "admin", "message": message, "date": today()})
-    support[username] = ticket
-    save_json(SUPPORT_FILE, support)
-    return {"success": True, "message": "Đã gửi trả lời cho khách trong trung tâm hỗ trợ."}
+@app.route("/analyze_fanpage", methods=["POST"])
+def analyze_route():
+    name = request.form.get("page_name", "")
+    avatar = request.form.get("avatar", "")
+    cover = request.form.get("cover", "")
+    bio = request.form.get("bio", "")
+    freq = request.form.get("post_frequency", "")
+    cta = request.form.get("cta", "")
+    score, notes = analyze_fanpage(name, avatar, cover, bio, freq, cta)
+    analysis = f"Fanpage: {name}\nĐiểm đánh giá: {score}/100\n\nĐề xuất:\n- " + "\n- ".join(notes)
+    return render(analysis=analysis, message="Đã phân tích Fanpage.", ok=True)
 
-@app.post("/admin-close-ticket")
-def admin_close_ticket(req: AdminCloseTicketRequest):
-    if req.admin_password != ADMIN_PASSWORD:
-        return {"success": False, "message": "Sai mật khẩu admin."}
+@app.route("/plan_30_days", methods=["POST"])
+def plan_route():
+    industry = request.form.get("industry", "spa")
+    goal = request.form.get("goal", "tăng inbox")
+    try:
+        plan = ai_planner_v6(industry, goal, request.form.get("days", "30"))
+        return render(plan=plan, message="Đã tạo kế hoạch marketing 30 ngày.", ok=True)
+    except Exception as e:
+        return render(message=friendly_ai_error(e), ok=False)
 
-    username = safe_username(req.username)
-    support = load_json(SUPPORT_FILE)
-    if username not in support:
-        return {"success": False, "message": "Không tìm thấy ticket."}
+@app.route("/campaign", methods=["POST"])
+def campaign_route():
+    add_campaign(
+        request.form.get("name","").strip(),
+        request.form.get("industry","").strip(),
+        request.form.get("goal","").strip(),
+        request.form.get("note","").strip()
+    )
+    return render(message="Đã tạo chiến dịch.", ok=True)
 
-    if isinstance(support[username], dict):
-        support[username]["status"] = "closed"
-        support[username]["closed_at"] = today()
-    else:
-        support[username] = {"status": "closed", "created_at": today(), "closed_at": today(), "messages": support[username]}
 
-    save_json(SUPPORT_FILE, support)
-    return {"success": True, "message": "Đã đóng ticket hỗ trợ."}
+def split_bulk_contents(text):
+    raw = (text or "").replace("\r\n", "\n").strip()
+    if not raw:
+        return []
 
-@app.get("/admin-data")
-def admin_data():
-    return {"users": load_users(), "support": load_json(SUPPORT_FILE)}
+    # Ưu tiên tách theo dòng trống: mỗi đoạn là 1 content
+    parts = [p.strip() for p in raw.split("\n\n") if p.strip()]
 
-@app.post("/admin-approve")
-def admin_approve(req: AdminApproveRequest):
-    if req.admin_password != ADMIN_PASSWORD:
-        return {"success": False, "message": "Sai mật khẩu admin."}
+    # Nếu không có dòng trống, mỗi dòng là 1 content
+    if len(parts) <= 1:
+        lines = [x.strip() for x in raw.split("\n") if x.strip()]
+        if len(lines) > 1:
+            parts = lines
 
-    users = load_users()
-    username = safe_username(req.username)
-    if username not in users:
-        return {"success": False, "message": "Không tìm thấy tài khoản."}
+    return parts
 
-    users[username]["plan"] = req.plan
-    users[username]["used"] = 0
-    if req.plan == "lifetime":
-        users[username]["expires_at"] = None
-    elif req.plan == "free":
-        users[username]["expires_at"] = None
-    else:
-        users[username]["expires_at"] = add_days(30)
+def distribute_content_to_pages(contents, pages):
+    jobs = []
+    if not contents or not pages:
+        return jobs
 
-    if supabase_enabled():
-        supabase_update_user(username, {"plan": req.plan, "used": 0, "expires_at": users[username].get("expires_at")})
-    save_users(users)
+    # Ví dụ 10 content + 10 page => content 1 page 1, content 2 page 2...
+    # Nếu content nhiều hơn page thì quay vòng page.
+    for i, content in enumerate(contents):
+        page = pages[i % len(pages)]
+        jobs.append((page, content))
+    return jobs
 
-    expire_msg = "vĩnh viễn" if req.plan == "lifetime" else (f"đến ngày {users[username].get('expires_at')}" if req.plan != "free" else "")
-    return {"success": True, "message": f"Đã cập nhật tài khoản {username} thành gói {PLAN_LABELS.get(req.plan, req.plan)} {expire_msg}."}
+
+@app.route("/multi_post", methods=["POST"])
+def multi_post():
+    free = get_free_status()
+    if free.get("is_expired"):
+        return render(message="Phiên miễn phí đã giới hạn. Quý khách vui lòng nâng cấp Premium để tiếp tục đăng Fanpage.", ok=False)
+    bulk_content = request.form.get("bulk_content", "").strip()
+    action = request.form.get("action", "now")
+    schedule_time = request.form.get("schedule_time", "").replace("T", " ")
+    campaign = request.form.get("campaign", "").strip()
+    pages = selected_pages(request.form.getlist("page_indexes"))
+    if get_free_status().get("is_trial") and len(pages) > 1:
+        return render(message="Gói miễn phí chỉ được đăng tối đa 1 Fanpage. Vui lòng nâng cấp Premium để đăng nhiều Fanpage cùng lúc.", ok=False)
+    use_ai_enhance = request.form.get("use_ai_enhance") == "1"
+
+    media_paths = save_uploads(request.files.getlist("images"))
+    if not media_paths:
+        single = save_upload(request.files.get("image"))
+        media_paths = [single] if single else []
+
+    contents = split_bulk_contents(bulk_content)
+
+    if not contents:
+        return render(message="Chưa nhập content để đăng.", ok=False)
+    if not pages:
+        return render(message="Chưa chọn Fanpage.", ok=False)
+
+    # V9: kiểm tra token trước khi đăng ngay
+    token_errors = []
+    for page in pages:
+        token_status = check_single_page_token(page)
+        if token_status["status"] != "SỐNG":
+            token_errors.append(f"{page.get('name')}: {token_status['detail']}")
+    if token_errors and action == "now":
+        return render(message="Token lỗi, hệ thống dừng đăng để tránh fail hàng loạt:\n" + "\n".join(token_errors), ok=False)
+
+    jobs = distribute_content_to_pages(contents, pages)
+    messages = []
+    used_media = set()
+
+    for idx, (page, content) in enumerate(jobs):
+        # Mặc định giữ nguyên 100% content khách nhập.
+        # Chỉ spin/thêm CTA/hashtag khi khách bật checkbox AI tối ưu.
+        final_content = content
+        if use_ai_enhance:
+            final_content = ai_spin_content(content) if idx > 0 else content
+            cta, hashtags = auto_cta_hashtag(final_content, "marketing")
+            if cta.lower() not in final_content.lower():
+                final_content += "\n\n" + cta
+            if "#" not in final_content:
+                final_content += "\n" + hashtags
+
+        content_score = score_content(final_content)
+        image_path = choose_best_media_for_content(final_content, media_paths, used_media)
+
+        if action == "schedule":
+            if not schedule_time:
+                return render(message="Chưa chọn thời gian đặt lịch.", ok=False)
+            save_post(page["name"], page["id"], final_content, "scheduled", "", schedule_time, image_path, campaign, content_score)
+            media_note = f" | Media: {os.path.basename(image_path)}" if image_path else ""
+            messages.append(f"Đã lưu lịch cho {page['name']}{media_note}")
+        else:
+            result = post_to_facebook(page, final_content, image_path)
+            if "id" in result or "post_id" in result:
+                post_id = result.get("post_id") or result.get("id")
+                save_post(page["name"], page["id"], final_content, "posted", post_id, "", image_path, campaign, content_score)
+                media_note = f" | Media: {os.path.basename(image_path)}" if image_path else ""
+                messages.append(f"Đăng thành công {page['name']}: {post_id}{media_note}")
+            else:
+                save_post(page["name"], page["id"], final_content, "error", str(result), "", image_path, campaign, content_score)
+                messages.append(f"Lỗi {page['name']}: {result}")
+
+    return render(message="\n".join(messages), ok=True)
+
+@app.route("/post", methods=["POST"])
+def post():
+    content = request.form.get("content", "").strip()
+    action = request.form.get("action", "now")
+    schedule_time = request.form.get("schedule_time", "").replace("T", " ")
+    campaign = request.form.get("campaign", "").strip()
+    pages = selected_pages(request.form.getlist("page_indexes"))
+    image_path = save_upload(request.files.get("image"))
+    if not content:
+        return render(message="Nội dung trống.", ok=False)
+    if not pages:
+        return render(content=content, message="Chưa chọn Fanpage.", ok=False)
+    messages = []
+    content_score = score_content(content)
+    for i, page in enumerate(pages):
+        final_content = content if i == 0 else spin_content_local(content)
+        if action == "schedule":
+            if not schedule_time:
+                return render(content=content, message="Chưa chọn thời gian đặt lịch.", ok=False)
+            save_post(page["name"], page["id"], final_content, "scheduled", "", schedule_time, image_path, campaign, content_score)
+            messages.append(f"Đã lưu lịch {schedule_time} cho {page['name']}")
+        else:
+            result = post_to_facebook(page, final_content, image_path)
+            if "id" in result or "post_id" in result:
+                post_id = result.get("post_id") or result.get("id")
+                save_post(page["name"], page["id"], final_content, "posted", post_id, "", image_path, campaign, content_score)
+                messages.append(f"Đăng thành công {page['name']}: {post_id}")
+            else:
+                save_post(page["name"], page["id"], final_content, "error", str(result), "", image_path, campaign, content_score)
+                messages.append(f"Lỗi {page['name']}: {result}")
+    return render(content=content, message="\\n".join(messages), ok=True)
+
+@app.route("/batch", methods=["POST"])
+def batch():
+    file_obj = request.files.get("batch_file")
+    if not file_obj:
+        return render(message="Chưa chọn file Excel/CSV.", ok=False)
+    try:
+        rows = read_batch_file(file_obj)
+        count = 0
+        for row in rows:
+            idea = str(row.get("idea", "") or "").strip()
+            content = str(row.get("content", "") or "").strip()
+            page_names = str(row.get("page_names", "") or "").strip()
+            schedule_time = str(row.get("schedule_time", "") or "").strip()
+            campaign = str(row.get("campaign", "") or "").strip()
+            if not content and idea:
+                content = generate_content(idea, "chuyên nghiệp", "120", variants=1)
+            if not content or not schedule_time:
+                continue
+            target_pages = []
+            for name in [x.strip().lower() for x in page_names.split(",") if x.strip()]:
+                for p in PAGES:
+                    if name in p["name"].lower():
+                        target_pages.append(p)
+            if not target_pages and PAGES:
+                # Nếu file không có page_names, tự chia mỗi dòng content sang Page kế tiếp để tránh trùng bài
+                target_pages = [PAGES[count % len(PAGES)]]
+
+            # File Excel/CSV có thể thêm cột image_path để gắn ảnh riêng từng bài.
+            image_path = str(row.get("image_path", "") or row.get("media_path", "") or "").strip()
+            if image_path and not os.path.exists(image_path):
+                image_path = ""
+
+            for page in target_pages:
+                save_post(page["name"], page["id"], content, "scheduled", "", schedule_time, image_path, campaign, score_content(content))
+                count += 1
+        return render(message=f"Đã nhập và lưu lịch {count} bài từ file.", ok=True)
+    except Exception as e:
+        return render(message="Lỗi đọc file: " + str(e), ok=False)
+
+
+@app.route("/check_tokens", methods=["POST"])
+def check_tokens_route():
+    if not PAGES:
+        return render(message="Chưa có Fanpage trong PAGES_JSON của file .env.", ok=False)
+
+    results = check_all_page_tokens()
+    alive = sum(1 for x in results if x["status"] == "SỐNG")
+    dead = len(results) - alive
+    message = f"Đã kiểm tra {len(results)} Page Token. Sống: {alive}. Lỗi/Giới hạn: {dead}."
+    return render(message=message, ok=(dead == 0))
+
+@app.route("/content_factory", methods=["POST"])
+def content_factory_route():
+    idea = request.form.get("idea", "").strip()
+    count = request.form.get("count", "20")
+    style = request.form.get("style", "bán hàng tự nhiên")
+
+    if not idea:
+        return render(message="Chưa nhập chủ đề để tạo content hàng loạt.", ok=False)
+
+    try:
+        content = generate_many_contents(idea, count, style)
+        return render(content=content, message=f"Đã tạo {count} content. Nội dung đã hiển thị trong khung kết quả AI.", ok=True)
+    except Exception as e:
+        return render(message=friendly_ai_error(e), ok=False)
+
+@app.route("/smart_schedule", methods=["POST"])
+def smart_schedule_route():
+    bulk_content = request.form.get("bulk_content", "").strip()
+    start_time = request.form.get("start_time", "")
+    gap_minutes = request.form.get("gap_minutes", "60")
+    campaign = request.form.get("campaign", "").strip()
+    pages = selected_pages(request.form.getlist("page_indexes"))
+    media_paths = save_uploads(request.files.getlist("images"))
+    use_ai_enhance = request.form.get("use_ai_enhance") == "1"
+
+    contents = split_bulk_contents(bulk_content)
+
+    if not contents:
+        return render(message="Chưa nhập content để chia lịch.", ok=False)
+    if not pages:
+        return render(message="Chưa chọn Fanpage.", ok=False)
+
+    jobs = distribute_content_to_pages(contents, pages)
+    times = smart_schedule_times(start_time, len(jobs), gap_minutes)
+    used_media = set()
+
+    for i, (page, content) in enumerate(jobs):
+        # Mặc định giữ nguyên 100% content khách nhập.
+        final_content = content
+        if use_ai_enhance:
+            final_content = ai_spin_content(content) if i > 0 else content
+            cta, hashtags = auto_cta_hashtag(final_content, "marketing")
+            if cta.lower() not in final_content.lower():
+                final_content += "\n\n" + cta
+            if "#" not in final_content:
+                final_content += "\n" + hashtags
+
+        image_path = choose_best_media_for_content(final_content, media_paths, used_media)
+        save_post(page["name"], page["id"], final_content, "scheduled", "", times[i], image_path, campaign, score_content(final_content))
+
+    msg = f"Đã tự chia lịch {len(jobs)} bài. Content được giữ nguyên theo nội dung đã nhập."
+    if use_ai_enhance:
+        msg = f"Đã tự chia lịch {len(jobs)} bài và bật AI tối ưu từng bài. Khoảng cách: {gap_minutes} phút."
+    return render(message=msg, ok=True)
+
+@app.route("/page_cluster", methods=["POST"])
+def page_cluster_route():
+    add_page_cluster(
+        request.form.get("name", "").strip(),
+        request.form.get("page_names", "").strip(),
+        request.form.get("note", "").strip()
+    )
+    return render(message="Đã lưu nhóm Page.", ok=True)
+
+
+@app.route("/crm", methods=["POST"])
+def crm_route():
+    add_crm(
+        request.form.get("name","").strip(),
+        request.form.get("phone","").strip(),
+        request.form.get("zalo","").strip(),
+        request.form.get("source","").strip(),
+        request.form.get("note","").strip()
+    )
+    return render(message="Đã lưu khách hàng vào CRM Mini.", ok=True)
+
+
+@app.route("/v3_ai_tool", methods=["POST"])
+def v3_ai_tool_route():
+    tool = request.form.get("tool", "marketing_director")
+    topic = request.form.get("topic", "").strip()
+    extra = request.form.get("extra", "").strip()
+    if not topic:
+        return render(message="Vui lòng nhập nội dung cần AI xử lý.", ok=False)
+    prompt = v3_ai_tool_prompt(tool, topic, extra)
+    result = safe_ai_generate(prompt, fallback=f"Bản demo cho {topic}:\n\n- 30 content\n- 10 quảng cáo\n- Tệp khách hàng mục tiêu\n- CTA và kế hoạch triển khai\n\nVui lòng cấu hình GEMINI_API_KEY để dùng AI đầy đủ.")
+    return render(content=result, message="Đã tạo nội dung bằng AI Studio V3.", ok=True)
+
+@app.route("/pipeline", methods=["POST"])
+def pipeline_route():
+    add_pipeline_lead(
+        request.form.get("customer_name", "").strip(),
+        request.form.get("phone", "").strip(),
+        request.form.get("zalo", "").strip(),
+        request.form.get("source", "").strip(),
+        request.form.get("stage", "Khách mới").strip(),
+        request.form.get("value", "0").strip() or 0,
+        request.form.get("note", "").strip()
+    )
+    return render(message="Đã thêm khách vào CRM Sales Pipeline.", ok=True)
+
+@app.route("/customer_task", methods=["POST"])
+def customer_task_route():
+    add_customer_task(request.form.get("customer_name", "").strip(), request.form.get("task", "").strip(), request.form.get("due_date", "").strip())
+    return render(message="Đã tạo lịch chăm sóc khách hàng.", ok=True)
+
+@app.route("/notification", methods=["POST"])
+def notification_route():
+    add_notification(request.form.get("title", "").strip(), request.form.get("detail", "").strip(), "info")
+    return render(message="Đã thêm thông báo vào Notification Center.", ok=True)
+
+@app.route("/export")
+def export_route():
+    path = export_csv()
+    return send_file(path, as_attachment=True)
+
+
+@app.route("/backup")
+def backup_route():
+    path = backup_database()
+    if not path:
+        return render(message="Không tìm thấy database để backup.", ok=False)
+    return send_file(path, as_attachment=True)
+
+@app.route("/export_pdf")
+def export_pdf_route():
+    path = export_pdf_report()
+    return send_file(path, as_attachment=True)
+
+
+@app.route("/api/templates")
+def api_templates():
+    industry = request.args.get("industry", "spa")
+    return jsonify(current_library(industry))
+
+
+@app.get("/manifest.json")
+def pwa_manifest():
+    return jsonify({
+        "name": "Mkt Automation Pro",
+        "short_name": "Mkt Pro",
+        "description": "AI Marketing & Automation V3 Enterprise AI Suite",
+        "start_url": "/",
+        "scope": "/",
+        "display": "standalone",
+        "background_color": "#0F172A",
+        "theme_color": "#0F172A",
+        "orientation": "portrait",
+        "icons": [
+            {"src": "/pwa-icon-192.png", "sizes": "192x192", "type": "image/png"},
+            {"src": "/pwa-icon-512.png", "sizes": "512x512", "type": "image/png"}
+        ]
+    })
+
+@app.get("/service-worker.js")
+def pwa_service_worker():
+    js = """
+const CACHE_NAME = 'mkt-automation-pro-v1';
+const ASSETS = ['/', '/manifest.json', '/pwa-icon-192.png', '/pwa-icon-512.png'];
+self.addEventListener('install', event => {
+  event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(ASSETS)));
+  self.skipWaiting();
+});
+self.addEventListener('activate', event => {
+  event.waitUntil(self.clients.claim());
+});
+self.addEventListener('fetch', event => {
+  event.respondWith(fetch(event.request).catch(() => caches.match(event.request)));
+});
+"""
+    return app.response_class(js, mimetype="application/javascript")
+
+@app.get("/pwa-icon-192.png")
+def pwa_icon_192():
+    return send_file("pwa-icon-192.png", mimetype="image/png")
+
+@app.get("/pwa-icon-512.png")
+def pwa_icon_512():
+    return send_file("pwa-icon-512.png", mimetype="image/png")
+
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 8005))
-    uvicorn.run(app, host="0.0.0.0", port=port)
+    init_db()
+    threading.Thread(target=scheduler_loop, daemon=True).start()
+    app.run(debug=True, port=5010)
