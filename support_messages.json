@@ -1,0 +1,102 @@
+{
+    "optima": [
+        {
+            "from": "optima",
+            "message": "Khách báo đã thanh toán GÓI CƠ BẢN - 99.000đ / tháng. Nội dung CK: OPTIMA optima GOI CO BAN",
+            "date": "2026-06-06"
+        },
+        {
+            "from": "optima",
+            "message": "ALO",
+            "date": "2026-06-06"
+        },
+        {
+            "from": "optima",
+            "message": "BẠN ƠI",
+            "date": "2026-06-06"
+        },
+        {
+            "from": "optima",
+            "message": "helo",
+            "date": "2026-06-06"
+        },
+        {
+            "from": "optima",
+            "message": "Kích hoạt gói Premium",
+            "date": "2026-06-06"
+        },
+        {
+            "from": "optima",
+            "message": "Kiểm tra thanh toán",
+            "date": "2026-06-06"
+        },
+        {
+            "from": "optima",
+            "message": "Báo lỗi hệ thống",
+            "date": "2026-06-06"
+        },
+        {
+            "from": "optima",
+            "message": "Tư vấn nâng cấp gói",
+            "date": "2026-06-06"
+        },
+        {
+            "from": "optima",
+            "message": "Hỗ trợ kỹ thuật",
+            "date": "2026-06-06"
+        },
+        {
+            "from": "optima",
+            "message": "cho tôi gặp nhân viên",
+            "date": "2026-06-06"
+        },
+        {
+            "from": "optima",
+            "message": "xin chào",
+            "date": "2026-06-06"
+        },
+        {
+            "from": "optima",
+            "message": "kiểm tra",
+            "date": "2026-06-06"
+        },
+        {
+            "from": "optima",
+            "message": "thanh toán",
+            "date": "2026-06-06"
+        }
+    ],
+    "thuthanh": [
+        {
+            "from": "thuthanh",
+            "message": "◆ Kích hoạt Premium",
+            "date": "2026-06-06"
+        }
+    ],
+    "thuthien": [
+        {
+            "from": "thuthien",
+            "message": "hello",
+            "date": "2026-06-06"
+        }
+    ],
+    "yeuban": [
+        {
+            "from": "yeuban",
+            "message": "helo",
+            "date": "2026-06-06"
+        },
+        {
+            "from": "yeuban",
+            "message": "kích hoạt",
+            "date": "2026-06-06"
+        }
+    ],
+    "tiennu": [
+        {
+            "from": "tiennu",
+            "message": "hú",
+            "date": "2026-06-06"
+        }
+    ]
+}

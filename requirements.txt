@@ -1,6 +1,6 @@
-fastapi
-uvicorn
-pydantic
-google-genai
-python-multipart
+flask
+gunicorn
+python-dotenv
 requests
+openpyxl
+google-generativeai

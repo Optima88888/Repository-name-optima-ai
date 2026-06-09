@@ -4,7 +4,7 @@
         "password": "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92",
         "token": "255a5f5b-5e1c-4edf-9b62-3f7e1080a022",
         "plan": "free",
-        "used": 0,
+        "used": 10,
         "date": "2026-06-06"
     },
     "thanhthu": {
@@ -23,6 +23,156 @@
         "login_type": "password",
         "plan": "free",
         "used": 1,
-        "date": "2026-06-05"
+        "date": "2026-06-06"
+    },
+    "thuthanh": {
+        "username": "thuthanh",
+        "email": "",
+        "password": "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92",
+        "token": "21873016-912c-4f50-8cfc-ebd1860b1661",
+        "login_type": "password",
+        "plan": "free",
+        "used": 2,
+        "date": "2026-06-06"
+    },
+    "tiennu": {
+        "username": "tiennu",
+        "email": "",
+        "password": "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92",
+        "token": "d397cb5b-c5da-4601-ac77-90c2cf035cf4",
+        "login_type": "password",
+        "plan": "free",
+        "used": 1,
+        "date": "2026-06-06"
+    },
+    "thuthien": {
+        "username": "thuthien",
+        "email": "",
+        "password": "2dc0269fa54d269a87536810ec453cb095b4b92f45e63826a21dff1c2e76f169",
+        "token": "28c74634-6b7c-4597-8939-4edf170c53a2",
+        "login_type": "password",
+        "plan": "free",
+        "used": 1,
+        "date": "2026-06-06"
+    },
+    "tien_tien": {
+        "username": "tien_tien",
+        "email": "",
+        "password": "fa6b7642fd7fbd57499271d697a055eef6579e4aa30e74050047fd589f51a6bb",
+        "token": "9a935fb1-84f5-4c73-be83-c7d8b20b47a3",
+        "login_type": "password",
+        "plan": "free",
+        "used": 0,
+        "date": "2026-06-06"
+    },
+    "thien_thanh": {
+        "username": "thien_thanh",
+        "email": "",
+        "password": "b5dcc5e058446116c115ad372f4f7e52decf81f2ae3a76e2bc5e51711650f289",
+        "token": "50d8be06-d912-4f5d-8cb0-ff60d4a0e853",
+        "login_type": "password",
+        "plan": "free",
+        "used": 0,
+        "date": "2026-06-06"
+    },
+    "xinchao": {
+        "username": "xinchao",
+        "email": "",
+        "password": "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92",
+        "token": "3697bbbc-2832-4cc7-b08f-44021c761e3f",
+        "login_type": "password",
+        "plan": "free",
+        "used": 0,
+        "date": "2026-06-06"
+    },
+    "yoiyeuai": {
+        "username": "yoiyeuai",
+        "email": "",
+        "password": "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92",
+        "token": "66f4d124-a2b2-4f03-a301-22252ddfe921",
+        "login_type": "password",
+        "plan": "free",
+        "used": 1,
+        "date": "2026-06-06"
+    },
+    "giauco": {
+        "username": "giauco",
+        "email": "",
+        "password": "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92",
+        "token": "4882ba22-6e0e-4c71-ab97-433ab4e762f2",
+        "login_type": "password",
+        "plan": "free",
+        "used": 0,
+        "date": "2026-06-06"
+    },
+    "toilaai": {
+        "username": "toilaai",
+        "email": "",
+        "password": "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92",
+        "token": "70c05860-a556-4467-9369-579c816e6bed",
+        "login_type": "password",
+        "plan": "free",
+        "used": 0,
+        "date": "2026-06-06"
+    },
+    "yeuban": {
+        "username": "yeuban",
+        "email": "",
+        "password": "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92",
+        "token": "7410a1d5-da1a-4b11-98ea-c6855ed08747",
+        "login_type": "password",
+        "plan": "free",
+        "used": 0,
+        "date": "2026-06-06"
+    },
+    "toigiauco": {
+        "username": "toigiauco",
+        "email": "",
+        "password": "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92",
+        "token": "d3ee04c8-01b6-45a2-b105-5cf0cec4db13",
+        "login_type": "password",
+        "plan": "free",
+        "used": 0,
+        "date": "2026-06-06"
+    },
+    "banlaai": {
+        "username": "banlaai",
+        "email": "",
+        "password": "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92",
+        "token": "77d74fd5-cfba-41bf-8ddb-c932189defa2",
+        "login_type": "password",
+        "plan": "free",
+        "used": 0,
+        "date": "2026-06-06"
+    },
+    "yeuaiketoi": {
+        "username": "yeuaiketoi",
+        "email": "",
+        "password": "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92",
+        "token": "324702ad-7570-4e46-9975-26380c1fd8b1",
+        "login_type": "password",
+        "plan": "free",
+        "used": 2,
+        "date": "2026-06-06"
+    },
+    "daigiangam": {
+        "username": "daigiangam",
+        "email": "",
+        "password": "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92",
+        "token": "2c2c9682-057f-43c1-a8c5-56674391671e",
+        "login_type": "password",
+        "plan": "free",
+        "used": 0,
+        "date": "2026-06-06"
+    },
+    "toiphaigiauco": {
+        "username": "toiphaigiauco",
+        "email": "",
+        "password": "f2be5b1f1a8af84108f2e9e844490d53490afd73b7a0e523288c935f482c4291",
+        "token": "5648994a-31d2-42dc-b4c3-8798342d699c",
+        "login_type": "password",
+        "plan": "free",
+        "used": 0,
+        "date": "2026-06-06"
     }
 }
