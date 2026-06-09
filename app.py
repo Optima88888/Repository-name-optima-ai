@@ -6588,6 +6588,161 @@ async function pollSupportReplies(){
 }
 setInterval(function(){if(document.getElementById('supportPanel')&&document.getElementById('supportPanel').classList.contains('open')) pollSupportReplies();},3000);
 </script>
+
+
+<!-- MENU SAFE FIX V12: chống kẹt menu / mở module ổn định -->
+<style>
+/* Giữ chữ menu luôn rõ, không bị ẩn mờ */
+.v2-nav-title{
+  cursor:pointer!important;
+  user-select:none!important;
+  color:#BFDBFE!important;
+  font-weight:950!important;
+  text-shadow:0 1px 3px rgba(0,0,0,.55)!important;
+}
+.v2-nav-title:after{content:'▾';float:right;opacity:.9}
+.v2-nav-title.is-collapsed:after{content:'▸'}
+.v2-nav-link{
+  display:flex!important;
+  opacity:1!important;
+  visibility:visible!important;
+  pointer-events:auto!important;
+}
+.v2-nav-title.is-collapsed + .v2-nav-link{display:none!important}
+.v2-nav-link.active{
+  background:linear-gradient(135deg,#2563EB,#7C3AED)!important;
+  color:#fff!important;
+  border-color:rgba(255,255,255,.20)!important;
+}
+.module-section{display:none!important}
+.module-section.active-module{display:block!important}
+.menu-health-box{
+  margin:10px 0 14px;
+  padding:10px 12px;
+  border-radius:14px;
+  background:rgba(34,197,94,.10);
+  border:1px solid rgba(34,197,94,.22);
+  color:#D1FAE5;
+  font-size:12px;
+  line-height:1.45;
+}
+</style>
+<script>
+(function(){
+  const aliasMap = {
+    fanpage:'fanpage_manager',
+    crm:'crm_sales',
+    studio:'ai_studio',
+    v9center:'dashboard',
+    content_calendar:'scheduler',
+    facebook_ads:'marketing_director'
+  };
+  const trialAllowed = [
+    'dashboard','facebook_center','fanpage_manager','group_marketing','comment_manager',
+    'post','facebook_publisher_pro','token','premium','history','library'
+  ];
+  const premiumLocked = {
+    messenger_ai:'AI Messenger',
+    crm_sales:'CRM Kanban',
+    marketing_director:'AI Marketing Director',
+    ai_studio:'AI Studio',
+    creative_center:'Creative Center',
+    scheduler:'Content Calendar',
+    plan:'Kế hoạch Marketing 30 ngày',
+    analytics:'Analytics Center',
+    automation_center:'Automation Center',
+    success_center:'Success Center',
+    batch:'Đăng hàng loạt',
+    factory:'Content Factory',
+    clusters:'Page Cluster',
+    campaign:'Campaign Manager',
+    smart_engagement:'Tăng tương tác thông minh'
+  };
+
+  function isPremiumActive(){
+    try{return !!window.MKT_PREMIUM_ACTIVE;}catch(e){return false;}
+  }
+  function showLocked(moduleId){
+    const name = premiumLocked[moduleId] || 'Tính năng Premium';
+    if(typeof window.openLockedFeature === 'function'){
+      window.openLockedFeature(name, 'Gói 1 tháng / 3 tháng / 6 tháng / 1 năm / Nhà bán hàng chuyên nghiệp');
+    }else if(typeof window.openPremiumPopup === 'function'){
+      window.openPremiumPopup();
+    }else{
+      alert(name + ' thuộc nhóm Premium. Vui lòng nâng cấp để sử dụng.');
+    }
+  }
+  window.openModule = function(moduleId){
+    moduleId = (aliasMap[moduleId] || moduleId || '').trim();
+    const target = document.getElementById(moduleId);
+    if(!target){
+      console.warn('Không tìm thấy module:', moduleId);
+      return false;
+    }
+    if(!trialAllowed.includes(moduleId) && premiumLocked[moduleId] && !isPremiumActive()){
+      showLocked(moduleId);
+      return false;
+    }
+    document.querySelectorAll('.module-section').forEach(function(el){
+      el.classList.remove('active-module');
+      el.style.display = 'none';
+    });
+    target.classList.add('active-module');
+    target.style.display = 'block';
+    document.querySelectorAll('.v2-nav-link').forEach(function(a){a.classList.remove('active');});
+    document.querySelectorAll('.v2-nav-link[href="#'+moduleId+'"]').forEach(function(a){a.classList.add('active');});
+    try{history.replaceState(null, '', '#'+moduleId);}catch(e){}
+    target.scrollIntoView({behavior:'smooth', block:'start'});
+    return false;
+  };
+
+  function navLinksUntilNextTitle(title){
+    const arr=[]; let n=title.nextElementSibling;
+    while(n && !n.classList.contains('v2-nav-title') && !n.classList.contains('v2-side-card')){
+      if(n.classList && n.classList.contains('v2-nav-link')) arr.push(n);
+      n=n.nextElementSibling;
+    }
+    return arr;
+  }
+  function setGroup(title, collapsed){
+    title.classList.toggle('is-collapsed', collapsed);
+    navLinksUntilNextTitle(title).forEach(function(a){a.style.setProperty('display', collapsed ? 'none' : 'flex', 'important');});
+  }
+  function bindSafeMenu(){
+    const nav = document.querySelector('.nav');
+    if(!nav) return;
+    if(!nav.querySelector('.menu-health-box')){
+      const box=document.createElement('div');
+      box.className='menu-health-box';
+      box.innerHTML='Menu đã bật chế độ ổn định: bấm tiêu đề để mở/thu nhóm, bấm mục con để mở chức năng.';
+      nav.insertBefore(box, nav.firstChild);
+    }
+    document.querySelectorAll('.v2-nav-title').forEach(function(title){
+      if(title.dataset.safeBound==='1') return;
+      title.dataset.safeBound='1';
+      setGroup(title, false);
+      title.addEventListener('click', function(ev){
+        ev.preventDefault(); ev.stopImmediatePropagation();
+        setGroup(title, !title.classList.contains('is-collapsed'));
+      }, true);
+    });
+    document.querySelectorAll('.v2-nav-link[href^="#"]').forEach(function(link){
+      if(link.dataset.safeBound==='1') return;
+      link.dataset.safeBound='1';
+      link.addEventListener('click', function(ev){
+        const id=(link.getAttribute('href') || '').replace('#','').trim();
+        if(id){ev.preventDefault(); ev.stopImmediatePropagation(); window.openModule(id);}
+      }, true);
+    });
+    const hash=(location.hash || '').replace('#','').trim();
+    if(hash && document.getElementById(hash)) window.openModule(hash);
+    else window.openModule('dashboard');
+  }
+  document.addEventListener('DOMContentLoaded', bindSafeMenu);
+  setTimeout(bindSafeMenu, 300);
+})();
+</script>
+
 </body>
 </html>
 """
@@ -7588,6 +7743,18 @@ def admin_reply_support_route():
     from urllib.parse import quote
     return f"<meta charset='UTF-8'><script>alert({json.dumps(msg)});location.href='/admin?password={quote(password)}#chat';</script>"
 
+
+
+@app.post("/admin/check_tokens")
+def admin_check_tokens_route():
+    admin_password = os.getenv("ADMIN_PASSWORD", "admin123")
+    password = request.form.get("password", "")
+    if password != admin_password:
+        return "Sai mật khẩu admin.", 403
+    results = check_all_page_tokens()
+    msg = f"Đã kiểm tra {len(results)} Fanpage. Xem bảng Token bên dưới."
+    from urllib.parse import quote
+    return f"<meta charset='UTF-8'><script>alert({json.dumps(msg)});location.href='/admin?password={quote(password)}#tokens';</script>"
 
 
 @app.get('/install_qr')
