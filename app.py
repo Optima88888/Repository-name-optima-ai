@@ -2075,7 +2075,7 @@ p{color:var(--muted)}
 }
 .stat span{color:var(--muted);font-size:14px}
 .stat b{
-  font-size:30px;
+  font-size:27px;
   color:var(--purple);
 }
 textarea,select,input{
@@ -2362,8 +2362,8 @@ button:hover{
   font-family:Arial,sans-serif;
 }
 .bot-bubble{
-  width:66px;
-  height:66px;
+  width:60px;
+  height:60px;
   border-radius:50%;
   border:none;
   cursor:pointer;
@@ -2377,19 +2377,48 @@ button:hover{
   position:relative;
   animation:botFloat 2.2s ease-in-out infinite;
 }
+.bot-bubble:after{
+  content:"AI Online\A Phản hồi trong vài giây";
+  white-space:pre;
+  position:absolute;
+  right:66px;
+  bottom:8px;
+  min-width:150px;
+  background:rgba(15,23,42,.96);
+  color:#E0F2FE;
+  border:1px solid rgba(34,197,94,.35);
+  border-radius:14px;
+  padding:9px 11px;
+  font-size:12px;
+  line-height:1.35;
+  text-align:left;
+  opacity:0;
+  pointer-events:none;
+  transform:translateX(8px);
+  transition:.18s ease;
+  box-shadow:0 14px 34px rgba(15,23,42,.28);
+}
+.bot-bubble:hover:after{opacity:1;transform:translateX(0)}
 @keyframes botFloat{
   0%,100%{transform:translateY(0)}
   50%{transform:translateY(-6px)}
 }
 .bot-status{
   position:absolute;
-  right:0;
-  bottom:2px;
-  width:18px;
-  height:18px;
+  right:3px;
+  bottom:4px;
+  width:10px;
+  height:10px;
   border-radius:50%;
-  background:#22C55E;
-  border:3px solid white;
+  background:#00ff88;
+  border:2px solid white;
+  box-shadow:0 0 8px #00ff88,0 0 14px rgba(0,255,136,.85);
+  animation:aiOnlinePulse 1.6s infinite;
+}
+@keyframes aiOnlinePulse{
+  0%{transform:scale(1);opacity:1}
+  50%{transform:scale(1.35);opacity:.78}
+  100%{transform:scale(1);opacity:1}
 }
 .bot-panel{
   display:none;
@@ -4412,7 +4441,7 @@ function closeLockedFeature(){
   <div class="bot-panel" id="floatingBotPanel">
     <div class="bot-head">
       <div>
-        <div class="bot-title">Mini Chat Support</div>
+        <div class="bot-title">🤖 Bot AI</div>
         <div class="bot-online">Đang trực tuyến
           <span class="typing-dots"><span></span><span></span><span></span></span>
         </div>
@@ -4512,8 +4541,9 @@ function closeLockedFeature(){
 
 <div class="app-install-banner">
   <b>📲 App Mini đã sẵn sàng</b><br>
-  Mở trên điện thoại rồi bấm “Thêm vào màn hình chính” để dùng như phần mềm.
-  <button onclick="showInstallGuide()">Hướng dẫn cài vào điện thoại</button>
+  Bấm nút bên dưới để cài Mkt Automation Pro vào điện thoại/máy tính và mở như phần mềm riêng.
+  <button onclick="showInstallGuide()">⬇️ Tải xuống / Cài đặt ngay</button>
+  <div id="installStatus" style="margin-top:8px;font-size:13px;color:#4C1D95;font-weight:800"></div>
 </div>
 
 <div class="app-quick-grid">
@@ -5741,12 +5771,49 @@ function dropKanban(ev){ ev.preventDefault(); const col=ev.currentTarget; if(dra
 </script>
 
 
+
+<script>
+window.mktDeferredInstallPrompt = window.mktDeferredInstallPrompt || null;
+window.addEventListener('beforeinstallprompt', function(e){
+  e.preventDefault();
+  window.mktDeferredInstallPrompt = e;
+  var st=document.getElementById('installStatus');
+  if(st){st.innerText='Có thể cài đặt ngay trên thiết bị này.';}
+});
+function showInstallGuide(){
+  var st=document.getElementById('installStatus');
+  if(window.matchMedia && window.matchMedia('(display-mode: standalone)').matches){
+    if(st) st.innerText='App đã được cài đặt trên thiết bị này.';
+    alert('Mkt Automation Pro đã được cài đặt trên thiết bị này.');
+    return;
+  }
+  if(window.mktDeferredInstallPrompt){
+    window.mktDeferredInstallPrompt.prompt();
+    window.mktDeferredInstallPrompt.userChoice.then(function(choice){
+      if(st){st.innerText = choice.outcome === 'accepted' ? 'Đã gửi yêu cầu cài đặt app.' : 'Anh/chị có thể bấm cài đặt lại bất kỳ lúc nào.';}
+      window.mktDeferredInstallPrompt = null;
+    });
+    return;
+  }
+  var isIOS=/iphone|ipad|ipod/i.test(navigator.userAgent);
+  var msg=isIOS
+    ? 'iPhone/iPad: mở bằng Safari → bấm Chia sẻ → Thêm vào Màn hình chính.'
+    : 'Chrome/Edge: bấm biểu tượng cài đặt trên thanh địa chỉ hoặc menu ⋮ → Cài đặt ứng dụng / Thêm vào màn hình chính.';
+  if(st){st.innerText='Trình duyệt chưa bật hộp cài đặt tự động. Làm theo hướng dẫn vừa hiển thị.';}
+  alert('Cài Mkt Automation Pro như app:\n\n'+msg+'\n\nSau khi cài, khách mở app trực tiếp như phần mềm trên máy.');
+}
+window.addEventListener('appinstalled', function(){
+  var st=document.getElementById('installStatus');
+  if(st){st.innerText='Đã cài đặt Mkt Automation Pro thành công.';}
+});
+</script>
+
 <!-- Mini Chat Support - lưu tin nhắn để Admin trả lời trong /admin -->
 <style>
-.support-float{position:fixed;right:22px;bottom:88px;z-index:9999;font-family:Arial,sans-serif}.support-btn{background:linear-gradient(135deg,#2563eb,#38bdf8);color:white;border:0;border-radius:999px;padding:13px 18px;font-weight:900;box-shadow:0 12px 32px rgba(37,99,235,.35);cursor:pointer}.support-dot-btn{width:54px;height:54px;padding:0;border-radius:50%;font-size:24px;letter-spacing:2px;line-height:1;background:linear-gradient(135deg,#06b6d4,#2563eb,#7c3aed);box-shadow:0 0 0 6px rgba(56,189,248,.18),0 0 22px rgba(56,189,248,.85),0 14px 38px rgba(37,99,235,.45);animation:supportGlow 1.35s infinite alternate}@keyframes supportGlow{from{filter:brightness(1);transform:translateY(0)}to{filter:brightness(1.35);transform:translateY(-2px)}}.support-panel{display:none;width:340px;max-width:calc(100vw - 30px);background:#0f172a;color:#e5e7eb;border:1px solid #334155;border-radius:20px;box-shadow:0 18px 60px rgba(0,0,0,.45);overflow:hidden}.support-panel.open{display:block}.support-head{background:#1e1b4b;padding:12px 14px;font-weight:900;color:#bfdbfe;display:flex;align-items:center;justify-content:space-between}.support-close{background:#020617;color:white;border:1px solid #334155;border-radius:10px;width:28px;height:28px;cursor:pointer}.support-body{padding:12px}.support-mini-menu{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:8px}.support-mini-menu button{border:1px solid #334155;background:#111827;color:#dbeafe;border-radius:12px;padding:8px 5px;font-size:12px;font-weight:900;cursor:pointer}.support-mini-menu button:hover{background:#1e40af}.support-log{height:170px;overflow-y:auto;background:#020617;border:1px solid #1f2937;border-radius:14px;padding:10px;margin-bottom:10px;font-size:13px}.support-log .me{background:#1d4ed8;margin:6px 0 6px 35px;padding:8px;border-radius:12px}.support-log .ad{background:#14532d;margin:6px 35px 6px 0;padding:8px;border-radius:12px}.support-body input,.support-body textarea{width:100%;background:#020617;color:white;border:1px solid #334155;border-radius:12px;padding:10px;margin:5px 0}.support-body textarea{height:78px}.support-send{width:100%;background:#22c55e;color:white;border:0;border-radius:12px;padding:11px;font-weight:900;cursor:pointer}.support-note{font-size:12px;color:#94a3b8;margin-top:8px}.compact-actions{display:grid!important;grid-template-columns:repeat(3,1fr);gap:6px!important}.compact-actions button,.compact-actions a{font-size:12px!important;padding:8px 6px!important;border-radius:12px!important;text-align:center!important}
+.support-float{position:fixed;right:22px;bottom:88px;z-index:9999;font-family:Arial,sans-serif}.support-btn{width:60px;height:60px;padding:0;border:0;border-radius:50%;cursor:pointer;position:relative;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#2563eb,#7c3aed);box-shadow:0 0 0 5px rgba(37,99,235,.12),0 14px 34px rgba(37,99,235,.38);animation:supportBotFloat 2.2s ease-in-out infinite}.support-robot{font-size:27px;line-height:1}.support-online-dot{position:absolute;right:5px;bottom:6px;width:10px;height:10px;border-radius:50%;background:#00ff88;border:2px solid white;box-shadow:0 0 8px #00ff88,0 0 15px rgba(0,255,136,.85);animation:supportOnlinePulse 1.5s infinite}.support-tooltip{position:absolute;right:66px;bottom:7px;min-width:150px;background:rgba(15,23,42,.96);color:#E0F2FE;border:1px solid rgba(34,197,94,.35);border-radius:14px;padding:9px 11px;font-size:12px;line-height:1.35;text-align:left;opacity:0;pointer-events:none;transform:translateX(8px);transition:.18s ease;box-shadow:0 14px 34px rgba(15,23,42,.28)}.support-btn:hover .support-tooltip{opacity:1;transform:translateX(0)}@keyframes supportBotFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}@keyframes supportOnlinePulse{0%{transform:scale(1);opacity:1}50%{transform:scale(1.35);opacity:.78}100%{transform:scale(1);opacity:1}}.support-panel{display:none;width:340px;max-width:calc(100vw - 30px);background:#0f172a;color:#e5e7eb;border:1px solid #334155;border-radius:20px;box-shadow:0 18px 60px rgba(0,0,0,.45);overflow:hidden}.support-panel.open{display:block}.support-head{background:#1e1b4b;padding:12px 14px;font-weight:900;color:#bfdbfe;display:flex;align-items:center;justify-content:space-between}.support-close{background:#020617;color:white;border:1px solid #334155;border-radius:10px;width:28px;height:28px;cursor:pointer}.support-body{padding:12px}.support-mini-menu{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:8px}.support-mini-menu button{border:1px solid #334155;background:#111827;color:#dbeafe;border-radius:12px;padding:8px 5px;font-size:12px;font-weight:900;cursor:pointer}.support-mini-menu button:hover{background:#1e40af}.support-log{height:170px;overflow-y:auto;background:#020617;border:1px solid #1f2937;border-radius:14px;padding:10px;margin-bottom:10px;font-size:13px}.support-log .me{background:#1d4ed8;margin:6px 0 6px 35px;padding:8px;border-radius:12px}.support-log .ad{background:#14532d;margin:6px 35px 6px 0;padding:8px;border-radius:12px}.support-body input,.support-body textarea{width:100%;background:#020617;color:white;border:1px solid #334155;border-radius:12px;padding:10px;margin:5px 0}.support-body textarea{height:78px}.support-send{width:100%;background:#22c55e;color:white;border:0;border-radius:12px;padding:11px;font-weight:900;cursor:pointer}.support-note{font-size:12px;color:#94a3b8;margin-top:8px}.compact-actions{display:grid!important;grid-template-columns:repeat(3,1fr);gap:6px!important}.compact-actions button,.compact-actions a{font-size:12px!important;padding:8px 6px!important;border-radius:12px!important;text-align:center!important}
 </style>
 <div class="support-float">
-  <button class="support-btn support-dot-btn" title="Mở hỗ trợ" onclick="toggleSupportChat()">...</button>
+  <button class="support-btn" title="AI Online" onclick="toggleSupportChat()"><span class="support-robot">🤖</span><span class="support-online-dot"></span><span class="support-tooltip">AI Online<br>Phản hồi trong vài giây</span></button>
   <div class="support-panel" id="supportPanel">
     <div class="support-head">
       <span>💬 Hỗ trợ trực tiếp</span>
@@ -6612,7 +6679,7 @@ def pwa_manifest():
     return jsonify({
         "name": "Mkt Automation Pro",
         "short_name": "Mkt Pro",
-        "description": "AI Marketing & Automation V3 Enterprise AI Suite",
+        "description": "Mkt Automation Pro - AI Marketing, Facebook, CRM và Automation",
         "start_url": "/",
         "scope": "/",
         "display": "standalone",
@@ -6643,13 +6710,30 @@ self.addEventListener('fetch', event => {
 """
     return app.response_class(js, mimetype="application/javascript")
 
+def _solid_png(size=192):
+    import struct, zlib
+    size = int(size)
+    # PNG RGBA nền xanh tím đơn giản, dùng làm icon PWA nếu chưa có file icon.
+    raw = b''.join([b'\x00' + bytes([37, 99, 235, 255]) * size for _ in range(size)])
+    def chunk(tag, data):
+        return struct.pack('>I', len(data)) + tag + data + struct.pack('>I', zlib.crc32(tag + data) & 0xffffffff)
+    png = b'\x89PNG\r\n\x1a\n'
+    png += chunk(b'IHDR', struct.pack('>IIBBBBB', size, size, 8, 6, 0, 0, 0))
+    png += chunk(b'IDAT', zlib.compress(raw, 9))
+    png += chunk(b'IEND', b'')
+    return png
+
 @app.get("/pwa-icon-192.png")
 def pwa_icon_192():
-    return send_file("pwa-icon-192.png", mimetype="image/png")
+    if os.path.exists("pwa-icon-192.png"):
+        return send_file("pwa-icon-192.png", mimetype="image/png")
+    return app.response_class(_solid_png(192), mimetype="image/png")
 
 @app.get("/pwa-icon-512.png")
 def pwa_icon_512():
-    return send_file("pwa-icon-512.png", mimetype="image/png")
+    if os.path.exists("pwa-icon-512.png"):
+        return send_file("pwa-icon-512.png", mimetype="image/png")
+    return app.response_class(_solid_png(512), mimetype="image/png")
 
 
 # Khởi tạo database khi import app để chạy ổn cả python app.py và gunicorn app:app.
