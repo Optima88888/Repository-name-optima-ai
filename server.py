@@ -11,8 +11,8 @@ except Exception:
 
 load_dotenv()
 
-APP_TITLE = "Mkt Automation Pro V4 Enterprise AI Suite"
-DB = "marketing_automation_pro_v10.db"
+APP_TITLE = "Mkt Automation Pro V5 Seller AI Suite"
+DB = "marketing_automation_pro_v11.db"
 UPLOAD_DIR = "uploads"
 REPORT_DIR = "reports"
 BACKUP_DIR = "backups"
@@ -421,6 +421,60 @@ def init_db():
         username TEXT,
         role TEXT DEFAULT 'staff',
         note TEXT,
+        created_at TEXT
+    )
+    """)
+
+    # V5 Seller AI Suite tables
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS fb_groups (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        group_name TEXT,
+        group_id TEXT,
+        niche TEXT,
+        note TEXT,
+        status TEXT DEFAULT 'active',
+        created_at TEXT
+    )
+    """)
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS group_schedules (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        group_name TEXT,
+        group_id TEXT,
+        content TEXT,
+        schedule_time TEXT,
+        status TEXT DEFAULT 'scheduled',
+        created_at TEXT
+    )
+    """)
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS comment_leads (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        customer_name TEXT,
+        phone TEXT,
+        comment_text TEXT,
+        ai_reply TEXT,
+        label TEXT,
+        crm_status TEXT DEFAULT 'new',
+        created_at TEXT
+    )
+    """)
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS messenger_scripts (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        product TEXT,
+        script_type TEXT,
+        content TEXT,
+        created_at TEXT
+    )
+    """)
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS success_assets (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        asset_type TEXT,
+        title TEXT,
+        content TEXT,
         created_at TEXT
     )
     """)
@@ -1042,6 +1096,90 @@ Trình bày theo Ngày 1 đến Ngày {days}.
 
 
 
+
+def add_fb_group(group_name, group_id, niche, note):
+    if not group_name and not group_id:
+        return
+    conn = db(); c = conn.cursor()
+    c.execute("""
+    INSERT INTO fb_groups(group_name,group_id,niche,note,status,created_at)
+    VALUES(?,?,?,?,?,?)
+    """, (group_name, group_id, niche, note, 'active', datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
+    conn.commit(); conn.close()
+
+def get_fb_groups(limit=80):
+    conn = db(); c = conn.cursor()
+    c.execute("SELECT id,group_name,group_id,niche,note,status,created_at FROM fb_groups ORDER BY id DESC LIMIT ?", (limit,))
+    rows = c.fetchall(); conn.close(); return rows
+
+def add_group_schedule(group_name, group_id, content, schedule_time):
+    if not content:
+        return
+    conn = db(); c = conn.cursor()
+    c.execute("""
+    INSERT INTO group_schedules(group_name,group_id,content,schedule_time,status,created_at)
+    VALUES(?,?,?,?,?,?)
+    """, (group_name, group_id, content, schedule_time, 'scheduled', datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
+    conn.commit(); conn.close()
+
+def get_group_schedules(limit=50):
+    conn = db(); c = conn.cursor()
+    c.execute("SELECT id,group_name,group_id,content,schedule_time,status,created_at FROM group_schedules ORDER BY id DESC LIMIT ?", (limit,))
+    rows = c.fetchall(); conn.close(); return rows
+
+def hide_phone_preview(text):
+    import re
+    return re.sub(r'(0|\+84)[0-9\s\.\-]{7,13}', '[ĐÃ ẨN SĐT]', text or '')
+
+def add_comment_lead(customer_name, phone, comment_text, ai_reply, label):
+    if not comment_text and not phone and not customer_name:
+        return
+    conn = db(); c = conn.cursor()
+    c.execute("""
+    INSERT INTO comment_leads(customer_name,phone,comment_text,ai_reply,label,crm_status,created_at)
+    VALUES(?,?,?,?,?,?,?)
+    """, (customer_name, phone, comment_text, ai_reply, label, 'new', datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
+    conn.commit(); conn.close()
+
+def get_comment_leads(limit=50):
+    conn = db(); c = conn.cursor()
+    c.execute("SELECT id,customer_name,phone,comment_text,ai_reply,label,crm_status,created_at FROM comment_leads ORDER BY id DESC LIMIT ?", (limit,))
+    rows = c.fetchall(); conn.close(); return rows
+
+def add_messenger_script(product, script_type, content):
+    if not product and not content:
+        return
+    conn = db(); c = conn.cursor()
+    c.execute("INSERT INTO messenger_scripts(product,script_type,content,created_at) VALUES(?,?,?,?)", (product, script_type, content, datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
+    conn.commit(); conn.close()
+
+def get_messenger_scripts(limit=30):
+    conn = db(); c = conn.cursor()
+    c.execute("SELECT id,product,script_type,content,created_at FROM messenger_scripts ORDER BY id DESC LIMIT ?", (limit,))
+    rows = c.fetchall(); conn.close(); return rows
+
+def v5_seed_success_assets():
+    conn = db(); c = conn.cursor()
+    c.execute("SELECT COUNT(*) FROM success_assets")
+    if c.fetchone()[0] == 0:
+        now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        samples = [
+            ('Case Study','Shop Proxy tăng phản hồi inbox','Trước: đăng bài rời rạc, thiếu lịch. Sau: dùng AI tạo 30 ngày content, 10 ads, 5 kịch bản chốt sale và CRM theo dõi khách.'),
+            ('Fanpage','Mẫu Fanpage dịch vụ chuyên nghiệp','Avatar rõ thương hiệu, cover nêu lợi ích, mô tả có Zalo/CTA, ghim bài giới thiệu dịch vụ và bảng giá.'),
+            ('Content','Mẫu content thành công','Nêu nỗi đau, đưa giải pháp, bằng chứng mềm, CTA inbox và hashtag vừa đủ.'),
+            ('Ads','Mẫu quảng cáo thành công','Hook mạnh, lợi ích rõ, tránh cam kết quá đà, kêu gọi inbox nhận tư vấn.'),
+            ('Script','Mẫu kịch bản chốt sale','Chào hỏi - hỏi nhu cầu - tư vấn gói phù hợp - xử lý từ chối - chốt hành động tiếp theo.')
+        ]
+        c.executemany("INSERT INTO success_assets(asset_type,title,content,created_at) VALUES(?,?,?,?)", [(a,b,cnt,now) for a,b,cnt in samples])
+        conn.commit()
+    conn.close()
+
+def get_success_assets(limit=20):
+    v5_seed_success_assets()
+    conn = db(); c = conn.cursor()
+    c.execute("SELECT id,asset_type,title,content,created_at FROM success_assets ORDER BY id ASC LIMIT ?", (limit,))
+    rows = c.fetchall(); conn.close(); return rows
+
 def v3_ceo_summary():
     s = get_stats()
     token_checks = get_latest_token_checks(200)
@@ -1116,16 +1254,18 @@ def get_notifications(limit=30):
 def v3_ai_tool_prompt(tool, topic, extra=''):
     if tool == 'marketing_director':
         return f"""
-Bạn là AI Marketing Director. Lập kế hoạch bằng tiếng Việt cho: {topic}
-Yêu cầu xuất đầy đủ:
-1. Phân tích sản phẩm/dịch vụ
-2. Tệp khách hàng mục tiêu
-3. 30 content Facebook/TikTok ngắn
-4. 10 mẫu quảng cáo Facebook Ads
-5. Kế hoạch marketing 30 ngày
-6. CTA và hashtag gợi ý
-7. Ngân sách quảng cáo đề xuất theo 3 mức
-Không cam kết quá đà, không dùng lời hứa chắc chắn ra đơn.
+Bạn là AI Marketing Director Premium cho chủ shop/doanh nghiệp nhỏ. Lập bộ kế hoạch bằng tiếng Việt cho: {topic}
+Yêu cầu xuất đúng cấu trúc sau:
+1. Phân tích nhanh sản phẩm/dịch vụ và lợi thế bán hàng
+2. Tệp khách hàng mục tiêu chi tiết
+3. 30 content Facebook/TikTok ngắn, dễ đăng ngay
+4. 10 mẫu quảng cáo Facebook Ads kéo inbox/chuyển đổi
+5. 10 caption viral ngắn
+6. 5 kịch bản chốt sale/inbox xử lý từ chối
+7. Kế hoạch marketing 30 ngày
+8. Ngân sách quảng cáo đề xuất theo 3 mức: thấp, vừa, mạnh
+9. Việc cần làm mỗi ngày để tăng tỷ lệ chốt đơn
+Không cam kết quá đà, không dùng lời hứa chắc chắn ra đơn, không spam hashtag.
 Thông tin thêm: {extra}
 """
     if tool == 'facebook_ads_ai':
@@ -1150,6 +1290,25 @@ Thông tin thêm: {extra}
         return f"""
 Tạo nội dung landing page cho dịch vụ/sản phẩm: {topic}
 Gồm: tiêu đề, mô tả, ưu điểm, form thu khách, CTA, FAQ, lý do nên chọn, nội dung hero section.
+Thông tin thêm: {extra}
+"""
+    if tool == 'group_content':
+        return f"""
+Viết bài đăng Group Facebook bằng tiếng Việt cho: {topic}
+Yêu cầu: gần gũi, không quá quảng cáo, tạo thảo luận, có CTA mềm, dưới 120 từ, kèm 3 biến thể tiêu đề.
+Thông tin thêm: {extra}
+"""
+    if tool == 'comment_reply':
+        return f"""
+Bạn là Comment Manager AI. Hãy tạo phản hồi comment chuyên nghiệp cho khách hàng.
+Comment/Nội dung khách: {topic}
+Yêu cầu: trả lời ngắn, thân thiện, kéo khách vào inbox, không lộ số điện thoại, gắn nhãn khách nóng/ấm/lạnh và đề xuất chuyển CRM.
+Thông tin thêm: {extra}
+"""
+    if tool == 'messenger_ai':
+        return f"""
+Tạo bộ kịch bản Messenger bán hàng cho: {topic}
+Gồm: kịch bản inbox, kịch bản chốt sale, xử lý từ chối, chăm sóc khách cũ, tin nhắn nhắc thanh toán, tin nhắn hậu mãi.
 Thông tin thêm: {extra}
 """
     if tool == 'prompt_premium':
@@ -2882,6 +3041,14 @@ button:hover{
 /* V3 Enterprise Add-on */
 .v3-kpi-title{margin-top:18px;background:#EEF2FF;border:1px solid #DDD6FE;color:#4C1D95;padding:12px 16px;border-radius:18px;font-weight:800}
 .v3-ceo-grid .stat small{display:block;color:#64748B;margin-top:6px;font-size:12px}
+
+.v5-seller-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px;margin:14px 0}
+.v5-tool-card{background:#fff;border:1px solid var(--border);border-radius:22px;padding:16px;box-shadow:0 12px 28px rgba(37,99,235,.08)}
+.v5-tool-card h3{margin:0 0 8px;color:#1E1B4B}.v5-tool-card ul{padding-left:18px;line-height:1.7;color:#334155}
+.v5-status-pill{display:inline-block;border-radius:999px;padding:6px 10px;font-size:12px;font-weight:900;background:#ECFDF5;color:#047857;border:1px solid #A7F3D0}
+.v5-warning-pill{display:inline-block;border-radius:999px;padding:6px 10px;font-size:12px;font-weight:900;background:#FEF3C7;color:#92400E;border:1px solid #FCD34D}
+.v5-table{width:100%;border-collapse:separate;border-spacing:0 8px}.v5-table th{text-align:left;color:#64748B;font-size:13px}.v5-table td{background:#F8FAFC;border-top:1px solid #E5E7EB;border-bottom:1px solid #E5E7EB;padding:10px}.v5-table td:first-child{border-left:1px solid #E5E7EB;border-radius:14px 0 0 14px}.v5-table td:last-child{border-right:1px solid #E5E7EB;border-radius:0 14px 14px 0}
+
 .v3-feature-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin-top:14px}
 .v3-feature-card{background:#fff;border:1px solid var(--border);border-radius:22px;padding:18px;box-shadow:0 12px 28px rgba(30,41,59,.08)}
 .v3-feature-card h3{margin:0 0 8px;color:#1E1B4B}.v3-feature-card ul{margin:8px 0 0;padding-left:18px;line-height:1.65;color:#334155}
@@ -3125,7 +3292,7 @@ function botQuick(text){
   if(lower.includes("giá") || lower.includes("gói")){
     reply="Dạ gói Premium hiện có: 1 tháng 159K, 3 tháng 359K, 6 tháng 559K, 1 năm 859K và vĩnh viễn 1.959K. Gói 1 năm đang phổ biến nhất, còn gói vĩnh viễn mở toàn bộ tính năng và cập nhật tương lai.";
   }else if(lower.includes("thanh toán")){
-    reply="Anh/chị bấm Bảng Giá Premium, chọn gói cần mua, hệ thống sẽ mở popup thanh toán kèm QR Agribank, STK 8888363382629 - NGUYEN DANG THI XUAN. Nếu sau 5 phút chưa kích hoạt, liên hệ Zalo 036 338 2629.";
+    reply="Anh/chị bấm Bảng Giá Premium Seller AI, chọn gói cần mua, hệ thống sẽ mở popup thanh toán kèm QR Agribank, STK 8888363382629 - NGUYEN DANG THI XUAN. Nếu sau 5 phút chưa kích hoạt, liên hệ Zalo 036 338 2629.";
   }else if(lower.includes("tính năng")){
     reply="Tool hỗ trợ AI Content Brain, đăng nhiều Fanpage, lịch đăng, chia content/ảnh, CRM Pro, AI Sales Bot, Marketing Funnel, kho content 50.000+, xuất báo cáo và backup dữ liệu.";
   }
@@ -3401,9 +3568,9 @@ function openLockedFeature(feature, plans){
          </div>
          <div class="locked-recommend-card v4-gold-card">
            <div class="rec-label">👑 TRỌN ĐỜI</div>
-           <h3>Gói Vĩnh Viễn</h3>
+           <h3>Gói Nhà Bán Hàng Chuyên Nghiệp</h3>
            <div class="rec-price">1.959.000đ</div>
-           <p>Thanh toán một lần, sử dụng trọn đời, không phí gia hạn, nhận toàn bộ AI hiện tại và AI tương lai.</p>
+           <p>Mở toàn bộ Comment Manager AI, Messenger AI, CRM Pro, Group Marketing, AI Marketing Director và cập nhật tương lai.</p>
            <button onclick="closeLockedFeature();openPayment('lifetime')">Mở khóa trọn đời</button>
          </div>
        </div>
@@ -3608,19 +3775,73 @@ function closeLockedFeature(){
   <div class="fb-submenu-pro">
     <button onclick="openModule('post')">📢 Đăng bài</button>
     <button onclick="openModule('scheduler')">📅 Scheduler</button>
-    <button onclick="openModule('token')">📄 Fanpage Manager</button>
-    <button class="locked" onclick="openLockedFeature('Group Marketing','Gói 1 năm / Vĩnh viễn')">👥 Group Marketing 🔒</button>
-    <button class="locked" onclick="openLockedFeature('Comment Manager','Gói 1 năm / Vĩnh viễn')">💬 Comment Manager 🔒</button>
-    <button class="locked" onclick="openLockedFeature('Messenger AI','Gói 1 năm / Vĩnh viễn')">🤖 Messenger AI 🔒</button>
+    <button onclick="openModule('fanpage_manager')">📄 Fanpage Manager</button>
+    <button onclick="openModule('group_marketing')">👥 Group Marketing</button>
+    <button onclick="openModule('comment_manager')">💬 Comment Manager AI</button>
+    <button onclick="openModule('messenger_ai')">🤖 Messenger AI</button>
   </div>
   <div class="v3-feature-grid">
     <div class="v3-feature-card"><h3>Đăng bài</h3><ul><li>Đăng ngay</li><li>Đăng hàng loạt</li><li>Đăng nhiều Page</li><li>Đăng ảnh/video</li></ul><button onclick="openModule('post')">Mở công cụ đăng bài</button></div>
     <div class="v3-feature-card"><h3>Scheduler</h3><ul><li>Lên lịch tự động</li><li>Đăng chiến dịch</li><li>Chia khung giờ</li><li>Tự lưu lịch</li></ul><button onclick="openModule('scheduler')">Mở lịch đăng</button></div>
-    <div class="v3-feature-card"><h3>Fanpage Manager</h3><ul><li>Quản lý Page</li><li>Kiểm tra token</li><li>Kiểm tra quyền</li><li>Token status</li></ul><button onclick="openModule('token')">Kiểm tra token</button></div>
-    <div class="v3-feature-card"><h3>Group Marketing</h3><ul><li>Quản lý group</li><li>Danh sách group</li><li>Lịch đăng group</li><li>Gợi ý nội dung nhóm</li></ul><button class="secondary" onclick="openLockedFeature('Group Marketing','Gói 6 tháng / Gói 1 năm / Vĩnh viễn')">Mở khóa</button></div>
-    <div class="v3-feature-card"><h3>Comment Manager</h3><ul><li>Trả lời comment</li><li>Ẩn SĐT</li><li>Quản lý tương tác</li><li>Gợi ý phản hồi</li></ul><button class="secondary" onclick="openLockedFeature('Comment Manager','Gói 6 tháng / Gói 1 năm / Vĩnh viễn')">Mở khóa</button></div>
-    <div class="v3-feature-card"><h3>Messenger AI</h3><ul><li>Chat mẫu</li><li>Gửi báo giá</li><li>Chăm sóc khách</li><li>FAQ bán hàng</li></ul><button class="secondary" onclick="openLockedFeature('Messenger AI','Gói 1 năm / Vĩnh viễn')">Mở khóa</button></div>
+    <div class="v3-feature-card"><h3>Quản lý Fanpage</h3><ul><li>Kết nối Fanpage</li><li>Kiểm tra Token</li><li>Kiểm tra quyền</li><li>Trạng thái hoạt động</li><li>Làm mới Token</li></ul><button onclick="openModule('fanpage_manager')">Mở Fanpage Manager</button></div>
+    <div class="v3-feature-card"><h3>Tiếp thị nhóm</h3><ul><li>Quản lý Group</li><li>Danh sách Group</li><li>Lịch đăng Group</li><li>AI viết bài Group</li></ul><button onclick="openModule('group_marketing')">Mở Group Marketing</button></div>
+    <div class="v3-feature-card"><h3>Trình quản lý bình luận</h3><ul><li>AI trả lời comment</li><li>Ẩn SĐT</li><li>Gắn nhãn khách</li><li>Chuyển CRM</li></ul><button onclick="openModule('comment_manager')">Mở Comment AI</button></div>
+    <div class="v3-feature-card"><h3>Trí tuệ nhân tạo Messenger</h3><ul><li>Kịch bản Inbox</li><li>Kịch bản Chốt Sale</li><li>Xử lý từ chối</li><li>Chăm sóc khách cũ</li></ul><button onclick="openModule('messenger_ai')">Mở Messenger AI</button></div>
   </div>
+</section>
+
+
+<section class="panel module-section" id="fanpage_manager">
+  <div class="section-open-note">Bạn đang mở: Fanpage Manager Pro.</div>
+  <h2>📄 Quản lý Fanpage</h2>
+  <p class="small">Trung tâm kiểm tra kết nối Page, Token, quyền và trạng thái hoạt động trước khi đăng bài.</p>
+  <div class="v5-seller-grid">
+    <div class="v5-tool-card"><h3>Kết nối Fanpage</h3><p>Thêm Page qua biến PAGES_JSON trong file .env gồm name, id, token.</p><button onclick="openModule('token')">Mở Token Center</button></div>
+    <div class="v5-tool-card"><h3>Kiểm tra Token</h3><p>Quét toàn bộ Page để phát hiện token chết, thiếu quyền hoặc phiên bị giới hạn.</p><form method="post" action="/check_tokens"><button>Kiểm tra Token ngay</button></form></div>
+    <div class="v5-tool-card"><h3>Kiểm tra quyền</h3><ul><li>pages_manage_posts</li><li>pages_read_engagement</li><li>pages_manage_metadata</li></ul><span class="v5-warning-pill">Cần kiểm tra từ Meta App</span></div>
+    <div class="v5-tool-card"><h3>Làm mới Token</h3><p>Khi token lỗi, hệ thống hướng dẫn thay token mới trong .env rồi chạy lại app.</p><button class="secondary" onclick="openLockedFeature('Làm mới Token','Gói 1 năm / Gói Nhà Bán Hàng Chuyên Nghiệp')">Hướng dẫn làm mới</button></div>
+  </div>
+  <table class="v5-table"><tr><th>Fanpage</th><th>Page ID</th><th>Token</th><th>Trạng thái</th></tr>
+    {% for p in pages %}<tr><td>{{ p.name }}</td><td>{{ p.id }}</td><td>{{ 'Có token' if p.token else 'Thiếu token' }}</td><td><span class="v5-status-pill">Đã cấu hình</span></td></tr>{% endfor %}
+  </table>
+</section>
+
+<section class="panel module-section" id="group_marketing">
+  <div class="section-open-note">Bạn đang mở: Group Marketing.</div>
+  <h2>👥 Tiếp thị nhóm</h2>
+  <p class="small">Quản lý Group, danh sách Group, lịch đăng Group và AI viết bài Group.</p>
+  <div class="grid">
+    <form method="post" action="/fb_group"><h3>Thêm Group</h3><input name="group_name" placeholder="Tên Group"><input name="group_id" placeholder="Group ID"><input name="niche" placeholder="Ngành / tệp khách"><textarea name="note" rows="2" placeholder="Ghi chú"></textarea><button>Lưu Group</button></form>
+    <form method="post" action="/v3_ai_tool"><h3>AI viết bài Group</h3><input type="hidden" name="tool" value="group_content"><textarea name="topic" rows="4" placeholder="Ví dụ: Tôi bán Proxy cho người chạy quảng cáo Facebook"></textarea><button>Tạo bài Group</button></form>
+  </div>
+  <form method="post" action="/group_schedule"><h3>Lịch đăng Group</h3><div class="grid"><input name="group_name" placeholder="Tên Group"><input name="group_id" placeholder="Group ID"><input name="schedule_time" type="datetime-local"></div><textarea name="content" rows="4" placeholder="Nội dung cần lên lịch đăng Group"></textarea><button>Lưu lịch Group</button></form>
+  <h3>Danh sách Group</h3>{% for g in fb_groups %}<div class="history"><b>{{ g[1] }}</b> • {{ g[2] }} • {{ g[3] }}<br>{{ g[4] }}</div>{% endfor %}
+  <h3>Lịch Group gần nhất</h3>{% for gs in group_schedules %}<div class="history"><b>{{ gs[1] }}</b> • {{ gs[4] }} • {{ gs[5] }}<br>{{ gs[3] }}</div>{% endfor %}
+</section>
+
+<section class="panel module-section" id="comment_manager">
+  <div class="section-open-note">Bạn đang mở: Comment Manager AI.</div>
+  <h2>💬 Trình quản lý bình luận</h2>
+  <p class="small">AI trả lời comment, ẩn SĐT, gắn nhãn khách và chuyển CRM.</p>
+  <form method="post" action="/comment_ai">
+    <div class="grid"><input name="customer_name" placeholder="Tên khách nếu có"><input name="phone" placeholder="SĐT nếu có"></div>
+    <textarea name="comment_text" rows="4" placeholder="Dán comment khách hàng vào đây. Ví dụ: shop còn proxy Việt không, số em 09..."></textarea>
+    <div class="grid"><select name="label"><option>Khách nóng</option><option>Khách ấm</option><option>Khách lạnh</option><option>Cần chăm sóc lại</option></select><select name="to_crm"><option value="1">Chuyển sang CRM</option><option value="0">Chỉ lưu comment</option></select></div>
+    <button>AI xử lý Comment</button><button type="button" class="secondary" onclick="openLockedFeature('Comment Manager AI','Gói 1 năm / Gói Nhà Bán Hàng Chuyên Nghiệp')">Xem bản tự động Webhook</button>
+  </form>
+  <h3>Comment đã xử lý</h3>{% for c in comment_leads %}<div class="history"><b>{{ c[1] or 'Khách hàng' }}</b> • {{ c[5] }} • {{ c[7] }}<br>Comment: {{ c[3] }}<br>AI: {{ c[4] }}</div>{% endfor %}
+</section>
+
+<section class="panel module-section" id="messenger_ai">
+  <div class="section-open-note">Bạn đang mở: Messenger AI.</div>
+  <h2>🤖 Trí tuệ nhân tạo Messenger</h2>
+  <p class="small">Tạo kịch bản Inbox, kịch bản chốt sale, xử lý từ chối và chăm sóc khách cũ.</p>
+  <form method="post" action="/messenger_ai_script">
+    <div class="grid"><input name="product" placeholder="Sản phẩm/dịch vụ. Ví dụ: Proxy"><select name="script_type"><option>Kịch bản Inbox</option><option>Kịch bản Chốt Sale</option><option>Xử lý từ chối</option><option>Chăm sóc khách cũ</option></select></div>
+    <textarea name="extra" rows="3" placeholder="Thông tin thêm: giá, ưu đãi, tệp khách, số Zalo..."></textarea>
+    <button>Tạo kịch bản Messenger</button>
+  </form>
+  <h3>Kịch bản đã lưu</h3>{% for m in messenger_scripts %}<div class="history"><b>{{ m[1] }}</b> • {{ m[2] }} • {{ m[4] }}<br>{{ m[3] }}</div>{% endfor %}
 </section>
 
 <section class="panel module-section" id="ai_studio">
@@ -3630,7 +3851,7 @@ function closeLockedFeature(){
     <div class="v3-feature-card"><h3>AI Content</h3><ul><li>Content Facebook</li><li>Content TikTok</li><li>Caption</li></ul><button onclick="openModule('studio')">Mở AI Content</button></div>
     <div class="v3-feature-card"><h3>Viral Content Lab</h3><ul><li>Content Viral</li><li>Storytelling</li><li>Seeding</li></ul><form method="post" action="/v3_ai_tool"><input type="hidden" name="tool" value="prompt_premium"><textarea name="topic" rows="3" placeholder="Ví dụ: nội dung viral cho dịch vụ proxy"></textarea><button>Tạo ý tưởng viral</button></form></div>
     <div class="v3-feature-card"><h3>Facebook Ads AI</h3><ul><li>Chấm điểm quảng cáo</li><li>Viết quảng cáo</li><li>Target khách hàng</li></ul><form method="post" action="/v3_ai_tool"><input type="hidden" name="tool" value="facebook_ads_ai"><textarea name="topic" rows="3" placeholder="Nhập sản phẩm/dịch vụ cần chạy ads"></textarea><button>Tạo Facebook Ads AI</button></form></div>
-    <div class="v3-feature-card"><span class="v3-premium-badge">VIP</span><h3>AI Marketing Director</h3><p>Khách nhập: Tôi bán mỹ phẩm. Hệ thống sinh 30 content, 10 quảng cáo, tệp khách hàng và kế hoạch marketing.</p><form method="post" action="/v3_ai_tool"><input type="hidden" name="tool" value="marketing_director"><textarea name="topic" rows="3" placeholder="Tôi bán mỹ phẩm / proxy / dịch vụ quảng cáo..."></textarea><button>Tạo kế hoạch tổng</button></form></div>
+    <div class="v3-feature-card"><span class="v3-premium-badge">VIP</span><h3>AI Marketing Director</h3><p>Khách nhập: Tôi bán Proxy. AI trả: 30 Content, 10 Quảng cáo, 10 Caption, 5 Kịch bản chốt sale, 30 ngày Marketing, tệp khách hàng và ngân sách đề xuất.</p><form method="post" action="/v3_ai_tool"><input type="hidden" name="tool" value="marketing_director"><textarea name="topic" rows="3" placeholder="Tôi bán Proxy / mỹ phẩm / dịch vụ quảng cáo..."></textarea><button>Tạo kế hoạch tổng</button></form></div>
     <div class="v3-feature-card"><h3>Competitor Scanner</h3><p>Nhập link Fanpage hoặc mô tả đối thủ. AI phân tích điểm mạnh, điểm yếu, nội dung và CTA.</p><form method="post" action="/v3_ai_tool"><input type="hidden" name="tool" value="competitor_scanner"><input name="topic" placeholder="Link Fanpage đối thủ"><button>Phân tích đối thủ</button></form></div>
     <div class="v3-feature-card"><h3>AI Sales Script</h3><ul><li>Kịch bản chốt sale</li><li>Xử lý từ chối</li><li>Kịch bản inbox</li></ul><form method="post" action="/v3_ai_tool"><input type="hidden" name="tool" value="sales_script"><textarea name="topic" rows="3" placeholder="Sản phẩm/dịch vụ cần tư vấn"></textarea><button>Tạo kịch bản sale</button></form></div>
     <div class="v3-feature-card"><h3>AI Landing Page Builder</h3><p>Nhập: Dịch vụ chạy quảng cáo Facebook. AI sinh tiêu đề, CTA, form và ưu điểm.</p><form method="post" action="/v3_ai_tool"><input type="hidden" name="tool" value="landing_page"><textarea name="topic" rows="3" placeholder="Dịch vụ chạy quảng cáo Facebook"></textarea><button>Tạo Landing Page</button></form></div>
@@ -3686,36 +3907,14 @@ function closeLockedFeature(){
   <p class="small">Tăng niềm tin cho khách trước khi nâng cấp Premium bằng case study, mẫu thành công và tài sản bán hàng đã được chuẩn hóa.</p>
 
   <div class="v4-success-grid">
+    {% for a in success_assets %}
     <div class="v4-success-card">
-      <div class="success-icon">📈</div>
-      <h3>Case Study</h3>
-      <p>Mẫu câu chuyện trước/sau: shop thiếu content, không đều bài, sau khi dùng AI có kế hoạch đăng 30 ngày.</p>
-      <button onclick="openLockedFeature('Case Study Premium')">Xem mẫu Premium</button>
+      <div class="success-icon">🏆</div>
+      <h3>{{ a[2] }}</h3>
+      <p><b>{{ a[1] }}</b> — {{ a[3] }}</p>
+      <button onclick="openLockedFeature('{{ a[1] }} Premium','Gói 1 năm / Gói Nhà Bán Hàng Chuyên Nghiệp')">Mở mẫu Premium</button>
     </div>
-    <div class="v4-success-card">
-      <div class="success-icon">👥</div>
-      <h3>Khách hàng thành công</h3>
-      <p>Hiển thị các mô hình khách hàng: Spa, Proxy, TikTok Shop, Nha khoa, BĐS, Thời trang.</p>
-      <button onclick="openLockedFeature('Khách hàng thành công')">Mở thư viện</button>
-    </div>
-    <div class="v4-success-card">
-      <div class="success-icon">📄</div>
-      <h3>Mẫu Fanpage thành công</h3>
-      <p>Gợi ý bố cục avatar, cover, mô tả, CTA và lịch đăng giúp Fanpage nhìn uy tín hơn.</p>
-      <button onclick="openLockedFeature('Mẫu Fanpage thành công')">Xem mẫu</button>
-    </div>
-    <div class="v4-success-card">
-      <div class="success-icon">🎯</div>
-      <h3>Mẫu quảng cáo thành công</h3>
-      <p>Kho mẫu quảng cáo theo nỗi đau, lợi ích, bằng chứng, CTA và kịch bản kéo inbox.</p>
-      <button onclick="openLockedFeature('Mẫu quảng cáo thành công')">Mở mẫu Ads</button>
-    </div>
-    <div class="v4-success-card">
-      <div class="success-icon">🔥</div>
-      <h3>Mẫu content thành công</h3>
-      <p>Mẫu content bán hàng, storytelling, seeding, xử lý từ chối và remarketing.</p>
-      <button onclick="openLockedFeature('Mẫu content thành công')">Xem content</button>
-    </div>
+    {% endfor %}
   </div>
 
   <div class="v4-proof-box">
@@ -4028,7 +4227,7 @@ Tạo: {{ c[4] }}</div>
 </section>
 
 <section class="panel module-section" id="premium">
-  <h2>💎 Premium Center V4</h2>
+  <h2>💎 Premium Center V5</h2>
   <div class="premium-center v4-premium-hero">
     <div class="v4-hero-label">AI MARKETING PREMIUM</div>
     <h3>Biến công cụ đăng bài thành trợ lý Marketing tự động</h3>
@@ -4156,7 +4355,7 @@ Thời gian tạo: {{ h[9] }}
 <section class="panel pricing-visible" id="pricing">
   <div class="premium-pricing-pro v4-pricing-shell">
     <div class="premium-title">
-      <span class="mini">V4 ENTERPRISE PREMIUM</span>
+      <span class="mini">V5 SELLER AI PREMIUM</span>
       <h2>Bảng Giá Premium</h2>
       <p>Thiết kế theo giá trị nhận được: tiết kiệm thời gian, giảm chi phí thuê ngoài và mở khóa AI Marketing chuyên nghiệp.</p>
     </div>
@@ -4546,7 +4745,7 @@ def render(content="", message="", ok=True, selected_industry="spa", analysis=""
         industry_labels=INDUSTRY_LABELS, selected_industry=selected_industry,
         library_items=current_library(selected_industry)[:10], locked_count=max(0, 500 - len(current_library(selected_industry)[:10])),
         score=score, warnings=warnings, token_warning=token_warning,
-        analysis=analysis, plan=plan, v3=v3_ceo_summary(), pipeline_rows=get_pipeline_leads(), customer_tasks=get_customer_tasks(), notifications=get_notifications()
+        analysis=analysis, plan=plan, v3=v3_ceo_summary(), pipeline_rows=get_pipeline_leads(), customer_tasks=get_customer_tasks(), notifications=get_notifications(), fb_groups=get_fb_groups(), group_schedules=get_group_schedules(), comment_leads=get_comment_leads(), messenger_scripts=get_messenger_scripts(), success_assets=get_success_assets()
     )
 
 @app.route("/")
@@ -4896,6 +5095,47 @@ def customer_task_route():
 def notification_route():
     add_notification(request.form.get("title", "").strip(), request.form.get("detail", "").strip(), "info")
     return render(message="Đã thêm thông báo vào Notification Center.", ok=True)
+
+
+@app.route("/fb_group", methods=["POST"])
+def fb_group_route():
+    add_fb_group(request.form.get("group_name", "").strip(), request.form.get("group_id", "").strip(), request.form.get("niche", "").strip(), request.form.get("note", "").strip())
+    return render(message="Đã lưu Group vào Group Marketing.", ok=True)
+
+@app.route("/group_schedule", methods=["POST"])
+def group_schedule_route():
+    add_group_schedule(request.form.get("group_name", "").strip(), request.form.get("group_id", "").strip(), request.form.get("content", "").strip(), request.form.get("schedule_time", "").replace("T", " "))
+    return render(message="Đã lưu lịch đăng Group.", ok=True)
+
+@app.route("/comment_ai", methods=["POST"])
+def comment_ai_route():
+    customer_name = request.form.get("customer_name", "").strip()
+    phone = request.form.get("phone", "").strip()
+    comment_text = request.form.get("comment_text", "").strip()
+    label = request.form.get("label", "Khách nóng").strip()
+    if not comment_text:
+        return render(message="Vui lòng nhập comment khách hàng.", ok=False)
+    clean_comment = hide_phone_preview(comment_text)
+    prompt = v3_ai_tool_prompt('comment_reply', clean_comment, f"Nhãn khách: {label}")
+    fallback = f"Dạ em đã nhận thông tin. Anh/chị vui lòng inbox để bên em tư vấn chi tiết và hỗ trợ nhanh hơn.\n\nNhãn gợi ý: {label}\nHành động: Chuyển CRM"
+    ai_reply = safe_ai_generate(prompt, fallback=fallback)
+    add_comment_lead(customer_name, phone, clean_comment, ai_reply, label)
+    if request.form.get("to_crm", "1") == "1":
+        add_pipeline_lead(customer_name or "Khách từ Comment", phone, "", "Comment Facebook", "Khách mới", 0, clean_comment)
+    return render(content=ai_reply, message="Đã xử lý comment, ẩn SĐT và chuyển CRM nếu được chọn.", ok=True)
+
+@app.route("/messenger_ai_script", methods=["POST"])
+def messenger_ai_script_route():
+    product = request.form.get("product", "").strip()
+    script_type = request.form.get("script_type", "Kịch bản Inbox").strip()
+    extra = request.form.get("extra", "").strip()
+    if not product:
+        return render(message="Vui lòng nhập sản phẩm/dịch vụ để tạo kịch bản Messenger.", ok=False)
+    prompt = v3_ai_tool_prompt('messenger_ai', product, f"Loại kịch bản: {script_type}. {extra}")
+    fallback = f"{script_type} cho {product}:\n1. Chào khách tự nhiên.\n2. Hỏi nhu cầu chính.\n3. Tư vấn gói phù hợp.\n4. Xử lý băn khoăn về giá.\n5. Chốt hành động: inbox/Zalo/thanh toán."
+    content = safe_ai_generate(prompt, fallback=fallback)
+    add_messenger_script(product, script_type, content)
+    return render(content=content, message="Đã tạo kịch bản Messenger AI.", ok=True)
 
 @app.route("/export")
 def export_route():
