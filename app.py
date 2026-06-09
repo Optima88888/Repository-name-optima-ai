@@ -22,7 +22,7 @@ except Exception:
 
 load_dotenv()
 
-APP_TITLE = "Mkt Automation Pro V10 Page Group Token Center Pro"
+APP_TITLE = "Mkt Automation Pro V11 Full Page Group Token Comment Pro"
 DB = "marketing_automation_pro_v11.db"
 UPLOAD_DIR = "uploads"
 REPORT_DIR = "reports"
@@ -579,7 +579,7 @@ def init_db():
         group_uid TEXT,
         comment_text TEXT,
         min_delay_seconds INTEGER DEFAULT 45,
-        max_delay_seconds INTEGER DEFAULT 90,
+        max_delay_seconds INTEGER DEFAULT 60,
         scheduled_at TEXT,
         status TEXT DEFAULT 'Chờ duyệt',
         admin_status TEXT DEFAULT 'Chờ admin duyệt',
@@ -1897,6 +1897,16 @@ def normalize_delay_seconds(value, default=45):
         v = default
     return max(45, min(v, 3600))
 
+def normalize_comment_delay_seconds(value, default=45):
+    """Giới hạn riêng cho bình luận Page: tối thiểu 45s, tối đa 60s.
+    Dùng cho hàng chờ bình luận UID người dùng / UID bài viết / UID Group để tránh cấu hình quá nhanh hoặc quá rộng.
+    """
+    try:
+        v = int(value or default)
+    except Exception:
+        v = default
+    return max(45, min(v, 60))
+
 def add_page_comment_queue(page_index, target_type, user_uid, post_uid, group_uid, comment_text, min_delay=45, max_delay=60, scheduled_at=''):
     if not comment_text or (not post_uid and not group_uid and not user_uid):
         return 0
@@ -1909,8 +1919,8 @@ def add_page_comment_queue(page_index, target_type, user_uid, post_uid, group_ui
     page_id = str(selected_page.get('id','')) if selected_page else ''
     page_name = selected_page.get('name','Chưa chọn Page') if selected_page else 'Chưa chọn Page'
     target_type = target_type or 'post'
-    min_delay = normalize_delay_seconds(min_delay, 45)
-    max_delay = normalize_delay_seconds(max_delay, 60)
+    min_delay = normalize_comment_delay_seconds(min_delay, 45)
+    max_delay = normalize_comment_delay_seconds(max_delay, 60)
     if max_delay < min_delay:
         max_delay = min_delay
     now = datetime.datetime.now()
@@ -1927,8 +1937,8 @@ def add_page_comment_queue(page_index, target_type, user_uid, post_uid, group_ui
 
 def bulk_import_page_comment_queue(page_index, raw_targets, comment_text, min_delay=45, max_delay=60, target_type='post'):
     lines = [x.strip() for x in (raw_targets or '').splitlines() if x.strip()]
-    min_delay = normalize_delay_seconds(min_delay, 45)
-    max_delay = normalize_delay_seconds(max_delay, 60)
+    min_delay = normalize_comment_delay_seconds(min_delay, 45)
+    max_delay = normalize_comment_delay_seconds(max_delay, 60)
     if max_delay < min_delay: max_delay = min_delay
     added = skipped = 0
     base = datetime.datetime.now() + datetime.timedelta(seconds=min_delay)
@@ -4555,10 +4565,10 @@ function closeLockedFeature(){
 
   <div class="v2-nav-title">FACEBOOK CENTER</div>
   <a class="v2-nav-link" href="#facebook_center" onclick="return openModule('facebook_center')"><span class="v2-nav-ico">📣</span><span class="v2-nav-text">Facebook Center</span><span class="v2-nav-tag">Core</span></a>
-  <a class="v2-nav-link" href="#page_center_total" onclick="return openModule('page_center_total')"><span class="v2-nav-ico"></span><span class="v2-nav-text">Page Center Tổng</span><span class="v2-nav-tag">V9</span></a>
+  <a class="v2-nav-link" href="#page_center_total" onclick="return openModule('page_center_total')"><span class="v2-nav-ico"></span><span class="v2-nav-text">Page Center Tổng</span><span class="v2-nav-tag">V11</span></a>
   <a class="v2-nav-link" href="#post" onclick="return openModule('page_center_total')"><span class="v2-nav-ico"></span><span class="v2-nav-text">Đăng bài Facebook</span></a>
   <a class="v2-nav-link" href="#fanpage_manager" onclick="return openModule('fanpage_manager')"><span class="v2-nav-ico">📄</span><span class="v2-nav-text">Quản lý Fanpage</span><span class="v2-nav-tag">V5</span></a>
-  <a class="v2-nav-link" href="#group_suite" onclick="return openModule('group_suite')"><span class="v2-nav-ico"></span><span class="v2-nav-text">Group Center Tổng</span><span class="v2-nav-tag">V8</span></a>
+  <a class="v2-nav-link" href="#group_suite" onclick="return openModule('group_suite')"><span class="v2-nav-ico"></span><span class="v2-nav-text">Group Center Tổng</span><span class="v2-nav-tag">V11</span></a>
 
   <div class="v2-nav-title">SELLER AI</div>
   <a class="v2-nav-link" href="#comment_manager" onclick="return openModule('comment_manager')"><span class="v2-nav-ico">🤖</span><span class="v2-nav-text">AI Comment</span><span class="v2-nav-tag">AI</span></a>
@@ -4739,8 +4749,8 @@ function closeLockedFeature(){
 
 
 <section class="panel module-section" id="page_center_total">
-  <div class="section-open-note">Bạn đang mở: Page Center Tổng V9.</div>
-  <h2>Page Center Tổng - đăng bài, hẹn giờ và bình luận UID trong một khung</h2>
+  <div class="section-open-note">Bạn đang mở: Page Center Tổng V11.</div>
+  <h2>Page Center Tổng V11 - Token, đăng bài, hẹn giờ và bình luận UID theo từng Page</h2>
   <p class="small">Chọn nhiều Page, nhập nhiều nội dung mỗi dòng một bài, chia nội dung không trùng nhau. Có nút Đăng ngay, Hẹn giờ nhanh 30 phút / 1h / 2h / 3h. Bình luận UID người dùng, UID bài viết, UID nhóm được đưa vào hàng chờ duyệt với giãn cách 45-60 giây.</p>
   <div class="gf-warning">Chỉ dùng với Page và bài viết/Group mà bạn có quyền quản lý hợp lệ. Bình luận UID được lưu hàng chờ và cần duyệt trước; không thiết kế spam tự động hàng loạt.</div>
 
@@ -4753,6 +4763,7 @@ function closeLockedFeature(){
       <button type="submit" formaction="/check_tokens">Kiểm tra toàn bộ Token</button>
     </form>
     <div style="max-height:180px;overflow:auto"><table class="gf-table"><tr><th>Page</th><th>Page ID</th><th>Token</th><th>Trạng thái</th><th>Cập nhật</th></tr>{% for t in page_token_rows %}<tr><td>{{ t[1] }}</td><td>{{ t[2] }}</td><td>{{ t[3] }}</td><td>{{ t[4] }}</td><td>{{ t[6] }}</td></tr>{% endfor %}</table></div>
+    <p class="small">Sau khi lưu Token, Page xuất hiện ngay ở danh sách chọn Page bên dưới và ở Group Center. Không cần sửa PAGES_JSON trên Render Environment.</p>
   </div>
 
   <div class="gf-grid-3">
@@ -4797,7 +4808,8 @@ function closeLockedFeature(){
   </div>
 
   <div class="gf-box">
-    <h3>2. Bình luận UID bằng Page - hàng chờ duyệt 45-60 giây</h3>
+    <h3>2. Bình luận UID bằng Page - từng Page riêng, hàng chờ duyệt 45-60 giây</h3>
+    <p class="small">Chọn 1 hoặc nhiều Page. Mỗi Page sẽ tạo hàng chờ bình luận riêng theo UID người dùng / UID bài viết / UID Group. Không tự spam; admin phải duyệt và ghi log.</p>
     <form method="post" action="/page_comment_queue_add">
       <div class="gf-grid-3">
         <div>
@@ -4830,18 +4842,19 @@ function closeLockedFeature(){
 
 
 <section class="panel module-section" id="group_suite">
-  <div class="section-open-note">Bạn đang mở: Group Center Tổng V9.</div>
-  <h2>Group Center Tổng - Page nào đăng Group đó, không trùng nhau</h2>
+  <div class="section-open-note">Bạn đang mở: Group Center Tổng V11.</div>
+  <h2>Group Center Tổng V11 - chọn Page đã tham gia Group để đăng bài không trùng</h2>
   <p class="small">Gom chung: sắp xếp Group, tìm từ khóa, chia UID, tham gia nhóm, đăng bài nhóm và bình luận nhóm trong một khung. Bản này có chế độ ghép 1 Page với 1 Group riêng, tránh Page đăng trùng nhiều Group khi không cần.</p>
   <div class="gf-warning">Chỉ dùng với Group/Page mà tài khoản hoặc Page có quyền truy cập hợp lệ. Hệ thống tạo hàng chờ, duyệt và log; không tự động spam hàng loạt hoặc thao tác trái quyền.</div>
 
   <div class="gf-box">
-    <h3>0. Chọn Page đã tham gia Group</h3>
+    <h3>0. Chọn Page đã tham gia Group / có quyền đăng</h3>
+    <p class="small">Bước bắt buộc: lưu cặp Page → Group. Khi đăng Group, hệ thống chỉ nhận đúng cặp đã lưu, không cho Page đăng vào Group chưa tham gia.</p>
     <form method="post" action="/page_group_membership_add">
       <div class="gf-grid-3">
         <select name="page_index">{% for p in pages %}<option value="{{ loop.index0 }}">{{ p.name }} - {{ p.id }}</option>{% endfor %}</select>
-        <select name="group_id">{% for g in fb_groups %}<option value="{{ g[2] }}">{{ g[1] }} - {{ g[2] }}</option>{% endfor %}</select>
-        <select name="can_post"><option value="Có">Page có quyền đăng bài</option><option value="Không">Chưa có quyền đăng</option></select>
+        <select name="group_id_select" onchange="this.form.group_id.value=this.value"><option value="">Chọn Group đã lưu</option>{% for g in fb_groups %}<option value="{{ g[2] }}">{{ g[1] }} - {{ g[2] }}</option>{% endfor %}</select>
+        <input name="group_id" placeholder="Hoặc nhập UID Group thủ công"><select name="can_post"><option value="Có">Page có quyền đăng bài</option><option value="Không">Chưa có quyền đăng</option></select>
       </div>
       <div class="gf-grid-3"><select name="status"><option>Đã tham gia</option><option>Đang chờ duyệt</option><option>Không đủ quyền</option></select><input name="note" placeholder="Ghi chú kiểm tra quyền"><button>Lưu Page đã tham gia Group</button></div>
     </form>
@@ -6426,13 +6439,17 @@ def page_token_save_route():
 @app.route("/page_group_membership_add", methods=["POST"])
 def page_group_membership_add_route():
     page_index = request.form.get("page_index", "")
-    group_id = request.form.get("group_id", "").strip()
+    group_id = (request.form.get("group_id", "") or request.form.get("group_id_select", "")).strip()
     status = request.form.get("status", "Đã tham gia")
     can_post = request.form.get("can_post", "Có")
     note = request.form.get("note", "")
     if not add_page_group_membership(page_index, group_id, status, can_post, note):
         return render(message="Vui lòng chọn Page và Group hợp lệ trước khi lưu quyền tham gia Group.", ok=False)
     return render(message="Đã lưu Page đã tham gia Group. Khi tạo hàng chờ đăng Group, hệ thống chỉ nhận cặp Page → Group có quyền đăng.", ok=True)
+
+@app.route("/healthz")
+def healthz_route():
+    return jsonify({"ok": True, "app": APP_TITLE, "pages": len(get_pages_dynamic())})
 
 @app.route("/support_poll")
 def support_poll_route():
@@ -6471,7 +6488,7 @@ def page_comment_queue_add_route():
             else: total_skipped += 1
     if total_added <= 0:
         return render(message="Vui lòng nhập ít nhất một UID bài viết, UID Group hoặc UID người dùng hợp lệ.", ok=False)
-    return render(message=f"Đã tạo {total_added} hàng chờ bình luận cho {len(page_indexes)} Page. Bỏ qua {total_skipped}. Giãn cách {normalize_delay_seconds(min_delay,45)}-{normalize_delay_seconds(max_delay,60)} giây.", ok=True)
+    return render(message=f"Đã tạo {total_added} hàng chờ bình luận cho {len(page_indexes)} Page. Bỏ qua {total_skipped}. Giãn cách {normalize_comment_delay_seconds(min_delay,45)}-{normalize_comment_delay_seconds(max_delay,60)} giây.", ok=True)
 
 @app.route("/page_comment_queue_action", methods=["POST"])
 def page_comment_queue_action_route():
