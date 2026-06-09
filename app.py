@@ -6381,64 +6381,100 @@ def admin_premium_page():
     password = request.args.get("password") or request.form.get("password") or ""
     if password != admin_password:
         return """
-        <html><head><meta charset='UTF-8'><title>Admin Login</title></head>
+        <html><head><meta charset='UTF-8'><meta name='viewport' content='width=device-width,initial-scale=1'><title>Admin Login</title></head>
         <body style='font-family:Arial;background:#0f172a;color:white;padding:30px'>
         <h2>Đăng nhập Web Admin</h2>
         <form method='get'>
-          <input name='password' type='password' placeholder='Mật khẩu admin' style='padding:12px;border-radius:10px;width:260px'>
+          <input name='password' type='password' placeholder='Mật khẩu admin' style='padding:12px;border-radius:10px;width:260px;background:#111827;color:white;border:1px solid #334155'>
           <button style='padding:12px 18px;border-radius:10px;background:#7c3aed;color:white;border:0;font-weight:bold'>Vào Admin</button>
         </form>
         </body></html>
         """
 
-    rows = get_premium_requests(200)
-    chats = get_support_messages(200)
-    token_checks = get_latest_token_checks(80)
+    rows = get_premium_requests(500)
+    chats = get_support_messages(300)
+    token_checks = get_latest_token_checks(120)
+    history = get_history(500)
+    stats = get_stats()
+    fanpages = get_fanpages()
+
     pending_count = sum(1 for r in rows if r[8] == 'pending')
     approved_count = sum(1 for r in rows if r[8] == 'approved')
     chat_new_count = sum(1 for r in chats if r[7] == 'new')
-    error_posts = [r for r in get_history(200) if str(r[3]).lower() == 'error']
+    error_posts = [r for r in history if str(r[3]).lower() == 'error']
+    posted_count = sum(1 for r in history if str(r[3]).lower() == 'posted')
+    scheduled_count = sum(1 for r in history if str(r[3]).lower() == 'scheduled')
+    total_revenue = sum(int(r[6] or 0) for r in rows if r[8] == 'approved')
+    month_now = datetime.datetime.now().strftime('%Y-%m')
+    month_revenue = sum(int(r[6] or 0) for r in rows if r[8] == 'approved' and str(r[12] or '').startswith(month_now))
+
+    plan_counts = {}
+    for r in rows:
+        if r[8] == 'approved':
+            name = r[5] or r[4] or 'Gói Premium'
+            plan_counts[name] = plan_counts.get(name, 0) + 1
 
     def esc(x):
         return str(x or "").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', '&quot;')
 
+    def money(v):
+        try:
+            return f"{int(v or 0):,}đ".replace(',', '.')
+        except Exception:
+            return '0đ'
+
+    now_dt = datetime.datetime.now()
+    expiring = []
+    for r in rows:
+        if r[8] == 'approved' and r[10]:
+            try:
+                end_dt = datetime.datetime.strptime(str(r[10])[:19], '%Y-%m-%d %H:%M:%S')
+                if 0 <= (end_dt - now_dt).days <= 7:
+                    expiring.append(r)
+            except Exception:
+                pass
+
     html_rows = ""
     payment_rows = ""
+    premium_customer_rows = ""
     for r in rows:
         status = r[8] or "pending"
-        badge = "#22c55e" if status == "approved" else "#f59e0b"
+        badge_class = "badge-ok" if status == "approved" else "badge-warn"
         approve_btn = ""
         if status != "approved":
             approve_btn = f"""
             <form method='post' action='/admin/approve_premium' style='margin:0'>
               <input type='hidden' name='password' value='{esc(password)}'>
               <input type='hidden' name='request_id' value='{r[0]}'>
-              <button class='ok'>Kích hoạt Premium</button>
+              <button class='btn success'>Kích hoạt</button>
             </form>
             """
+        else:
+            approve_btn = "<span class='muted'>Đã duyệt</span>"
         plan_name = esc(r[5] or r[4] or 'Gói Premium')
-        amount = f"{int(r[6] or 0):,}đ"
+        amount = money(r[6])
         html_rows += f"""
         <tr>
-          <td>{r[0]}</td>
-          <td><b>{esc(r[1])}</b></td>
-          <td>{esc(r[2])}</td>
-          <td>{esc(r[3])}</td>
+          <td>{r[0]}</td><td><b>{esc(r[1])}</b></td><td>{esc(r[2])}</td><td>{esc(r[3])}</td>
           <td><b class='plan-name'>👑 {plan_name}</b><br><small>{amount}</small></td>
-          <td>{esc(r[7])}</td>
-          <td><span style='background:{badge};color:white;padding:6px 10px;border-radius:999px;font-weight:bold'>{esc(status)}</span><br><small>{esc(r[11])}</small></td>
-          <td>{esc(r[10] or '')}</td>
-          <td>{approve_btn}</td>
+          <td>{esc(r[7])}</td><td><span class='badge {badge_class}'>{esc(status)}</span><br><small>{esc(r[11])}</small></td><td>{esc(r[10] or '')}</td><td>{approve_btn}</td>
         </tr>
         """
         payment_rows += f"""
-        <tr><td>{r[0]}</td><td>{esc(r[2])}</td><td>{esc(r[3])}</td><td>{plan_name}</td><td>{amount}</td><td>{esc(r[7])}</td><td>{esc(status)}</td><td>{esc(r[12] or '')}</td></tr>
+        <tr><td>{r[0]}</td><td>{esc(r[2])}</td><td>{esc(r[3])}</td><td>{plan_name}</td><td><b>{amount}</b></td><td>{esc(r[7])}</td><td><span class='badge {badge_class}'>{esc(status)}</span></td><td>{esc(r[12] or '')}</td></tr>
         """
+        if status == 'approved':
+            premium_customer_rows += f"""
+            <tr><td>{r[0]}</td><td><b>{esc(r[1])}</b></td><td>{esc(r[2])}</td><td>{esc(r[3])}</td><td><b class='plan-name'>{plan_name}</b></td><td>{amount}</td><td>{esc(r[10] or '')}</td></tr>
+            """
+
+    plan_cards = ''.join(f"<div class='mini-card'><span>{esc(k)}</span><b>{v}</b></div>" for k,v in sorted(plan_counts.items())) or "<div class='mini-card'><span>Chưa có gói đã duyệt</span><b>0</b></div>"
 
     chat_rows = ""
     for m in chats:
         status = m[7] or 'new'
-        badge = '#f59e0b' if status == 'new' else '#22c55e'
+        badge_class = 'badge-warn' if status == 'new' else 'badge-ok'
+        customer_key = esc(m[2] or m[3] or m[1] or 'Khách chưa có thông tin')
         reply_box = ''
         if status != 'replied':
             reply_box = f"""
@@ -6446,59 +6482,83 @@ def admin_premium_page():
               <input type='hidden' name='password' value='{esc(password)}'>
               <input type='hidden' name='message_id' value='{m[0]}'>
               <textarea name='admin_reply' placeholder='Nhập nội dung trả lời khách...' required></textarea>
-              <button class='ok'>Gửi trả lời</button>
+              <button class='btn success'>Gửi trả lời</button>
             </form>
             """
         else:
             reply_box = f"<div class='reply-done'><b>Admin đã trả lời:</b><br>{esc(m[6])}<br><small>{esc(m[9])}</small></div>"
         chat_rows += f"""
         <div class='chat-card'>
-          <div class='chat-head'><b>#{m[0]} - {esc(m[2] or m[3] or m[1] or 'Khách chưa có thông tin')}</b><span style='background:{badge}'>{esc(status)}</span></div>
-          <small>Device: {esc(m[1])} • Email: {esc(m[3])} • {esc(m[8])}</small>
+          <div class='chat-head'><b>#{m[0]} - {customer_key}</b><span class='badge {badge_class}'>{esc(status)}</span></div>
+          <small>Device: {esc(m[1])} • SĐT: {esc(m[2])} • Email: {esc(m[3])} • {esc(m[8])}</small>
           <div class='customer-msg'>{esc(m[5])}</div>
           {reply_box}
         </div>
         """
 
-    token_rows = ''.join(f"<tr><td>{esc(t[0])}</td><td>{esc(t[1])}</td><td>{esc(t[2])}</td><td>{esc(t[3])}</td><td>{esc(t[4])}</td></tr>" for t in token_checks)
-    error_rows = ''.join(f"<tr><td>{e[0]}</td><td>{esc(e[1])}</td><td>{esc(e[3])}</td><td>{esc(e[4])}</td><td>{esc(e[9])}</td></tr>" for e in error_posts[:80])
+    token_rows = ''.join(
+        f"<tr><td>{esc(t[0])}</td><td>{esc(t[1])}</td><td><span class='badge {'badge-ok' if str(t[2]).upper()=='SỐNG' else 'badge-danger'}'>{esc(t[2])}</span></td><td>{esc(t[3])}</td><td>{esc(t[4])}</td></tr>" for t in token_checks
+    )
+    error_rows = ''.join(f"<tr><td>{e[0]}</td><td>{esc(e[1])}</td><td><span class='badge badge-danger'>{esc(e[3])}</span></td><td>{esc(e[4])}</td><td>{esc(e[9])}</td></tr>" for e in error_posts[:120])
+    expiring_rows = ''.join(f"<tr><td>{r[0]}</td><td>{esc(r[2])}</td><td>{esc(r[3])}</td><td>{esc(r[5] or r[4])}</td><td>{esc(r[10])}</td></tr>" for r in expiring)
 
     return f"""
-    <html><head><meta charset='UTF-8'><title>Premium Admin</title>
+    <html><head><meta charset='UTF-8'><meta name='viewport' content='width=device-width,initial-scale=1'><title>Admin Center</title>
     <style>
-      *{{box-sizing:border-box}} body{{font-family:Arial;background:#0f172a;color:#e5e7eb;margin:0}} a{{color:inherit;text-decoration:none}}
-      .layout{{display:flex;min-height:100vh}} .admin-side{{width:250px;background:#0b1224;border-right:1px solid #1e293b;padding:22px;position:sticky;top:0;height:100vh;overflow-y:auto}}
-      .admin-side h2{{color:#38bdf8;margin-top:0}} .admin-side a{{display:block;padding:12px;border-radius:12px;margin:6px 0;background:#111827;border:1px solid #1f2937}}
-      .admin-side a:hover{{background:#1e293b;color:#38bdf8}} .main{{flex:1;padding:24px;overflow:auto}}
-      h1{{color:#38bdf8;font-size:36px;text-shadow:0 2px 0 #075985,0 0 18px rgba(56,189,248,.35)}} h2{{color:#c4b5fd;margin-top:34px}}
-      .cards{{display:grid;grid-template-columns:repeat(4,minmax(160px,1fr));gap:14px;margin:18px 0}}
-      .card{{background:#1e293b;border:1px solid #334155;border-radius:18px;padding:18px;min-height:98px}} .card b{{font-size:30px;color:#fbbf24}}
-      table{{width:100%;border-collapse:collapse;background:#111827;border-radius:18px;overflow:hidden;margin-bottom:20px}}
-      th,td{{border-bottom:1px solid #334155;padding:12px;text-align:left;vertical-align:top}} th{{background:#1e1b4b;color:#c4b5fd;position:sticky;top:0}}
-      .ok{{background:#22c55e;color:white;border:0;padding:10px 14px;border-radius:10px;font-weight:bold;cursor:pointer}} small{{color:#94a3b8}}
-      .plan-name{{color:#38bdf8;text-shadow:0 1px 0 #075985,0 0 13px rgba(59,130,246,.65)}}
-      .chat-card{{background:#111827;border:1px solid #334155;border-radius:18px;padding:16px;margin:12px 0}} .chat-head{{display:flex;justify-content:space-between;gap:10px}}
-      .chat-head span{{color:white;padding:5px 10px;border-radius:999px;font-weight:bold}} .customer-msg{{background:#0b1224;border:1px solid #1f2937;border-radius:14px;padding:12px;margin:10px 0;white-space:pre-wrap}}
-      .reply-form textarea{{width:100%;height:90px;background:#020617;color:white;border:1px solid #334155;border-radius:12px;padding:12px;margin:8px 0}} .reply-done{{background:#052e16;border:1px solid #166534;border-radius:14px;padding:12px;margin-top:10px}}
-      @media(max-width:900px){{.layout{{display:block}}.admin-side{{width:100%;height:auto;position:relative}}.cards{{grid-template-columns:1fr 1fr}}}}
+      *{{box-sizing:border-box}} html{{scroll-behavior:smooth}} body{{font-family:Arial,system-ui;background:#0f172a;color:#e5e7eb;margin:0}} a{{color:inherit;text-decoration:none}}
+      .layout{{display:flex;min-height:100vh}} .admin-side{{width:282px;background:#08111f;border-right:1px solid #1e293b;padding:20px;position:sticky;top:0;height:100vh;overflow-y:auto}}
+      .brand{{font-size:26px;font-weight:900;color:#38bdf8;text-shadow:0 2px 0 #075985,0 0 18px rgba(56,189,248,.35);margin-bottom:18px}}
+      .menu-title{{color:#94a3b8;font-size:12px;letter-spacing:.12em;text-transform:uppercase;margin:18px 0 8px}}
+      .admin-side a{{display:block;padding:13px 14px;border-radius:14px;margin:7px 0;background:#111827;border:1px solid #1f2937;font-weight:700}}
+      .admin-side a:hover{{background:#1e293b;color:#38bdf8;transform:translateX(3px)}} .main{{flex:1;padding:26px;overflow:auto}}
+      h1{{color:#38bdf8;font-size:38px;text-shadow:0 2px 0 #075985,0 0 18px rgba(56,189,248,.35);margin:0 0 8px}} h2{{color:#c4b5fd;margin-top:38px;font-size:28px}}
+      .sub{{color:#94a3b8;margin-bottom:18px}} .cards{{display:grid;grid-template-columns:repeat(6,minmax(140px,1fr));gap:14px;margin:18px 0}}
+      .card{{background:linear-gradient(135deg,#1e293b,#111827);border:1px solid #334155;border-radius:20px;padding:18px;min-height:104px;box-shadow:0 18px 50px rgba(0,0,0,.18)}} .card span{{color:#cbd5e1;font-weight:700}} .card b{{display:block;font-size:30px;color:#fbbf24;margin-top:8px}}
+      .grid2{{display:grid;grid-template-columns:1.1fr .9fr;gap:16px}} .panel{{background:#111827;border:1px solid #334155;border-radius:20px;padding:16px;margin:16px 0}}
+      .mini-grid{{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px}} .mini-card{{background:#0b1224;border:1px solid #263449;border-radius:16px;padding:14px}} .mini-card span{{display:block;color:#cbd5e1}} .mini-card b{{font-size:26px;color:#38bdf8}}
+      table{{width:100%;border-collapse:collapse;background:#111827;border-radius:18px;overflow:hidden;margin-bottom:20px}} th,td{{border-bottom:1px solid #334155;padding:12px;text-align:left;vertical-align:top}} th{{background:#1e1b4b;color:#c4b5fd;position:sticky;top:0}}
+      .btn{{border:0;padding:10px 14px;border-radius:12px;font-weight:900;cursor:pointer}} .success{{background:#22c55e;color:white}} .primary{{background:#2563eb;color:white}} small,.muted{{color:#94a3b8}}
+      .badge{{display:inline-block;color:white;padding:6px 10px;border-radius:999px;font-weight:900;font-size:13px}} .badge-ok{{background:#22c55e}} .badge-warn{{background:#f59e0b}} .badge-danger{{background:#ef4444}}
+      .plan-name{{color:#38bdf8;text-shadow:0 1px 0 #075985,0 0 13px rgba(59,130,246,.65)}} .tools{{display:flex;gap:10px;flex-wrap:wrap;margin:8px 0 16px}}
+      .chat-card{{background:#111827;border:1px solid #334155;border-radius:18px;padding:16px;margin:12px 0}} .chat-head{{display:flex;justify-content:space-between;gap:10px;align-items:center}}
+      .customer-msg{{background:#0b1224;border:1px solid #1f2937;border-radius:14px;padding:12px;margin:10px 0;white-space:pre-wrap;line-height:1.5}} .reply-form textarea{{width:100%;height:90px;background:#020617;color:white;border:1px solid #334155;border-radius:12px;padding:12px;margin:8px 0}} .reply-done{{background:#052e16;border:1px solid #166534;border-radius:14px;padding:12px;margin-top:10px}}
+      @media(max-width:1100px){{.cards{{grid-template-columns:repeat(2,1fr)}}.grid2{{grid-template-columns:1fr}}}} @media(max-width:760px){{.layout{{display:block}}.admin-side{{width:100%;height:auto;position:relative}}.cards{{grid-template-columns:1fr}}}}
     </style></head><body>
       <div class='layout'>
         <aside class='admin-side'>
-          <h2>Admin Center</h2>
-          <a href='#overview'>🏠 Tổng quan</a><a href='#premium'>👑 Yêu cầu Premium</a><a href='#payments'>💳 Lịch sử thanh toán</a><a href='#chat'>💬 Chat khách hàng</a><a href='#errors'>📣 Lỗi đăng Fanpage</a><a href='#tokens'>🔑 Token Fanpage</a>
+          <div class='brand'>Admin Center</div>
+          <div class='menu-title'>CEO</div><a href='#overview'>🏠 Dashboard CEO</a>
+          <div class='menu-title'>Premium Center</div><a href='#premium'>👑 Yêu cầu kích hoạt</a><a href='#customers'>💎 Khách Premium</a><a href='#expiring'>⏳ Hết hạn sắp tới</a><a href='#payments'>💳 Doanh thu & Thanh toán</a>
+          <div class='menu-title'>Chat Center</div><a href='#chat'>💬 Chat khách hàng <span class='badge badge-warn'>{chat_new_count}</span></a>
+          <div class='menu-title'>Facebook Center</div><a href='#errors'>📣 Lỗi đăng Fanpage</a><a href='#tokens'>🔑 Token Fanpage</a>
+          <div class='menu-title'>System</div><a href='/admin?password={esc(password)}'>🔄 Tải lại Admin</a>
         </aside>
         <main class='main'>
-          <h1 id='overview'>Premium Admin Center</h1>
+          <h1 id='overview'>Dashboard CEO</h1><div class='sub'>Quản lý Premium, thanh toán, chat khách hàng, lỗi đăng bài và token Fanpage.</div>
           <div class='cards'>
-            <div class='card'>Chờ duyệt<br><b>{pending_count}</b></div><div class='card'>Đã kích hoạt<br><b>{approved_count}</b></div><div class='card'>Tin chat mới<br><b>{chat_new_count}</b></div><div class='card'>Lỗi đăng bài<br><b>{len(error_posts)}</b></div>
+            <div class='card'><span>Chờ duyệt</span><b>{pending_count}</b></div><div class='card'><span>Đã kích hoạt</span><b>{approved_count}</b></div><div class='card'><span>Doanh thu tháng</span><b>{money(month_revenue)}</b></div><div class='card'><span>Tổng doanh thu</span><b>{money(total_revenue)}</b></div><div class='card'><span>Tin chat mới</span><b>{chat_new_count}</b></div><div class='card'><span>Lỗi đăng bài</span><b>{len(error_posts)}</b></div>
           </div>
+          <div class='grid2'>
+            <div class='panel'><h3>👑 Thống kê gói Premium</h3><div class='mini-grid'>{plan_cards}</div></div>
+            <div class='panel'><h3>📣 Tình trạng hệ thống</h3><div class='mini-grid'><div class='mini-card'><span>Fanpage đã lưu</span><b>{len(fanpages)}</b></div><div class='mini-card'><span>Đã đăng</span><b>{posted_count}</b></div><div class='mini-card'><span>Đang hẹn lịch</span><b>{scheduled_count}</b></div><div class='mini-card'><span>CRM</span><b>{stats.get('crm',0)}</b></div></div></div>
+          </div>
+
           <h2 id='premium'>👑 Yêu cầu Premium</h2>
           <table><tr><th>ID</th><th>Device ID</th><th>SĐT</th><th>Email</th><th>Gói</th><th>Ghi chú</th><th>Trạng thái</th><th>Hết hạn</th><th>Duyệt</th></tr>{html_rows or '<tr><td colspan="9">Chưa có yêu cầu Premium.</td></tr>'}</table>
+          <h2 id='customers'>💎 Khách đang Premium</h2>
+          <table><tr><th>ID</th><th>Device ID</th><th>SĐT</th><th>Email</th><th>Gói</th><th>Số tiền</th><th>Hết hạn</th></tr>{premium_customer_rows or '<tr><td colspan="7">Chưa có khách Premium.</td></tr>'}</table>
+          <h2 id='expiring'>⏳ Premium hết hạn trong 7 ngày</h2>
+          <table><tr><th>ID</th><th>SĐT</th><th>Email</th><th>Gói</th><th>Hết hạn</th></tr>{expiring_rows or '<tr><td colspan="5">Chưa có khách sắp hết hạn.</td></tr>'}</table>
           <h2 id='payments'>💳 Lịch sử thanh toán</h2>
           <table><tr><th>ID</th><th>SĐT</th><th>Email</th><th>Gói</th><th>Số tiền</th><th>Nội dung CK</th><th>Trạng thái</th><th>Ngày duyệt</th></tr>{payment_rows or '<tr><td colspan="8">Chưa có lịch sử thanh toán.</td></tr>'}</table>
-          <h2 id='chat'>💬 Chat khách hàng</h2>{chat_rows or '<div class="chat-card">Chưa có tin nhắn hỗ trợ.</div>'}
-          <h2 id='errors'>📣 Lỗi đăng Fanpage</h2><table><tr><th>ID</th><th>Fanpage</th><th>Trạng thái</th><th>Chi tiết lỗi</th><th>Thời gian</th></tr>{error_rows or '<tr><td colspan="5">Chưa có lỗi đăng bài.</td></tr>'}</table>
-          <h2 id='tokens'>🔑 Token Fanpage</h2><table><tr><th>Fanpage</th><th>Page ID</th><th>Trạng thái</th><th>Chi tiết</th><th>Thời gian</th></tr>{token_rows or '<tr><td colspan="5">Chưa có dữ liệu kiểm tra token.</td></tr>'}</table>
+          <h2 id='chat'>💬 Chat khách hàng</h2>
+          <div class='panel'><b>Quy trình:</b> Khách nhắn trong Mini Chat Support → lưu vào Admin → Admin trả lời → khách nhận trong khung chat.</div>
+          {chat_rows or '<div class="panel">Chưa có tin nhắn hỗ trợ.</div>'}
+          <h2 id='errors'>📣 Lỗi đăng Fanpage</h2>
+          <table><tr><th>ID</th><th>Fanpage</th><th>Trạng thái</th><th>Chi tiết lỗi</th><th>Thời gian</th></tr>{error_rows or '<tr><td colspan="5">Chưa có lỗi đăng bài.</td></tr>'}</table>
+          <h2 id='tokens'>🔑 Token Fanpage</h2>
+          <div class='tools'><form method='post' action='/admin/check_tokens'><input type='hidden' name='password' value='{esc(password)}'><button class='btn primary'>Kiểm tra tất cả Token</button></form></div>
+          <table><tr><th>Fanpage</th><th>Page ID</th><th>Trạng thái</th><th>Chi tiết</th><th>Thời gian</th></tr>{token_rows or '<tr><td colspan="5">Chưa có dữ liệu kiểm tra token.</td></tr>'}</table>
         </main>
       </div>
     </body></html>
