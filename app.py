@@ -4006,7 +4006,17 @@ document.addEventListener("DOMContentLoaded",function(){
 
 
 function openModule(moduleId){
-  const trialAllowed = ["dashboard", "fanpage_manager", "group_marketing", "comment_manager"];
+  const moduleAlias = {
+    "group_marketing":"group_suite",
+    "group_finder":"group_suite",
+    "group_uid_splitter":"group_suite",
+    "group_join_queue":"group_suite",
+    "group_post_filter":"group_suite",
+    "page_comment_pro":"group_suite",
+    "page_comment_queue":"group_suite"
+  };
+  moduleId = moduleAlias[moduleId] || moduleId;
+  const trialAllowed = ["dashboard", "fanpage_manager", "group_suite", "group_marketing", "comment_manager"];
   const premiumLocked = {
     "messenger_ai": "AI Messenger",
     "crm_sales": "CRM Kanban",
@@ -4042,6 +4052,12 @@ function showAllModules(){
 document.addEventListener("DOMContentLoaded",function(){
   const first=document.getElementById("dashboard");
   if(first){first.classList.add("active-module");}
+  document.querySelectorAll(".v2-nav-link[href^='#']").forEach(function(a){
+    a.addEventListener("click", function(e){
+      const id=(a.getAttribute("href")||"").replace("#","");
+      if(id){ e.preventDefault(); openModule(id); }
+    });
+  });
 });
 
 
@@ -4294,13 +4310,7 @@ function closeLockedFeature(){
   <a class="v2-nav-link" href="#facebook_center" onclick="openModule('facebook_center')"><span class="v2-nav-ico">📣</span><span class="v2-nav-text">Facebook Center</span><span class="v2-nav-tag">Core</span></a>
   <a class="v2-nav-link" href="#post" onclick="openModule('post')"><span class="v2-nav-ico">📝</span><span class="v2-nav-text">Đăng bài Facebook</span></a>
   <a class="v2-nav-link" href="#fanpage_manager" onclick="openModule('fanpage_manager')"><span class="v2-nav-ico">📄</span><span class="v2-nav-text">Quản lý Fanpage</span><span class="v2-nav-tag">V5</span></a>
-  <a class="v2-nav-link" href="#group_marketing" onclick="openModule('group_marketing')"><span class="v2-nav-ico"></span><span class="v2-nav-text">Quản lý Group</span><span class="v2-nav-tag">V6</span></a>
-  <a class="v2-nav-link" href="#group_finder" onclick="openModule('group_finder')"><span class="v2-nav-ico"></span><span class="v2-nav-text">Tìm Group theo từ khóa</span><span class="v2-nav-tag">New</span></a>
-  <a class="v2-nav-link" href="#group_uid_splitter" onclick="openModule('group_uid_splitter')"><span class="v2-nav-ico"></span><span class="v2-nav-text">Chia UID Group</span></a>
-  <a class="v2-nav-link" href="#group_join_queue" onclick="openModule('group_join_queue')"><span class="v2-nav-ico"></span><span class="v2-nav-text">Hàng chờ tham gia Group</span></a>
-  <a class="v2-nav-link" href="#group_post_filter" onclick="openModule('group_post_filter')"><span class="v2-nav-ico"></span><span class="v2-nav-text">Lọc bài viết Group</span></a>
-  <a class="v2-nav-link" href="#page_comment_pro" onclick="openModule('page_comment_pro')"><span class="v2-nav-ico"></span><span class="v2-nav-text">Bình luận Page theo UID</span><span class="v2-nav-tag">V7</span></a>
-  <a class="v2-nav-link" href="#page_comment_queue" onclick="openModule('page_comment_queue')"><span class="v2-nav-ico"></span><span class="v2-nav-text">Hàng chờ bình luận</span></a>
+  <a class="v2-nav-link" href="#group_suite" onclick="return openModule('group_suite')"><span class="v2-nav-ico"></span><span class="v2-nav-text">Group Center Tổng</span><span class="v2-nav-tag">V8</span></a>
 
   <div class="v2-nav-title">SELLER AI</div>
   <a class="v2-nav-link" href="#comment_manager" onclick="openModule('comment_manager')"><span class="v2-nav-ico">🤖</span><span class="v2-nav-text">AI Comment</span><span class="v2-nav-tag">AI</span></a>
@@ -4355,7 +4365,7 @@ function closeLockedFeature(){
     <b>Quản lý Fanpage</b>
     <span>Kiểm tra Page, Token, quyền đăng bài và trạng thái hoạt động.</span>
   </div>
-  <div class="app-quick-card" onclick="openModule('group_marketing')">
+  <div class="app-quick-card" onclick="openModule('group_suite')">
     <div class="app-ico">👥</div>
     <b>Quản lý Group</b>
     <span>Lưu group, tạo lịch đăng group và viết bài seeding mềm.</span>
@@ -4418,7 +4428,7 @@ function closeLockedFeature(){
   <div class="module-hub v3-main-hub">
     <div class="module-card" onclick="openModule('facebook_center')"><div class="icon">📣</div><h3>Facebook Center</h3><p>Trung tâm đăng bài, lên lịch, quản lý Fanpage, Group, Token và lịch sử đăng.</p><span class="module-pill">Mở Facebook Center</span></div>
     <div class="module-card" onclick="openModule('fanpage_manager')"><div class="icon">📄</div><h3>Quản lý Fanpage</h3><p>Kiểm tra Page, Token, quyền đăng bài và trạng thái hoạt động.</p><span class="module-pill">Mở Fanpage</span></div>
-    <div class="module-card" onclick="openModule('group_marketing')"><div class="icon">👥</div><h3>Quản lý Group</h3><p>Lưu Group, tạo lịch đăng Group và viết bài seeding mềm.</p><span class="module-pill">Mở Group</span></div>
+    <div class="module-card" onclick="openModule('group_suite')"><div class="icon">👥</div><h3>Quản lý Group</h3><p>Lưu Group, tạo lịch đăng Group và viết bài seeding mềm.</p><span class="module-pill">Mở Group</span></div>
     <div class="module-card" onclick="openModule('comment_manager')"><div class="icon">🤖</div><h3>AI Comment</h3><p>Ẩn số điện thoại, trả lời bình luận, gắn nhãn khách nóng/ấm/lạnh và chuyển CRM.</p><span class="module-pill">Mở AI Comment</span></div>
     <div class="module-card" onclick="openModule('messenger_ai')"><div class="icon">💬</div><h3>AI Messenger</h3><p>Tạo kịch bản inbox, chốt sale, xử lý từ chối và chăm sóc lại.</p><span class="module-pill">Mở AI Messenger</span></div>
     <div class="module-card" onclick="openModule('crm_sales')"><div class="icon">📋</div><h3>CRM Kanban</h3><p>Quản lý khách theo các cột: mới, tư vấn, báo giá, theo dõi, đã chốt.</p><span class="module-pill">Mở CRM</span></div>
@@ -4448,7 +4458,7 @@ function closeLockedFeature(){
     <button onclick="openModule('post')">📢 Đăng bài</button>
     <button onclick="openModule('scheduler')">📅 Scheduler</button>
     <button onclick="openModule('fanpage_manager')">📄 Fanpage Manager</button>
-    <button onclick="openModule('group_marketing')">👥 Group Marketing</button>
+    <button onclick="openModule('group_suite')">👥 Group Marketing</button>
     <button onclick="openModule('comment_manager')">💬 Comment Manager AI</button>
     <button onclick="openModule('messenger_ai')">🤖 Messenger AI</button>
   </div>
@@ -4456,7 +4466,7 @@ function closeLockedFeature(){
     <div class="v3-feature-card"><h3>Đăng bài</h3><ul><li>Đăng ngay</li><li>Đăng hàng loạt</li><li>Đăng nhiều Page</li><li>Đăng ảnh/video</li></ul><button onclick="openModule('post')">Mở công cụ đăng bài</button></div>
     <div class="v3-feature-card"><h3>Scheduler</h3><ul><li>Lên lịch tự động</li><li>Đăng chiến dịch</li><li>Chia khung giờ</li><li>Tự lưu lịch</li></ul><button onclick="openModule('scheduler')">Mở lịch đăng</button></div>
     <div class="v3-feature-card"><h3>Quản lý Fanpage</h3><ul><li>Kết nối Fanpage</li><li>Kiểm tra Token</li><li>Kiểm tra quyền</li><li>Trạng thái hoạt động</li><li>Làm mới Token</li></ul><button onclick="openModule('fanpage_manager')">Mở Fanpage Manager</button></div>
-    <div class="v3-feature-card"><h3>Tiếp thị nhóm</h3><ul><li>Quản lý Group</li><li>Danh sách Group</li><li>Lịch đăng Group</li><li>AI viết bài Group</li></ul><button onclick="openModule('group_marketing')">Mở Group Marketing</button></div>
+    <div class="v3-feature-card"><h3>Tiếp thị nhóm</h3><ul><li>Quản lý Group</li><li>Danh sách Group</li><li>Lịch đăng Group</li><li>AI viết bài Group</li></ul><button onclick="openModule('group_suite')">Mở Group Marketing</button></div>
     <div class="v3-feature-card"><h3>Trình quản lý bình luận</h3><ul><li>AI trả lời comment</li><li>Ẩn SĐT</li><li>Gắn nhãn khách</li><li>Chuyển CRM</li></ul><button onclick="openModule('comment_manager')">Mở Comment AI</button></div>
     <div class="v3-feature-card"><h3>Trí tuệ nhân tạo Messenger</h3><ul><li>Kịch bản Inbox</li><li>Kịch bản Chốt Sale</li><li>Xử lý từ chối</li><li>Chăm sóc khách cũ</li></ul><button onclick="openModule('messenger_ai')">Mở Messenger AI</button></div>
   </div>
@@ -4479,103 +4489,76 @@ function closeLockedFeature(){
 </section>
 
 
-<section class="panel module-section" id="group_marketing">
-  <div class="section-open-note">Bạn đang mở: Group Marketing V6.</div>
-  <h2>Quản lý Group</h2>
-  <p class="small">Chọn Page và các Group đã tham gia để đưa bài vào hàng chờ đăng. Hệ thống chỉ lưu hàng chờ, không tự động spam hàng loạt.</p>
-  <div class="gf-warning">Chỉ đăng vào Group/Page mà Page hoặc tài khoản có quyền truy cập hợp lệ. Nên dùng quy trình: chọn Page → chọn Group đã tham gia → admin duyệt → đăng có giới hạn → ghi log.</div>
-  <div class="gf-grid">
-    <form method="post" action="/fb_group"><h3>Thêm Group đã tham gia</h3><input name="group_name" placeholder="Tên Group"><input name="group_id" placeholder="UID Group"><input name="niche" placeholder="Ngành / tệp khách"><textarea name="note" rows="3" placeholder="Ghi chú quyền: Page có tham gia, có được đăng bài không..."></textarea><button>Lưu Group</button></form>
-    <form method="post" action="/group_multi_post_queue"><h3>Chọn Page + nhiều Group để đăng</h3><select name="page_index">{% for p in pages %}<option value="{{ loop.index0 }}">{{ p.name }} - {{ p.id }}</option>{% endfor %}</select><div class="gf-box" style="max-height:220px;overflow:auto">{% for g in fb_groups %}<label style="display:block;margin:6px 0"><input type="checkbox" name="group_ids" value="{{ g[2] }}"> {{ g[1] }} • {{ g[2] }}</label>{% endfor %}</div><textarea name="content" rows="5" placeholder="Nội dung bài đăng Group"></textarea><button>Đưa vào hàng chờ duyệt</button></form>
-  </div>
-  <h3>Hàng chờ đăng Group</h3>{% for q in group_post_queue %}<div class="history"><b>{{ q[1] }}</b> → {{ q[2] }} • {{ q[5] }}<br>{{ q[4] }}</div>{% endfor %}
-  <h3>Danh sách Group đã lưu</h3>{% for g in fb_groups %}<div class="history"><b>{{ g[1] }}</b> • {{ g[2] }} • {{ g[3] }}<br>{{ g[4] }}</div>{% endfor %}
-</section>
+<section class="panel module-section" id="group_suite">
+  <div class="section-open-note">Bạn đang mở: Group Center Tổng V8.</div>
+  <h2>Group Center Tổng - quản lý Group trong một khung</h2>
+  <p class="small">Gom chung: sắp xếp Group, tìm theo từ khóa, chia UID, hàng chờ tham gia, đăng bài nhóm, lọc bài viết Group và bình luận Group/Page theo UID. Chọn nhiều Page để chuẩn bị hàng chờ đăng nhóm trong cùng một khung.</p>
+  <div class="gf-warning">Chỉ dùng với Group/Page mà tài khoản hoặc Page có quyền truy cập hợp lệ. Tool lưu hàng chờ, duyệt và log; không thiết kế spam tự động hoặc tham gia/bình luận hàng loạt trái quyền.</div>
 
-<section class="panel module-section" id="group_finder">
-  <div class="section-open-note">Bạn đang mở: Group Finder & UID Splitter.</div>
-  <h2>Group Finder & UID Splitter</h2>
-  <p class="small">Quét/lọc theo danh sách UID hợp lệ đã có quyền xem. Bản này không quét trái phép Facebook; nếu chưa dán danh sách, hệ thống tạo dữ liệu nháp để test giao diện.</p>
   <div class="gf-grid-3">
-    <div class="gf-stat"><span>Tổng UID quét/lưu</span><b>{{ group_finder_stats.total }}</b></div>
+    <div class="gf-stat"><span>Tổng UID Group</span><b>{{ group_finder_stats.total }}</b></div>
     <div class="gf-stat"><span>Group hợp lệ</span><b>{{ group_finder_stats.valid }}</b></div>
     <div class="gf-stat"><span>Hàng chờ tham gia</span><b>{{ group_finder_stats.queue }}</b></div>
   </div>
-  <form method="post" action="/group_finder_scan" class="gf-box">
-    <h3>Quét / nhập Group theo từ khóa</h3>
-    <div class="gf-grid-3"><input name="keyword" placeholder="Từ khóa Group"><input name="min_members" type="number" placeholder="Số thành viên tối thiểu"><select name="privacy"><option value="all">Công khai / riêng tư</option><option>Công khai</option><option>Riêng tư</option></select></div>
-    <div class="gf-grid-3"><select name="recent_only"><option value="0">Không bắt buộc hoạt động gần đây</option><option value="1">Có hoạt động gần đây</option></select><select name="page_join"><option value="all">Page tham gia: không lọc</option><option>Có</option><option>Không</option><option>Chưa rõ</option></select><select name="page_post"><option value="all">Page đăng bài: không lọc</option><option>Có</option><option>Không</option><option>Chưa rõ</option></select></div>
-    <textarea name="raw_groups" rows="6" placeholder="Dán danh sách: UID, Tên Group, Thành viên, Công khai/Riêng tư, Có hoạt động, Page tham gia, Page đăng bài"></textarea>
-    <button>Lọc và lưu UID hợp lệ</button>
-  </form>
-  <h3>Kết quả Group</h3><table class="gf-table"><tr><th>UID</th><th>Tên Group</th><th>Từ khóa</th><th>Thành viên</th><th>Quyền Page</th><th>Trạng thái</th></tr>{% for r in group_finder_results %}<tr><td>{{ r[3] }}</td><td>{{ r[2] }}</td><td>{{ r[1] }}</td><td>{{ r[4] }}</td><td>Tham gia: {{ r[7] }}<br>Đăng: {{ r[8] }}</td><td>{{ r[9] }}</td></tr>{% endfor %}</table>
-</section>
 
-<section class="panel module-section" id="group_uid_splitter">
-  <div class="section-open-note">Bạn đang mở: Chia UID Group.</div>
-  <h2>Chia UID Group tự động</h2>
-  <p class="small">Chia UID hợp lệ thành nhiều file CSV: 50 / 100 / 200 UID mỗi tệp hoặc số tự chọn.</p>
-  <form method="post" action="/group_uid_split"><select name="chunk_size"><option value="50">50 UID / tệp</option><option value="100">100 UID / tệp</option><option value="200">200 UID / tệp</option></select><button>Chia UID thành tệp</button></form>
-  <h3>Tệp UID đã tạo</h3>{% for f in group_uid_files %}<div class="history"><b>{{ f[1] }}</b> • {{ f[2] }} UID • mỗi tệp {{ f[3] }} UID</div>{% endfor %}
-</section>
-
-<section class="panel module-section" id="group_join_queue">
-  <div class="section-open-note">Bạn đang mở: Hàng chờ tham gia Group.</div>
-  <h2>Hàng chờ tham gia Group</h2>
-  <p class="small">Đưa UID đã lọc vào hàng chờ. Admin duyệt trước, sau đó tham gia có giới hạn và ghi log.</p>
-  <form method="post" action="/group_join_queue_add"><select name="page_index">{% for p in pages %}<option value="{{ loop.index0 }}">{{ p.name }} - {{ p.id }}</option>{% endfor %}</select><button>Đưa UID hợp lệ vào hàng chờ</button></form>
-  <table class="gf-table"><tr><th>UID Group</th><th>Tên Group</th><th>Từ khóa</th><th>Thành viên</th><th>Page</th><th>Trạng thái</th></tr>{% for q in group_join_queue %}<tr><td>{{ q[1] }}</td><td>{{ q[2] }}</td><td>{{ q[3] }}</td><td>{{ q[4] }}</td><td>{{ q[5] }}</td><td>{{ q[6] }}<br>{{ q[7] }}</td></tr>{% endfor %}</table>
-</section>
-
-<section class="panel module-section" id="group_post_filter">
-  <div class="section-open-note">Bạn đang mở: Lọc bài viết Group & lấy UID bài viết.</div>
-  <h2>Lọc bài viết Group & lấy UID bài viết</h2>
-  <p class="small">Nhập UID Group hoặc danh sách bài viết mà tài khoản/Page có quyền truy cập hợp lệ, sau đó lọc bài mới, nhiều comment, nhiều tương tác hoặc có từ khóa mua hàng.</p>
-  <div class="gf-warning">Không hỗ trợ quét dữ liệu trái phép hoặc spam tự động. Chỉ xử lý dữ liệu từ Group/Page có quyền truy cập hợp lệ.</div>
-  <form method="post" action="/group_post_filter_import" class="gf-box">
-    <div class="gf-grid-3"><input name="keyword" placeholder="Từ khóa mua hàng / số điện thoại / nhu cầu"><input name="min_comments" type="number" placeholder="Số comment tối thiểu"><input name="min_reactions" type="number" placeholder="Số reaction tối thiểu"></div>
-    <textarea name="raw_posts" rows="6" placeholder="Dán: UID Group, UID bài viết, Link bài viết, Người đăng, Thời gian đăng, Nội dung rút gọn, Số comment, Số reaction"></textarea>
-    <button>Lọc và lưu UID bài viết</button>
-  </form>
-  <table class="gf-table"><tr><th>UID Group</th><th>UID bài viết</th><th>Link</th><th>Người đăng</th><th>Nội dung</th><th>Comment/Reaction</th><th>Trạng thái</th></tr>{% for p in group_post_results %}<tr><td>{{ p[1] }}</td><td>{{ p[2] }}</td><td>{{ p[3] }}</td><td>{{ p[4] }}<br>{{ p[5] }}</td><td>{{ p[6] }}</td><td>{{ p[7] }} / {{ p[8] }}</td><td>{{ p[9] }}</td></tr>{% endfor %}</table>
-</section>
-
-<section class="panel module-section" id="page_comment_pro">
-  <div class="section-open-note">Bạn đang mở: Comment Manager Pro V7.</div>
-  <h2>Comment Manager Pro - Bình luận Page theo UID</h2>
-  <p class="small">Tạo hàng chờ bình luận cho Page theo UID bài viết, UID Group hoặc UID người dùng đã tương tác. Mỗi bình luận có giãn cách tối thiểu 60 giây, cần admin duyệt trước khi xử lý.</p>
-  <div class="gf-warning">Chỉ dùng với bài viết/Group/Page mà Page có quyền truy cập hợp lệ. Không hỗ trợ spam tự động, không bình luận trái phép vào người dùng không tương tác.</div>
-  <div class="gf-grid-3">
-    <div class="stat"><b>{{ page_comment_stats.total }}</b><br>Tổng hàng chờ</div>
-    <div class="stat"><b>{{ page_comment_stats.pending }}</b><br>Chờ duyệt</div>
-    <div class="stat"><b>{{ page_comment_stats.done }}</b><br>Hoàn thành</div>
+  <div class="gf-box">
+    <h3>1. Chọn nhiều Page + nhiều Group đã tham gia để đăng nhóm</h3>
+    <form method="post" action="/group_multi_post_queue">
+      <div class="gf-grid-3">
+        <div>
+          <label>Chọn Page đăng nhóm</label>
+          <div class="gf-box" style="max-height:180px;overflow:auto;padding:10px">
+            {% for p in pages %}<label style="display:block;margin:6px 0"><input type="checkbox" name="page_indexes" value="{{ loop.index0 }}"> {{ p.name }} - {{ p.id }}</label>{% endfor %}
+          </div>
+          <small class="small">Có thể chọn nhiều Page. Nếu route cũ chỉ nhận 1 Page, hệ thống mới vẫn nên xử lý nhiều Page bằng cách lặp từng Page.</small>
+        </div>
+        <div>
+          <label>Chọn Group đã tham gia</label>
+          <div class="gf-box" style="max-height:180px;overflow:auto;padding:10px">
+            {% for g in fb_groups %}<label style="display:block;margin:6px 0"><input type="checkbox" name="group_ids" value="{{ g[2] }}"> {{ g[1] }} • {{ g[2] }}</label>{% endfor %}
+          </div>
+        </div>
+        <div>
+          <label>Cài đặt duyệt</label>
+          <select name="approval_mode"><option value="manual">Admin duyệt trước</option><option value="limited">Duyệt có giới hạn</option></select>
+          <input name="min_delay" type="number" min="60" value="60" placeholder="Giãn cách tối thiểu 60 giây">
+          <input name="max_delay" type="number" min="60" value="120" placeholder="Giãn cách tối đa">
+        </div>
+      </div>
+      <textarea name="content" rows="5" placeholder="Nội dung bài đăng Group"></textarea>
+      <button>Đưa vào hàng chờ đăng Group</button>
+    </form>
   </div>
-  <form method="post" action="/page_comment_queue_add" class="gf-box">
-    <div class="gf-grid-3">
-      <select name="page_index">{% for p in pages %}<option value="{{ loop.index0 }}">{{ p.name }} - {{ p.id }}</option>{% endfor %}</select>
-      <select name="target_type"><option value="post">UID bài viết</option><option value="group">UID Group</option><option value="user">UID người dùng đã tương tác</option></select>
-      <input name="min_delay" type="number" min="60" value="60" placeholder="Giãn cách tối thiểu giây">
-    </div>
-    <div class="gf-grid-3">
-      <input name="max_delay" type="number" min="60" value="120" placeholder="Giãn cách tối đa giây">
-      <input name="single_post_uid" placeholder="UID bài viết nếu thêm 1 dòng">
-      <input name="single_group_uid" placeholder="UID Group nếu có">
-    </div>
-    <input name="single_user_uid" placeholder="UID người dùng đã tương tác nếu có">
-    <textarea name="comment_text" rows="4" placeholder="Nội dung bình luận. Nên viết tự nhiên, không lặp máy móc, không chứa cam kết quá đà."></textarea>
-    <textarea name="raw_targets" rows="6" placeholder="Dán nhiều UID, mỗi dòng một mục. Với UID bài viết: post_uid, group_uid, user_uid. Với UID Group/User: chỉ cần UID ở cột đầu."></textarea>
-    <button>Tạo hàng chờ bình luận</button>
-    <a class="btnlink" href="/export_page_comment_queue">Xuất CSV hàng chờ</a>
-  </form>
-</section>
 
-<section class="panel module-section" id="page_comment_queue">
-  <div class="section-open-note">Bạn đang mở: Hàng chờ bình luận.</div>
-  <h2>Hàng chờ bình luận</h2>
-  <p class="small">Admin duyệt từng dòng, sau đó đánh dấu hoàn thành/lỗi sau khi xử lý hợp lệ. Mỗi dòng có thời gian dự kiến và khoảng nghỉ.</p>
-  <table class="gf-table"><tr><th>ID</th><th>Page</th><th>Loại</th><th>UID đích</th><th>Nội dung</th><th>Giãn cách</th><th>Thời gian</th><th>Trạng thái</th><th>Thao tác</th></tr>{% for q in page_comment_queue %}<tr><td>{{ q[0] }}</td><td>{{ q[1] }}</td><td>{{ q[2] }}</td><td>USER: {{ q[3] }}<br>POST: {{ q[4] }}<br>GROUP: {{ q[5] }}</td><td>{{ q[6] }}</td><td>{{ q[7] }} - {{ q[8] }} giây</td><td>{{ q[9] }}<br>{{ q[13] }}</td><td>{{ q[10] }}<br>{{ q[11] }}<br><small>{{ q[12] }}</small></td><td><form method="post" action="/page_comment_queue_action"><input type="hidden" name="queue_id" value="{{ q[0] }}"><button name="action" value="approve">Duyệt</button><button name="action" value="done">Hoàn thành</button><button name="action" value="error">Báo lỗi</button></form></td></tr>{% endfor %}</table>
-  <h3>Lịch sử bình luận</h3>
-  {% for l in page_comment_logs %}<div class="history"><b>{{ l[5] }}</b> • {{ l[7] }}<br>Page: {{ l[2] }} • UID: {{ l[3] }}<br>{{ l[4] }} - {{ l[6] }}</div>{% endfor %}
+  <div class="gf-grid">
+    <form method="post" action="/fb_group" class="gf-box"><h3>2. Thêm / sắp xếp Group đã tham gia</h3><input name="group_name" placeholder="Tên Group"><input name="group_id" placeholder="UID Group"><input name="niche" placeholder="Ngành / tệp khách"><textarea name="note" rows="3" placeholder="Ghi chú quyền: Page có tham gia, có được đăng bài không..."></textarea><button>Lưu Group</button></form>
+    <form method="post" action="/group_finder_scan" class="gf-box"><h3>3. Tìm Group theo từ khóa / lọc UID</h3><div class="gf-grid-3"><input name="keyword" placeholder="Từ khóa Group"><input name="min_members" type="number" placeholder="Số thành viên tối thiểu"><select name="privacy"><option value="all">Công khai / riêng tư</option><option>Công khai</option><option>Riêng tư</option></select></div><div class="gf-grid-3"><select name="recent_only"><option value="0">Không bắt buộc hoạt động gần đây</option><option value="1">Có hoạt động gần đây</option></select><select name="page_join"><option value="all">Page tham gia: không lọc</option><option>Có</option><option>Không</option><option>Chưa rõ</option></select><select name="page_post"><option value="all">Page đăng bài: không lọc</option><option>Có</option><option>Không</option><option>Chưa rõ</option></select></div><textarea name="raw_groups" rows="5" placeholder="Dán: UID, Tên Group, Thành viên, Công khai/Riêng tư, Có hoạt động, Page tham gia, Page đăng bài"></textarea><button>Lọc và lưu UID hợp lệ</button></form>
+  </div>
+
+  <div class="gf-grid">
+    <div class="gf-box"><h3>4. Chia UID Group</h3><form method="post" action="/group_uid_split"><select name="chunk_size"><option value="50">50 UID / tệp</option><option value="100">100 UID / tệp</option><option value="200">200 UID / tệp</option></select><button>Chia UID thành tệp</button></form>{% for f in group_uid_files %}<div class="history"><b>{{ f[1] }}</b> • {{ f[2] }} UID • mỗi tệp {{ f[3] }} UID</div>{% endfor %}</div>
+    <div class="gf-box"><h3>5. Hàng chờ tham gia Group</h3><form method="post" action="/group_join_queue_add"><select name="page_index">{% for p in pages %}<option value="{{ loop.index0 }}">{{ p.name }} - {{ p.id }}</option>{% endfor %}</select><button>Đưa UID hợp lệ vào hàng chờ</button></form><div style="max-height:240px;overflow:auto"><table class="gf-table"><tr><th>UID</th><th>Group</th><th>Page</th><th>Trạng thái</th></tr>{% for q in group_join_queue %}<tr><td>{{ q[1] }}</td><td>{{ q[2] }}</td><td>{{ q[5] }}</td><td>{{ q[6] }}<br>{{ q[7] }}</td></tr>{% endfor %}</table></div></div>
+  </div>
+
+  <div class="gf-box">
+    <h3>6. Lọc bài viết Group & lấy UID bài viết</h3>
+    <form method="post" action="/group_post_filter_import"><div class="gf-grid-3"><input name="keyword" placeholder="Từ khóa mua hàng / số điện thoại / nhu cầu"><input name="min_comments" type="number" placeholder="Số comment tối thiểu"><input name="min_reactions" type="number" placeholder="Số reaction tối thiểu"></div><textarea name="raw_posts" rows="5" placeholder="Dán: UID Group, UID bài viết, Link bài viết, Người đăng, Thời gian đăng, Nội dung rút gọn, Số comment, Số reaction"></textarea><button>Lọc và lưu UID bài viết</button></form>
+    <div style="max-height:260px;overflow:auto"><table class="gf-table"><tr><th>UID Group</th><th>UID bài viết</th><th>Link</th><th>Nội dung</th><th>Comment/Reaction</th><th>Trạng thái</th></tr>{% for p in group_post_results %}<tr><td>{{ p[1] }}</td><td>{{ p[2] }}</td><td>{{ p[3] }}</td><td>{{ p[6] }}</td><td>{{ p[7] }} / {{ p[8] }}</td><td>{{ p[9] }}</td></tr>{% endfor %}</table></div>
+  </div>
+
+  <div class="gf-box">
+    <h3>7. Bình luận Group/Page theo UID</h3>
+    <form method="post" action="/page_comment_queue_add">
+      <div class="gf-grid-3"><select name="page_index">{% for p in pages %}<option value="{{ loop.index0 }}">{{ p.name }} - {{ p.id }}</option>{% endfor %}</select><select name="target_type"><option value="post">UID bài viết Group</option><option value="group">UID Group</option><option value="user">UID người dùng đã tương tác</option></select><input name="min_delay" type="number" min="60" value="60" placeholder="Giãn cách tối thiểu giây"></div>
+      <div class="gf-grid-3"><input name="max_delay" type="number" min="60" value="120" placeholder="Giãn cách tối đa giây"><input name="single_post_uid" placeholder="UID bài viết"><input name="single_group_uid" placeholder="UID Group"></div>
+      <input name="single_user_uid" placeholder="UID người dùng đã tương tác nếu có"><textarea name="comment_text" rows="4" placeholder="Nội dung bình luận"></textarea><textarea name="raw_targets" rows="5" placeholder="Dán nhiều UID, mỗi dòng một mục: post_uid, group_uid, user_uid"></textarea><button>Tạo hàng chờ bình luận</button><a class="btnlink" href="/export_page_comment_queue">Xuất CSV hàng chờ</a>
+    </form>
+  </div>
+
+  <h3>Hàng chờ đăng Group</h3>{% for q in group_post_queue %}<div class="history"><b>{{ q[1] }}</b> → {{ q[2] }} • {{ q[5] }}<br>{{ q[4] }}</div>{% endfor %}
+  <h3>Hàng chờ bình luận</h3><div style="max-height:300px;overflow:auto"><table class="gf-table"><tr><th>ID</th><th>Page</th><th>Loại</th><th>UID đích</th><th>Nội dung</th><th>Giãn cách</th><th>Trạng thái</th><th>Thao tác</th></tr>{% for q in page_comment_queue %}<tr><td>{{ q[0] }}</td><td>{{ q[1] }}</td><td>{{ q[2] }}</td><td>USER: {{ q[3] }}<br>POST: {{ q[4] }}<br>GROUP: {{ q[5] }}</td><td>{{ q[6] }}</td><td>{{ q[7] }} - {{ q[8] }} giây</td><td>{{ q[10] }}<br>{{ q[11] }}</td><td><form method="post" action="/page_comment_queue_action"><input type="hidden" name="queue_id" value="{{ q[0] }}"><button name="action" value="approve">Duyệt</button><button name="action" value="done">Hoàn thành</button><button name="action" value="error">Báo lỗi</button></form></td></tr>{% endfor %}</table></div>
+
+  <h3>Danh sách Group đã lưu</h3>{% for g in fb_groups %}<div class="history"><b>{{ g[1] }}</b> • {{ g[2] }} • {{ g[3] }}<br>{{ g[4] }}</div>{% endfor %}
 </section>
 
 <section class="panel module-section" id="comment_manager">
@@ -6015,11 +5998,19 @@ def group_post_filter_import_route():
 @app.route("/group_multi_post_queue", methods=["POST"])
 def group_multi_post_queue_route():
     group_ids = request.form.getlist("group_ids")
+    page_indexes = request.form.getlist("page_indexes")
+    if not page_indexes:
+        single_page = request.form.get("page_index", "")
+        page_indexes = [single_page] if single_page != "" else []
     content = request.form.get("content", "").strip()
     if not group_ids or not content:
         return render(message="Vui lòng chọn ít nhất 1 Group và nhập nội dung bài đăng.", ok=False)
-    added = add_group_post_queue(request.form.get("page_index", ""), group_ids, content)
-    return render(message=f"Đã đưa {added} bài đăng Group vào hàng chờ duyệt. Chỉ đăng khi Page có quyền hợp lệ.", ok=True)
+    if not page_indexes:
+        return render(message="Vui lòng chọn ít nhất 1 Page để đưa vào hàng chờ đăng Group.", ok=False)
+    added = 0
+    for page_index in page_indexes:
+        added += add_group_post_queue(page_index, group_ids, content)
+    return render(message=f"Đã đưa {added} dòng vào hàng chờ duyệt cho {len(page_indexes)} Page và {len(group_ids)} Group. Chỉ đăng khi Page có quyền hợp lệ.", ok=True)
 
 @app.route("/export_group_uids")
 def export_group_uids_route():
