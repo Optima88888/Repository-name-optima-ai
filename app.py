@@ -14,6 +14,8 @@ import csv
 import random
 import io
 import shutil
+import hashlib
+import urllib.parse
 
 try:
     import openpyxl
@@ -22,7 +24,7 @@ except Exception:
 
 load_dotenv()
 
-APP_TITLE = "Mkt Automation Pro V11 Full Page Group Token Comment Pro"
+APP_TITLE = "Mkt Automation Pro V12 Premium Upgrade Support Center"
 DB = "marketing_automation_pro_v11.db"
 UPLOAD_DIR = "uploads"
 REPORT_DIR = "reports"
@@ -628,12 +630,101 @@ def init_db():
         UNIQUE(page_id, group_id)
     )
     """)
+
+    # V12 Premium Upgrade Support Center - lưu yêu cầu nâng cấp theo ID máy
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS upgrade_requests (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        device_id TEXT,
+        plan TEXT,
+        customer_name TEXT,
+        phone TEXT,
+        email TEXT,
+        note TEXT,
+        status TEXT DEFAULT 'Chờ kích hoạt',
+        created_at TEXT,
+        updated_at TEXT
+    )
+    """)
     conn.commit()
     conn.close()
 
 def db():
     return sqlite3.connect(DB)
 
+
+
+def generate_device_id(raw=None):
+    """Tạo ID máy ổn định theo cookie/IP/User-Agent để gắn thanh toán và kích hoạt gói."""
+    try:
+        cookie_id = request.cookies.get("mkt_device_id", "")
+        if cookie_id:
+            return cookie_id[:40]
+        base = raw or f"{request.remote_addr}|{request.headers.get('User-Agent','')[:120]}"
+    except Exception:
+        base = raw or "local-device"
+    digest = hashlib.sha1(str(base).encode("utf-8", errors="ignore")).hexdigest()[:10].upper()
+    return "MP-" + datetime.datetime.now().strftime("%Y%m%d") + "-" + digest
+
+def build_upgrade_contact_links(device_id=None, plan="Premium"):
+    device_id = device_id or generate_device_id()
+    zalo_phone = os.getenv("SUPPORT_ZALO", "0363382629").strip()
+    support_email = os.getenv("SUPPORT_EMAIL", "support@gptmini.pro").strip()
+    message = f"Em muốn nâng cấp gói {plan}. ID máy: {device_id}"
+    subject = f"Nâng cấp gói {plan} - {device_id}"
+    body = f"Xin chào,\n\nEm muốn nâng cấp gói {plan}.\nID máy: {device_id}\n\nSau khi thanh toán, vui lòng kích hoạt giúp em đúng ID máy này."
+    return {
+        "device_id": device_id,
+        "zalo_phone": zalo_phone,
+        "support_email": support_email,
+        "zalo_url": f"https://zalo.me/{zalo_phone}?text={urllib.parse.quote(message)}",
+        "gmail_url": f"mailto:{support_email}?subject={urllib.parse.quote(subject)}&body={urllib.parse.quote(body)}",
+        "message": message,
+    }
+
+def save_upgrade_request(device_id, plan, customer_name='', phone='', email='', note=''):
+    device_id = (device_id or generate_device_id()).strip()
+    plan = (plan or 'Premium').strip()
+    now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    conn = db(); c = conn.cursor()
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS upgrade_requests (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            device_id TEXT,
+            plan TEXT,
+            customer_name TEXT,
+            phone TEXT,
+            email TEXT,
+            note TEXT,
+            status TEXT DEFAULT 'Chờ kích hoạt',
+            created_at TEXT,
+            updated_at TEXT
+        )
+    """)
+    c.execute("""
+        INSERT INTO upgrade_requests(device_id,plan,customer_name,phone,email,note,status,created_at,updated_at)
+        VALUES(?,?,?,?,?,?,?,?,?)
+    """, (device_id, plan, customer_name, phone, email, note, 'Chờ kích hoạt', now, now))
+    conn.commit(); conn.close(); return True
+
+def get_upgrade_requests(limit=60):
+    conn = db(); c = conn.cursor()
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS upgrade_requests (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            device_id TEXT,
+            plan TEXT,
+            customer_name TEXT,
+            phone TEXT,
+            email TEXT,
+            note TEXT,
+            status TEXT DEFAULT 'Chờ kích hoạt',
+            created_at TEXT,
+            updated_at TEXT
+        )
+    """)
+    c.execute("SELECT id,device_id,plan,customer_name,phone,email,note,status,created_at FROM upgrade_requests ORDER BY id DESC LIMIT ?", (limit,))
+    rows = c.fetchall(); conn.close(); return rows
 
 def get_pages_dynamic():
     """Lấy Page từ PAGES_JSON và Page Token lưu trong tool.
@@ -4168,6 +4259,12 @@ body{
 .gf-table{width:100%;border-collapse:separate;border-spacing:0 8px;font-size:13px}.gf-table th{text-align:left;color:#475569;padding:8px}.gf-table td{background:white;border-top:1px solid #E5E7EB;border-bottom:1px solid #E5E7EB;padding:10px}.gf-table td:first-child{border-left:1px solid #E5E7EB;border-radius:12px 0 0 12px}.gf-table td:last-child{border-right:1px solid #E5E7EB;border-radius:0 12px 12px 0}
 @media(max-width:900px){.gf-grid,.gf-grid-3{grid-template-columns:1fr}}
 
+
+/* V12 Premium Upgrade Support Center */
+.premium-contact-bar{position:sticky;top:0;z-index:9999;margin:0 auto 14px;max-width:1560px;background:linear-gradient(135deg,#0F172A,#1E1B4B 55%,#312E81);color:white;border:1px solid rgba(255,255,255,.16);box-shadow:0 18px 40px rgba(15,23,42,.22);border-radius:0 0 24px 24px;padding:10px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.premium-contact-left{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.device-pill{background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.18);border-radius:999px;padding:8px 12px;font-weight:900;letter-spacing:.2px}.device-pill b{color:#FDE68A}.contact-actions{display:flex;gap:8px;flex-wrap:wrap}.contact-actions a,.contact-actions button{border:none;border-radius:999px;padding:9px 12px;font-weight:900;text-decoration:none;cursor:pointer;background:white;color:#1E1B4B}.contact-actions .zalo{background:#0284C7;color:white}.contact-actions .gmail{background:#EA4335;color:white}.contact-actions .upgrade{background:linear-gradient(135deg,#F59E0B,#F97316);color:white}.upgrade-modal{display:none;position:fixed;inset:0;background:rgba(15,23,42,.72);z-index:10000;align-items:center;justify-content:center;padding:18px}.upgrade-modal-card{width:min(620px,96vw);background:white;border-radius:28px;padding:22px;box-shadow:0 30px 90px rgba(0,0,0,.35);border:1px solid #E5E7EB}.upgrade-modal-card h2{margin:0 0 8px;color:#1E1B4B}.upgrade-id-box{background:#F8FAFC;border:1px dashed #7C3AED;border-radius:18px;padding:12px;margin:12px 0;font-weight:900}.upgrade-action-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:14px 0}.upgrade-action-grid a,.upgrade-action-grid button{border:none;border-radius:16px;padding:12px;text-align:center;font-weight:900;text-decoration:none;cursor:pointer}.upgrade-action-grid .zalo{background:#0284C7;color:white}.upgrade-action-grid .gmail{background:#EA4335;color:white}.upgrade-action-grid .pay{background:linear-gradient(135deg,#7C3AED,#2563EB);color:white}.upgrade-form-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}.upgrade-form-grid input,.upgrade-form-grid select,.upgrade-modal-card textarea{width:100%;border:1px solid #E5E7EB;border-radius:14px;padding:11px}.upgrade-close{float:right;background:#F1F5F9!important;color:#0F172A!important}.support-upgrade-note{background:#FFF7ED;border:1px solid #FED7AA;color:#9A3412;border-radius:16px;padding:12px;margin:10px 0;font-size:13px;line-height:1.5}
+@media(max-width:800px){.premium-contact-bar{border-radius:0 0 18px 18px}.upgrade-action-grid,.upgrade-form-grid{grid-template-columns:1fr}.contact-actions{width:100%}.contact-actions a,.contact-actions button{flex:1;text-align:center}}
+
 </style>
 <script>
 function copyText(id){
@@ -4184,6 +4281,51 @@ function closePremiumPopup(){
   const m=document.getElementById("premiumPopup");
   if(m){m.style.display="none";}
 }
+
+function getDeviceId(){
+  let id=localStorage.getItem('mkt_device_id');
+  if(!id){
+    const seed=(navigator.userAgent||'')+'|'+(screen.width||0)+'x'+(screen.height||0)+'|'+Date.now();
+    let hash=0; for(let i=0;i<seed.length;i++){hash=((hash<<5)-hash)+seed.charCodeAt(i);hash|=0;}
+    id='MP-'+new Date().toISOString().slice(0,10).replaceAll('-','')+'-'+Math.abs(hash).toString(16).toUpperCase().slice(0,8);
+    localStorage.setItem('mkt_device_id',id);
+    document.cookie='mkt_device_id='+encodeURIComponent(id)+'; path=/; max-age=31536000';
+  }
+  return id;
+}
+function upgradeLinks(plan){
+  const id=getDeviceId();
+  const p=encodeURIComponent(plan||'Premium');
+  const msg=encodeURIComponent('Em muốn nâng cấp gói '+(plan||'Premium')+'. ID máy: '+id);
+  const subject=encodeURIComponent('Nâng cấp gói '+(plan||'Premium')+' - '+id);
+  const body=encodeURIComponent('Xin chào,\n\nEm muốn nâng cấp gói '+(plan||'Premium')+'.\nID máy: '+id+'\n\nEm sẽ gửi ảnh/nội dung thanh toán để được kích hoạt đúng ID máy.');
+  return {id,zalo:'https://zalo.me/0363382629?text='+msg,gmail:'mailto:support@gptmini.pro?subject='+subject+'&body='+body};
+}
+function refreshUpgradeBar(){
+  const links=upgradeLinks('Premium');
+  document.querySelectorAll('[data-device-id]').forEach(e=>e.textContent=links.id);
+  document.querySelectorAll('[data-zalo-link]').forEach(e=>e.href=links.zalo);
+  document.querySelectorAll('[data-gmail-link]').forEach(e=>e.href=links.gmail);
+  const input=document.getElementById('upgradeDeviceInput'); if(input) input.value=links.id;
+}
+function copyDeviceId(){navigator.clipboard.writeText(getDeviceId());alert('Đã copy ID máy: '+getDeviceId());}
+function openUpgradeCenter(plan){
+  refreshUpgradeBar();
+  const modal=document.getElementById('upgradeCenterModal');
+  const planInput=document.getElementById('upgradePlanInput');
+  if(planInput && plan) planInput.value=plan;
+  if(modal) modal.style.display='flex';
+}
+function closeUpgradeCenter(){const modal=document.getElementById('upgradeCenterModal'); if(modal) modal.style.display='none';}
+function requireUpgradeFromSupport(){
+  openUpgradeCenter('Premium hỗ trợ nhanh');
+  const body=document.getElementById('floatingBotBody');
+  if(body){
+    body.innerHTML += `<div class="bot-msg ai"><b>Cần nâng cấp gói để gửi hỗ trợ trực tiếp</b><br>ID máy: <b>${getDeviceId()}</b><br>Vui lòng bấm Zalo hoặc Gmail, hệ thống đã gắn sẵn ID máy để kích hoạt sau thanh toán.</div>`;
+    body.scrollTop=body.scrollHeight;
+  }
+}
+
 
 function toggleFloatingBot(){
   const panel=document.getElementById("floatingBotPanel");
@@ -4235,8 +4377,11 @@ function botQuick(text){
 function sendBotInput(){
   const input=document.getElementById("botInputText");
   if(!input || !input.value.trim()) return;
-  botQuick(input.value.trim());
+  const text=input.value.trim();
+  const body=document.getElementById("floatingBotBody");
+  if(body){ body.innerHTML += `<div class="bot-msg"><b>Bạn:</b> ${text}</div>`; }
   input.value="";
+  requireUpgradeFromSupport();
 }
 function updateLiveTrust(){
   const el=document.getElementById("liveMemberCount");
@@ -4251,6 +4396,7 @@ document.addEventListener("DOMContentLoaded",function(){
   const el=document.getElementById("liveMemberCount");
   if(el){ el.innerText = localStorage.getItem("v10_premium_count") || "231"; }
   setInterval(updateLiveTrust,4500);
+  refreshUpgradeBar();
 });
 
 
@@ -4502,6 +4648,46 @@ function closeLockedFeature(){
 </head>
 <body>
 
+<div class="premium-contact-bar">
+  <div class="premium-contact-left">
+    <strong>Premium Support</strong>
+    <span class="device-pill">ID máy: <b data-device-id>Đang tạo...</b></span>
+    <button onclick="copyDeviceId()">Sao chép ID</button>
+  </div>
+  <div class="contact-actions">
+    <a class="zalo" data-zalo-link target="_blank">Zalo kèm ID</a>
+    <a class="gmail" data-gmail-link>Gmail kèm ID</a>
+    <button class="upgrade" onclick="openUpgradeCenter('Premium')">Nâng cấp gói</button>
+  </div>
+</div>
+<div class="upgrade-modal" id="upgradeCenterModal">
+  <div class="upgrade-modal-card">
+    <button class="upgrade-close" onclick="closeUpgradeCenter()">Đóng</button>
+    <h2>Nâng cấp Premium & kích hoạt theo ID máy</h2>
+    <p>Sau khi thanh toán, vui lòng gửi Zalo hoặc Gmail. Nội dung gửi đã tự kèm ID máy để kích hoạt đúng tài khoản.</p>
+    <div class="upgrade-id-box">ID máy: <span data-device-id>Đang tạo...</span></div>
+    <div class="upgrade-action-grid">
+      <a class="zalo" data-zalo-link target="_blank">Gửi Zalo</a>
+      <a class="gmail" data-gmail-link>Gửi Gmail</a>
+      <button class="pay" onclick="document.getElementById('premium')?.scrollIntoView({behavior:'smooth'});closeUpgradeCenter();">Xem bảng giá</button>
+    </div>
+    <form method="post" action="/upgrade_confirm">
+      <input type="hidden" name="device_id" id="upgradeDeviceInput">
+      <div class="upgrade-form-grid">
+        <select name="plan" id="upgradePlanInput">
+          <option>Gói 1 tháng</option><option>Gói 3 tháng</option><option>Gói 6 tháng</option><option>Gói 1 năm</option><option>Gói nhà bán hàng chuyên nghiệp</option><option>Premium hỗ trợ nhanh</option>
+        </select>
+        <input name="customer_name" placeholder="Tên khách hàng">
+        <input name="phone" placeholder="Số Zalo/SĐT">
+        <input name="email" placeholder="Gmail nhận hỗ trợ">
+      </div>
+      <textarea name="note" rows="3" placeholder="Ghi chú thanh toán / mã giao dịch / nội dung chuyển khoản"></textarea>
+      <button class="premium-btn" style="width:100%;margin-top:10px">Tôi đã thanh toán - gửi yêu cầu kích hoạt</button>
+    </form>
+  </div>
+</div>
+
+
 <div class="v2-topbar">
   <div class="v2-brand-row">
     <div>
@@ -4539,7 +4725,7 @@ function closeLockedFeature(){
       <button onclick="botQuick('Tư vấn giá gói Premium')">Tư vấn gói Premium</button>
       <button class="light" onclick="botQuick('Hướng dẫn thanh toán')">Hướng dẫn thanh toán</button>
       <button class="light" onclick="botQuick('Tôi muốn xem tính năng')">Xem tính năng nổi bật</button>
-      <a href="https://zalo.me/0363382629" target="_blank">Liên hệ Zalo 036 338 2629</a>
+      <a data-zalo-link target="_blank">Liên hệ Zalo kèm ID máy</a>
     </div>
     <div class="bot-input">
       <input id="botInputText" placeholder="Nhập câu hỏi nhanh..." onkeydown="if(event.key==='Enter')sendBotInput()">
@@ -5972,7 +6158,7 @@ def render(content="", message="", ok=True, selected_industry="spa", analysis=""
         industry_labels=INDUSTRY_LABELS, selected_industry=selected_industry,
         library_items=current_library(selected_industry)[:10], locked_count=max(0, 500 - len(current_library(selected_industry)[:10])),
         score=score, warnings=warnings, token_warning=token_warning,
-        analysis=analysis, plan=plan, v3=v3_ceo_summary(), pipeline_rows=get_pipeline_leads(), customer_tasks=get_customer_tasks(), notifications=get_notifications(), fb_groups=get_fb_groups(), group_schedules=get_group_schedules(), comment_leads=get_comment_leads(), messenger_scripts=get_messenger_scripts(), success_assets=get_success_assets(), group_finder_results=get_group_finder_results(), group_finder_stats=get_group_finder_stats(), group_join_queue=get_group_join_queue(), group_uid_files=get_group_uid_files(), group_post_results=get_group_post_results(), group_post_queue=get_group_post_queue(), page_comment_queue=get_page_comment_queue(), page_comment_logs=get_page_comment_logs(), page_comment_stats=get_page_comment_stats(), page_token_rows=get_page_token_rows(), page_group_memberships=get_page_group_memberships()
+        analysis=analysis, plan=plan, v3=v3_ceo_summary(), pipeline_rows=get_pipeline_leads(), customer_tasks=get_customer_tasks(), notifications=get_notifications(), fb_groups=get_fb_groups(), group_schedules=get_group_schedules(), comment_leads=get_comment_leads(), messenger_scripts=get_messenger_scripts(), success_assets=get_success_assets(), group_finder_results=get_group_finder_results(), group_finder_stats=get_group_finder_stats(), group_join_queue=get_group_join_queue(), group_uid_files=get_group_uid_files(), group_post_results=get_group_post_results(), group_post_queue=get_group_post_queue(), page_comment_queue=get_page_comment_queue(), page_comment_logs=get_page_comment_logs(), page_comment_stats=get_page_comment_stats(), page_token_rows=get_page_token_rows(), page_group_memberships=get_page_group_memberships(), upgrade_links=build_upgrade_contact_links(), upgrade_requests=get_upgrade_requests()
     )
 
 @app.route("/")
@@ -6447,6 +6633,20 @@ def page_group_membership_add_route():
         return render(message="Vui lòng chọn Page và Group hợp lệ trước khi lưu quyền tham gia Group.", ok=False)
     return render(message="Đã lưu Page đã tham gia Group. Khi tạo hàng chờ đăng Group, hệ thống chỉ nhận cặp Page → Group có quyền đăng.", ok=True)
 
+
+@app.route("/upgrade_confirm", methods=["POST"])
+def upgrade_confirm_route():
+    device_id = request.form.get("device_id", "").strip() or generate_device_id()
+    plan = request.form.get("plan", "Premium").strip()
+    customer_name = request.form.get("customer_name", "").strip()
+    phone = request.form.get("phone", "").strip()
+    email = request.form.get("email", "").strip()
+    note = request.form.get("note", "").strip()
+    save_upgrade_request(device_id, plan, customer_name, phone, email, note)
+    links = build_upgrade_contact_links(device_id, plan)
+    msg = f"Đã ghi nhận yêu cầu nâng cấp {plan} cho ID máy {device_id}. Vui lòng gửi ảnh/nội dung thanh toán qua Zalo {links['zalo_phone']} hoặc Gmail {links['support_email']} để được kích hoạt nhanh."
+    return render(message=msg, ok=True)
+
 @app.route("/healthz")
 def healthz_route():
     return jsonify({"ok": True, "app": APP_TITLE, "pages": len(get_pages_dynamic())})
@@ -6457,7 +6657,16 @@ def support_poll_route():
 
 @app.route("/support_send", methods=["POST"])
 def support_send_route():
-    return jsonify({"success": True, "message": "Đã nhận nội dung hỗ trợ."})
+    device_id = request.args.get("device_id") or generate_device_id()
+    links = build_upgrade_contact_links(device_id, "Premium hỗ trợ nhanh")
+    return jsonify({
+        "success": False,
+        "premium_required": True,
+        "message": "Tính năng gửi hỗ trợ trực tiếp cần nâng cấp Premium. Vui lòng gửi Zalo/Gmail kèm ID máy để được kích hoạt nhanh.",
+        "device_id": device_id,
+        "zalo_url": links["zalo_url"],
+        "gmail_url": links["gmail_url"]
+    })
 
 @app.route("/page_comment_queue_add", methods=["POST"])
 def page_comment_queue_add_route():
