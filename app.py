@@ -6832,7 +6832,7 @@ setInterval(function(){if(document.getElementById('supportPanel')&&document.getE
     }else if(typeof window.openPremiumPopup === 'function'){
       window.openPremiumPopup();
     }else{
-      alert(name + ' thuộc nhóm Premium. Vui lòng nâng cấp để sử dụng.');
+      showPremiumConversionFinal(name);
     }
   }
   window.openModule = function(moduleId){
@@ -8069,6 +8069,250 @@ window.addEventListener('load', function(){{
 }});
 </script>
 
+<!-- PREMIUM MENU BADGE + PRICING FIX FINAL -->
+<style>
+/* SaaS Premium 3D Text Menu - no noisy icons */
+.v2-nav-ico,.menu-icon{{display:none!important;}}
+.v2-nav-link{{
+  position:relative!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:space-between!important;
+  gap:10px!important;
+  padding:15px 16px!important;
+  border-radius:16px!important;
+  background:rgba(255,255,255,.055)!important;
+  border:1px solid rgba(255,255,255,.075)!important;
+  text-decoration:none!important;
+  transition:.22s ease!important;
+}}
+.v2-nav-link .v2-nav-text,
+.v2-nav-link span:not(.v2-nav-tag):not(.premium-menu-badge){{
+  color:#fff!important;
+  font-weight:900!important;
+  letter-spacing:-.25px!important;
+  text-shadow:0 2px 0 rgba(0,0,0,.35),0 8px 18px rgba(0,0,0,.42),0 0 14px rgba(99,102,241,.35)!important;
+}}
+.v2-nav-link:hover,.v2-nav-link.active{{
+  background:linear-gradient(135deg,#2563EB,#7C3AED)!important;
+  border-color:rgba(255,255,255,.22)!important;
+  box-shadow:0 16px 42px rgba(124,58,237,.32)!important;
+  transform:translateX(3px)!important;
+}}
+.v2-nav-tag{{
+  padding:3px 8px!important;
+  border-radius:999px!important;
+  font-size:10px!important;
+  font-weight:1000!important;
+  letter-spacing:.35px!important;
+  background:rgba(255,255,255,.12)!important;
+  color:#F8FAFC!important;
+  border:1px solid rgba(255,255,255,.14)!important;
+  white-space:nowrap!important;
+}}
+.premium-menu-badge{{
+  margin-left:auto!important;
+  padding:4px 9px!important;
+  border-radius:999px!important;
+  font-size:10px!important;
+  font-weight:1000!important;
+  letter-spacing:.35px!important;
+  color:#3B2600!important;
+  background:linear-gradient(135deg,#FDE68A,#F59E0B,#FACC15)!important;
+  box-shadow:0 0 12px rgba(250,204,21,.45), inset 0 1px 0 rgba(255,255,255,.65)!important;
+  text-shadow:none!important;
+  white-space:nowrap!important;
+}}
+.premium-conversion-overlay-final{{
+  position:fixed!important;
+  inset:0!important;
+  z-index:999999!important;
+  background:rgba(2,6,23,.72)!important;
+  backdrop-filter:blur(14px)!important;
+  display:none;
+  align-items:center!important;
+  justify-content:center!important;
+  padding:18px!important;
+}}
+.premium-conversion-card-final{{
+  width:min(720px,96vw)!important;
+  background:linear-gradient(135deg,#FFFFFF,#F8FAFC)!important;
+  border:1px solid rgba(221,214,254,.95)!important;
+  border-radius:30px!important;
+  box-shadow:0 35px 110px rgba(15,23,42,.42)!important;
+  padding:28px!important;
+  color:#0F172A!important;
+  position:relative!important;
+  overflow:hidden!important;
+}}
+.premium-conversion-card-final:before{{
+  content:"";position:absolute;inset:-80px -80px auto auto;width:260px;height:260px;border-radius:50%;
+  background:radial-gradient(circle,rgba(124,58,237,.22),transparent 68%);
+}}
+.premium-close-final{{position:absolute;right:16px;top:14px;border:0;background:#EEF2FF;color:#1E1B4B;border-radius:999px;padding:8px 12px;font-weight:900;cursor:pointer;}}
+.premium-kicker-final{{display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,#FEF3C7,#FDE68A);color:#78350F;border-radius:999px;padding:7px 12px;font-size:12px;font-weight:1000;letter-spacing:.4px;margin-bottom:12px;}}
+.premium-title-final{{font-size:34px;font-weight:1000;letter-spacing:-1.2px;margin:0 0 8px;background:linear-gradient(135deg,#2563EB,#7C3AED);-webkit-background-clip:text;background-clip:text;color:transparent;}}
+.premium-sub-final{{font-size:15px;line-height:1.7;color:#475569;font-weight:650;margin:0 0 16px;}}
+.premium-benefits-final{{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin:18px 0;}}
+.premium-benefits-final div{{background:#F8FAFC;border:1px solid #E5E7EB;border-radius:15px;padding:12px 13px;font-weight:850;color:#1E293B;}}
+.premium-social-final{{background:linear-gradient(135deg,#ECFDF5,#EFF6FF);border:1px solid #BFDBFE;border-radius:16px;padding:13px 15px;font-weight:900;color:#065F46;margin:12px 0 18px;}}
+.premium-actions-final{{display:flex;gap:12px;flex-wrap:wrap;}}
+.premium-actions-final button{{flex:1;min-width:190px;border:0;border-radius:16px;padding:14px 16px;font-weight:1000;cursor:pointer;}}
+.premium-actions-final .view-price{{background:#E0E7FF;color:#1E1B4B;}}
+.premium-actions-final .upgrade-now{{background:linear-gradient(135deg,#2563EB,#7C3AED);color:white;box-shadow:0 16px 38px rgba(124,58,237,.32);}}
+.premium-plan,.price-card,.plan-button,.premium-btn{{pointer-events:auto!important;cursor:pointer!important;}}
+.premium-plan:hover,.price-card:hover{{transform:translateY(-5px)!important;box-shadow:0 25px 70px rgba(124,58,237,.18)!important;}}
+@media(max-width:720px){{.premium-benefits-final{{grid-template-columns:1fr}}.premium-title-final{{font-size:27px}}.premium-conversion-card-final{{padding:22px}}}}
+</style>
+
+<div id="premiumConversionOverlayFinal" class="premium-conversion-overlay-final" onclick="if(event.target===this) closePremiumConversionFinal()">
+  <div class="premium-conversion-card-final">
+    <button class="premium-close-final" onclick="closePremiumConversionFinal()">Đóng</button>
+    <div class="premium-kicker-final">PREMIUM</div>
+    <h2 class="premium-title-final" id="premiumConversionTitleFinal">Tính năng Premium</h2>
+    <p class="premium-sub-final" id="premiumConversionDescFinal">Tính năng này thuộc gói Premium. Nâng cấp để mở toàn bộ hệ sinh thái AI bán hàng.</p>
+    <div class="premium-benefits-final" id="premiumConversionBenefitsFinal"></div>
+    <div class="premium-social-final">Đã có 2.381+ khách hàng sử dụng GPT MKT Pro để quản lý Fanpage, Group, CRM và AI Marketing.</div>
+    <div class="premium-actions-final">
+      <button class="view-price" onclick="closePremiumConversionFinal(); scrollToPricingFinal();">Xem bảng giá</button>
+      <button class="upgrade-now" onclick="closePremiumConversionFinal(); scrollToPricingFinal(); setTimeout(function(){{ safeOpenPaymentFinal('yearly'); }},650);">Nâng cấp ngay</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){{
+  const lockedMapFinal = {{
+    messenger_ai:'AI Messenger', crm_sales:'CRM Kanban', marketing_director:'AI Marketing Director', ai_studio:'AI Studio',
+    creative_center:'Creative Center', scheduler:'Content Calendar', plan:'Kế hoạch Marketing 30 ngày', analytics:'Analytics Center',
+    automation_center:'Automation Center', success_center:'Success Center', batch:'Đăng hàng loạt', factory:'Content Factory',
+    clusters:'Page Cluster', campaign:'Campaign Manager', smart_engagement:'Tăng tương tác thông minh'
+  }};
+  const benefitMapFinal = {{
+    'AI Messenger':['Trả lời inbox tự động','Gợi ý chốt sale','Chăm sóc khách hàng','Đồng bộ CRM'],
+    'CRM Kanban':['Quản lý khách theo trạng thái','Gắn nhãn nóng/ấm/lạnh','Nhắc chăm sóc lại','Tối ưu quy trình chốt đơn'],
+    'AI Marketing Director':['Lập kế hoạch 30 ngày','Phễu bán hàng','Content Calendar','Chiến lược tăng chuyển đổi'],
+    'Đăng hàng loạt':['Chọn nhiều Page/Group','Hẹn giờ theo khoảng cách','Chống trùng nội dung','Theo dõi hàng đợi đăng'],
+    'Tăng tương tác thông minh':['Gợi ý giờ đăng tốt','Caption kéo comment','Gợi ý trả lời comment','Nhắc chăm sóc khách đã tương tác']
+  }};
+  window.closePremiumConversionFinal = function(){{
+    const el=document.getElementById('premiumConversionOverlayFinal');
+    if(el) el.style.display='none';
+  }};
+  window.showPremiumConversionFinal = function(feature){{
+    feature = feature || 'Tính năng Premium';
+    const overlay=document.getElementById('premiumConversionOverlayFinal');
+    if(!overlay){{ scrollToPricingFinal(); return false; }}
+    const title=document.getElementById('premiumConversionTitleFinal');
+    const desc=document.getElementById('premiumConversionDescFinal');
+    const benefits=document.getElementById('premiumConversionBenefitsFinal');
+    if(title) title.innerText = feature;
+    if(desc) desc.innerText = feature + ' thuộc nhóm Premium. Nâng cấp để mở toàn bộ công cụ AI bán hàng, Marketing, CRM và Automation.';
+    const arr = benefitMapFinal[feature] || ['Mở khóa tính năng nâng cao','Không giới hạn trải nghiệm quan trọng','Ưu tiên hỗ trợ kỹ thuật','Tăng hiệu quả bán hàng online'];
+    if(benefits) benefits.innerHTML = arr.map(x=>'<div>💬 '+x+'</div>').join('');
+    overlay.style.display='flex';
+    return false;
+  }};
+  window.scrollToPricingFinal = function(){{
+    const ids=['pricing','premium','premiumPricing','premium-pricing','pricing-section'];
+    let el=null;
+    for(const id of ids){{ el=document.getElementById(id); if(el) break; }}
+    if(el){{
+      el.classList.add('pricing-visible');
+      el.style.display='block';
+      el.scrollIntoView({{behavior:'smooth',block:'start'}});
+    }}
+  }};
+  const oldScroll = window.scrollToPricing;
+  window.scrollToPricing = function(){{ scrollToPricingFinal(); }};
+  window.safeOpenPaymentFinal = function(plan){{
+    if(typeof window.openPayment === 'function'){{
+      try{{ window.openPayment(plan || 'monthly'); return; }}catch(e){{ console.warn(e); }}
+    }}
+    scrollToPricingFinal();
+  }};
+  const oldOpenLocked = window.openLockedFeature;
+  window.openLockedFeature = function(feature, plans){{ return showPremiumConversionFinal(feature); }};
+  const oldOpenModule = window.openModule;
+  window.openModule = function(moduleId){{
+    moduleId = (moduleId || '').replace('#','').trim();
+    const alias = {{fb_bulk:'batch', multi_group:'batch', group_bulk:'batch'}};
+    moduleId = alias[moduleId] || moduleId;
+    const feature = lockedMapFinal[moduleId];
+    if(feature && !window.MKT_PREMIUM_ACTIVE){{ return showPremiumConversionFinal(feature); }}
+    if(typeof oldOpenModule === 'function') return oldOpenModule(moduleId);
+    const target=document.getElementById(moduleId);
+    if(target){{
+      document.querySelectorAll('.module-section').forEach(el=>{{el.classList.remove('active-module');el.style.display='none';}});
+      target.classList.add('active-module'); target.style.display='block'; target.scrollIntoView({{behavior:'smooth',block:'start'}});
+    }}
+    return false;
+  }};
+  function addPremiumBadges(){{
+    document.querySelectorAll('.v2-nav-link[href^="#"]').forEach(function(a){{
+      const id=(a.getAttribute('href')||'').replace('#','').trim();
+      if(lockedMapFinal[id]){{
+        a.classList.add('is-premium-menu');
+        if(!a.querySelector('.premium-menu-badge')){{
+          const b=document.createElement('span');
+          b.className='premium-menu-badge';
+          b.textContent='PREMIUM';
+          a.appendChild(b);
+        }}
+      }}
+      a.querySelectorAll('.v2-nav-ico,.menu-icon').forEach(x=>x.remove());
+    }});
+  }}
+  function bindMenuCapture(){{
+    document.querySelectorAll('.v2-nav-link[href^="#"]').forEach(function(a){{
+      a.addEventListener('click', function(ev){{
+        const id=(a.getAttribute('href')||'').replace('#','').trim();
+        if(lockedMapFinal[id] && !window.MKT_PREMIUM_ACTIVE){{
+          ev.preventDefault(); ev.stopPropagation();
+          showPremiumConversionFinal(lockedMapFinal[id]);
+          return false;
+        }}
+      }}, true);
+    }});
+  }}
+  function inferPlanKeyFromText(text){{
+    text=(text||'').toLowerCase();
+    if(text.includes('nhà bán') || text.includes('seller') || text.includes('1.959') || text.includes('vĩnh')) return 'lifetime';
+    if(text.includes('1 năm') || text.includes('859')) return 'yearly';
+    if(text.includes('6 tháng') || text.includes('559')) return 'halfyear';
+    if(text.includes('3 tháng') || text.includes('359')) return 'quarterly';
+    if(text.includes('trải nghiệm') || text.includes('dùng thử')) return 'monthly';
+    return 'monthly';
+  }}
+  function bindPricingFixed(){{
+    document.querySelectorAll('.premium-plan,.price-card').forEach(function(card){{
+      if(card.dataset.pricingFixed==='1') return;
+      card.dataset.pricingFixed='1';
+      card.addEventListener('click', function(ev){{
+        if(ev.target && (ev.target.tagName==='BUTTON' || ev.target.closest('button'))) return;
+        safeOpenPaymentFinal(inferPlanKeyFromText(card.innerText));
+      }});
+    }});
+    document.querySelectorAll('.plan-button,.premium-btn,.safe-pricing-action,.v2-pricing-action').forEach(function(btn){{
+      if(btn.dataset.pricingBtnFixed==='1') return;
+      btn.dataset.pricingBtnFixed='1';
+      btn.addEventListener('click', function(ev){{
+        const txt=(btn.innerText || '') + ' ' + ((btn.closest('.premium-plan,.price-card')||{{}}).innerText || '');
+        if(!btn.getAttribute('onclick')){{
+          ev.preventDefault(); ev.stopPropagation();
+          safeOpenPaymentFinal(inferPlanKeyFromText(txt));
+          return false;
+        }}
+      }}, true);
+    }});
+  }}
+  document.addEventListener('DOMContentLoaded', function(){{
+    addPremiumBadges(); bindMenuCapture(); bindPricingFixed();
+    setTimeout(function(){{ addPremiumBadges(); bindMenuCapture(); bindPricingFixed(); }}, 900);
+    setTimeout(function(){{ addPremiumBadges(); bindPricingFixed(); }}, 2200);
+  }});
+}})();
+</script>
 </body>
 </html>
 """
