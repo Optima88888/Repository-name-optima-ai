@@ -1167,21 +1167,100 @@ def premium_visible_items(items, free_limit=10):
     return items[:free_limit], max(0, len(items) - free_limit)
 
 
-def get_free_status():
-    # Chế độ miễn phí không ép giới hạn cơ bản.
-    # Một số tính năng nâng cao sẽ hiển thị yêu cầu Premium theo từng công cụ.
+def get_trial_identity():
+    try:
+        raw = request.cookies.get("mkt_trial_user") or request.remote_addr or "local_user"
+    except Exception:
+        raw = "local_user"
+    return str(raw).replace(" ", "_")[:80]
+
+
+def get_free_status(username=None):
+    """Trial thật 3 ngày.
+    Gói dùng thử chỉ mở: Quản lý Fanpage, Quản lý Group, AI Comment.
+    Các tính năng còn lại sẽ chuyển sang popup Premium.
+    """
+    username = username or get_trial_identity()
+    now = datetime.datetime.now()
+
+    conn = sqlite3.connect(DB)
+    c = conn.cursor()
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS users_trial (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT UNIQUE,
+        package_name TEXT DEFAULT 'trial',
+        trial_start_date TEXT,
+        trial_end_date TEXT,
+        status TEXT DEFAULT 'active',
+        created_at TEXT
+    )
+    """)
+    c.execute("SELECT username,package_name,trial_start_date,trial_end_date,status FROM users_trial WHERE username=?", (username,))
+    row = c.fetchone()
+
+    if not row:
+        start = now
+        end = now + datetime.timedelta(days=3)
+        c.execute("""
+        INSERT INTO users_trial(username,package_name,trial_start_date,trial_end_date,status,created_at)
+        VALUES(?,?,?,?,?,?)
+        """, (username, "trial", start.strftime("%Y-%m-%d %H:%M:%S"), end.strftime("%Y-%m-%d %H:%M:%S"), "active", now.strftime("%Y-%m-%d %H:%M:%S")))
+        conn.commit()
+        row = (username, "trial", start.strftime("%Y-%m-%d %H:%M:%S"), end.strftime("%Y-%m-%d %H:%M:%S"), "active")
+
+    package_name = row[1] or "trial"
+    trial_start = row[2] or now.strftime("%Y-%m-%d %H:%M:%S")
+    trial_end = row[3] or (now + datetime.timedelta(days=3)).strftime("%Y-%m-%d %H:%M:%S")
+    status = row[4] or "active"
+
+    try:
+        end_dt = datetime.datetime.strptime(trial_end, "%Y-%m-%d %H:%M:%S")
+    except Exception:
+        end_dt = now
+
+    remaining = end_dt - now
+    total_seconds = int(remaining.total_seconds())
+    if package_name == "trial" and total_seconds <= 0:
+        status = "expired"
+        c.execute("UPDATE users_trial SET status=? WHERE username=?", ("expired", username))
+        conn.commit()
+
+    conn.close()
+
+    days = max(0, total_seconds // 86400)
+    hours = max(0, (total_seconds % 86400) // 3600)
+    percent = max(0, min(100, int((total_seconds / (3 * 86400)) * 100))) if package_name == "trial" else 100
+
+    allowed_features = ["Quản lý Fanpage", "Quản lý Group", "AI Comment"]
+    locked_features = ["AI Messenger", "CRM Kanban", "AI Marketing Director", "AI Video", "AI Image", "AI Kinh Doanh", "AI Giọng Nói", "AI Livestream"]
+
     return {
-        "package_name": "trial",
-        "status": "active",
-        "free_end": "",
-        "days": 3,
-        "hours": 72,
-        "percent": 100,
-        "is_trial": True,
-        "is_expired": False,
-        "label": "🎁 Dùng thử miễn phí",
-        "note": "Còn lại 3 ngày • 10/10 Content AI • 1/1 Fanpage"
+        "package_name": package_name,
+        "status": status,
+        "trial_start": trial_start,
+        "trial_end": trial_end,
+        "free_end": trial_end,
+        "days": days,
+        "hours": hours,
+        "percent": percent,
+        "is_trial": package_name == "trial",
+        "is_expired": status == "expired",
+        "label": "🎁 Dùng thử miễn phí 3 ngày" if status != "expired" else "🔒 Dùng thử đã hết hạn",
+        "note": "Dùng thử chỉ mở: Quản lý Fanpage • Quản lý Group • AI Comment",
+        "allowed_features": allowed_features,
+        "locked_features": locked_features
     }
+
+
+PREMIUM_PACKAGES = {
+    "monthly": {"name": "Gói 1 tháng", "price": "159.000đ", "amount": 159000},
+    "quarterly": {"name": "Gói 3 tháng", "price": "359.000đ", "amount": 359000},
+    "halfyear": {"name": "Gói 6 tháng", "price": "559.000đ", "amount": 559000},
+    "yearly": {"name": "Gói 1 năm", "price": "859.000đ", "amount": 859000},
+    "sellerpro": {"name": "Gói nhà bán hàng chuyên nghiệp", "price": "1.959.000đ", "amount": 1959000}
+}
+
 
 def plan_required_message(feature_name, plans):
     return (
@@ -3488,7 +3567,7 @@ function appendBotGreeting(){
       Anh/chị cần tư vấn gói Premium, kích hoạt tài khoản, thanh toán hay hướng dẫn sử dụng tool thì em hỗ trợ ngay ạ.
     </div>
     <div class="bot-msg ai">
-      Hiện hệ thống có các gói: <b>1 tháng 159K</b>, <b>3 tháng 359K</b>, <b>6 tháng 559K</b>, <b>1 năm 859K</b> và <b>vĩnh viễn 1.959K</b>.<br>
+      Hiện hệ thống có các gói: <b>1 tháng 159K</b>, <b>3 tháng 359K</b>, <b>6 tháng 559K</b>, <b>1 năm 859K</b> và <b>Nhà bán hàng chuyên nghiệp 1.959K</b>.<br>
       Nếu đã thanh toán mà sau 5 phút chưa kích hoạt, vui lòng liên hệ Zalo <b>036 338 2629</b>.
     </div>`;
   body.scrollTop=body.scrollHeight;
@@ -3500,7 +3579,7 @@ function botQuick(text){
   let reply="Dạ em đã nhận yêu cầu. Nếu hệ thống AI báo quá tải hoặc hết lượt tạm thời, anh/chị vui lòng thử lại sau ít phút hoặc liên hệ Zalo để kỹ thuật hỗ trợ nhanh ạ.";
   const lower=text.toLowerCase();
   if(lower.includes("giá") || lower.includes("gói")){
-    reply="Dạ gói Premium hiện có: 1 tháng 159K, 3 tháng 359K, 6 tháng 559K, 1 năm 859K và vĩnh viễn 1.959K. Gói 1 năm đang phổ biến nhất, còn gói vĩnh viễn mở toàn bộ tính năng và cập nhật tương lai.";
+    reply="Dạ gói Premium hiện có: 1 tháng 159K, 3 tháng 359K, 6 tháng 559K, 1 năm 859K và Nhà bán hàng chuyên nghiệp 1.959K. Gói 1 năm đang phổ biến nhất, còn gói Nhà bán hàng chuyên nghiệp mở toàn bộ tính năng và cập nhật tương lai.";
   }else if(lower.includes("thanh toán")){
     reply="Anh/chị bấm Bảng Giá Premium Seller AI, chọn gói cần mua, hệ thống sẽ mở popup thanh toán kèm QR Agribank, STK 8888363382629 - NGUYEN DANG THI XUAN. Nếu sau 5 phút chưa kích hoạt, liên hệ Zalo 036 338 2629.";
   }else if(lower.includes("tính năng")){
@@ -3532,6 +3611,24 @@ document.addEventListener("DOMContentLoaded",function(){
 
 
 function openModule(moduleId){
+  const trialAllowed = ["dashboard", "fanpage_manager", "group_marketing", "comment_manager"];
+  const premiumLocked = {
+    "messenger_ai": "AI Messenger",
+    "crm_sales": "CRM Kanban",
+    "marketing_director": "AI Marketing Director",
+    "ai_video": "AI Video",
+    "ai_image": "AI Image",
+    "ai_business": "AI Kinh Doanh",
+    "ai_voice": "AI Giọng Nói",
+    "ai_livestream": "AI Livestream",
+    "analytics_center": "Analytics Center"
+  };
+
+  if(!trialAllowed.includes(moduleId) && premiumLocked[moduleId]){
+    openLockedFeature(premiumLocked[moduleId], "Gói 1 tháng / 3 tháng / 6 tháng / 1 năm / Nhà bán hàng chuyên nghiệp");
+    return false;
+  }
+
   document.querySelectorAll(".module-section").forEach(function(el){
     el.classList.remove("active-module");
   });
@@ -3540,6 +3637,7 @@ function openModule(moduleId){
     target.classList.add("active-module");
     target.scrollIntoView({behavior:"smooth",block:"start"});
   }
+  return false;
 }
 function showAllModules(){
   document.querySelectorAll(".module-section").forEach(function(el){
@@ -3565,147 +3663,65 @@ function scrollToPricing(){
 
 const premiumPlans = {
   trial:{
-    title:"DÙNG THỬ MIỄN PHÍ – 3 NGÀY",
+    title:"🎁 DÙNG THỬ MIỄN PHÍ – 3 NGÀY",
     price:"0Đ",
     amount:"0",
-    package:"trial",
-    desc:"Trải nghiệm hệ thống trong 3 ngày trước khi nâng cấp Premium.",
-    benefits:[
-      "Đăng thử 1 Fanpage",
-      "Tạo tối đa 10 content AI",
-      "Xem 10 content đầu tiên của mỗi ngành",
-      "Đăng bài cơ bản",
-      "Dashboard cơ bản"
-    ],
+    package:"TRIAL",
+    desc:"Dùng thử 3 ngày sau khi đăng ký. Chỉ mở Quản lý Fanpage, Quản lý Group và AI Comment.",
+    benefits:["Quản lý Fanpage", "Quản lý Group", "AI Comment", "Xem giao diện hệ thống", "Trải nghiệm quy trình bán hàng"],
+    locked:["AI Messenger", "CRM Kanban", "AI Marketing Director", "AI Video", "AI Image", "AI Kinh Doanh", "AI Giọng Nói", "AI Livestream"]
   },
   monthly:{
-    title:"💎 GÓI KHỞI ĐỘNG",
-    price:"159K",
+    title:"🚀 GÓI 1 THÁNG",
+    price:"159.000đ",
     amount:"159000",
     package:"1THANG",
-    desc:"159.000đ • Chỉ 5.300đ/ngày • Phù hợp chủ shop mới, cá nhân kinh doanh online và người mới chạy quảng cáo.",
-    benefits:[
-      "AI Content Studio",
-      "Tạo 5 content/lần",
-      "Đăng Fanpage",
-      "Đăng ảnh",
-      "Đăng Video",
-      "Đăng Reel",
-      "Upload Excel / CSV",
-      "Lịch đăng cơ bản",
-      "Dashboard cơ bản",
-      "Token Manager"
-    ],
-    locked:[
-      "Campaign Manager",
-      "AI Marketing Planner",
-      "CRM Pro",
-      "AI Sales Bot",
-      "Comment Manager",
-      "AI Content Brain",
-      "AI Image / Video Center"
-    ]
+    desc:"Phù hợp người mới bắt đầu dùng hệ thống để quản lý Fanpage, Group và AI Comment.",
+    benefits:["Quản lý Fanpage", "Quản lý Group", "AI Comment", "Đăng bài Facebook", "Lịch đăng cơ bản", "Token Manager", "Hỗ trợ cơ bản"],
+    locked:["AI Messenger nâng cao", "CRM Kanban", "AI Marketing Director", "AI Video/Image/Voice"]
   },
   quarterly:{
-    title:"GÓI 3 THÁNG",
-    price:"359K",
+    title:"⭐ GÓI 3 THÁNG",
+    price:"359.000đ",
     amount:"359000",
     package:"3THANG",
-    desc:"Bao gồm toàn bộ gói 1 tháng và mở thêm công cụ chiến dịch, planner, kho content Premium.",
-    benefits:[
-      "Toàn bộ gói 1 tháng",
-      "Campaign Manager",
-      "AI Marketing Planner",
-      "Kho Content Premium",
-      "Token Center nâng cao",
-      "Báo cáo CSV",
-      "Lịch đăng nâng cao"
-    ],
-    locked:[
-      "CRM Pro",
-      "AI Sales Bot",
-      "Comment Manager",
-      "AI Content Brain",
-      "AI Image / Video Center"
-    ]
+    desc:"Tối ưu cho shop đang bán hàng cần thêm Messenger AI và quản lý khách hàng.",
+    benefits:["Toàn bộ gói 1 tháng", "AI Messenger", "CRM Kanban", "Kịch bản inbox", "Kịch bản chốt sale", "Quản lý khách hàng", "Ưu tiên hỗ trợ"],
+    locked:["AI Marketing Director", "AI Video/Image/Voice", "AI Livestream"]
   },
   halfyear:{
-    title:"GÓI 6 THÁNG",
-    price:"559K",
+    title:"💎 GÓI 6 THÁNG",
+    price:"559.000đ",
     amount:"559000",
     package:"6THANG",
-    desc:"Bao gồm toàn bộ gói 3 tháng và mở thêm CRM Pro, Sales Bot, Comment Manager.",
-    benefits:[
-      "Toàn bộ gói 3 tháng",
-      "CRM Pro",
-      "AI Sales Bot",
-      "Comment Manager",
-      "Auto Tag khách hàng",
-      "Quản lý khách hàng",
-      "Chuyển khách sang CRM"
-    ],
-    locked:[
-      "AI Content Brain",
-      "AI phân tích đối thủ",
-      "AI tạo 100 content theo ngành",
-      "Marketing Funnel",
-      "Kho Content 50.000+",
-      "AI Image / Video Center"
-    ]
+    desc:"Mở thêm AI Marketing Director và các công cụ tạo nội dung nâng cao.",
+    benefits:["Toàn bộ gói 3 tháng", "AI Marketing Director", "AI Image", "AI Video", "AI Kinh Doanh", "Content Studio", "Không giới hạn Fanpage/Group theo cấu hình"],
+    locked:["AI Giọng Nói nâng cao", "AI Livestream nâng cao", "VIP Support"]
   },
   yearly:{
-    title:"⭐ GÓI 1 NĂM - PHỔ BIẾN NHẤT",
-    price:"859K",
+    title:"🔥 GÓI 1 NĂM",
+    price:"859.000đ",
     amount:"859000",
     package:"1NAM",
-    desc:"859.000đ • Chỉ 2.300đ/ngày • Mở AI Content Brain, Marketing Director, AI Ads, CRM Pro, Kho 50.000+ Content và Automation Marketing.",
-    benefits:[
-      "Toàn bộ gói 6 tháng",
-      "AI Content Brain",
-      "AI phân tích đối thủ",
-      "AI tạo 30 ngày content",
-      "AI tạo 100 content theo ngành",
-      "Marketing Funnel",
-      "Kho Content 50.000+"
-    ],
-    locked:[
-      "AI Image Center",
-      "AI Video Center",
-      "Multi User",
-      "Dashboard Enterprise nâng cao"
-    ]
+    desc:"Gói phổ biến nhất cho người bán hàng muốn dùng đầy đủ công cụ AI Marketing trong 1 năm.",
+    benefits:["Toàn bộ gói 6 tháng", "AI Giọng Nói", "AI Livestream", "AI Automation", "Kho content Premium", "Ưu tiên xử lý", "Cập nhật miễn phí trong thời gian sử dụng"],
+    locked:["Gói nhà bán hàng chuyên nghiệp", "Tư vấn VIP", "Cập nhật trọn đời"]
   },
   lifetime:{
     title:"👑 GÓI NHÀ BÁN HÀNG CHUYÊN NGHIỆP",
-    price:"1.959K",
+    price:"1.959.000đ",
     amount:"1959000",
-    package:"VINHVIEN",
-    desc:"1.959.000đ • Thanh toán 1 lần • Sử dụng trọn đời • Mở toàn bộ AI hiện tại, AI tương lai, cập nhật miễn phí và ưu tiên hỗ trợ.",
-    benefits:[
-      "AI Content Brain",
-      "AI Image Center",
-      "AI Video Center",
-      "Marketing Funnel",
-      "CRM Pro",
-      "AI Sales Bot",
-      "Comment Manager",
-      "Multi User",
-      "Kho Content 50.000+",
-      "Dashboard Enterprise",
-      "Export PDF",
-      "Export Excel",
-      "Backup Database",
-      "Cập nhật tính năng mới miễn phí",
-      "Ưu tiên hỗ trợ kỹ thuật"
-    ],
+    package:"NHABANHANGCHUYENNGHIEP",
+    desc:"Gói cao nhất dành cho nhà bán hàng, agency và team kinh doanh muốn mở toàn bộ hệ thống.",
+    benefits:["Toàn bộ tính năng Premium", "Không giới hạn AI theo cấu hình", "AI Marketing Director Pro", "CRM Pro", "AI Automation Pro", "AI Livestream", "AI Giọng Nói", "Export PDF/Excel", "Backup Database", "Ưu tiên hỗ trợ VIP", "Cập nhật trọn đời"],
     locked:[]
   },
-
-  // Alias giữ tương thích với code/nút cũ
+  sellerpro:null,
   basic:null,
   pro:null,
   business:null
 };
+premiumPlans.sellerpro = premiumPlans.lifetime;
 premiumPlans.basic = premiumPlans.monthly;
 premiumPlans.pro = premiumPlans.quarterly;
 premiumPlans.business = premiumPlans.halfyear;
@@ -3738,55 +3754,55 @@ function openLockedFeature(feature, plans){
   const modal=document.getElementById("lockedFeatureModal");
   if(!modal) {
     scrollToPricing();
-    return;
+    return false;
   }
 
-  const featureMap = {
-    "Group Marketing": {
-      label:"Group Marketing AI",
-      benefits:["Quản lý danh sách group","Lên lịch nội dung nhóm","Gợi ý bài đăng group","Tối ưu kế hoạch group marketing"]
-    },
-    "Comment Manager": {
-      label:"Comment Manager AI",
-      benefits:["Tự động trả lời khách hàng","Tăng tốc độ phản hồi","Tăng tỷ lệ chốt đơn","Gợi ý phản hồi và hỗ trợ ẩn SĐT khi kết nối API/Webhook"]
-    },
-    "Messenger AI": {
-      label:"Messenger AI",
-      benefits:["Tạo chat mẫu","Gửi báo giá nhanh","FAQ bán hàng","Kịch bản chăm sóc và chốt sale"]
-    }
-  };
-
-  const info = featureMap[feature] || {
-    label: feature,
-    benefits:["Mở tính năng nâng cao","Tiết kiệm thời gian vận hành","Tối ưu quy trình bán hàng","Tăng cảm giác chuyên nghiệp cho hệ thống"]
-  };
-
-  document.getElementById("lockedFeatureTitle").innerText="🚀 Tính năng nâng cao";
+  document.getElementById("lockedFeatureTitle").innerText="🔒 Tính năng Premium";
   document.getElementById("lockedFeaturePlans").innerHTML =
     `<div class="premium-lock-hero v4-lock-hero">
-       <p>Bạn đang truy cập: <b>${info.label}</b></p>
-       <p><b>Tính năng này giúp:</b></p>
-       <ul class="benefit-list">${info.benefits.map(x=>`<li class="open">${x}</li>`).join("")}</ul>
-       <p><b>Khuyến nghị:</b></p>
+       <p>Bạn đang muốn mở: <b>${feature}</b></p>
+       <p>Gói dùng thử 3 ngày chỉ hỗ trợ:</p>
+       <ul class="benefit-list">
+         <li class="open">Quản lý Fanpage</li>
+         <li class="open">Quản lý Group</li>
+         <li class="open">AI Comment</li>
+       </ul>
+       <p><b>Nâng cấp Premium để mở khóa:</b></p>
+       <ul class="benefit-list">
+         <li class="open">AI Messenger</li>
+         <li class="open">CRM Kanban</li>
+         <li class="open">AI Marketing Director</li>
+         <li class="open">AI Video • AI Image • AI Kinh Doanh</li>
+         <li class="open">AI Giọng Nói • AI Livestream • AI Automation</li>
+       </ul>
        <div class="locked-recommend-grid">
+         <div class="locked-recommend-card">
+           <div class="rec-label">🚀 BẮT ĐẦU</div>
+           <h3>Gói 1 tháng</h3>
+           <div class="rec-price">159.000đ</div>
+           <p>Phù hợp để mở các công cụ quản lý cơ bản và dùng ổn định.</p>
+           <button onclick="closeLockedFeature();openPayment('monthly')">Chọn gói 1 tháng</button>
+         </div>
          <div class="locked-recommend-card featured">
-           <div class="rec-label">⭐ PHỔ BIẾN NHẤT</div>
+           <div class="rec-label">⭐ PHỔ BIẾN</div>
            <h3>Gói 1 năm</h3>
            <div class="rec-price">859.000đ</div>
-           <p>Chỉ 2.300đ/ngày. Mở AI Content Brain, AI Marketing Director, AI Ads Chuyên Gia, CRM Pro, Kho 50.000+ Content và Automation Marketing.</p>
-           <button onclick="closeLockedFeature();openPayment('yearly')">Chọn gói 1 năm</button>
+           <p>Mở đầy đủ AI Marketing, CRM, Automation và công cụ bán hàng nâng cao.</p>
+           <button onclick="closeLockedFeature();openPayment('yearly')">Xem gói 1 năm</button>
          </div>
-         <div class="locked-recommend-card v4-gold-card">
-           <div class="rec-label">👑 TRỌN ĐỜI</div>
-           <h3>Gói Nhà Bán Hàng Chuyên Nghiệp</h3>
+         <div class="locked-recommend-card v4-gold-card" style="grid-column:1/-1">
+           <div class="rec-label">👑 CAO NHẤT</div>
+           <h3>Gói nhà bán hàng chuyên nghiệp</h3>
            <div class="rec-price">1.959.000đ</div>
-           <p>Mở toàn bộ Comment Manager AI, Messenger AI, CRM Pro, Group Marketing, AI Marketing Director và cập nhật tương lai.</p>
-           <button onclick="closeLockedFeature();openPayment('lifetime')">Mở khóa trọn đời</button>
+           <p>Mở toàn bộ tính năng cao cấp, hỗ trợ VIP và cập nhật trọn đời.</p>
+           <button onclick="closeLockedFeature();openPayment('lifetime')">Mở gói chuyên nghiệp</button>
          </div>
        </div>
+       <button class="secondary" onclick="closeLockedFeature();scrollToPricing()">Xem chi tiết tất cả gói</button>
        <p class="small">Sau khi thanh toán 5 phút chưa kích hoạt, vui lòng gửi ảnh giao dịch qua Zalo 036 338 2629.</p>
      </div>`;
   modal.style.display="flex";
+  return false;
 }
 function closeLockedFeature(){
   const modal=document.getElementById("lockedFeatureModal");
@@ -3805,6 +3821,14 @@ function closeLockedFeature(){
 .fb-submenu-pro .locked{background:linear-gradient(135deg,#EEF2FF,#F5F3FF);color:#4C1D95;border:1px solid #DDD6FE}
 .premium-lock-hero p{line-height:1.55}.locked-recommend-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:14px 0}.locked-recommend-card{background:white;border:1px solid #E5E7EB;border-radius:22px;padding:16px;box-shadow:0 14px 32px rgba(30,41,59,.10)}.locked-recommend-card.featured{border:2px solid #7C3AED;background:linear-gradient(180deg,#FFFFFF,#F5F3FF)}.rec-label{display:inline-block;background:linear-gradient(135deg,#2563EB,#7C3AED);color:white;border-radius:999px;padding:5px 10px;font-size:11px;font-weight:900}.rec-price{font-size:28px;font-weight:900;color:#7C3AED;margin:6px 0}@media(max-width:720px){.locked-recommend-grid{grid-template-columns:1fr}}
 .locked-plan-actions button{width:100%;margin:0;}
+
+.trial-box{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);border-radius:16px;padding:12px;margin:12px 0;line-height:1.75;color:#E5E7EB}
+.locked-list{background:rgba(239,68,68,.08);border-color:rgba(239,68,68,.25)}
+.benefit-list .locked{color:#DC2626;list-style:none;margin:6px 0;font-weight:800}
+.v2-nav-link[href="#messenger_ai"] .v2-nav-tag,
+.v2-nav-link[href="#crm_sales"] .v2-nav-tag,
+.v2-nav-link[href="#marketing_director"] .v2-nav-tag{background:linear-gradient(135deg,#F59E0B,#EF4444)!important;color:white!important}
+
 </style>
 
 </head>
@@ -4710,19 +4734,20 @@ Thời gian tạo: {{ h[9] }}
         <div class="plan-ribbon">DÙNG THỬ</div>
         <div class="plan-name">Dùng thử miễn phí</div>
         <div class="plan-price">3 ngày</div>
-        <div class="plan-desc">Trải nghiệm giao diện và tính năng cơ bản trước khi chọn gói phù hợp.</div>
+        <div class="plan-desc">Dùng thử 3 ngày sau khi đăng ký, chỉ mở 3 công cụ chính để khách trải nghiệm trước khi nâng cấp.</div>
         <div class="benefit-title">Quyền lợi dùng thử</div>
         <ul class="benefit-list">
-          <li class="open">Đăng thử 1 Fanpage</li>
-          <li class="open">Tạo tối đa 10 content AI</li>
-          <li class="open">Xem 10 content đầu tiên của mỗi ngành</li>
-          <li class="open">Đăng bài cơ bản</li>
-          <li class="open">Dashboard cơ bản</li>
+          <li class="open">Quản lý Fanpage</li>
+          <li class="open">Quản lý Group</li>
+          <li class="open">AI Comment</li>
+          <li class="locked">AI Messenger cần Premium</li>
+          <li class="locked">CRM Kanban cần Premium</li>
+          <li class="locked">AI Marketing Director cần Premium</li>
         </ul>
       </div>
 
       <div class="premium-plan v4-plan">
-        <div class="value-badge">💎 GÓI KHỞI ĐỘNG</div>
+        <div class="value-badge">🚀 GÓI 1 THÁNG</div>
         <div class="plan-name">Gói 1 tháng</div>
         <div class="plan-price">159.000đ</div>
         <div class="price-sub">Chỉ 5.300đ/ngày</div>
@@ -4743,7 +4768,7 @@ Thời gian tạo: {{ h[9] }}
           <li class="open">Dashboard cơ bản</li>
           <li class="open">Token Manager</li>
         </ul>
-        <button class="plan-button premium-btn" onclick="openPayment('monthly')">Mở khóa gói Khởi Động</button>
+        <button class="plan-button premium-btn" onclick="openPayment('monthly')">Mở khóa gói 1 tháng</button>
       </div>
 
       <div class="premium-plan v4-plan">
@@ -4805,10 +4830,10 @@ Thời gian tạo: {{ h[9] }}
       </div>
 
       <div class="premium-plan featured v4-plan v4-lifetime">
-        <div class="plan-ribbon">👑 TRỌN ĐỜI</div>
+        <div class="plan-ribbon">👑 NHÀ BÁN HÀNG PRO</div>
         <div class="plan-name">Gói nhà bán hàng chuyên nghiệp</div>
         <div class="plan-price">1.959.000đ</div>
-        <div class="price-sub">Thanh toán 1 lần • Sử dụng trọn đời</div>
+        <div class="price-sub">Gói cao nhất cho nhà bán hàng chuyên nghiệp</div>
         <div class="benefit-title">Bao gồm</div>
         <ul class="benefit-list">
           <li class="open">Toàn bộ AI hiện tại</li>
@@ -4928,16 +4953,29 @@ Thời gian tạo: {{ h[9] }}
   </div>
 
   <div class="{{ 'free-status-card free-expired' if free_status.is_expired else 'free-status-card' }}">
-    <b>Gói hiện tại:</b> {{ 'Gói miễn phí' if free_status.package_name == 'free' else free_status.package_name }}<br>
+    <h3>🎁 Gói dùng thử 3 ngày</h3>
     {% if free_status.is_expired %}
-      <b>Trạng thái:</b> Giới hạn miễn phí<br>
-      Một số tính năng nâng cao yêu cầu Premium để tiếp tục sử dụng hệ thống.
-    {% elif free_status.is_trial %}
+      <b>Trạng thái:</b> Đã hết dùng thử<br>
+      Vui lòng nâng cấp Premium để tiếp tục sử dụng các công cụ.
+    {% else %}
       <b>Còn lại:</b> {{ free_status.days }} ngày {{ free_status.hours }} giờ
       <div class="free-progress"><span style="width:{{ free_status.percent }}%"></span></div>
-      <button onclick="scrollToPricing()">Nâng cấp Premium</button>
-    {% else %}
-      <b>Trạng thái:</b> Premium đang hoạt động
+      <div class="trial-box">
+        <b>Được sử dụng:</b><br>
+        ✓ Quản lý Fanpage<br>
+        ✓ Quản lý Group<br>
+        ✓ AI Comment
+      </div>
+      <div class="trial-box locked-list">
+        <b>Chưa mở khóa:</b><br>
+        🔒 AI Messenger<br>
+        🔒 CRM Kanban<br>
+        🔒 AI Marketing Director<br>
+        🔒 AI Video • AI Image<br>
+        🔒 AI Giọng Nói • AI Livestream
+      </div>
+      <button onclick="scrollToPricing()">Xem chi tiết gói</button>
+      <button onclick="openPayment('monthly')">Nâng cấp Premium</button>
     {% endif %}
   </div>
 
