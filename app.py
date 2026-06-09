@@ -923,14 +923,123 @@ def get_page_clusters():
 def get_analytics_summary():
     conn = sqlite3.connect(DB)
     c = conn.cursor()
-    c.execute("SELECT page_name, COUNT(*) FROM posts GROUP BY page_name ORDER BY COUNT(*) DESC LIMIT 10")
-    by_page = c.fetchall()
-    c.execute("SELECT campaign, COUNT(*) FROM posts WHERE campaign!='' GROUP BY campaign ORDER BY COUNT(*) DESC LIMIT 10")
-    by_campaign = c.fetchall()
-    c.execute("SELECT substr(created_at,1,10), COUNT(*) FROM posts GROUP BY substr(created_at,1,10) ORDER BY substr(created_at,1,10) DESC LIMIT 7")
-    by_day = c.fetchall()
+
+    def one(query, params=()):
+        try:
+            c.execute(query, params)
+            row = c.fetchone()
+            return row[0] if row and row[0] is not None else 0
+        except Exception:
+            return 0
+
+    def many(query, params=()):
+        try:
+            c.execute(query, params)
+            return c.fetchall()
+        except Exception:
+            return []
+
+    total_posts = one("SELECT COUNT(*) FROM posts")
+    posted = one("SELECT COUNT(*) FROM posts WHERE status='posted'")
+    scheduled = one("SELECT COUNT(*) FROM posts WHERE status='scheduled'")
+    errors = one("SELECT COUNT(*) FROM posts WHERE status='error'")
+    campaigns = one("SELECT COUNT(*) FROM campaigns")
+    crm_total = one("SELECT COUNT(*) FROM crm")
+    pipeline_total = one("SELECT COUNT(*) FROM lead_pipeline")
+    groups_total = one("SELECT COUNT(*) FROM fb_groups")
+    group_scheduled = one("SELECT COUNT(*) FROM group_schedules WHERE status='scheduled'")
+    comments_total = one("SELECT COUNT(*) FROM comment_leads")
+    messenger_total = one("SELECT COUNT(*) FROM messenger_scripts")
+
+    by_page = many("""
+        SELECT COALESCE(NULLIF(page_name,''),'Chưa đặt tên') AS name, COUNT(*) AS total
+        FROM posts
+        GROUP BY COALESCE(NULLIF(page_name,''),'Chưa đặt tên')
+        ORDER BY total DESC
+        LIMIT 10
+    """)
+
+    by_campaign = many("""
+        SELECT COALESCE(NULLIF(campaign,''),'Chưa phân loại') AS name, COUNT(*) AS total
+        FROM posts
+        GROUP BY COALESCE(NULLIF(campaign,''),'Chưa phân loại')
+        ORDER BY total DESC
+        LIMIT 10
+    """)
+
+    by_day = many("""
+        SELECT substr(created_at,1,10) AS day, COUNT(*) AS total
+        FROM posts
+        WHERE created_at IS NOT NULL AND created_at != ''
+        GROUP BY substr(created_at,1,10)
+        ORDER BY substr(created_at,1,10) DESC
+        LIMIT 7
+    """)
+
+    by_status = many("""
+        SELECT COALESCE(NULLIF(status,''),'unknown') AS status, COUNT(*) AS total
+        FROM posts
+        GROUP BY COALESCE(NULLIF(status,''),'unknown')
+        ORDER BY total DESC
+    """)
+
+    group_by_niche = many("""
+        SELECT COALESCE(NULLIF(niche,''),'Chưa phân loại') AS niche, COUNT(*) AS total
+        FROM fb_groups
+        GROUP BY COALESCE(NULLIF(niche,''),'Chưa phân loại')
+        ORDER BY total DESC
+        LIMIT 10
+    """)
+
+    crm_by_source = many("""
+        SELECT COALESCE(NULLIF(source,''),'Chưa rõ nguồn') AS source, COUNT(*) AS total
+        FROM crm
+        GROUP BY COALESCE(NULLIF(source,''),'Chưa rõ nguồn')
+        ORDER BY total DESC
+        LIMIT 10
+    """)
+
+    crm_by_stage = many("""
+        SELECT COALESCE(NULLIF(stage,''),'Khách mới') AS stage, COUNT(*) AS total
+        FROM lead_pipeline
+        GROUP BY COALESCE(NULLIF(stage,''),'Khách mới')
+        ORDER BY total DESC
+        LIMIT 10
+    """)
+
+    total_value = one("SELECT COALESCE(SUM(value),0) FROM lead_pipeline")
+    avg_value = one("SELECT COALESCE(AVG(value),0) FROM lead_pipeline WHERE value > 0")
     conn.close()
-    return {"by_page": by_page, "by_campaign": by_campaign, "by_day": by_day}
+
+    conversion_rate = round((posted / total_posts) * 100, 1) if total_posts else 0
+    error_rate = round((errors / total_posts) * 100, 1) if total_posts else 0
+
+    return {
+        "summary": {
+            "total_posts": total_posts,
+            "posted": posted,
+            "scheduled": scheduled,
+            "errors": errors,
+            "campaigns": campaigns,
+            "crm_total": crm_total,
+            "pipeline_total": pipeline_total,
+            "groups_total": groups_total,
+            "group_scheduled": group_scheduled,
+            "comments_total": comments_total,
+            "messenger_total": messenger_total,
+            "total_value": int(total_value or 0),
+            "avg_value": int(avg_value or 0),
+            "conversion_rate": conversion_rate,
+            "error_rate": error_rate
+        },
+        "by_page": by_page,
+        "by_campaign": by_campaign,
+        "by_day": by_day,
+        "by_status": by_status,
+        "group_by_niche": group_by_niche,
+        "crm_by_source": crm_by_source,
+        "crm_by_stage": crm_by_stage
+    }
 
 def generate_many_contents(idea, count, style="bán hàng tự nhiên", length="80"):
     count = max(1, min(int(count), 50))
@@ -3297,6 +3406,45 @@ body{
   line-height:1.65;
 }
 .v5-focus-box b{color:#FBBF24}
+
+/* ===== ANALYTICS CENTER V5 POLISH ===== */
+.analytics-kpi-grid{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:14px;
+  margin:18px 0 22px;
+}
+.analytics-kpi{
+  background:linear-gradient(135deg,rgba(37,99,235,.10),rgba(124,58,237,.10));
+  border:1px solid rgba(124,58,237,.22);
+  border-radius:20px;
+  padding:16px;
+  box-shadow:0 12px 28px rgba(37,99,235,.08);
+}
+.analytics-kpi span{display:block;color:#475569;font-size:13px;font-weight:800}
+.analytics-kpi b{display:block;color:#4C1D95;font-size:28px;margin:7px 0}
+.analytics-kpi small{display:block;color:#64748B;line-height:1.45}
+.analytics-section-title{
+  margin:24px 0 12px;
+  color:#1E1B4B;
+  font-size:17px;
+  font-weight:900;
+}
+.analytics-box.full{grid-column:1/-1}
+.analytics-bar{height:8px;background:#E5E7EB;border-radius:999px;overflow:hidden;margin:-2px 0 8px}
+.analytics-bar.large{height:12px;margin:2px 0 12px}
+.analytics-bar i{display:block;height:100%;background:linear-gradient(135deg,var(--blue),var(--purple));border-radius:999px;min-width:6px}
+.empty-analytics{
+  background:#F8FAFC;
+  border:1px dashed #CBD5E1;
+  border-radius:14px;
+  color:#64748B;
+  padding:14px;
+  line-height:1.55;
+}
+@media(max-width:1100px){.analytics-kpi-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:700px){.analytics-kpi-grid{grid-template-columns:1fr}}
+
 </style>
 <script>
 function copyText(id){
@@ -4319,27 +4467,101 @@ Tạo: {{ c[4] }}</div>
 </section>
 
 <section class="panel module-section" id="analytics">
-  <div class="section-open-note">Bạn đang mở: Analytics Pro.</div>
-  <h2>Analytics Pro</h2>
+  <div class="section-open-note">Bạn đang mở: Analytics Center V5.</div>
+  <h2>📊 Analytics Center</h2>
+  <p class="small">Trung tâm phân tích tổng hợp Fanpage, Group, bài đăng, chiến dịch và CRM để theo dõi hiệu suất bán hàng.</p>
+
+  <div class="analytics-kpi-grid">
+    <div class="analytics-kpi"><span>📌 Tổng bài</span><b>{{ analytics.summary.total_posts }}</b><small>Toàn bộ bài đã tạo</small></div>
+    <div class="analytics-kpi"><span>✅ Đã đăng</span><b>{{ analytics.summary.posted }}</b><small>Tỷ lệ đăng: {{ analytics.summary.conversion_rate }}%</small></div>
+    <div class="analytics-kpi"><span>⏰ Chờ đăng</span><b>{{ analytics.summary.scheduled }}</b><small>Bài đang lên lịch</small></div>
+    <div class="analytics-kpi"><span>⚠️ Lỗi đăng</span><b>{{ analytics.summary.errors }}</b><small>Tỷ lệ lỗi: {{ analytics.summary.error_rate }}%</small></div>
+    <div class="analytics-kpi"><span>👥 Lead CRM</span><b>{{ analytics.summary.crm_total + analytics.summary.pipeline_total }}</b><small>Tổng khách hàng ghi nhận</small></div>
+    <div class="analytics-kpi"><span>💰 Pipeline</span><b>{{ "{:,}".format(analytics.summary.total_value).replace(",", ".") }}đ</b><small>Giá trị cơ hội bán hàng</small></div>
+    <div class="analytics-kpi"><span>👥 Group</span><b>{{ analytics.summary.groups_total }}</b><small>{{ analytics.summary.group_scheduled }} lịch đăng Group</small></div>
+    <div class="analytics-kpi"><span>🤖 AI xử lý</span><b>{{ analytics.summary.comments_total + analytics.summary.messenger_total }}</b><small>Comment + Messenger</small></div>
+  </div>
+
+  <div class="analytics-section-title">📣 Fanpage / Campaign Analytics</div>
   <div class="analytics-grid">
     <div class="analytics-box">
-      <h3>Theo Fanpage</h3>
-      {% for r in analytics.by_page %}
-      <div class="analytics-row"><span>{{ r[0] }}</span><b>{{ r[1] }}</b></div>
-      {% endfor %}
+      <h3>Top Fanpage có bài đăng</h3>
+      {% if analytics.by_page %}
+        {% for r in analytics.by_page %}
+        <div class="analytics-row"><span>{{ r[0] }}</span><b>{{ r[1] }}</b></div>
+        <div class="analytics-bar"><i style="width:{{ 100 if loop.first else (r[1] / (analytics.by_page[0][1] if analytics.by_page[0][1] else 1) * 100)|round(0) }}%"></i></div>
+        {% endfor %}
+      {% else %}
+        <div class="empty-analytics">Chưa có dữ liệu Fanpage.</div>
+      {% endif %}
     </div>
     <div class="analytics-box">
-      <h3>Theo chiến dịch</h3>
-      {% for r in analytics.by_campaign %}
-      <div class="analytics-row"><span>{{ r[0] }}</span><b>{{ r[1] }}</b></div>
-      {% endfor %}
+      <h3>Hiệu suất chiến dịch</h3>
+      {% if analytics.by_campaign %}
+        {% for r in analytics.by_campaign %}
+        <div class="analytics-row"><span>{{ r[0] }}</span><b>{{ r[1] }}</b></div>
+        <div class="analytics-bar"><i style="width:{{ 100 if loop.first else (r[1] / (analytics.by_campaign[0][1] if analytics.by_campaign[0][1] else 1) * 100)|round(0) }}%"></i></div>
+        {% endfor %}
+      {% else %}
+        <div class="empty-analytics">Chưa có dữ liệu chiến dịch.</div>
+      {% endif %}
     </div>
     <div class="analytics-box">
-      <h3>Theo ngày</h3>
+      <h3>Trạng thái bài đăng</h3>
+      {% if analytics.by_status %}
+        {% for r in analytics.by_status %}
+        <div class="analytics-row"><span>{{ r[0] }}</span><b>{{ r[1] }}</b></div>
+        {% endfor %}
+      {% else %}
+        <div class="empty-analytics">Chưa có trạng thái bài đăng.</div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="analytics-section-title">👥 Group / CRM Analytics</div>
+  <div class="analytics-grid">
+    <div class="analytics-box">
+      <h3>Group theo ngành</h3>
+      {% if analytics.group_by_niche %}
+        {% for r in analytics.group_by_niche %}
+        <div class="analytics-row"><span>{{ r[0] }}</span><b>{{ r[1] }}</b></div>
+        {% endfor %}
+      {% else %}
+        <div class="empty-analytics">Chưa có dữ liệu Group.</div>
+      {% endif %}
+    </div>
+    <div class="analytics-box">
+      <h3>Lead theo nguồn</h3>
+      {% if analytics.crm_by_source %}
+        {% for r in analytics.crm_by_source %}
+        <div class="analytics-row"><span>{{ r[0] }}</span><b>{{ r[1] }}</b></div>
+        {% endfor %}
+      {% else %}
+        <div class="empty-analytics">Chưa có dữ liệu nguồn lead.</div>
+      {% endif %}
+    </div>
+    <div class="analytics-box">
+      <h3>Pipeline CRM</h3>
+      {% if analytics.crm_by_stage %}
+        {% for r in analytics.crm_by_stage %}
+        <div class="analytics-row"><span>{{ r[0] }}</span><b>{{ r[1] }}</b></div>
+        {% endfor %}
+      {% else %}
+        <div class="empty-analytics">Chưa có dữ liệu Kanban.</div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="analytics-section-title">📅 Xu hướng 7 ngày</div>
+  <div class="analytics-box full">
+    {% if analytics.by_day %}
       {% for r in analytics.by_day %}
-      <div class="analytics-row"><span>{{ r[0] }}</span><b>{{ r[1] }}</b></div>
+      <div class="analytics-row"><span>{{ r[0] }}</span><b>{{ r[1] }} bài</b></div>
+      <div class="analytics-bar large"><i style="width:{{ 100 if loop.first else (r[1] / (analytics.by_day[0][1] if analytics.by_day[0][1] else 1) * 100)|round(0) }}%"></i></div>
       {% endfor %}
-    </div>
+    {% else %}
+      <div class="empty-analytics">Chưa có dữ liệu theo ngày. Khi bắt đầu đăng bài, biểu đồ sẽ tự cập nhật tại đây.</div>
+    {% endif %}
   </div>
 </section>
 
