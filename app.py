@@ -1733,6 +1733,23 @@ def get_group_schedules(limit=50):
     c.execute("SELECT id,group_name,group_id,content,schedule_time,status,created_at FROM group_schedules ORDER BY id DESC LIMIT ?", (limit,))
     rows = c.fetchall(); conn.close(); return rows
 
+
+def selected_groups(group_indexes):
+    result = []
+    groups = get_fb_groups(500)
+    for idx in group_indexes:
+        try:
+            i = int(idx)
+            if 0 <= i < len(groups):
+                result.append(groups[i])
+        except Exception:
+            pass
+    return result
+
+
+def smart_schedule_times_from_start(start_time, count, gap_minutes):
+    return smart_schedule_times(start_time, count, gap_minutes)
+
 def hide_phone_preview(text):
     import re
     return re.sub(r'(0|\+84)[0-9\s\.\-]{7,13}', '[ĐÃ ẨN SĐT]', text or '')
@@ -1917,8 +1934,41 @@ Tạo kế hoạch Tăng tương tác thông minh gồm:
 4. 5 mẫu phản hồi comment để kéo khách vào inbox
 5. Cách nhận diện bài ít tương tác và việc admin cần làm
 6. Kịch bản chăm sóc lại khách đã comment
-7. Lưu ý: ưu tiên tương tác thật, chăm sóc khách thật và nội dung phù hợp.
+7. Lưu ý an toàn: không auto like hàng loạt, không dùng nhiều tài khoản, không tạo tương tác giả.
 Trình bày rõ ràng, dễ copy, không cam kết quá đà.
+"""
+    if tool == 'publisher_optimizer':
+        return f"""
+Bạn là Facebook Publisher Pro AI, chuyên tối ưu bài đăng Fanpage an toàn và tăng chuyển đổi thật.
+Nội dung/bối cảnh cần tối ưu: {topic}
+Thông tin thêm: {extra}
+
+Trả về theo cấu trúc:
+1. Chấm điểm bài đăng từ 0-100
+2. Lỗi cần sửa trước khi đăng: tiêu đề, CTA, độ dài, hashtag, từ ngữ rủi ro
+3. Phiên bản bài đăng đã tối ưu, dưới 180 từ
+4. 3 tiêu đề/câu mở đầu khác nhau
+5. 3 CTA kéo inbox tự nhiên
+6. Gợi ý ảnh/video nên dùng
+7. Gợi ý đăng ngay hay lên lịch, kèm khung giờ phù hợp
+8. Checklist trước khi đăng: Fanpage, token, ảnh/video, nội dung, comment chăm sóc
+Không cam kết quá đà, không spam, không hướng dẫn tương tác giả.
+"""
+    if tool == 'engagement_filter':
+        return f"""
+Bạn là Engagement Assistant cho Fanpage bán hàng.
+Danh sách comment hoặc mô tả tình huống: {topic}
+Thông tin thêm: {extra}
+
+Hãy lọc và trả về:
+1. Comment cần ưu tiên xử lý ngay
+2. Phân loại khách: nóng / ấm / lạnh / spam / cần chăm sóc lại
+3. Mẫu phản hồi từng nhóm comment
+4. Comment nên chuyển vào CRM
+5. Việc admin cần làm trong 24 giờ tới
+6. Gợi ý bài nào nên tương tác lại và lý do
+7. Cảnh báo an toàn: không auto like hàng loạt, không dùng nhiều tài khoản, không tạo reach giả.
+Giọng văn chuyên nghiệp, dễ copy để dùng ngay.
 """
     if tool == 'comment_reply':
         return f"""
@@ -2399,7 +2449,7 @@ button:hover{
   animation:botFloat 2.2s ease-in-out infinite;
 }
 .bot-bubble:after{
-  content:"AI Online\A Phản hồi trong vài giây";
+  content:"AI Online\\A Phản hồi trong vài giây";
   white-space:pre;
   position:absolute;
   right:66px;
@@ -4105,6 +4155,36 @@ button,.btn,.safe-pricing-action,.support-send{
   .module-card h3,.app-quick-card h3,.template-card h3{font-size:20px!important}
 }
 
+
+/* Smart Facebook Pro upgrade - giữ giao diện hiện tại, chỉ bổ sung AI thông minh */
+.publisher-smart-panel,.smart-ai-board,.comment-smart-row,.smart-template-row{
+    display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin:14px 0;
+}
+.publisher-smart-panel,.smart-ai-card{
+    padding:16px;border-radius:20px;background:linear-gradient(135deg,rgba(37,99,235,.10),rgba(168,85,247,.08));
+    border:1px solid rgba(37,99,235,.18);box-shadow:0 14px 40px rgba(15,23,42,.06);
+}
+.publisher-smart-panel b,.smart-ai-card b{display:block;color:#1e3a8a;font-weight:900;margin-bottom:6px;}
+.publisher-smart-panel span,.smart-ai-card span{display:block;color:#64748b;font-size:13px;line-height:1.6;}
+.publisher-smart-panel form{grid-column:1/-1;}
+.smart-form{margin-top:12px;}
+.smart-template-row button,.comment-smart-row button{font-size:13px;padding:10px 12px;border-radius:14px;}
+
+/* ===== MULTI PAGE/GROUP SMART SCHEDULER + MENU VISIBILITY FIX ===== */
+.v2-nav-link,.v2-nav-link:visited{color:#F8FAFC!important;opacity:1!important;text-shadow:0 1px 2px rgba(0,0,0,.35)}
+.v2-nav-text{color:#FFFFFF!important;font-weight:900!important;letter-spacing:.1px;text-shadow:0 1px 2px rgba(0,0,0,.42)}
+.v2-nav-title{color:#BFDBFE!important;font-weight:950!important;text-shadow:0 1px 3px rgba(0,0,0,.55)}
+.v2-nav-ico{filter:drop-shadow(0 2px 4px rgba(0,0,0,.35))}
+.v2-nav-tag{background:rgba(59,130,246,.25)!important;color:#DBEAFE!important;border:1px solid rgba(147,197,253,.35)}
+.menu-mini-item,.menu-mini-title,.menu-mini-title small{opacity:1!important;text-shadow:0 1px 2px rgba(0,0,0,.5)}
+.bulk-smart-box{margin:16px 0;padding:18px;border-radius:22px;background:linear-gradient(135deg,#EFF6FF,#F5F3FF);border:1px solid rgba(37,99,235,.16);box-shadow:0 16px 40px rgba(15,23,42,.06)}
+.bulk-smart-box h3{margin-top:0;color:#1E1B4B;font-size:20px;font-weight:950;letter-spacing:-.3px}
+.bulk-smart-note{padding:13px 15px;border-radius:16px;background:#FFFFFF;color:#1E3A8A;font-weight:800;line-height:1.65;border:1px dashed rgba(37,99,235,.22);margin:12px 0}
+.group-check-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin:12px 0}
+.group-check-item{background:#fff;border:1px solid rgba(37,99,235,.12);border-radius:16px;padding:12px;color:#0F172A;font-weight:800;box-shadow:0 10px 24px rgba(15,23,42,.05)}
+.group-check-item span{display:block;color:#64748B;font-size:12px;font-weight:700;margin-top:4px}
+.scheduler-tip{font-size:13px;color:#475569;line-height:1.6;font-weight:700;margin:8px 0}
+
 </style>
 
 <script>
@@ -4702,6 +4782,7 @@ function closeLockedFeature(){
   <a class="v2-nav-link" href="#post" onclick="openModule('post')"><span class="v2-nav-ico">📝</span><span class="v2-nav-text">Đăng bài Facebook</span></a>
   <a class="v2-nav-link" href="#fanpage_manager" onclick="openModule('fanpage_manager')"><span class="v2-nav-ico">📄</span><span class="v2-nav-text">Quản lý Fanpage</span><span class="v2-nav-tag">V5</span></a>
   <a class="v2-nav-link" href="#group_marketing" onclick="openModule('group_marketing')"><span class="v2-nav-ico">👥</span><span class="v2-nav-text">Quản lý Group</span><span class="v2-nav-tag">V5</span></a>
+  <a class="v2-nav-link" href="#group_marketing" onclick="openModule('group_marketing')"><span class="v2-nav-ico">🧩</span><span class="v2-nav-text">Đăng nhiều Group</span><span class="v2-nav-tag">New</span></a>
   <a class="v2-nav-link" href="#token" onclick="openModule('token')"><span class="v2-nav-ico">🔑</span><span class="v2-nav-text">Token Fanpage</span><span class="v2-nav-tag">Pro</span></a>
   <a class="v2-nav-link" href="#facebook_publisher_pro" onclick="openModule('facebook_publisher_pro')"><span class="v2-nav-ico">🚀</span><span class="v2-nav-text">Đăng bài Fanpage</span><span class="v2-nav-tag">Pro</span></a>
   <a class="v2-nav-link" href="#scheduler" onclick="openModule('scheduler')"><span class="v2-nav-ico">🗓️</span><span class="v2-nav-text">Lên lịch đăng bài</span></a>
@@ -4734,7 +4815,7 @@ function closeLockedFeature(){
   <div class="v2-nav-title">💎 PREMIUM CENTER</div>
   <a class="v2-nav-link" href="#premium" onclick="openModule('premium')"><span class="v2-nav-ico">💎</span><span class="v2-nav-text">Bảng giá Premium</span><span class="v2-nav-tag">VIP</span></a>
   <a class="v2-nav-link" href="#premium" onclick="openModule('premium')"><span class="v2-nav-ico">💳</span><span class="v2-nav-text">Gửi xác nhận thanh toán</span></a>
-  <a class="v2-nav-link" href="#premium" onclick="openModule('premium')"><span class="v2-nav-ico">🟢</span><span class="v2-nav-text">Trạng thái kích hoạt</span></a>
+  <a class="v2-nav-link" href="#premium" onclick="openModule('premium')"><span class="v2-nav-ico">✅</span><span class="v2-nav-text">Trạng thái kích hoạt</span></a>
   <a class="v2-nav-link" href="/install" target="_blank"><span class="v2-nav-ico">📲</span><span class="v2-nav-text">Cài đặt App</span><span class="v2-nav-tag">App</span></a>
 
   <div class="v2-nav-title">⚙️ TÀI KHOẢN</div>
@@ -4865,16 +4946,21 @@ function closeLockedFeature(){
 
 
 <section class="panel module-section" id="facebook_center">
+  <div class="section-open-note">Bạn đang mở: Facebook Center Pro.</div>
   <h2>📣 Facebook Center</h2>
+  <p class="small">Trung tâm đăng bài Fanpage, lên lịch, quản lý nội dung, nhật ký đăng bài, tăng tương tác thông minh và AI trả lời comment.</p>
   <div class="fb-submenu-pro">
     <button onclick="openModule('facebook_publisher_pro')">🚀 Đăng bài Fanpage</button>
     <button onclick="openModule('scheduler')">🗓️ Lên lịch đăng bài</button>
-    <button onclick="openModule('library')">📚 Kho Content +50.000</button>
+    <button onclick="openModule('library')">🗂️ Quản lý nội dung</button>
     <button onclick="openModule('history')">📜 Nhật ký đăng bài</button>
     <button onclick="openModule('smart_engagement')">⚡ Tăng tương tác thông minh</button>
     <button onclick="openModule('comment_manager')">💬 AI trả lời comment</button>
   </div>
 
+  <div class="fb-safe-note">
+    Hệ thống không dùng auto like hàng loạt, không tương tác giả bằng nhiều tài khoản. Thay vào đó dùng chiến lược tăng tương tác thông minh: giờ đăng tốt, caption kéo comment, câu hỏi tương tác, theo dõi bài yếu và nhắc admin chăm sóc khách thật.
+  </div>
 
   <div class="v3-feature-grid">
     <div class="fb-pro-card"><div class="fb-pro-badge">🚀 Facebook Publisher Pro</div><h3>Đăng bài Fanpage chuyên nghiệp</h3><ul><li>Chọn Fanpage</li><li>Soạn bài</li><li>Upload ảnh/video</li><li>Đăng ngay</li><li>Lên lịch đăng</li><li>Lưu nháp</li><li>Nhật ký đăng bài</li><li>Báo lỗi token/page rõ ràng</li></ul><button onclick="openModule('facebook_publisher_pro')">Mở Publisher Pro</button></div>
@@ -4882,12 +4968,24 @@ function closeLockedFeature(){
     <div class="fb-pro-card"><div class="fb-pro-badge">⚡ Safe Growth</div><h3>Tăng tương tác thông minh</h3><ul><li>Gợi ý giờ đăng tốt</li><li>Gợi ý caption tăng comment</li><li>Tạo câu hỏi kéo tương tác</li><li>Gợi ý trả lời comment</li><li>Theo dõi bài ít tương tác</li><li>Nhắc chăm sóc khách đã comment</li></ul><button onclick="openModule('smart_engagement')">Mở Smart Engagement</button></div>
   </div>
 
+  <div class="fb-danger-note">
+    Không tích hợp: tự động like hàng loạt, tự động like bằng nhiều tài khoản, tự động tương tác để tăng reach giả. Đây là nhóm hành vi dễ checkpoint, giảm uy tín Page và rủi ro khóa tài khoản.
+  </div>
 </section>
 
 <section class="panel module-section" id="facebook_publisher_pro">
   <div class="section-open-note">Bạn đang mở: Facebook Publisher Pro.</div>
   <h2>🚀 Facebook Publisher Pro</h2>
   <p class="small">Đăng bài Fanpage trực tiếp, tải ảnh/video, lên lịch và theo dõi lỗi token/page rõ ràng.</p>
+  <div class="publisher-smart-panel">
+    <div><b>🧠 Smart Publisher AI</b><span>Chấm điểm nội dung, sửa CTA, cảnh báo lỗi trước khi đăng.</span></div>
+    <form method="post" action="/v3_ai_tool">
+      <input type="hidden" name="tool" value="publisher_optimizer">
+      <textarea name="topic" rows="3" placeholder="Dán bài đăng cần tối ưu trước khi đăng Fanpage"></textarea>
+      <textarea name="extra" rows="2" placeholder="Ngành, tệp khách, ưu đãi, Page cần đăng..."></textarea>
+      <button>AI kiểm tra trước khi đăng</button>
+    </form>
+  </div>
   <div class="v3-feature-grid">
     <div class="fb-pro-card"><h3>Quy trình đăng bài</h3><ul><li>Chọn Fanpage từ Token Center</li><li>Soạn nội dung hoặc lấy nội dung AI</li><li>Upload ảnh/video</li><li>Đăng ngay hoặc lên lịch</li><li>Lưu lịch sử đăng bài</li></ul><button onclick="openModule('post')">Mở form đăng bài</button></div>
     <div class="fb-pro-card"><h3>Lên lịch & lưu nháp</h3><p>Quản lý lịch đăng, chiến dịch nội dung và kiểm tra bài sắp đăng để tránh lỗi nội dung trùng lặp.</p><button onclick="openModule('scheduler')">Mở lịch đăng</button></div>
@@ -4898,15 +4996,32 @@ function closeLockedFeature(){
 <section class="panel module-section" id="smart_engagement">
   <div class="section-open-note">Bạn đang mở: Tăng tương tác thông minh.</div>
   <h2>⚡ Tăng tương tác thông minh</h2>
-  <p class="small">Tăng tương tác bằng nội dung, giờ đăng, CTA và chăm sóc comment thật.</p>
+  <p class="small">Thay thế an toàn cho auto like: tăng tương tác bằng nội dung, giờ đăng, CTA và chăm sóc comment thật.</p>
   <div class="smart-chip-row"><span class="smart-chip">Gợi ý giờ đăng tốt</span><span class="smart-chip">Caption tăng comment</span><span class="smart-chip">Câu hỏi kéo tương tác</span><span class="smart-chip">Gợi ý trả lời comment</span><span class="smart-chip">Theo dõi bài ít tương tác</span><span class="smart-chip">Nhắc chăm sóc khách</span></div>
-  <form method="post" action="/v3_ai_tool">
+  <div class="smart-ai-board">
+    <div class="smart-ai-card"><b>🧠 AI phân tích bài yếu</b><span>Nhập nội dung bài đăng, AI gợi ý vì sao ít tương tác và cách sửa.</span></div>
+    <div class="smart-ai-card"><b>💬 AI lọc comment cần chăm sóc</b><span>Ưu tiên khách nóng, khách hỏi giá, khách để số điện thoại.</span></div>
+    <div class="smart-ai-card"><b>⏰ Nhắc admin xử lý thật</b><span>Tạo checklist việc cần làm thay vì tự động like hàng loạt.</span></div>
+  </div>
+  <form method="post" action="/v3_ai_tool" class="smart-form">
     <input type="hidden" name="tool" value="smart_engagement">
-    <textarea name="topic" rows="4" placeholder="Nhập sản phẩm/dịch vụ hoặc dán nội dung bài viết cần tăng tương tác. Ví dụ: Dịch vụ chạy quảng cáo Facebook cho shop online"></textarea>
+    <div class="smart-template-row">
+      <button type="button" class="secondary" onclick="fillSmartEngagement('Bài đăng bán hàng ít comment, cần tăng bình luận thật và kéo khách inbox')">Bài ít comment</button>
+      <button type="button" class="secondary" onclick="fillSmartEngagement('Fanpage có khách xem nhưng ít inbox, cần caption và câu hỏi kéo tương tác')">Ít inbox</button>
+      <button type="button" class="secondary" onclick="fillSmartEngagement('Cần kế hoạch chăm sóc lại khách đã comment trong 7 ngày gần nhất')">Chăm sóc lại</button>
+    </div>
+    <textarea id="smartEngagementTopic" name="topic" rows="4" placeholder="Nhập sản phẩm/dịch vụ hoặc dán nội dung bài viết cần tăng tương tác. Ví dụ: Dịch vụ chạy quảng cáo Facebook cho shop online"></textarea>
     <textarea name="extra" rows="3" placeholder="Thông tin thêm: tệp khách, ưu đãi, giờ đăng hiện tại, vấn đề đang gặp..."></textarea>
     <button>AI tạo kế hoạch tăng tương tác</button>
     <button type="button" class="secondary" onclick="openModule('comment_manager')">Mở AI trả lời comment</button>
   </form>
+  <form method="post" action="/v3_ai_tool" class="smart-form">
+    <input type="hidden" name="tool" value="engagement_filter">
+    <textarea name="topic" rows="4" placeholder="Dán nhiều comment khách hàng để AI lọc khách nóng/ấm/lạnh và đề xuất chuyển CRM"></textarea>
+    <textarea name="extra" rows="2" placeholder="Sản phẩm, giá, ưu đãi, cách liên hệ..."></textarea>
+    <button>AI lọc comment cần chăm sóc</button>
+  </form>
+  <div class="fb-safe-note">Mục này chỉ tạo gợi ý và nhắc admin xử lý tương tác thật. Không tự động like hàng loạt, không dùng nhiều tài khoản, không tạo reach giả.</div>
 </section>
 
 <section class="panel module-section" id="fanpage_manager">
@@ -4925,14 +5040,50 @@ function closeLockedFeature(){
 </section>
 
 <section class="panel module-section" id="group_marketing">
-  <div class="section-open-note">Bạn đang mở: Group Marketing.</div>
-  <h2>👥 Quản lý Group</h2>
-  <p class="small">Quản lý Group, danh sách Group, lịch đăng Group và AI viết bài Group.</p>
+  <div class="section-open-note">Bạn đang mở: Group Marketing Pro.</div>
+  <h2>👥 Quản lý Group & Lịch đăng nhiều Group</h2>
+  <p class="small">Chọn nhiều Group, nhập nhiều nội dung, hệ thống tự chia mỗi nội dung cho mỗi Group, có khoảng cách thời gian và không tự lặp lại nội dung để tránh trùng bài.</p>
   <div class="grid">
     <form method="post" action="/fb_group"><h3>Thêm Group</h3><input name="group_name" placeholder="Tên Group"><input name="group_id" placeholder="Group ID"><input name="niche" placeholder="Ngành / tệp khách"><textarea name="note" rows="2" placeholder="Ghi chú"></textarea><button>Lưu Group</button></form>
     <form method="post" action="/v3_ai_tool"><h3>AI viết bài Group</h3><input type="hidden" name="tool" value="group_content"><textarea name="topic" rows="4" placeholder="Ví dụ: Tôi bán Proxy cho người chạy quảng cáo Facebook"></textarea><button>Tạo bài Group</button></form>
   </div>
-  <form method="post" action="/group_schedule"><h3>Lịch đăng Group</h3><div class="grid"><input name="group_name" placeholder="Tên Group"><input name="group_id" placeholder="Group ID"><input name="schedule_time" type="datetime-local"></div><textarea name="content" rows="4" placeholder="Nội dung cần lên lịch đăng Group"></textarea><button>Lưu lịch Group</button></form>
+
+  <div class="bulk-smart-box">
+    <h3>🚀 Đăng lịch nhiều Group không trùng nội dung</h3>
+    <div class="bulk-smart-note">Mỗi dòng hoặc mỗi đoạn cách dòng trống là 1 nội dung riêng. Hệ thống sẽ chia lần lượt: Nội dung 1 → Group 1, Nội dung 2 → Group 2... Nếu thiếu nội dung, hệ thống không lặp lại để tránh trùng bài.</div>
+    <form method="post" action="/group_bulk_schedule">
+      <div class="group-check-grid">
+        {% for g in fb_groups %}
+        <label class="group-check-item">
+          <input type="checkbox" name="group_indexes" value="{{ loop.index0 }}">
+          {{ g[1] }}
+          <span>{{ g[2] }} • {{ g[3] }}</span>
+        </label>
+        {% endfor %}
+      </div>
+      <textarea name="bulk_content" rows="10" placeholder="Nội dung 1 cho Group 1
+
+Nội dung 2 cho Group 2
+
+Nội dung 3 cho Group 3"></textarea>
+      <div class="grid">
+        <input name="start_time" type="datetime-local" placeholder="Giờ bắt đầu">
+        <select name="gap_minutes">
+          <option value="5">Cách nhau 5 phút</option>
+          <option value="15">Cách nhau 15 phút</option>
+          <option value="30">Cách nhau 30 phút</option>
+          <option value="60" selected>Cách nhau 1 giờ</option>
+          <option value="120">Cách nhau 2 giờ</option>
+          <option value="180">Cách nhau 3 giờ</option>
+        </select>
+      </div>
+      <input name="campaign" placeholder="Tên chiến dịch / ghi chú nhóm bài">
+      <p class="scheduler-tip">Lưu ý an toàn: hệ thống tạo lịch và chia nội dung thông minh. Việc đăng Group thực tế cần quyền/phiên Facebook hợp lệ theo chính sách nền tảng.</p>
+      <button>Lưu lịch nhiều Group</button>
+    </form>
+  </div>
+
+  <form method="post" action="/group_schedule"><h3>Lịch đăng Group thủ công</h3><div class="grid"><input name="group_name" placeholder="Tên Group"><input name="group_id" placeholder="Group ID"><input name="schedule_time" type="datetime-local"></div><textarea name="content" rows="4" placeholder="Nội dung cần lên lịch đăng Group"></textarea><button>Lưu lịch Group</button></form>
   <h3>Danh sách Group</h3>{% for g in fb_groups %}<div class="history"><b>{{ g[1] }}</b> • {{ g[2] }} • {{ g[3] }}<br>{{ g[4] }}</div>{% endfor %}
   <h3>Lịch Group gần nhất</h3>{% for gs in group_schedules %}<div class="history"><b>{{ gs[1] }}</b> • {{ gs[4] }} • {{ gs[5] }}<br>{{ gs[3] }}</div>{% endfor %}
 </section>
@@ -4941,11 +5092,16 @@ function closeLockedFeature(){
   <div class="section-open-note">Bạn đang mở: Comment Manager AI.</div>
   <h2>💬 AI Comment</h2>
   <p class="small">AI trả lời comment, ẩn SĐT, gắn nhãn khách và chuyển CRM.</p>
+  <div class="comment-smart-row">
+    <button type="button" class="secondary" onclick="fillCommentAI('Shop còn hàng không ạ? Cho em xin giá với')">Khách hỏi giá</button>
+    <button type="button" class="secondary" onclick="fillCommentAI('Em cần tư vấn, số điện thoại của em là 09xxxxxxxx')">Khách để SĐT</button>
+    <button type="button" class="secondary" onclick="fillCommentAI('Sản phẩm này có phù hợp cho người mới bắt đầu không?')">Khách cần tư vấn</button>
+  </div>
   <form method="post" action="/comment_ai">
     <div class="grid"><input name="customer_name" placeholder="Tên khách nếu có"><input name="phone" placeholder="SĐT nếu có"></div>
-    <textarea name="comment_text" rows="4" placeholder="Dán comment khách hàng vào đây. Ví dụ: shop còn proxy Việt không, số em 09..."></textarea>
+    <textarea id="commentAiText" name="comment_text" rows="4" placeholder="Dán comment khách hàng vào đây. Ví dụ: shop còn proxy Việt không, số em 09..."></textarea>
     <div class="grid"><select name="label"><option>Khách nóng</option><option>Khách ấm</option><option>Khách lạnh</option><option>Cần chăm sóc lại</option></select><select name="to_crm"><option value="1">Chuyển sang CRM</option><option value="0">Chỉ lưu comment</option></select></div>
-    <button>AI xử lý Comment</button><button type="button" class="secondary" onclick="openLockedFeature('Comment Manager AI','Gói 1 năm / Gói Nhà Bán Hàng Chuyên Nghiệp')">Xem bản tự động Webhook</button>
+    <button>AI xử lý Comment</button><button type="button" class="secondary" onclick="openModule('smart_engagement')">Lọc nhiều comment</button>
   </form>
   <h3>Comment đã xử lý</h3>{% for c in comment_leads %}<div class="history"><b>{{ c[1] or 'Khách hàng' }}</b> • {{ c[5] }} • {{ c[7] }}<br>Comment: {{ c[3] }}<br>AI: {{ c[4] }}</div>{% endfor %}
 </section>
@@ -5112,7 +5268,14 @@ Mỗi content cách nhau bằng một dòng trống. Nếu nhập từng dòng, 
           <h3>Đặt lịch đăng</h3>
           <p class="small">Chọn thời gian, hệ thống lưu lịch và tự đăng khi đến giờ.</p>
           <input type="datetime-local" name="schedule_time">
-          <button type="submit" name="action" value="schedule" class="secondary">Tự chia và lưu lịch</button>
+          <select name="schedule_gap_minutes">
+            <option value="5">Cách nhau 5 phút</option>
+            <option value="15">Cách nhau 15 phút</option>
+            <option value="30" selected>Cách nhau 30 phút</option>
+            <option value="60">Cách nhau 1 giờ</option>
+            <option value="120">Cách nhau 2 giờ</option>
+          </select>
+          <button type="submit" name="action" value="schedule" class="secondary">Tự chia và lưu lịch theo khoảng cách</button>
         </div>
       </div>
     </div>
@@ -5184,8 +5347,8 @@ Content 3..."></textarea>
 </section>
 
 <section class="panel module-section" id="library">
-  <div class="section-open-note">Bạn đang mở: Kho Content +50.000.</div>
-  <h2>📚 Kho Content +50.000</h2>
+  <div class="section-open-note">Bạn đang mở: Kho Content 50.000+.</div>
+  <h2>Kho Content 10.000+ Dùng Thử</h2>
   <p class="small">Bản demo nạp sẵn một số mẫu. Sau này có thể import 10.000 content thật từ JSON/CSV.</p>
   <form method="get" action="/">
     <select name="industry">
@@ -5344,7 +5507,7 @@ Tạo: {{ c[4] }}</div>
 
   <div class="analytics-kpi-grid">
     <div class="analytics-kpi"><span>📌 Tổng bài</span><b>{{ analytics.summary.total_posts }}</b><small>Toàn bộ bài đã tạo</small></div>
-    <div class="analytics-kpi"><span>• Đã đăng</span><b>{{ analytics.summary.posted }}</b><small>Tỷ lệ đăng: {{ analytics.summary.conversion_rate }}%</small></div>
+    <div class="analytics-kpi"><span>✅ Đã đăng</span><b>{{ analytics.summary.posted }}</b><small>Tỷ lệ đăng: {{ analytics.summary.conversion_rate }}%</small></div>
     <div class="analytics-kpi"><span>⏰ Chờ đăng</span><b>{{ analytics.summary.scheduled }}</b><small>Bài đang lên lịch</small></div>
     <div class="analytics-kpi"><span>⚠️ Lỗi đăng</span><b>{{ analytics.summary.errors }}</b><small>Tỷ lệ lỗi: {{ analytics.summary.error_rate }}%</small></div>
     <div class="analytics-kpi"><span>👥 Lead CRM</span><b>{{ analytics.summary.crm_total + analytics.summary.pipeline_total }}</b><small>Tổng khách hàng ghi nhận</small></div>
@@ -5837,7 +6000,7 @@ Thời gian tạo: {{ h[9] }}
     <span>📌 Tổng bài</span><b>{{ s.total }}</b>
   </div>
   <div class="activity-card">
-    <span>• Đã đăng</span><b>{{ s.posted }}</b>
+    <span>✅ Đã đăng</span><b>{{ s.posted }}</b>
   </div>
   <div class="activity-card">
     <span>⏰ Chờ đăng</span><b>{{ s.scheduled }}</b>
@@ -5893,6 +6056,17 @@ Thời gian tạo: {{ h[9] }}
   <a href="#history">📊<br>Lịch sử</a>
 </nav>
 
+
+<script>
+function fillSmartEngagement(text){
+  const el=document.getElementById('smartEngagementTopic');
+  if(el){ el.value=text; el.focus(); }
+}
+function fillCommentAI(text){
+  const el=document.getElementById('commentAiText');
+  if(el){ el.value=text; el.focus(); }
+}
+</script>
 <script>
 function toggleMenuGroup(el){
   const box = el.closest('.menu-mini-group');
@@ -6267,6 +6441,7 @@ def multi_post():
     bulk_content = request.form.get("bulk_content", "").strip()
     action = request.form.get("action", "now")
     schedule_time = request.form.get("schedule_time", "").replace("T", " ")
+    schedule_gap_minutes = request.form.get("schedule_gap_minutes", "30")
     campaign = request.form.get("campaign", "").strip()
     pages = selected_pages(request.form.getlist("page_indexes"))
     if get_free_status().get("is_trial") and len(pages) > 1:
@@ -6298,6 +6473,8 @@ def multi_post():
     messages = []
     used_media = set()
 
+    schedule_times = smart_schedule_times_from_start(schedule_time, len(jobs), schedule_gap_minutes) if action == "schedule" else []
+
     for idx, (page, content) in enumerate(jobs):
         # Mặc định giữ nguyên 100% content khách nhập.
         # Chỉ spin/thêm CTA/hashtag khi khách bật checkbox AI tối ưu.
@@ -6316,9 +6493,10 @@ def multi_post():
         if action == "schedule":
             if not schedule_time:
                 return render(message="Chưa chọn thời gian đặt lịch.", ok=False)
-            save_post(page["name"], page["id"], final_content, "scheduled", "", schedule_time, image_path, campaign, content_score)
+            item_time = schedule_times[idx] if idx < len(schedule_times) else schedule_time
+            save_post(page["name"], page["id"], final_content, "scheduled", "", item_time, image_path, campaign, content_score)
             media_note = f" | Media: {os.path.basename(image_path)}" if image_path else ""
-            messages.append(f"Đã lưu lịch cho {page['name']}{media_note}")
+            messages.append(f"Đã lưu lịch {item_time} cho {page['name']}{media_note}")
         else:
             result = post_to_facebook(page, final_content, image_path)
             if "id" in result or "post_id" in result:
@@ -6498,6 +6676,45 @@ def smart_schedule_route():
         msg = f"Đã tự chia lịch {len(jobs)} bài và bật AI tối ưu từng bài. Khoảng cách: {gap_minutes} phút."
     return render(message=msg, ok=True)
 
+
+@app.route("/group_bulk_schedule", methods=["POST"])
+def group_bulk_schedule_route():
+    free = get_free_status()
+    if free.get("is_expired"):
+        return render(message="Phiên miễn phí đã giới hạn. Quý khách vui lòng nâng cấp Premium để dùng lịch đăng Group.", ok=False)
+
+    bulk_content = request.form.get("bulk_content", "").strip()
+    start_time = request.form.get("start_time", "")
+    gap_minutes = request.form.get("gap_minutes", "60")
+    campaign = request.form.get("campaign", "").strip()
+    groups = selected_groups(request.form.getlist("group_indexes"))
+    contents = split_bulk_contents(bulk_content)
+
+    if not groups:
+        return render(message="Chưa chọn Group để tạo lịch.", ok=False)
+    if not contents:
+        return render(message="Chưa nhập nội dung. Mỗi dòng hoặc mỗi đoạn cách dòng trống sẽ được tính là 1 nội dung riêng.", ok=False)
+
+    # Không đăng trùng nội dung: nếu nội dung ít hơn group, chỉ tạo lịch cho số group tương ứng.
+    max_jobs = min(len(groups), len(contents))
+    if max_jobs <= 0:
+        return render(message="Chưa đủ dữ liệu để tạo lịch Group.", ok=False)
+
+    times = smart_schedule_times_from_start(start_time, max_jobs, gap_minutes)
+    messages = []
+    for i in range(max_jobs):
+        group = groups[i]
+        content = contents[i]
+        item_time = times[i]
+        note_prefix = f"[{campaign}] " if campaign else ""
+        add_group_schedule(group[1], group[2], note_prefix + content, item_time)
+        messages.append(f"Đã lưu lịch {item_time} cho Group {group[1]} — nội dung #{i+1}")
+
+    if len(groups) > len(contents):
+        messages.append(f"Lưu ý: Có {len(groups)-len(contents)} Group chưa tạo lịch vì thiếu nội dung. Hệ thống không tự lặp để tránh trùng bài.")
+
+    return render(message="\n".join(messages), ok=True)
+
 @app.route("/page_cluster", methods=["POST"])
 def page_cluster_route():
     add_page_cluster(
@@ -6529,7 +6746,7 @@ def v3_ai_tool_route():
         return render(message="Vui lòng nhập nội dung cần AI xử lý.", ok=False)
     prompt = v3_ai_tool_prompt(tool, topic, extra)
     result = safe_ai_generate(prompt, fallback=f"Bản demo cho {topic}:\n\n- 30 content\n- 10 quảng cáo\n- Tệp khách hàng mục tiêu\n- CTA và kế hoạch triển khai\n\nVui lòng cấu hình GEMINI_API_KEY để dùng AI đầy đủ.")
-    return render(content=result, message="Đã tạo nội dung bằng AI Studio V3.", ok=True)
+    return render(content=result, message="Đã tạo nội dung AI thông minh cho Facebook Center.", ok=True)
 
 @app.route("/pipeline", methods=["POST"])
 def pipeline_route():
@@ -7081,8 +7298,8 @@ function isStandalone(){{ return (window.matchMedia && window.matchMedia('(displ
 function isIOS(){{ return /iphone|ipad|ipod/i.test(navigator.userAgent); }}
 function isAndroid(){{ return /android/i.test(navigator.userAgent); }}
 function markInstalled(){{
-  statusEl.innerText='• GPT MKT Pro đã được cài đặt. Biểu tượng ứng dụng đã có trên màn hình chính.';
-  installBtn.innerText='• Đã cài đặt GPT MKT Pro';
+  statusEl.innerText='✅ GPT MKT Pro đã được cài đặt. Biểu tượng ứng dụng đã có trên màn hình chính.';
+  installBtn.innerText='✅ Đã cài đặt GPT MKT Pro';
   installBtn.classList.add('installed');
   installBtn.disabled=true;
 }}
