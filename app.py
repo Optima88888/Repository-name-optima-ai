@@ -4328,6 +4328,178 @@ button,.btn,.safe-pricing-action,.support-send{
 .queue-board{margin-top:20px;padding:18px;border-radius:22px;background:linear-gradient(135deg,#F8FAFC,#EEF2FF);border:1px solid rgba(37,99,235,.14);box-shadow:0 16px 40px rgba(15,23,42,.06)}
 .queue-board h3{margin:0 0 12px;color:#1E1B4B;font-weight:950}.queue-table{width:100%;border-collapse:separate;border-spacing:0 8px}.queue-table th{text-align:left;color:#1E3A8A;font-size:13px}.queue-table td{background:#fff;padding:12px;border-top:1px solid rgba(37,99,235,.10);border-bottom:1px solid rgba(37,99,235,.10);font-size:13px;color:#0F172A}.queue-table td:first-child{border-left:1px solid rgba(37,99,235,.10);border-radius:14px 0 0 14px}.queue-table td:last-child{border-right:1px solid rgba(37,99,235,.10);border-radius:0 14px 14px 0}.queue-status{display:inline-flex;padding:5px 10px;border-radius:999px;font-weight:900;background:#DBEAFE;color:#1D4ED8}.queue-status.ready_now{background:#DCFCE7;color:#047857}.queue-status.paused{background:#FEF3C7;color:#B45309}.queue-status.cancelled{background:#FEE2E2;color:#B91C1C}.queue-actions{display:flex;gap:6px;flex-wrap:wrap}.queue-actions button{padding:7px 9px;border-radius:10px;font-size:12px;box-shadow:none}.queue-empty{padding:13px 15px;background:#fff;border-radius:16px;color:#64748B;font-weight:800}.calendar-mini-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-top:10px}.calendar-mini-item{background:#fff;border:1px solid rgba(37,99,235,.12);border-radius:16px;padding:12px;color:#0F172A;font-weight:850}.calendar-mini-item b{display:block;color:#7C3AED;margin-bottom:5px}.nav-collapsed .v2-nav-link{display:none}.v2-nav-title{cursor:pointer;user-select:none;position:relative}.v2-nav-title:after{content:'▾';float:right;opacity:.8}.nav-collapsed.v2-nav-title:after{content:'▸'}
 
+
+
+/* ===== SAAS PREMIUM 3D TEXT MENU + CONVERSION MODAL ===== */
+.sidebar .v2-nav-ico,
+.sidebar .menu-icon,
+.sidebar .app-ico,
+.sidebar .nav-ico{
+  display:none!important;
+}
+.sidebar .v2-nav-title{
+  margin:22px 4px 9px!important;
+  padding:0 4px!important;
+  color:#C7D2FE!important;
+  font-size:11px!important;
+  font-weight:900!important;
+  letter-spacing:1.4px!important;
+  text-transform:uppercase!important;
+  text-shadow:0 2px 10px rgba(99,102,241,.45)!important;
+}
+.sidebar .v2-nav-link,
+.sidebar .nav a,
+.sidebar .menu-mini-item{
+  position:relative!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:space-between!important;
+  gap:10px!important;
+  min-height:46px!important;
+  padding:13px 14px!important;
+  margin:6px 0!important;
+  border-radius:17px!important;
+  background:rgba(255,255,255,.055)!important;
+  border:1px solid rgba(255,255,255,.085)!important;
+  color:#FFFFFF!important;
+  text-decoration:none!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 10px 24px rgba(0,0,0,.16)!important;
+  transition:all .22s ease!important;
+}
+.sidebar .v2-nav-link:hover,
+.sidebar .v2-nav-link.active,
+.sidebar .nav a:hover,
+.sidebar .menu-mini-item:hover{
+  background:linear-gradient(135deg,#2563EB,#7C3AED)!important;
+  border-color:rgba(255,255,255,.26)!important;
+  transform:translateX(4px)!important;
+  box-shadow:0 16px 38px rgba(124,58,237,.38), inset 0 1px 0 rgba(255,255,255,.16)!important;
+}
+.sidebar .v2-nav-text,
+.sidebar .v2-nav-link,
+.sidebar .menu-mini-item,
+.sidebar .nav a{
+  color:#FFFFFF!important;
+  font-weight:900!important;
+  letter-spacing:.15px!important;
+  text-shadow:
+    0 2px 0 rgba(0,0,0,.40),
+    0 8px 20px rgba(0,0,0,.50),
+    0 0 16px rgba(129,140,248,.40)!important;
+}
+.sidebar .v2-nav-tag{
+  margin-left:auto!important;
+  padding:4px 8px!important;
+  border-radius:999px!important;
+  background:rgba(255,255,255,.14)!important;
+  color:#E0E7FF!important;
+  border:1px solid rgba(255,255,255,.18)!important;
+  font-size:10px!important;
+  font-weight:900!important;
+  letter-spacing:.6px!important;
+  text-transform:uppercase!important;
+  text-shadow:none!important;
+  box-shadow:0 8px 18px rgba(0,0,0,.15)!important;
+}
+.sidebar .v2-side-card,
+.sidebar .device-status-card{
+  color:#FFFFFF!important;
+  font-weight:800!important;
+  text-shadow:0 2px 0 rgba(0,0,0,.28),0 8px 18px rgba(0,0,0,.36)!important;
+}
+.lock-modal.premium-conversion-modal{
+  background:rgba(2,6,23,.72)!important;
+  backdrop-filter:blur(12px)!important;
+}
+.premium-conversion-modal .lock-inner{
+  max-width:760px!important;
+  border-radius:34px!important;
+  padding:0!important;
+  overflow:hidden!important;
+  background:linear-gradient(180deg,#FFFFFF,#F8FAFF)!important;
+  border:1px solid rgba(167,139,250,.45)!important;
+  box-shadow:0 34px 100px rgba(15,23,42,.42)!important;
+}
+.premium-conversion-head{
+  padding:26px 28px;
+  color:#FFFFFF;
+  background:
+    radial-gradient(circle at top left,rgba(59,130,246,.55),transparent 35%),
+    linear-gradient(135deg,#1E1B4B,#2563EB 48%,#7C3AED);
+}
+.premium-conversion-head small{
+  display:inline-block;
+  padding:6px 12px;
+  border-radius:999px;
+  background:rgba(255,255,255,.16);
+  border:1px solid rgba(255,255,255,.22);
+  font-weight:900;
+  letter-spacing:.7px;
+  text-transform:uppercase;
+}
+.premium-conversion-head h2{
+  color:#FFFFFF!important;
+  margin:14px 0 8px!important;
+  font-size:30px;
+  line-height:1.16;
+  text-shadow:0 3px 0 rgba(0,0,0,.25),0 18px 35px rgba(0,0,0,.28);
+}
+.premium-conversion-body{padding:24px 28px 28px;}
+.premium-feature-name{
+  color:#4C1D95;
+  font-weight:900;
+  font-size:20px;
+}
+.premium-benefit-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(190px,1fr));
+  gap:12px;
+  margin:18px 0;
+}
+.premium-benefit-item{
+  border-radius:18px;
+  padding:13px 14px;
+  background:linear-gradient(135deg,#EEF2FF,#F5F3FF);
+  border:1px solid #DDD6FE;
+  color:#1E1B4B;
+  font-weight:900;
+}
+.premium-social-proof{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  border-radius:18px;
+  padding:14px 16px;
+  margin:12px 0 18px;
+  background:linear-gradient(135deg,#ECFEFF,#EEF2FF);
+  color:#0F172A;
+  font-weight:900;
+  border:1px solid rgba(37,99,235,.18);
+}
+.premium-conversion-actions{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:12px;
+}
+.premium-conversion-actions button{
+  width:100%;
+  min-height:48px;
+  border-radius:16px;
+  font-weight:900;
+}
+.premium-conversion-actions .primary-upgrade{
+  background:linear-gradient(135deg,#2563EB,#7C3AED)!important;
+  color:#FFFFFF!important;
+  box-shadow:0 16px 38px rgba(124,58,237,.32)!important;
+}
+.premium-conversion-actions .secondary-view{
+  background:#FFFFFF!important;
+  color:#4C1D95!important;
+  border:1px solid #DDD6FE!important;
+}
+@media(max-width:720px){.premium-conversion-actions{grid-template-columns:1fr}.premium-conversion-head h2{font-size:24px}}
+
 </style>
 
 <script>
@@ -4709,56 +4881,47 @@ function closePayment(){
 
 function openLockedFeature(feature, plans){
   const modal=document.getElementById("lockedFeatureModal");
-  if(!modal) {
-    scrollToPricing();
-    return false;
+  if(!modal){ scrollToPricing(); return false; }
+  modal.classList.add("premium-conversion-modal");
+  const name = feature || "Tính năng Premium";
+  const titleEl=document.getElementById("lockedFeatureTitle");
+  const bodyEl=document.getElementById("lockedFeaturePlans");
+  if(titleEl) titleEl.innerText="";
+  const benefitMap={
+    "AI Messenger":["Trả lời inbox nhanh hơn","Gợi ý chốt sale","Phân loại khách nóng/ấm/lạnh","Kịch bản chăm sóc tự động","Đồng bộ CRM bán hàng"],
+    "CRM Kanban":["Quản lý khách theo từng giai đoạn","Theo dõi khách tiềm năng","Ghi chú nhu cầu khách","Nhắc chăm sóc lại","Tối ưu tỷ lệ chốt đơn"],
+    "AI Marketing Director":["Lập kế hoạch 30 ngày","Phân tích phễu bán hàng","Gợi ý nội dung theo ngành","Đề xuất chiến dịch","Theo dõi hiệu quả marketing"],
+    "Tăng tương tác thông minh":["Gợi ý giờ đăng tốt","Tạo câu hỏi kéo bình luận","Gợi ý caption tăng tương tác","Theo dõi bài ít tương tác","Nhắc chăm sóc khách đã comment"],
+    "AI Image Center":["Tạo ảnh quảng cáo","Avatar và cover chuyên nghiệp","Poster bán hàng","Ý tưởng visual theo ngành","Nâng cấp hình ảnh thương hiệu"],
+    "AI Video Center":["Ý tưởng Reels/TikTok","Kịch bản video ngắn","Hook 3 giây đầu","CTA tăng chuyển đổi","Lịch video bán hàng"],
+    "AI Voice Studio":["Kịch bản giọng nói","Voice quảng cáo","Giọng bán hàng","Ý tưởng audio ngắn","Tăng độ chuyên nghiệp"]
+  };
+  let benefits = benefitMap[name] || ["Mở khóa toàn bộ công cụ Premium","Tăng tốc quy trình bán hàng","Tiết kiệm thời gian vận hành","Hỗ trợ quản lý khách hàng","Ưu tiên trải nghiệm tính năng mới"];
+  if(bodyEl){
+    bodyEl.innerHTML = `
+      <div class="premium-conversion-head">
+        <small>Premium Feature</small>
+        <h2>Tính năng cao cấp dành cho nhà bán hàng</h2>
+        <div>Bạn đang truy cập: <b>${name}</b></div>
+      </div>
+      <div class="premium-conversion-body">
+        <div class="premium-feature-name">${name}</div>
+        <div class="premium-benefit-grid">
+          ${benefits.map(x=>`<div class="premium-benefit-item">${x}</div>`).join("")}
+        </div>
+        <div class="premium-social-proof">
+          <span>Đã có hơn 358 khách hàng nâng cấp Premium</span>
+          <span>Gói đề xuất: Nhà bán hàng chuyên nghiệp</span>
+        </div>
+        <div class="premium-conversion-actions">
+          <button class="secondary-view" onclick="closeLockedFeature();scrollToPricing();">Xem bảng giá</button>
+          <button class="primary-upgrade" onclick="closeLockedFeature();scrollToPricing();setTimeout(function(){try{openPayment('lifetime')}catch(e){}},650);">Nâng cấp ngay</button>
+        </div>
+        <p class="small" style="margin-top:14px;color:#64748B;font-weight:700">Sau khi thanh toán 5 phút chưa kích hoạt, vui lòng gửi ảnh giao dịch qua Zalo 036 338 2629.</p>
+      </div>`;
   }
-
-  document.getElementById("lockedFeatureTitle").innerText="🔒 Tính năng Premium";
-  document.getElementById("lockedFeaturePlans").innerHTML =
-    `<div class="premium-lock-hero v4-lock-hero">
-       <p>Bạn đang muốn mở: <b>${feature}</b></p>
-       <p>Gói dùng thử 3 ngày chỉ hỗ trợ:</p>
-       <ul class="benefit-list">
-         <li class="open">Quản lý Fanpage</li>
-         <li class="open">Quản lý Group</li>
-         <li class="open">AI Comment</li>
-       </ul>
-       <p><b>Nâng cấp Premium để mở khóa:</b></p>
-       <ul class="benefit-list">
-         <li class="open">AI Messenger</li>
-         <li class="open">CRM Kanban</li>
-         <li class="open">AI Marketing Director</li>
-         <li class="open">AI Video • AI Image • AI Kinh Doanh</li>
-         <li class="open">AI Giọng Nói • AI Livestream • AI Automation</li>
-       </ul>
-       <div class="locked-recommend-grid">
-         <div class="locked-recommend-card">
-           <div class="rec-label">🚀 BẮT ĐẦU</div>
-           <h3>Gói 1 tháng</h3>
-           <div class="rec-price">159.000đ</div>
-           <p>Phù hợp để mở các công cụ quản lý cơ bản và dùng ổn định.</p>
-           <button onclick="closeLockedFeature();openPayment('monthly')">Chọn gói 1 tháng</button>
-         </div>
-         <div class="locked-recommend-card featured">
-           <div class="rec-label">⭐ PHỔ BIẾN</div>
-           <h3>Gói 1 năm</h3>
-           <div class="rec-price">859.000đ</div>
-           <p>Mở đầy đủ AI Marketing, CRM, Automation và công cụ bán hàng nâng cao.</p>
-           <button onclick="closeLockedFeature();openPayment('yearly')">Xem gói 1 năm</button>
-         </div>
-         <div class="locked-recommend-card v4-gold-card" style="grid-column:1/-1">
-           <div class="rec-label">👑 CAO NHẤT</div>
-           <h3>Gói nhà bán hàng chuyên nghiệp</h3>
-           <div class="rec-price">1.959.000đ</div>
-           <p>Mở toàn bộ tính năng cao cấp, hỗ trợ VIP và cập nhật trọn đời.</p>
-           <button onclick="closeLockedFeature();openPayment('lifetime')">Mở gói chuyên nghiệp</button>
-         </div>
-       </div>
-       <button class="secondary" onclick="closeLockedFeature();scrollToPricing()">Xem chi tiết tất cả gói</button>
-       <p class="small">Sau khi thanh toán 5 phút chưa kích hoạt, vui lòng gửi ảnh giao dịch qua Zalo 036 338 2629.</p>
-     </div>`;
   modal.style.display="flex";
+  setTimeout(function(){ try{ document.querySelector('#lockedFeatureModal .primary-upgrade').focus(); }catch(e){} },80);
   return false;
 }
 function closeLockedFeature(){
@@ -4955,12 +5118,12 @@ function closeLockedFeature(){
   </div>
 
 <div class="nav">
-  <div class="v2-nav-title">🏠 DASHBOARD CEO</div>
+  <div class="v2-nav-title">DASHBOARD CEO</div>
   <a class="v2-nav-link" href="#dashboard"><span class="v2-nav-ico">🏠</span><span class="v2-nav-text">Dashboard CEO</span><span class="v2-nav-tag">Home</span></a>
   <a class="v2-nav-link" href="#analytics" onclick="openModule('analytics')"><span class="v2-nav-ico">📌</span><span class="v2-nav-text">Thống kê nhanh</span></a>
   <a class="v2-nav-link" href="#history" onclick="openModule('history')"><span class="v2-nav-ico">🔥</span><span class="v2-nav-text">Hoạt động hôm nay</span></a>
 
-  <div class="v2-nav-title">📣 FACEBOOK CENTER</div>
+  <div class="v2-nav-title">FACEBOOK CENTER</div>
   <a class="v2-nav-link" href="#facebook_center" onclick="openModule('facebook_center')"><span class="v2-nav-ico">📣</span><span class="v2-nav-text">Facebook Center</span><span class="v2-nav-tag">Core</span></a>
   <a class="v2-nav-link" href="#post" onclick="openModule('post')"><span class="v2-nav-ico">📝</span><span class="v2-nav-text">Đăng bài Facebook</span></a>
   <a class="v2-nav-link" href="#fanpage_manager" onclick="openModule('fanpage_manager')"><span class="v2-nav-ico">📄</span><span class="v2-nav-text">Quản lý Fanpage</span><span class="v2-nav-tag">V5</span></a>
@@ -4973,21 +5136,21 @@ function closeLockedFeature(){
   <a class="v2-nav-link" href="#smart_engagement" onclick="openModule('smart_engagement')"><span class="v2-nav-ico">⚡</span><span class="v2-nav-text">Tăng tương tác thông minh</span><span class="v2-nav-tag">Safe</span></a>
   <a class="v2-nav-link" href="#comment_manager" onclick="openModule('comment_manager')"><span class="v2-nav-ico">💬</span><span class="v2-nav-text">AI trả lời comment</span></a>
 
-  <div class="v2-nav-title">🤖 AI BÁN HÀNG</div>
+  <div class="v2-nav-title">AI BÁN HÀNG</div>
   <a class="v2-nav-link" href="#comment_manager" onclick="openModule('comment_manager')"><span class="v2-nav-ico">🤖</span><span class="v2-nav-text">AI Comment</span><span class="v2-nav-tag">AI</span></a>
   <a class="v2-nav-link" href="#messenger_ai" onclick="openModule('messenger_ai')"><span class="v2-nav-ico">💬</span><span class="v2-nav-text">AI Messenger</span><span class="v2-nav-tag">AI</span></a>
   <a class="v2-nav-link" href="#crm_sales" onclick="openModule('crm_sales')"><span class="v2-nav-ico">📋</span><span class="v2-nav-text">CRM Kanban</span><span class="v2-nav-tag">CRM</span></a>
   <a class="v2-nav-link" href="#messenger_ai" onclick="openModule('messenger_ai')"><span class="v2-nav-ico">🧾</span><span class="v2-nav-text">Kịch bản chốt sale</span></a>
   <a class="v2-nav-link" href="#crm_sales" onclick="openModule('crm_sales')"><span class="v2-nav-ico">♻️</span><span class="v2-nav-text">Chăm sóc khách cũ</span></a>
 
-  <div class="v2-nav-title">🧠 MARKETING DIRECTOR</div>
+  <div class="v2-nav-title">MARKETING DIRECTOR</div>
   <a class="v2-nav-link" href="#marketing_director" onclick="openModule('marketing_director')"><span class="v2-nav-ico">🧠</span><span class="v2-nav-text">AI Marketing Director</span><span class="v2-nav-tag">HOT</span></a>
   <a class="v2-nav-link" href="#plan" onclick="openModule('plan')"><span class="v2-nav-ico">📅</span><span class="v2-nav-text">Kế hoạch 30 ngày</span></a>
   <a class="v2-nav-link" href="#marketing_director" onclick="openModule('marketing_director')"><span class="v2-nav-ico">🧲</span><span class="v2-nav-text">Phễu bán hàng</span></a>
   <a class="v2-nav-link" href="#ai_studio" onclick="openModule('ai_studio')"><span class="v2-nav-ico">🔎</span><span class="v2-nav-text">Phân tích đối thủ</span></a>
   <a class="v2-nav-link" href="#scheduler" onclick="openModule('scheduler')"><span class="v2-nav-ico">🗓️</span><span class="v2-nav-text">Content Calendar</span></a>
 
-  <div class="v2-nav-title">📊 ANALYTICS CENTER</div>
+  <div class="v2-nav-title">ANALYTICS CENTER</div>
   <a class="v2-nav-link" href="#analytics" onclick="openModule('analytics')"><span class="v2-nav-ico">📊</span><span class="v2-nav-text">Analytics Center</span></a>
   <a class="v2-nav-link" href="#fanpage_manager" onclick="openModule('fanpage_manager')"><span class="v2-nav-ico">📈</span><span class="v2-nav-text">Báo cáo Fanpage</span></a>
   <a class="v2-nav-link" href="#group_marketing" onclick="openModule('group_marketing')"><span class="v2-nav-ico">👥</span><span class="v2-nav-text">Báo cáo Group</span></a>
@@ -4995,19 +5158,19 @@ function closeLockedFeature(){
   <a class="v2-nav-link" href="/export"><span class="v2-nav-ico">📤</span><span class="v2-nav-text">Xuất Excel/CSV</span></a>
   <a class="v2-nav-link" href="/export_pdf"><span class="v2-nav-ico">📄</span><span class="v2-nav-text">Xuất PDF</span></a>
 
-  <div class="v2-nav-title">💎 PREMIUM CENTER</div>
+  <div class="v2-nav-title">PREMIUM CENTER</div>
   <a class="v2-nav-link" href="#premium" onclick="openModule('premium')"><span class="v2-nav-ico">💎</span><span class="v2-nav-text">Bảng giá Premium</span><span class="v2-nav-tag">VIP</span></a>
   <a class="v2-nav-link" href="#premium" onclick="openModule('premium')"><span class="v2-nav-ico">💳</span><span class="v2-nav-text">Gửi xác nhận thanh toán</span></a>
   <a class="v2-nav-link" href="#premium" onclick="openModule('premium')"><span class="v2-nav-ico">💬</span><span class="v2-nav-text">Trạng thái kích hoạt</span></a>
   <a class="v2-nav-link" href="/install" target="_blank"><span class="v2-nav-ico">📲</span><span class="v2-nav-text">Cài đặt App</span><span class="v2-nav-tag">App</span></a>
 
-  <div class="v2-nav-title">⚙️ TÀI KHOẢN</div>
+  <div class="v2-nav-title">TÀI KHOẢN</div>
   <a class="v2-nav-link" href="#premium" onclick="openModule('premium')"><span class="v2-nav-ico">🖥️</span><span class="v2-nav-text">ID thiết bị</span></a>
   <a class="v2-nav-link" href="#premium" onclick="openModule('premium')"><span class="v2-nav-ico">📧</span><span class="v2-nav-text">Gmail / SĐT</span></a>
   <a class="v2-nav-link" href="#premium" onclick="openModule('premium')"><span class="v2-nav-ico">👑</span><span class="v2-nav-text">Trạng thái gói</span></a>
 
   <div class="v2-side-card">
-    🚀 Mkt Automation Pro V6<br>
+    Mkt Automation Pro V6<br>
     Fanpage • Group • Comment • Messenger • CRM • Marketing Director • Analytics • Premium.
   </div>
 </div>
@@ -6743,6 +6906,7 @@ setInterval(function(){if(document.getElementById('supportPanel')&&document.getE
 })();
 </script>
 
+
 </body>
 </html>
 """
@@ -7524,7 +7688,8 @@ def admin_premium_page():
           <input name='password' type='password' placeholder='Mật khẩu admin' style='padding:12px;border-radius:10px;width:260px;background:#111827;color:white;border:1px solid #334155'>
           <button style='padding:12px 18px;border-radius:10px;background:#7c3aed;color:white;border:0;font-weight:bold'>Vào Admin</button>
         </form>
-        </body></html>
+        
+</body></html>
         """
 
     rows = get_premium_requests(500)
@@ -7718,7 +7883,8 @@ def admin_premium_page():
           <table><tr><th>Fanpage</th><th>Page ID</th><th>Trạng thái</th><th>Chi tiết</th><th>Thời gian</th></tr>{token_rows or '<tr><td colspan="5">Chưa có dữ liệu kiểm tra token.</td></tr>'}</table>
         </main>
       </div>
-    </body></html>
+    
+</body></html>
     """
 
 
@@ -7902,6 +8068,7 @@ window.addEventListener('load', function(){{
   }}, 900);
 }});
 </script>
+
 </body>
 </html>
 """
