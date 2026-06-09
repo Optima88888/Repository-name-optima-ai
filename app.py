@@ -38,10 +38,18 @@ app.config["MAX_CONTENT_LENGTH"] = 100 * 1024 * 1024
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "").strip()
 PAGES_JSON = os.getenv("PAGES_JSON", "[]").strip()
 
-try:
-    PAGES = json.loads(PAGES_JSON)
-except Exception:
-    PAGES = []
+# PAGES_JSON vẫn được giữ làm dữ liệu dự phòng.
+# Fanpage mới sẽ được thêm trực tiếp trong tool và lưu vào SQLite.
+def load_env_pages():
+    try:
+        data = json.loads(PAGES_JSON or "[]")
+        if isinstance(data, list):
+            return data
+        return []
+    except Exception:
+        return []
+
+PAGES = load_env_pages()
 
 if GEMINI_API_KEY:
     genai.configure(api_key=GEMINI_API_KEY)
@@ -330,6 +338,18 @@ def init_db():
     )
     """)
     c.execute("""
+    CREATE TABLE IF NOT EXISTS fanpages (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        page_name TEXT,
+        page_id TEXT UNIQUE,
+        page_token TEXT,
+        note TEXT,
+        status TEXT DEFAULT 'active',
+        created_at TEXT
+    )
+    """)
+
+    c.execute("""
     CREATE TABLE IF NOT EXISTS page_clusters (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT UNIQUE,
@@ -495,34 +515,7 @@ def init_db():
     )
     """)
 
-    # V6 Device / Premium / Fanpage Token Center tables
-    c.execute("""
-    CREATE TABLE IF NOT EXISTS fanpages (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        page_name TEXT,
-        page_id TEXT,
-        page_token TEXT,
-        note TEXT,
-        status TEXT DEFAULT 'unknown',
-        last_checked TEXT,
-        created_at TEXT
-    )
-    """)
-    c.execute("""
-    CREATE TABLE IF NOT EXISTS premium_customers (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        device_id TEXT UNIQUE,
-        phone TEXT,
-        email TEXT,
-        status TEXT DEFAULT 'pending',
-        premium_plan TEXT DEFAULT 'trial',
-        premium_status TEXT DEFAULT 'trial',
-        premium_start TEXT,
-        premium_end TEXT,
-        created_at TEXT,
-        updated_at TEXT
-    )
-    """)
+    # V6 Premium approval center tables
     c.execute("""
     CREATE TABLE IF NOT EXISTS premium_requests (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -532,14 +525,26 @@ def init_db():
         plan_key TEXT,
         plan_name TEXT,
         amount INTEGER DEFAULT 0,
-        transfer_content TEXT,
-        transaction_code TEXT,
-        note TEXT,
+        transaction_note TEXT,
         status TEXT DEFAULT 'pending',
+        premium_start TEXT,
+        premium_end TEXT,
         created_at TEXT,
         approved_at TEXT
     )
     """)
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS customer_devices (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        device_id TEXT UNIQUE,
+        phone TEXT,
+        email TEXT,
+        status TEXT DEFAULT 'pending',
+        created_at TEXT,
+        updated_at TEXT
+    )
+    """)
+
     conn.commit()
     conn.close()
 
@@ -547,177 +552,9 @@ def db():
     return sqlite3.connect(DB)
 
 
-
-def now_text():
-    return datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-
-def get_request_device_id():
-    try:
-        device_id = (request.cookies.get("mkt_device_id") or request.form.get("device_id") or request.args.get("device_id") or "").strip()
-    except Exception:
-        device_id = ""
-    if not device_id:
-        device_id = "UNKNOWN-DEVICE"
-    return device_id[:120]
-
-
-def get_fanpages():
-    """Ưu tiên đọc Fanpage đã thêm trực tiếp trên tool. Nếu chưa có thì fallback PAGES_JSON cũ."""
-    pages = []
-    try:
-        conn = sqlite3.connect(DB)
-        c = conn.cursor()
-        c.execute("""
-        CREATE TABLE IF NOT EXISTS fanpages (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            page_name TEXT,
-            page_id TEXT,
-            page_token TEXT,
-            note TEXT,
-            status TEXT DEFAULT 'unknown',
-            last_checked TEXT,
-            created_at TEXT
-        )
-        """)
-        c.execute("SELECT page_name,page_id,page_token FROM fanpages ORDER BY id DESC")
-        rows = c.fetchall()
-        conn.close()
-        for name, page_id, token in rows:
-            if page_id and token:
-                pages.append({"name": name or page_id, "id": str(page_id), "token": token})
-    except Exception:
-        pages = []
-    return pages if pages else PAGES
-
-
-def add_fanpage_token(page_name, page_id, page_token, note=""):
+def ensure_premium_tables():
     conn = sqlite3.connect(DB)
     c = conn.cursor()
-    c.execute("""
-    CREATE TABLE IF NOT EXISTS fanpages (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        page_name TEXT,
-        page_id TEXT,
-        page_token TEXT,
-        note TEXT,
-        status TEXT DEFAULT 'unknown',
-        last_checked TEXT,
-        created_at TEXT
-    )
-    """)
-    c.execute("""
-    INSERT INTO fanpages(page_name,page_id,page_token,note,status,created_at)
-    VALUES(?,?,?,?,?,?)
-    """, (page_name, page_id, page_token, note, "unknown", now_text()))
-    conn.commit(); conn.close()
-
-
-def get_saved_fanpages(limit=200):
-    conn = sqlite3.connect(DB); c = conn.cursor()
-    c.execute("""
-    CREATE TABLE IF NOT EXISTS fanpages (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        page_name TEXT,
-        page_id TEXT,
-        page_token TEXT,
-        note TEXT,
-        status TEXT DEFAULT 'unknown',
-        last_checked TEXT,
-        created_at TEXT
-    )
-    """)
-    c.execute("SELECT id,page_name,page_id,page_token,note,status,last_checked,created_at FROM fanpages ORDER BY id DESC LIMIT ?", (limit,))
-    rows = c.fetchall(); conn.close()
-    return rows
-
-
-def delete_fanpage_token(row_id):
-    conn = sqlite3.connect(DB); c = conn.cursor()
-    c.execute("DELETE FROM fanpages WHERE id=?", (row_id,))
-    conn.commit(); conn.close()
-
-
-def get_customer_by_device(device_id):
-    conn = sqlite3.connect(DB); c = conn.cursor()
-    c.execute("""
-    CREATE TABLE IF NOT EXISTS premium_customers (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        device_id TEXT UNIQUE,
-        phone TEXT,
-        email TEXT,
-        status TEXT DEFAULT 'pending',
-        premium_plan TEXT DEFAULT 'trial',
-        premium_status TEXT DEFAULT 'trial',
-        premium_start TEXT,
-        premium_end TEXT,
-        created_at TEXT,
-        updated_at TEXT
-    )
-    """)
-    c.execute("SELECT id,device_id,phone,email,status,premium_plan,premium_status,premium_start,premium_end,created_at,updated_at FROM premium_customers WHERE device_id=?", (device_id,))
-    row = c.fetchone(); conn.close()
-    return row
-
-
-def upsert_customer(device_id, phone="", email="", status="pending"):
-    now = now_text()
-    conn = sqlite3.connect(DB); c = conn.cursor()
-    c.execute("""
-    CREATE TABLE IF NOT EXISTS premium_customers (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        device_id TEXT UNIQUE,
-        phone TEXT,
-        email TEXT,
-        status TEXT DEFAULT 'pending',
-        premium_plan TEXT DEFAULT 'trial',
-        premium_status TEXT DEFAULT 'trial',
-        premium_start TEXT,
-        premium_end TEXT,
-        created_at TEXT,
-        updated_at TEXT
-    )
-    """)
-    c.execute("SELECT id FROM premium_customers WHERE device_id=?", (device_id,))
-    exists = c.fetchone()
-    if exists:
-        c.execute("UPDATE premium_customers SET phone=COALESCE(NULLIF(?,''),phone), email=COALESCE(NULLIF(?,''),email), status=CASE WHEN status='approved' THEN status ELSE ? END, updated_at=? WHERE device_id=?", (phone, email, status, now, device_id))
-    else:
-        c.execute("INSERT INTO premium_customers(device_id,phone,email,status,premium_plan,premium_status,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?)", (device_id, phone, email, status, "trial", "trial", now, now))
-    conn.commit(); conn.close()
-
-
-def premium_days_for_plan(plan_key):
-    return {"monthly":30, "quarterly":90, "halfyear":180, "yearly":365, "lifetime":36500, "sellerpro":36500}.get(plan_key, 30)
-
-
-def is_premium_active(device_id):
-    row = get_customer_by_device(device_id)
-    if not row:
-        return False
-    premium_status = row[6]
-    premium_end = row[8]
-    if premium_status != "active":
-        return False
-    if not premium_end:
-        return True
-    try:
-        return datetime.datetime.strptime(premium_end[:19], "%Y-%m-%d %H:%M:%S") >= datetime.datetime.now()
-    except Exception:
-        return True
-
-
-def activate_customer_premium(device_id, plan_key="monthly"):
-    now = datetime.datetime.now()
-    days = premium_days_for_plan(plan_key)
-    end = now + datetime.timedelta(days=days)
-    conn = sqlite3.connect(DB); c = conn.cursor()
-    c.execute("UPDATE premium_customers SET status='approved', premium_status='active', premium_plan=?, premium_start=?, premium_end=?, updated_at=? WHERE device_id=?", (plan_key, now.strftime("%Y-%m-%d %H:%M:%S"), end.strftime("%Y-%m-%d %H:%M:%S"), now.strftime("%Y-%m-%d %H:%M:%S"), device_id))
-    conn.commit(); conn.close()
-
-
-def get_premium_requests(limit=200):
-    conn = sqlite3.connect(DB); c = conn.cursor()
     c.execute("""
     CREATE TABLE IF NOT EXISTS premium_requests (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -727,24 +564,271 @@ def get_premium_requests(limit=200):
         plan_key TEXT,
         plan_name TEXT,
         amount INTEGER DEFAULT 0,
-        transfer_content TEXT,
-        transaction_code TEXT,
-        note TEXT,
+        transaction_note TEXT,
         status TEXT DEFAULT 'pending',
+        premium_start TEXT,
+        premium_end TEXT,
         created_at TEXT,
         approved_at TEXT
     )
     """)
-    c.execute("SELECT id,device_id,phone,email,plan_key,plan_name,amount,transfer_content,transaction_code,note,status,created_at,approved_at FROM premium_requests ORDER BY id DESC LIMIT ?", (limit,))
-    rows = c.fetchall(); conn.close()
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS customer_devices (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        device_id TEXT UNIQUE,
+        phone TEXT,
+        email TEXT,
+        status TEXT DEFAULT 'pending',
+        created_at TEXT,
+        updated_at TEXT
+    )
+    """)
+    conn.commit()
+    conn.close()
+
+
+def plan_days(plan_key):
+    mapping = {
+        "monthly": 30,
+        "basic": 30,
+        "quarterly": 90,
+        "pro": 90,
+        "halfyear": 180,
+        "business": 180,
+        "yearly": 365,
+        "lifetime": 3650,
+        "sellerpro": 3650,
+    }
+    return mapping.get(str(plan_key or "").lower(), 30)
+
+
+def create_premium_request(device_id, phone, email, plan_key, plan_name, amount, transaction_note=""):
+    ensure_premium_tables()
+    device_id = (device_id or "").strip()
+    phone = (phone or "").strip()
+    email = (email or "").strip().lower()
+    plan_key = (plan_key or "monthly").strip()
+    plan_name = (plan_name or plan_key).strip()
+    transaction_note = (transaction_note or "").strip()
+
+    if not device_id:
+        return False, "Thiếu ID thiết bị. Vui lòng tải lại trang rồi gửi lại."
+    if not phone:
+        return False, "Vui lòng nhập số điện thoại/Zalo."
+    if not email or "@" not in email:
+        return False, "Vui lòng nhập đúng Gmail/Email."
+
+    now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    conn = sqlite3.connect(DB)
+    c = conn.cursor()
+    c.execute("""
+    INSERT INTO premium_requests(device_id,phone,email,plan_key,plan_name,amount,transaction_note,status,created_at)
+    VALUES(?,?,?,?,?,?,?,?,?)
+    """, (device_id, phone, email, plan_key, plan_name, int(amount or 0), transaction_note, "pending", now))
+    c.execute("""
+    INSERT INTO customer_devices(device_id,phone,email,status,created_at,updated_at)
+    VALUES(?,?,?,?,?,?)
+    ON CONFLICT(device_id) DO UPDATE SET
+        phone=excluded.phone,
+        email=excluded.email,
+        status='pending',
+        updated_at=excluded.updated_at
+    """, (device_id, phone, email, "pending", now, now))
+    conn.commit()
+    conn.close()
+    return True, "Đã gửi yêu cầu kích hoạt Premium. Admin sẽ kiểm tra và duyệt trực tiếp trên Web Admin."
+
+
+def get_premium_status_by_device(device_id):
+    ensure_premium_tables()
+    device_id = (device_id or "").strip()
+    if not device_id:
+        return {"active": False, "status": "missing", "message": "Thiếu ID thiết bị"}
+
+    now = datetime.datetime.now()
+    conn = sqlite3.connect(DB)
+    c = conn.cursor()
+    c.execute("""
+    SELECT plan_key,plan_name,premium_start,premium_end,status,approved_at
+    FROM premium_requests
+    WHERE device_id=? AND status='approved'
+    ORDER BY id DESC LIMIT 1
+    """, (device_id,))
+    row = c.fetchone()
+    conn.close()
+    if not row:
+        return {"active": False, "status": "pending_or_trial", "message": "Dùng thử / chờ duyệt"}
+
+    plan_key, plan_name, start, end, status, approved_at = row
+    if end:
+        try:
+            end_dt = datetime.datetime.strptime(str(end)[:19], "%Y-%m-%d %H:%M:%S")
+            if now > end_dt:
+                return {"active": False, "status": "expired", "plan": plan_name, "premium_end": end, "message": "Premium đã hết hạn"}
+        except Exception:
+            pass
+    return {"active": True, "status": "approved", "plan_key": plan_key, "plan": plan_name, "premium_start": start, "premium_end": end, "approved_at": approved_at, "message": "Premium đang hoạt động"}
+
+
+def get_premium_requests(limit=80):
+    ensure_premium_tables()
+    conn = sqlite3.connect(DB)
+    c = conn.cursor()
+    c.execute("""
+    SELECT id,device_id,phone,email,plan_key,plan_name,amount,transaction_note,status,premium_start,premium_end,created_at,approved_at
+    FROM premium_requests
+    ORDER BY id DESC LIMIT ?
+    """, (limit,))
+    rows = c.fetchall()
+    conn.close()
     return rows
 
 
-def get_premium_customers(limit=200):
-    conn = sqlite3.connect(DB); c = conn.cursor()
-    c.execute("SELECT id,device_id,phone,email,status,premium_plan,premium_status,premium_start,premium_end,created_at,updated_at FROM premium_customers ORDER BY id DESC LIMIT ?", (limit,))
-    rows = c.fetchall(); conn.close()
-    return rows
+def approve_premium_request(request_id):
+    ensure_premium_tables()
+    conn = sqlite3.connect(DB)
+    c = conn.cursor()
+    c.execute("SELECT id,device_id,plan_key,plan_name FROM premium_requests WHERE id=?", (int(request_id),))
+    row = c.fetchone()
+    if not row:
+        conn.close()
+        return False, "Không tìm thấy yêu cầu Premium."
+    _, device_id, plan_key, plan_name = row
+    start = datetime.datetime.now()
+    end = start + datetime.timedelta(days=plan_days(plan_key))
+    start_s = start.strftime("%Y-%m-%d %H:%M:%S")
+    end_s = end.strftime("%Y-%m-%d %H:%M:%S")
+    c.execute("""
+    UPDATE premium_requests
+    SET status='approved', premium_start=?, premium_end=?, approved_at=?
+    WHERE id=?
+    """, (start_s, end_s, start_s, int(request_id)))
+    c.execute("UPDATE customer_devices SET status='approved', updated_at=? WHERE device_id=?", (start_s, device_id))
+    conn.commit()
+    conn.close()
+    return True, f"Đã mở khóa Premium cho thiết bị {device_id} đến {end_s}."
+
+
+def ensure_fanpages_table():
+    conn = sqlite3.connect(DB)
+    c = conn.cursor()
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS fanpages (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        page_name TEXT,
+        page_id TEXT UNIQUE,
+        page_token TEXT,
+        note TEXT,
+        status TEXT DEFAULT 'active',
+        created_at TEXT
+    )
+    """)
+    conn.commit()
+    conn.close()
+
+
+def mask_token(token):
+    token = str(token or "").strip()
+    if not token:
+        return "Thiếu token"
+    if len(token) <= 14:
+        return token[:4] + "..."
+    return token[:8] + "..." + token[-6:]
+
+
+def get_fanpages(include_env=True):
+    """Lấy Fanpage từ SQLite, kèm PAGES_JSON cũ làm fallback nếu cần."""
+    ensure_fanpages_table()
+    pages = []
+    seen = set()
+
+    conn = sqlite3.connect(DB)
+    c = conn.cursor()
+    c.execute("""
+    SELECT id,page_name,page_id,page_token,note,status,created_at
+    FROM fanpages
+    ORDER BY id DESC
+    """)
+    for row in c.fetchall():
+        page_id = str(row[2] or "").strip()
+        if not page_id:
+            continue
+        seen.add(page_id)
+        pages.append({
+            "row_id": row[0],
+            "name": row[1] or "Fanpage chưa đặt tên",
+            "id": page_id,
+            "token": row[3] or "",
+            "token_mask": mask_token(row[3]),
+            "note": row[4] or "",
+            "status": row[5] or "active",
+            "created_at": row[6] or "",
+            "source": "database"
+        })
+    conn.close()
+
+    if include_env:
+        for p in load_env_pages():
+            page_id = str(p.get("id", "")).strip()
+            if not page_id or page_id in seen:
+                continue
+            pages.append({
+                "row_id": "",
+                "name": p.get("name", "Fanpage .env"),
+                "id": page_id,
+                "token": p.get("token", ""),
+                "token_mask": mask_token(p.get("token", "")),
+                "note": "Từ PAGES_JSON trong Environment",
+                "status": "env",
+                "created_at": "",
+                "source": "env"
+            })
+    return pages
+
+
+def add_fanpage_token(page_name, page_id, page_token, note=""):
+    page_name = (page_name or "").strip()
+    page_id = (page_id or "").strip()
+    page_token = (page_token or "").strip()
+    note = (note or "").strip()
+
+    if not page_name or not page_id or not page_token:
+        return False, "Vui lòng nhập đủ Tên Fanpage, Page ID và Page Token."
+
+    ensure_fanpages_table()
+    conn = sqlite3.connect(DB)
+    c = conn.cursor()
+    now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    try:
+        c.execute("""
+        INSERT INTO fanpages(page_name,page_id,page_token,note,status,created_at)
+        VALUES(?,?,?,?,?,?)
+        ON CONFLICT(page_id) DO UPDATE SET
+            page_name=excluded.page_name,
+            page_token=excluded.page_token,
+            note=excluded.note,
+            status='active'
+        """, (page_name, page_id, page_token, note, "active", now))
+        conn.commit()
+        return True, f"Đã lưu Fanpage {page_name}."
+    except Exception as e:
+        return False, "Lỗi lưu Fanpage: " + str(e)
+    finally:
+        conn.close()
+
+
+def delete_fanpage_token(row_id):
+    try:
+        row_id = int(row_id)
+    except Exception:
+        return False, "ID Fanpage không hợp lệ."
+    ensure_fanpages_table()
+    conn = sqlite3.connect(DB)
+    c = conn.cursor()
+    c.execute("DELETE FROM fanpages WHERE id=?", (row_id,))
+    conn.commit()
+    conn.close()
+    return True, "Đã xóa Fanpage khỏi Token Center."
 
 def save_post(page_name, page_id, content, status, post_id="", schedule_time="", image_path="", campaign="", score=0):
     conn = db(); c = conn.cursor()
@@ -799,12 +883,12 @@ def get_stats():
 
 def selected_pages(page_indexes):
     result = []
+    pages = get_fanpages()
     for idx in page_indexes:
         try:
             i = int(idx)
-            pages_all = get_fanpages()
-            if 0 <= i < len(pages_all):
-                result.append(pages_all[i])
+            if 0 <= i < len(pages):
+                result.append(pages[i])
         except Exception:
             pass
     return result
@@ -1021,7 +1105,7 @@ def scheduler_loop():
             for row_id, page_name, page_id, content, schedule_time, image_path in jobs:
                 page = next((p for p in get_fanpages() if str(p["id"]) == str(page_id)), None)
                 if not page:
-                    update_post(row_id, "error", "Không tìm thấy Page trong .env")
+                    update_post(row_id, "error", "Không tìm thấy Page trong Token Center")
                     continue
                 result = post_to_facebook(page, content, image_path)
                 if "id" in result or "post_id" in result:
@@ -1416,7 +1500,7 @@ def premium_visible_items(items, free_limit=10):
 
 def get_trial_identity():
     try:
-        raw = request.cookies.get("mkt_device_id") or request.cookies.get("mkt_trial_user") or request.remote_addr or "local_user"
+        raw = request.cookies.get("mkt_trial_user") or request.remote_addr or "local_user"
     except Exception:
         raw = "local_user"
     return str(raw).replace(" ", "_")[:80]
@@ -1429,27 +1513,6 @@ def get_free_status(username=None):
     """
     username = username or get_trial_identity()
     now = datetime.datetime.now()
-
-    if is_premium_active(username):
-        row = get_customer_by_device(username)
-        plan = row[5] if row else "premium"
-        premium_end = row[8] if row else ""
-        return {
-            "package_name": plan,
-            "status": "active",
-            "trial_start": "",
-            "trial_end": premium_end,
-            "free_end": premium_end,
-            "days": 999 if not premium_end else max(0, (datetime.datetime.strptime(premium_end[:19], "%Y-%m-%d %H:%M:%S") - now).days),
-            "hours": 0,
-            "percent": 100,
-            "is_trial": False,
-            "is_expired": False,
-            "label": "💎 PREMIUM đang hoạt động",
-            "note": "Đã mở khóa toàn bộ tính năng Premium",
-            "allowed_features": ["ALL"],
-            "locked_features": []
-        }
 
     conn = sqlite3.connect(DB)
     c = conn.cursor()
@@ -1542,11 +1605,12 @@ def token_manager_report():
     reports = []
     for p in get_fanpages():
         token = p.get("token", "")
-        status = "Có token" if token and token.startswith("EA") else "Thiếu token hoặc sai định dạng"
-        reports.append(f"{p.get('name','No name')} | {p.get('id','No ID')} | {status}")
+        status = "Có token" if token else "Thiếu token"
+        source = "SQLite" if p.get("source") == "database" else "Environment"
+        reports.append(f"{p.get('name','No name')} | {p.get('id','No ID')} | {status} | Nguồn: {source}")
     if not reports:
-        reports.append("Chưa có Fanpage. Vui lòng thêm trực tiếp trong Token Center trên tool.")
-    return "\\n".join(reports)
+        reports.append("Chưa có Fanpage. Hãy thêm trực tiếp trong Token Center.")
+    return "\n".join(reports)
 
 def ai_planner_v6(industry, goal, days):
     if not client:
@@ -3878,13 +3942,92 @@ document.addEventListener("DOMContentLoaded",function(){
 });
 
 
-function openModule(moduleId){
-  if(window.MKT_PREMIUM_ACTIVE === true){
-    document.querySelectorAll(".module-section").forEach(function(el){el.classList.remove("active-module");});
-    const premiumTarget=document.getElementById(moduleId);
-    if(premiumTarget){premiumTarget.classList.add("active-module"); premiumTarget.scrollIntoView({behavior:"smooth",block:"start"});}
+
+let MKT_DEVICE_ID = "";
+let MKT_SELECTED_PLAN = "monthly";
+let MKT_SELECTED_PACKAGE = "1THANG";
+let MKT_PREMIUM_ACTIVE = false;
+
+function getOrCreateDeviceId(){
+  let id = localStorage.getItem("mkt_device_id");
+  if(!id){
+    const rand = Math.random().toString(16).slice(2,8).toUpperCase();
+    const d = new Date();
+    const ymd = d.getFullYear().toString() + String(d.getMonth()+1).padStart(2,'0') + String(d.getDate()).padStart(2,'0');
+    id = "MP-" + ymd + "-" + rand;
+    localStorage.setItem("mkt_device_id", id);
+  }
+  MKT_DEVICE_ID = id;
+  document.querySelectorAll(".device-id-text").forEach(function(el){el.innerText=id;});
+  return id;
+}
+
+async function checkPremiumStatus(){
+  const id = getOrCreateDeviceId();
+  try{
+    const res = await fetch("/premium_status?device_id=" + encodeURIComponent(id));
+    const data = await res.json();
+    MKT_PREMIUM_ACTIVE = !!data.active;
+    const label = data.active ? ("Premium: " + (data.plan || "đã kích hoạt")) : "Dùng thử / chờ duyệt";
+    document.querySelectorAll(".premium-status-text").forEach(function(el){el.innerText=label;});
+    if(data.active){
+      document.body.classList.add("premium-active");
+      document.querySelectorAll(".premium-unlock-note").forEach(function(el){el.innerText="Đã mở khóa Premium cho thiết bị này.";});
+    }
+  }catch(e){
+    document.querySelectorAll(".premium-status-text").forEach(function(el){el.innerText="Dùng thử / chờ duyệt";});
+  }
+}
+
+document.addEventListener("DOMContentLoaded", function(){
+  getOrCreateDeviceId();
+  checkPremiumStatus();
+});
+
+function scrollToPaymentConfirm(){
+  const el=document.getElementById("premiumConfirmFormBox");
+  if(el){el.scrollIntoView({behavior:"smooth", block:"center"});}
+}
+
+async function submitPremiumRequest(){
+  const deviceId = getOrCreateDeviceId();
+  const phone = (document.getElementById("premiumPhone") || {}).value || "";
+  const email = (document.getElementById("premiumEmail") || {}).value || "";
+  const note = (document.getElementById("premiumTransactionNote") || {}).value || "";
+  const statusBox = document.getElementById("premiumRequestStatus");
+  if(!phone.trim()){
+    if(statusBox) statusBox.innerText="Vui lòng nhập số điện thoại/Zalo.";
     return false;
   }
+  if(!email.trim() || !email.includes("@")){
+    if(statusBox) statusBox.innerText="Vui lòng nhập đúng Gmail/Email.";
+    return false;
+  }
+  if(statusBox) statusBox.innerText="Đang gửi yêu cầu về Admin...";
+  try{
+    const plan = premiumPlans[MKT_SELECTED_PLAN] || premiumPlans.monthly;
+    const res = await fetch("/premium_request", {
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({
+        device_id: deviceId,
+        phone: phone,
+        email: email,
+        transaction_note: note,
+        plan_key: MKT_SELECTED_PLAN,
+        plan_name: plan.title || plan.package || MKT_SELECTED_PLAN,
+        amount: plan.amount || 0
+      })
+    });
+    const data = await res.json();
+    if(statusBox) statusBox.innerText = data.message || "Đã gửi yêu cầu.";
+  }catch(e){
+    if(statusBox) statusBox.innerText="Chưa gửi được yêu cầu. Vui lòng thử lại hoặc liên hệ Zalo.";
+  }
+  return false;
+}
+
+function openModule(moduleId){
   const trialAllowed = ["dashboard", "fanpage_manager", "group_marketing", "comment_manager"];
   const premiumLocked = {
     "messenger_ai": "AI Messenger",
@@ -3898,7 +4041,7 @@ function openModule(moduleId){
     "analytics_center": "Analytics Center"
   };
 
-  if(!trialAllowed.includes(moduleId) && premiumLocked[moduleId]){
+  if(!trialAllowed.includes(moduleId) && premiumLocked[moduleId] && !MKT_PREMIUM_ACTIVE){
     openLockedFeature(premiumLocked[moduleId], "Gói 1 tháng / 3 tháng / 6 tháng / 1 năm / Nhà bán hàng chuyên nghiệp");
     return false;
   }
@@ -4006,9 +4149,10 @@ function openPayment(planKey){
   if(!modal) return;
 
   const amountText = Number(plan.amount).toLocaleString("vi-VN") + " VNĐ";
-  const deviceId = getMktDeviceId();
-  const addInfo = "PREMIUM " + plan.package.toUpperCase() + " " + deviceId;
-  window.MKT_SELECTED_PLAN_KEY = planKey;
+  MKT_SELECTED_PLAN = planKey || "monthly";
+  MKT_SELECTED_PACKAGE = (plan.package || MKT_SELECTED_PLAN).toUpperCase();
+  const deviceId = getOrCreateDeviceId();
+  const addInfo = "PREMIUM " + MKT_SELECTED_PACKAGE + " " + deviceId;
   const qrUrl = "https://img.vietqr.io/image/970405-8888363382629-compact2.png?amount=" + encodeURIComponent(plan.amount) + "&addInfo=" + encodeURIComponent(addInfo) + "&accountName=" + encodeURIComponent("NGUYEN DANG THI XUAN");
 
   document.getElementById("payPlanTitle").innerText=plan.title;
@@ -4085,65 +4229,6 @@ function closeLockedFeature(){
   if(modal) modal.style.display="none";
 }
 
-
-function getMktDeviceId(){
-  let id = localStorage.getItem("mkt_device_id");
-  if(!id){
-    const rand = Math.random().toString(16).slice(2,8).toUpperCase();
-    const date = new Date().toISOString().slice(0,10).replaceAll("-","");
-    id = "MP-" + date + "-" + rand;
-    localStorage.setItem("mkt_device_id", id);
-  }
-  document.cookie = "mkt_device_id=" + encodeURIComponent(id) + ";path=/;max-age=31536000";
-  return id;
-}
-async function syncPremiumStatus(){
-  const id = getMktDeviceId();
-  const box = document.getElementById("deviceIdText");
-  if(box) box.innerText = id;
-  try{
-    const res = await fetch("/api/premium_status/" + encodeURIComponent(id));
-    const data = await res.json();
-    window.MKT_PREMIUM_ACTIVE = !!data.premium_active;
-    const st = document.getElementById("premiumStatusText");
-    if(st){
-      st.innerText = data.premium_active ? ("Trạng thái: PREMIUM - " + (data.plan || "active")) : "Trạng thái: dùng thử / chờ duyệt";
-    }
-  }catch(e){ window.MKT_PREMIUM_ACTIVE = false; }
-}
-async function submitQuickRegister(){
-  const phone = (document.getElementById("quickPhone")||{}).value || "";
-  const email = (document.getElementById("quickEmail")||{}).value || "";
-  const result = document.getElementById("quickRegisterResult");
-  if(!phone || !email){ if(result) result.innerText="Vui lòng nhập số điện thoại và Gmail."; return; }
-  const form = new FormData();
-  form.append("device_id", getMktDeviceId()); form.append("phone", phone); form.append("email", email);
-  const res = await fetch("/api/register_customer", {method:"POST", body:form});
-  const data = await res.json();
-  if(result) result.innerText = data.message || "Đã gửi đăng ký.";
-  syncPremiumStatus();
-}
-async function submitPremiumRequest(){
-  const phone = (document.getElementById("premiumPhone")||{}).value || "";
-  const email = (document.getElementById("premiumEmail")||{}).value || "";
-  const trans = (document.getElementById("premiumTransaction")||{}).value || "";
-  const note = (document.getElementById("premiumNote")||{}).value || "";
-  const result = document.getElementById("premiumSubmitResult");
-  if(!phone || !email){ if(result) result.innerText="Vui lòng nhập số điện thoại và Gmail để Admin duyệt."; return; }
-  const planKey = window.MKT_SELECTED_PLAN_KEY || "monthly";
-  const plan = premiumPlans[planKey] || premiumPlans.monthly;
-  const form = new FormData();
-  form.append("device_id", getMktDeviceId()); form.append("phone", phone); form.append("email", email);
-  form.append("plan_key", planKey); form.append("plan_name", plan.title); form.append("amount", plan.amount);
-  form.append("transfer_content", "PREMIUM " + plan.package.toUpperCase() + " " + getMktDeviceId());
-  form.append("transaction_code", trans); form.append("note", note);
-  const res = await fetch("/api/premium_request", {method:"POST", body:form});
-  const data = await res.json();
-  if(result) result.innerText = data.message || "Đã gửi yêu cầu, vui lòng chờ Admin duyệt.";
-  syncPremiumStatus();
-}
-document.addEventListener("DOMContentLoaded", syncPremiumStatus);
-
 </script>
 
 <style>
@@ -4164,12 +4249,27 @@ document.addEventListener("DOMContentLoaded", syncPremiumStatus);
 .v2-nav-link[href="#crm_sales"] .v2-nav-tag,
 .v2-nav-link[href="#marketing_director"] .v2-nav-tag{background:linear-gradient(135deg,#F59E0B,#EF4444)!important;color:white!important}
 
-
-.device-id-box{background:linear-gradient(135deg,#0F172A,#312E81);color:white;border:1px solid rgba(255,255,255,.16);border-radius:18px;padding:13px;margin:14px 0;line-height:1.7;font-size:13px;box-shadow:0 14px 30px rgba(49,46,129,.20)}
-.device-id-box b{color:#FBBF24;font-size:15px}
-.premium-submit-box{margin-top:14px;padding:16px;border-radius:18px;background:#F8FAFC;border:1px solid #DDD6FE;color:#111827}
-.premium-submit-box h3{margin:0 0 8px;color:#4C1D95}.premium-submit-box input,.premium-submit-box textarea{background:white}.premium-submit-result{margin-top:8px;font-weight:800;color:#047857}
-.admin-link-pill{display:block;margin-top:10px;padding:10px 12px;border-radius:14px;background:rgba(251,191,36,.12);border:1px solid rgba(251,191,36,.28);color:#FDE68A;text-decoration:none;font-weight:900;text-align:center}
+.device-status-card{
+  background:linear-gradient(135deg,rgba(37,99,235,.22),rgba(124,58,237,.22));
+  border:1px solid rgba(255,255,255,.16);
+  color:#E5E7EB;
+  border-radius:16px;
+  padding:14px;
+  margin:14px 0 18px;
+  line-height:1.65;
+}
+.device-status-card b{color:#FACC15}
+.premium-confirm-box{
+  margin-top:16px;
+  padding:16px;
+  border-radius:18px;
+  background:linear-gradient(135deg,#EEF2FF,#F5F3FF);
+  border:1px solid #DDD6FE;
+}
+.premium-confirm-box h3{margin:0 0 8px;color:#1E1B4B}
+.premium-confirm-box input,.premium-confirm-box textarea{background:#fff!important;color:#111827!important}
+.premium-confirm-box button{width:100%;margin-top:8px}
+.premium-request-status{margin-top:10px;font-weight:800;color:#047857;line-height:1.5}
 
 </style>
 
@@ -4230,10 +4330,12 @@ document.addEventListener("DOMContentLoaded", syncPremiumStatus);
 <aside class="sidebar">
   <div class="logo">Marketing<br>Automation Pro</div>
   <div class="subtitle">V5 Enterprise Seller AI Suite</div>
-  <div class="device-id-box">🖥️ ID thiết bị<br><b id="deviceIdText">Đang tạo...</b><br><span id="premiumStatusText">Trạng thái: dùng thử</span></div>
-  <a class="admin-link-pill" href="/admin" target="_blank">🔐 Mở Web Admin</a>
-  
 
+  <div class="device-status-card">
+    🖥 <b>ID thiết bị</b><br>
+    <b class="device-id-text">Đang tạo...</b><br>
+    <span>Trạng thái: <span class="premium-status-text">Dùng thử / chờ duyệt</span></span>
+  </div>
 
 <div class="nav">
   <div class="v2-nav-title">MENU CHÍNH</div>
@@ -4411,13 +4513,13 @@ document.addEventListener("DOMContentLoaded", syncPremiumStatus);
   <h2>📄 Quản lý Fanpage</h2>
   <p class="small">Trung tâm kiểm tra kết nối Page, Token, quyền và trạng thái hoạt động trước khi đăng bài.</p>
   <div class="v5-seller-grid">
-    <div class="v5-tool-card"><h3>Kết nối Fanpage</h3><p>Thêm Page ID và Token trực tiếp trên tool, không cần sửa Render.</p><button onclick="openModule('token')">Mở Token Center</button></div>
+    <div class="v5-tool-card"><h3>Kết nối Fanpage</h3><p>Thêm Fanpage trực tiếp trên web, không cần vào Render sửa PAGES_JSON.</p><button onclick="openModule('token')">Mở Token Center</button></div>
     <div class="v5-tool-card"><h3>Kiểm tra Token</h3><p>Quét toàn bộ Page để phát hiện token chết, thiếu quyền hoặc phiên bị giới hạn.</p><form method="post" action="/check_tokens"><button>Kiểm tra Token ngay</button></form></div>
     <div class="v5-tool-card"><h3>Kiểm tra quyền</h3><ul><li>pages_manage_posts</li><li>pages_read_engagement</li><li>pages_manage_metadata</li></ul><span class="v5-warning-pill">Cần kiểm tra từ Meta App</span></div>
-    <div class="v5-tool-card"><h3>Làm mới Token</h3><p>Khi token lỗi, hệ thống hướng dẫn thay token mới trong .env rồi chạy lại app.</p><button class="secondary" onclick="openLockedFeature('Làm mới Token','Gói 1 năm / Gói Nhà Bán Hàng Chuyên Nghiệp')">Hướng dẫn làm mới</button></div>
+    <div class="v5-tool-card"><h3>Làm mới Token</h3><p>Khi token lỗi, dán token mới vào Token Center rồi bấm lưu, không cần deploy lại.</p><button class="secondary" onclick="openModule('token')">Cập nhật Token</button></div>
   </div>
-  <table class="v5-table"><tr><th>Fanpage</th><th>Page ID</th><th>Token</th><th>Trạng thái</th></tr>
-    {% for p in pages %}<tr><td>{{ p.name }}</td><td>{{ p.id }}</td><td>{{ 'Có token' if p.token else 'Thiếu token' }}</td><td><span class="v5-status-pill">Đã cấu hình</span></td></tr>{% endfor %}
+  <table class="v5-table"><tr><th>Fanpage</th><th>Page ID</th><th>Token</th><th>Nguồn</th><th>Trạng thái</th></tr>
+    {% for p in pages %}<tr><td>{{ p.name }}</td><td>{{ p.id }}</td><td>{{ p.token_mask }}</td><td>{{ 'Tool' if p.source == 'database' else '.env' }}</td><td><span class="v5-status-pill">{{ 'Đã lưu' if p.token else 'Thiếu token' }}</span></td></tr>{% endfor %}
   </table>
 </section>
 
@@ -4999,40 +5101,52 @@ Ghi chú: {{ r[5] }}</div>
 </section>
 
 <section class="panel module-section" id="token">
-
-<div class="panel" style="border:2px solid #2563EB;background:linear-gradient(135deg,#FFFFFF,#EEF2FF)">
-  <h2>⚙️ Thêm Token Fanpage trực tiếp</h2>
-  <p>Không cần vào Render sửa PAGES_JSON. Điền Page ID và Page Token tại đây, hệ thống sẽ lưu vào SQLite.</p>
-  <form method="post" action="/fanpage_add">
-    <div class="grid">
-      <input name="page_name" placeholder="Tên Fanpage">
-      <input name="page_id" placeholder="Page ID">
-    </div>
-    <textarea name="page_token" rows="3" placeholder="Page Access Token"></textarea>
-    <input name="note" placeholder="Ghi chú">
-    <button>➕ Thêm Fanpage Token</button>
-  </form>
-  <h3>Danh sách Fanpage đã thêm</h3>
-  <div class="history">
-    {% for f in saved_fanpages %}
-      <div style="padding:10px;border-bottom:1px solid #E5E7EB">
-        <b>{{ f[1] }}</b> | Page ID: {{ f[2] }} | Trạng thái: {{ f[5] }} | Kiểm tra: {{ f[6] or 'Chưa kiểm tra' }}
-        <form method="post" action="/fanpage_delete" style="display:inline"><input type="hidden" name="id" value="{{ f[0] }}"><button class="secondary" style="padding:6px 10px">Xóa</button></form>
-      </div>
-    {% endfor %}
-    {% if not saved_fanpages %}Chưa có Fanpage nào. Hãy thêm Page Token đầu tiên.{% endif %}
-  </div>
-</div>
-
   <div class="section-open-note">Bạn đang mở: Token Manager.</div>
   <h2>Token Center Pro</h2>
-  <p class="small">Kiểm tra token từng Fanpage trước khi đăng hàng loạt. Nếu gặp OAuth 190 / Session expired thì cần lấy Page Token mới và thay vào file .env.</p>
+  <p class="small">Thêm, cập nhật và kiểm tra Page Token trực tiếp trong tool. Không cần vào Render Environment để sửa PAGES_JSON nữa.</p>
 
-  <form method="post" action="/check_tokens">
-    <button type="submit">Kiểm tra toàn bộ Page Token</button>
-  </form>
+  <div class="grid">
+    <form method="post" action="/fanpage_token_add">
+      <h3>➕ Thêm / cập nhật Fanpage</h3>
+      <input name="page_name" placeholder="Tên Fanpage, ví dụ: GPT Mini Premium">
+      <input name="page_id" placeholder="Page ID">
+      <textarea name="page_token" rows="4" placeholder="Dán Page Access Token tại đây"></textarea>
+      <input name="note" placeholder="Ghi chú, ví dụ: Page chính / Page ads / Page dự phòng">
+      <button type="submit">Lưu Fanpage Token</button>
+    </form>
 
-  <div class="history">{{ token_report }}</div>
+    <div class="history">
+      <h3>📌 Trạng thái cấu hình</h3>
+      {{ token_report }}
+      <form method="post" action="/check_tokens" style="margin-top:12px">
+        <button type="submit">Kiểm tra toàn bộ Page Token</button>
+      </form>
+    </div>
+  </div>
+
+  <h3>Danh sách Fanpage đang kết nối</h3>
+  <table class="v5-table">
+    <tr><th>Fanpage</th><th>Page ID</th><th>Token</th><th>Nguồn</th><th>Ghi chú</th><th>Hành động</th></tr>
+    {% for p in pages %}
+    <tr>
+      <td>{{ p.name }}</td>
+      <td>{{ p.id }}</td>
+      <td>{{ p.token_mask }}</td>
+      <td>{{ 'Tool' if p.source == 'database' else '.env' }}</td>
+      <td>{{ p.note }}</td>
+      <td>
+        {% if p.source == 'database' %}
+        <form method="post" action="/fanpage_token_delete" onsubmit="return confirm('Xóa Fanpage này khỏi Token Center?')">
+          <input type="hidden" name="row_id" value="{{ p.row_id }}">
+          <button class="secondary" type="submit">Xóa</button>
+        </form>
+        {% else %}
+        <span class="small">Sửa trong Environment</span>
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
 
   <h3>Kết quả kiểm tra gần nhất</h3>
   {% for t in token_checks %}
@@ -5050,8 +5164,8 @@ Thời gian: {{ t[4] }}
     <p>1. Vào Meta Graph API Explorer.</p>
     <p>2. Generate User Token có quyền pages_show_list, pages_read_engagement, pages_manage_posts, pages_manage_metadata.</p>
     <p>3. Gọi /me/accounts để lấy Page Access Token mới.</p>
-    <p>4. Dán token mới trực tiếp tại Token Center trên tool.</p>
-    <p>5. Chạy lại app.py và bấm kiểm tra token.</p>
+    <p>4. Dán token mới vào form Thêm / cập nhật Fanpage ở Token Center.</p>
+    <p>5. Bấm Lưu Fanpage Token rồi bấm kiểm tra token, không cần deploy lại.</p>
   </div>
 </section>
 
@@ -5271,27 +5385,23 @@ Thời gian tạo: {{ h[9] }}
         <div class="payment-benefits" id="payLocked"></div>
 
         <div class="payment-alert">
-          Sau khi thanh toán, hệ thống sẽ tự động kích hoạt gói Premium của bạn.
-          Nếu sau <b>5 phút</b> vẫn chưa được kích hoạt tự động, vui lòng liên hệ Zalo
-          <b>036 338 2629</b> để đội ngũ kỹ thuật hỗ trợ nhanh nhất.
-          Khi liên hệ vui lòng gửi ảnh giao dịch hoặc nội dung chuyển khoản.
+          Khi chuyển khoản, vui lòng giữ đúng <b>Nội dung CK</b> có kèm ID thiết bị.
+          Sau khi thanh toán, nhập <b>Số điện thoại</b> và <b>Gmail</b> bên dưới để gửi yêu cầu về Web Admin duyệt kích hoạt.
         </div>
 
-        
-        <div class="premium-submit-box">
-          <h3>Gửi thông tin để Admin duyệt Premium</h3>
-          <p class="small">Chỉ cần nhập số điện thoại và Gmail. Hệ thống tự gửi kèm ID thiết bị và gói đã chọn về Web Admin.</p>
-          <input id="premiumPhone" placeholder="Số điện thoại / Zalo">
-          <input id="premiumEmail" placeholder="Gmail đăng ký">
-          <input id="premiumTransaction" placeholder="Mã giao dịch hoặc 4 số cuối tài khoản chuyển khoản (không bắt buộc)">
-          <textarea id="premiumNote" rows="2" placeholder="Ghi chú thêm nếu có"></textarea>
-          <button onclick="submitPremiumRequest()">📨 Gửi yêu cầu kích hoạt Premium</button>
-          <div class="premium-submit-result" id="premiumSubmitResult"></div>
+        <div class="premium-confirm-box" id="premiumConfirmFormBox">
+          <h3>Gửi yêu cầu kích hoạt Premium</h3>
+          <div class="small">ID thiết bị: <b class="device-id-text">Đang tạo...</b></div>
+          <input id="premiumPhone" placeholder="Số điện thoại/Zalo đã thanh toán">
+          <input id="premiumEmail" placeholder="Gmail/Email đăng ký">
+          <textarea id="premiumTransactionNote" placeholder="Mã giao dịch hoặc ghi chú chuyển khoản (không bắt buộc)"></textarea>
+          <button onclick="submitPremiumRequest()">Gửi về Admin duyệt kích hoạt</button>
+          <div class="premium-request-status" id="premiumRequestStatus"></div>
         </div>
 
         <div class="payment-actions">
           <a href="https://zalo.me/0363382629" target="_blank">Liên hệ Zalo hỗ trợ</a>
-          <a class="light" href="#token" onclick="closePayment()">Đóng</a>
+          <a class="light" href="javascript:void(0)" onclick="scrollToPaymentConfirm()">Tôi đã thanh toán</a>
         </div>
       </div>
     </div>
@@ -5507,9 +5617,10 @@ def current_library(selected_industry):
 def render(content="", message="", ok=True, selected_industry="spa", analysis="", plan=""):
     score = score_content(content) if content else 0
     warnings = policy_check(content) if content else []
-    token_warning = "Cấu hình ổn." if get_fanpages() and GEMINI_API_KEY else "Thiếu Gemini API hoặc chưa thêm Fanpage Token trong tool."
+    pages_current = get_fanpages()
+    token_warning = "Cấu hình ổn." if pages_current and GEMINI_API_KEY else "Thiếu Gemini API hoặc chưa thêm Fanpage trong Token Center."
     return render_template_string(
-        HTML, title=APP_TITLE, pages=get_fanpages(), saved_fanpages=get_saved_fanpages(), content=content, message=message, ok=ok,
+        HTML, title=APP_TITLE, pages=pages_current, content=content, message=message, ok=ok,
         history=get_history(), campaigns=get_campaigns(), s=get_stats(), crm_rows=get_crm(), token_report=token_manager_report(), token_checks=get_latest_token_checks(), clusters=get_page_clusters(), analytics=get_analytics_summary(), free_status=get_free_status(),
         industry_labels=INDUSTRY_LABELS, selected_industry=selected_industry,
         library_items=current_library(selected_industry)[:10], locked_count=max(0, 500 - len(current_library(selected_industry)[:10])),
@@ -5721,14 +5832,15 @@ def batch():
                 content = generate_content(idea, "chuyên nghiệp", "120", variants=1)
             if not content or not schedule_time:
                 continue
+            all_pages = get_fanpages()
             target_pages = []
             for name in [x.strip().lower() for x in page_names.split(",") if x.strip()]:
-                for p in PAGES:
+                for p in all_pages:
                     if name in p["name"].lower():
                         target_pages.append(p)
-            if not target_pages and PAGES:
+            if not target_pages and all_pages:
                 # Nếu file không có page_names, tự chia mỗi dòng content sang Page kế tiếp để tránh trùng bài
-                target_pages = [PAGES[count % len(PAGES)]]
+                target_pages = [all_pages[count % len(all_pages)]]
 
             # File Excel/CSV có thể thêm cột image_path để gắn ảnh riêng từng bài.
             image_path = str(row.get("image_path", "") or row.get("media_path", "") or "").strip()
@@ -5743,10 +5855,27 @@ def batch():
         return render(message="Lỗi đọc file: " + str(e), ok=False)
 
 
+@app.route("/fanpage_token_add", methods=["POST"])
+def fanpage_token_add_route():
+    ok, msg = add_fanpage_token(
+        request.form.get("page_name", ""),
+        request.form.get("page_id", ""),
+        request.form.get("page_token", ""),
+        request.form.get("note", "")
+    )
+    return render(message=msg, ok=ok)
+
+
+@app.route("/fanpage_token_delete", methods=["POST"])
+def fanpage_token_delete_route():
+    ok, msg = delete_fanpage_token(request.form.get("row_id", ""))
+    return render(message=msg, ok=ok)
+
+
 @app.route("/check_tokens", methods=["POST"])
 def check_tokens_route():
     if not get_fanpages():
-        return render(message="Chưa có Fanpage. Vui lòng thêm Page ID và Token trực tiếp trong Token Center.", ok=False)
+        return render(message="Chưa có Fanpage. Hãy thêm trực tiếp trong Token Center.", ok=False)
 
     results = check_all_page_tokens()
     alive = sum(1 for x in results if x["status"] == "SỐNG")
@@ -5931,6 +6060,114 @@ def api_templates():
     return jsonify(current_library(industry))
 
 
+
+@app.post("/premium_request")
+def premium_request_route():
+    data = request.get_json(silent=True) or {}
+    ok, msg = create_premium_request(
+        data.get("device_id", ""),
+        data.get("phone", ""),
+        data.get("email", ""),
+        data.get("plan_key", "monthly"),
+        data.get("plan_name", "Gói Premium"),
+        data.get("amount", 0),
+        data.get("transaction_note", "")
+    )
+    return jsonify({"success": ok, "message": msg})
+
+
+@app.get("/premium_status")
+def premium_status_route():
+    device_id = request.args.get("device_id", "")
+    return jsonify(get_premium_status_by_device(device_id))
+
+
+@app.route("/admin", methods=["GET", "POST"])
+def admin_premium_page():
+    admin_password = os.getenv("ADMIN_PASSWORD", "admin123")
+    password = request.args.get("password") or request.form.get("password") or ""
+    if password != admin_password:
+        return """
+        <html><head><meta charset='UTF-8'><title>Admin Login</title></head>
+        <body style='font-family:Arial;background:#0f172a;color:white;padding:30px'>
+        <h2>Đăng nhập Web Admin</h2>
+        <form method='get'>
+          <input name='password' type='password' placeholder='Mật khẩu admin' style='padding:12px;border-radius:10px;width:260px'>
+          <button style='padding:12px 18px;border-radius:10px;background:#7c3aed;color:white;border:0;font-weight:bold'>Vào Admin</button>
+        </form>
+        </body></html>
+        """
+
+    rows = get_premium_requests(120)
+    pending_count = sum(1 for r in rows if r[8] == 'pending')
+    approved_count = sum(1 for r in rows if r[8] == 'approved')
+
+    def esc(x):
+        return str(x or "").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+    html_rows = ""
+    for r in rows:
+        status = r[8] or "pending"
+        badge = "#22c55e" if status == "approved" else "#f59e0b"
+        approve_btn = ""
+        if status != "approved":
+            approve_btn = f"""
+            <form method='post' action='/admin/approve_premium' style='margin:0'>
+              <input type='hidden' name='password' value='{esc(password)}'>
+              <input type='hidden' name='request_id' value='{r[0]}'>
+              <button class='ok'>Kích hoạt Premium</button>
+            </form>
+            """
+        html_rows += f"""
+        <tr>
+          <td>{r[0]}</td>
+          <td><b>{esc(r[1])}</b></td>
+          <td>{esc(r[2])}</td>
+          <td>{esc(r[3])}</td>
+          <td>{esc(r[5] or r[4])}<br><small>{int(r[6] or 0):,}đ</small></td>
+          <td>{esc(r[7])}</td>
+          <td><span style='background:{badge};color:white;padding:6px 10px;border-radius:999px;font-weight:bold'>{esc(status)}</span><br><small>{esc(r[11])}</small></td>
+          <td>{esc(r[10] or '')}</td>
+          <td>{approve_btn}</td>
+        </tr>
+        """
+
+    return f"""
+    <html><head><meta charset='UTF-8'><title>Premium Admin</title>
+    <style>
+      body{{font-family:Arial;background:#0f172a;color:#e5e7eb;margin:0;padding:24px}}
+      h1{{color:#38bdf8}} .cards{{display:flex;gap:14px;margin:18px 0}}
+      .card{{background:#1e293b;border:1px solid #334155;border-radius:18px;padding:18px;min-width:180px}}
+      .card b{{font-size:28px;color:#fbbf24}}
+      table{{width:100%;border-collapse:collapse;background:#111827;border-radius:18px;overflow:hidden}}
+      th,td{{border-bottom:1px solid #334155;padding:12px;text-align:left;vertical-align:top}}
+      th{{background:#1e1b4b;color:#c4b5fd}}
+      .ok{{background:#22c55e;color:white;border:0;padding:10px 14px;border-radius:10px;font-weight:bold;cursor:pointer}}
+      small{{color:#94a3b8}}
+    </style></head><body>
+      <h1>Premium Admin Center</h1>
+      <div class='cards'>
+        <div class='card'>Chờ duyệt<br><b>{pending_count}</b></div>
+        <div class='card'>Đã kích hoạt<br><b>{approved_count}</b></div>
+      </div>
+      <table>
+        <tr><th>ID</th><th>Device ID</th><th>SĐT</th><th>Email</th><th>Gói</th><th>Ghi chú</th><th>Trạng thái</th><th>Hết hạn</th><th>Duyệt</th></tr>
+        {html_rows or '<tr><td colspan="9">Chưa có yêu cầu Premium.</td></tr>'}
+      </table>
+    </body></html>
+    """
+
+
+@app.post("/admin/approve_premium")
+def admin_approve_premium_route():
+    admin_password = os.getenv("ADMIN_PASSWORD", "admin123")
+    password = request.form.get("password", "")
+    if password != admin_password:
+        return "Sai mật khẩu admin.", 403
+    ok, msg = approve_premium_request(request.form.get("request_id", "0"))
+    return f"<meta charset='UTF-8'><script>alert({json.dumps(msg)});location.href='/admin?password={password}';</script>"
+
+
 @app.get("/manifest.json")
 def pwa_manifest():
     return jsonify({
@@ -5976,114 +6213,13 @@ def pwa_icon_512():
     return send_file("pwa-icon-512.png", mimetype="image/png")
 
 
-
-@app.route("/api/register_customer", methods=["POST"])
-def api_register_customer():
-    device_id = request.form.get("device_id", "").strip() or get_request_device_id()
-    phone = request.form.get("phone", "").strip()
-    email = request.form.get("email", "").strip().lower()
-    if not phone or not email:
-        return jsonify({"success": False, "message": "Vui lòng nhập số điện thoại và Gmail."})
-    upsert_customer(device_id, phone, email, "pending")
-    return jsonify({"success": True, "message": "Đã gửi đăng ký về Web Admin. Vui lòng chờ duyệt."})
-
-@app.route("/api/premium_request", methods=["POST"])
-def api_premium_request():
-    device_id = request.form.get("device_id", "").strip() or get_request_device_id()
-    phone = request.form.get("phone", "").strip()
-    email = request.form.get("email", "").strip().lower()
-    plan_key = request.form.get("plan_key", "monthly").strip()
-    plan_name = request.form.get("plan_name", "Gói Premium").strip()
-    amount = int(request.form.get("amount", "0") or 0)
-    transfer_content = request.form.get("transfer_content", "").strip() or f"PREMIUM {plan_key.upper()} {device_id}"
-    transaction_code = request.form.get("transaction_code", "").strip()
-    note = request.form.get("note", "").strip()
-    if not phone or not email:
-        return jsonify({"success": False, "message": "Vui lòng nhập số điện thoại và Gmail."})
-    upsert_customer(device_id, phone, email, "pending_payment")
-    conn = sqlite3.connect(DB); c = conn.cursor()
-    c.execute("""
-    INSERT INTO premium_requests(device_id,phone,email,plan_key,plan_name,amount,transfer_content,transaction_code,note,status,created_at)
-    VALUES(?,?,?,?,?,?,?,?,?,?,?)
-    """, (device_id, phone, email, plan_key, plan_name, amount, transfer_content, transaction_code, note, "pending", now_text()))
-    conn.commit(); conn.close()
-    return jsonify({"success": True, "message": "Đã gửi yêu cầu kích hoạt Premium về Web Admin. Admin duyệt xong hệ thống sẽ mở khóa tự động."})
-
-@app.route("/api/premium_status/<device_id>")
-def api_premium_status(device_id):
-    row = get_customer_by_device(device_id)
-    active = is_premium_active(device_id)
-    return jsonify({
-        "success": True,
-        "device_id": device_id,
-        "premium_active": active,
-        "status": row[4] if row else "new",
-        "plan": row[5] if row else "trial",
-        "premium_status": row[6] if row else "trial",
-        "premium_end": row[8] if row else ""
-    })
-
-@app.route("/admin")
-def admin_center():
-    password = request.args.get("password", "") or request.cookies.get("admin_password", "")
-    admin_password = os.getenv("ADMIN_PASSWORD", "admin123")
-    if password != admin_password:
-        return """
-        <html><head><meta charset='utf-8'><title>Admin Login</title></head>
-        <body style='font-family:Arial;background:#0f172a;color:white;padding:40px'>
-        <h1>🔐 Mkt Automation Pro Admin</h1>
-        <form><input name='password' type='password' placeholder='Mật khẩu admin' style='padding:14px;border-radius:12px;width:280px'><button style='padding:14px;border-radius:12px'>Đăng nhập</button></form>
-        <p>Mật khẩu mặc định: admin123. Nên đổi bằng biến ADMIN_PASSWORD trên Render.</p>
-        </body></html>
-        """
-    rows = get_premium_requests()
-    customers = get_premium_customers()
-    fanpages = get_saved_fanpages()
-    req_html = ""
-    for r in rows:
-        req_html += f"""
-        <tr><td>{r[0]}</td><td><b>{r[1]}</b></td><td>{r[2]}</td><td>{r[3]}</td><td>{r[5]}</td><td>{r[6]:,}đ</td><td>{r[7]}</td><td>{r[10]}</td><td>{r[11]}</td>
-        <td><form method='post' action='/admin/approve_premium'><input type='hidden' name='password' value='{password}'><input type='hidden' name='request_id' value='{r[0]}'><input type='hidden' name='device_id' value='{r[1]}'><input type='hidden' name='plan_key' value='{r[4]}'><button>Duyệt Premium</button></form></td></tr>
-        """
-    cust_html = "".join([f"<tr><td>{c[1]}</td><td>{c[2]}</td><td>{c[3]}</td><td>{c[4]}</td><td>{c[5]}</td><td>{c[6]}</td><td>{c[8] or ''}</td></tr>" for c in customers])
-    fp_html = "".join([f"<tr><td>{f[0]}</td><td>{f[1]}</td><td>{f[2]}</td><td>{f[5]}</td><td>{f[6] or ''}</td></tr>" for f in fanpages])
-    return f"""
-    <html><head><meta charset='utf-8'><title>Mkt Admin</title>
-    <style>body{{font-family:Arial;background:#f8fafc;color:#111827;padding:24px}}.card{{background:white;border:1px solid #e5e7eb;border-radius:18px;padding:18px;margin:14px 0;box-shadow:0 12px 30px rgba(0,0,0,.06)}}table{{width:100%;border-collapse:collapse}}td,th{{border:1px solid #e5e7eb;padding:10px;text-align:left}}th{{background:#eef2ff}}button{{background:#2563eb;color:white;border:0;border-radius:10px;padding:10px 14px;font-weight:700}}input{{padding:10px;border:1px solid #ddd;border-radius:10px}}</style></head>
-    <body><h1>👑 Web Admin - Premium Center</h1>
-    <div class='card'><h2>🔔 Yêu cầu thanh toán chờ duyệt</h2><table><tr><th>ID</th><th>Device ID</th><th>SĐT</th><th>Email</th><th>Gói</th><th>Số tiền</th><th>Nội dung CK</th><th>Trạng thái</th><th>Ngày gửi</th><th>Duyệt</th></tr>{req_html}</table></div>
-    <div class='card'><h2>👤 Khách hàng / Thiết bị</h2><table><tr><th>Device ID</th><th>SĐT</th><th>Email</th><th>Trạng thái</th><th>Gói</th><th>Premium</th><th>Hết hạn</th></tr>{cust_html}</table></div>
-    <div class='card'><h2>📄 Fanpage đã thêm trên tool</h2><table><tr><th>ID</th><th>Tên Page</th><th>Page ID</th><th>Trạng thái</th><th>Kiểm tra cuối</th></tr>{fp_html}</table></div>
-    </body></html>
-    """
-
-@app.route("/admin/approve_premium", methods=["POST"])
-def admin_approve_premium():
-    password = request.form.get("password", "")
-    admin_password = os.getenv("ADMIN_PASSWORD", "admin123")
-    if password != admin_password:
-        return "Sai mật khẩu admin", 403
-    req_id = request.form.get("request_id", "")
-    device_id = request.form.get("device_id", "")
-    plan_key = request.form.get("plan_key", "monthly")
-    activate_customer_premium(device_id, plan_key)
-    conn = sqlite3.connect(DB); c = conn.cursor()
-    c.execute("UPDATE premium_requests SET status='approved', approved_at=? WHERE id=?", (now_text(), req_id))
-    conn.commit(); conn.close()
-    return f"<script>alert('Đã mở khóa Premium cho {device_id}');location.href='/admin?password={password}'</script>"
-
-@app.route("/fanpage_add", methods=["POST"])
-def fanpage_add_route():
-    add_fanpage_token(request.form.get("page_name",""), request.form.get("page_id",""), request.form.get("page_token",""), request.form.get("note",""))
-    return render(message="Đã thêm Fanpage Token trực tiếp trên tool.", ok=True)
-
-@app.route("/fanpage_delete", methods=["POST"])
-def fanpage_delete_route():
-    delete_fanpage_token(request.form.get("id","0"))
-    return render(message="Đã xóa Fanpage khỏi Token Center.", ok=True)
+# Khởi tạo database khi import app để chạy ổn cả python app.py và gunicorn app:app.
+try:
+    init_db()
+except Exception as e:
+    print("Init DB error:", e)
 
 if __name__ == "__main__":
-    init_db()
     threading.Thread(target=scheduler_loop, daemon=True).start()
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port, debug=False)
