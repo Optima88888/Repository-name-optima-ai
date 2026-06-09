@@ -38,10 +38,18 @@ app.config["MAX_CONTENT_LENGTH"] = 100 * 1024 * 1024
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "").strip()
 PAGES_JSON = os.getenv("PAGES_JSON", "[]").strip()
 
-try:
-    PAGES = json.loads(PAGES_JSON)
-except Exception:
-    PAGES = []
+# PAGES_JSON vẫn được giữ làm dữ liệu dự phòng.
+# Fanpage mới sẽ được thêm trực tiếp trong tool và lưu vào SQLite.
+def load_env_pages():
+    try:
+        data = json.loads(PAGES_JSON or "[]")
+        if isinstance(data, list):
+            return data
+        return []
+    except Exception:
+        return []
+
+PAGES = load_env_pages()
 
 if GEMINI_API_KEY:
     genai.configure(api_key=GEMINI_API_KEY)
@@ -330,6 +338,18 @@ def init_db():
     )
     """)
     c.execute("""
+    CREATE TABLE IF NOT EXISTS fanpages (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        page_name TEXT,
+        page_id TEXT UNIQUE,
+        page_token TEXT,
+        note TEXT,
+        status TEXT DEFAULT 'active',
+        created_at TEXT
+    )
+    """)
+
+    c.execute("""
     CREATE TABLE IF NOT EXISTS page_clusters (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT UNIQUE,
@@ -500,6 +520,127 @@ def init_db():
 def db():
     return sqlite3.connect(DB)
 
+def ensure_fanpages_table():
+    conn = sqlite3.connect(DB)
+    c = conn.cursor()
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS fanpages (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        page_name TEXT,
+        page_id TEXT UNIQUE,
+        page_token TEXT,
+        note TEXT,
+        status TEXT DEFAULT 'active',
+        created_at TEXT
+    )
+    """)
+    conn.commit()
+    conn.close()
+
+
+def mask_token(token):
+    token = str(token or "").strip()
+    if not token:
+        return "Thiếu token"
+    if len(token) <= 14:
+        return token[:4] + "..."
+    return token[:8] + "..." + token[-6:]
+
+
+def get_fanpages(include_env=True):
+    """Lấy Fanpage từ SQLite, kèm PAGES_JSON cũ làm fallback nếu cần."""
+    ensure_fanpages_table()
+    pages = []
+    seen = set()
+
+    conn = sqlite3.connect(DB)
+    c = conn.cursor()
+    c.execute("""
+    SELECT id,page_name,page_id,page_token,note,status,created_at
+    FROM fanpages
+    ORDER BY id DESC
+    """)
+    for row in c.fetchall():
+        page_id = str(row[2] or "").strip()
+        if not page_id:
+            continue
+        seen.add(page_id)
+        pages.append({
+            "row_id": row[0],
+            "name": row[1] or "Fanpage chưa đặt tên",
+            "id": page_id,
+            "token": row[3] or "",
+            "token_mask": mask_token(row[3]),
+            "note": row[4] or "",
+            "status": row[5] or "active",
+            "created_at": row[6] or "",
+            "source": "database"
+        })
+    conn.close()
+
+    if include_env:
+        for p in load_env_pages():
+            page_id = str(p.get("id", "")).strip()
+            if not page_id or page_id in seen:
+                continue
+            pages.append({
+                "row_id": "",
+                "name": p.get("name", "Fanpage .env"),
+                "id": page_id,
+                "token": p.get("token", ""),
+                "token_mask": mask_token(p.get("token", "")),
+                "note": "Từ PAGES_JSON trong Environment",
+                "status": "env",
+                "created_at": "",
+                "source": "env"
+            })
+    return pages
+
+
+def add_fanpage_token(page_name, page_id, page_token, note=""):
+    page_name = (page_name or "").strip()
+    page_id = (page_id or "").strip()
+    page_token = (page_token or "").strip()
+    note = (note or "").strip()
+
+    if not page_name or not page_id or not page_token:
+        return False, "Vui lòng nhập đủ Tên Fanpage, Page ID và Page Token."
+
+    ensure_fanpages_table()
+    conn = sqlite3.connect(DB)
+    c = conn.cursor()
+    now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    try:
+        c.execute("""
+        INSERT INTO fanpages(page_name,page_id,page_token,note,status,created_at)
+        VALUES(?,?,?,?,?,?)
+        ON CONFLICT(page_id) DO UPDATE SET
+            page_name=excluded.page_name,
+            page_token=excluded.page_token,
+            note=excluded.note,
+            status='active'
+        """, (page_name, page_id, page_token, note, "active", now))
+        conn.commit()
+        return True, f"Đã lưu Fanpage {page_name}."
+    except Exception as e:
+        return False, "Lỗi lưu Fanpage: " + str(e)
+    finally:
+        conn.close()
+
+
+def delete_fanpage_token(row_id):
+    try:
+        row_id = int(row_id)
+    except Exception:
+        return False, "ID Fanpage không hợp lệ."
+    ensure_fanpages_table()
+    conn = sqlite3.connect(DB)
+    c = conn.cursor()
+    c.execute("DELETE FROM fanpages WHERE id=?", (row_id,))
+    conn.commit()
+    conn.close()
+    return True, "Đã xóa Fanpage khỏi Token Center."
+
 def save_post(page_name, page_id, content, status, post_id="", schedule_time="", image_path="", campaign="", score=0):
     conn = db(); c = conn.cursor()
     c.execute("""
@@ -553,11 +694,12 @@ def get_stats():
 
 def selected_pages(page_indexes):
     result = []
+    pages = get_fanpages()
     for idx in page_indexes:
         try:
             i = int(idx)
-            if 0 <= i < len(PAGES):
-                result.append(PAGES[i])
+            if 0 <= i < len(pages):
+                result.append(pages[i])
         except Exception:
             pass
     return result
@@ -772,9 +914,9 @@ def scheduler_loop():
             """, (now,))
             jobs = c.fetchall(); conn.close()
             for row_id, page_name, page_id, content, schedule_time, image_path in jobs:
-                page = next((p for p in PAGES if str(p["id"]) == str(page_id)), None)
+                page = next((p for p in get_fanpages() if str(p["id"]) == str(page_id)), None)
                 if not page:
-                    update_post(row_id, "error", "Không tìm thấy Page trong .env")
+                    update_post(row_id, "error", "Không tìm thấy Page trong Token Center")
                     continue
                 result = post_to_facebook(page, content, image_path)
                 if "id" in result or "post_id" in result:
@@ -894,7 +1036,7 @@ def check_single_page_token(page):
 
 def check_all_page_tokens():
     results = []
-    for page in PAGES:
+    for page in get_fanpages():
         item = check_single_page_token(page)
         save_token_check(item["page_name"], item["page_id"], item["status"], item["detail"])
         results.append(item)
@@ -1272,13 +1414,14 @@ def plan_required_message(feature_name, plans):
 
 def token_manager_report():
     reports = []
-    for p in PAGES:
+    for p in get_fanpages():
         token = p.get("token", "")
-        status = "Có token" if token and token.startswith("EA") else "Thiếu token hoặc sai định dạng"
-        reports.append(f"{p.get('name','No name')} | {p.get('id','No ID')} | {status}")
+        status = "Có token" if token else "Thiếu token"
+        source = "SQLite" if p.get("source") == "database" else "Environment"
+        reports.append(f"{p.get('name','No name')} | {p.get('id','No ID')} | {status} | Nguồn: {source}")
     if not reports:
-        reports.append("Chưa có Fanpage trong PAGES_JSON.")
-    return "\\n".join(reports)
+        reports.append("Chưa có Fanpage. Hãy thêm trực tiếp trong Token Center.")
+    return "\n".join(reports)
 
 def ai_planner_v6(industry, goal, days):
     if not client:
@@ -1398,7 +1541,7 @@ def v3_ceo_summary():
     leads_today = c.fetchone()[0]
     conn.close()
     return {
-        'fanpages': len(PAGES),
+        'fanpages': len(get_fanpages()),
         'posts': s.get('total', 0),
         'posted': s.get('posted', 0),
         'scheduled': s.get('scheduled', 0),
@@ -1410,7 +1553,7 @@ def v3_ceo_summary():
         'premium': get_free_status().get('label','🎁 Dùng thử miễn phí'),
         'token_live': live_tokens,
         'token_dead': dead_tokens,
-        'token_total': len(PAGES)
+        'token_total': len(get_fanpages())
     }
 
 def add_pipeline_lead(customer_name, phone, zalo, source, stage, value, note):
@@ -4067,13 +4210,13 @@ function closeLockedFeature(){
   <h2>📄 Quản lý Fanpage</h2>
   <p class="small">Trung tâm kiểm tra kết nối Page, Token, quyền và trạng thái hoạt động trước khi đăng bài.</p>
   <div class="v5-seller-grid">
-    <div class="v5-tool-card"><h3>Kết nối Fanpage</h3><p>Thêm Page qua biến PAGES_JSON trong file .env gồm name, id, token.</p><button onclick="openModule('token')">Mở Token Center</button></div>
+    <div class="v5-tool-card"><h3>Kết nối Fanpage</h3><p>Thêm Fanpage trực tiếp trên web, không cần vào Render sửa PAGES_JSON.</p><button onclick="openModule('token')">Mở Token Center</button></div>
     <div class="v5-tool-card"><h3>Kiểm tra Token</h3><p>Quét toàn bộ Page để phát hiện token chết, thiếu quyền hoặc phiên bị giới hạn.</p><form method="post" action="/check_tokens"><button>Kiểm tra Token ngay</button></form></div>
     <div class="v5-tool-card"><h3>Kiểm tra quyền</h3><ul><li>pages_manage_posts</li><li>pages_read_engagement</li><li>pages_manage_metadata</li></ul><span class="v5-warning-pill">Cần kiểm tra từ Meta App</span></div>
-    <div class="v5-tool-card"><h3>Làm mới Token</h3><p>Khi token lỗi, hệ thống hướng dẫn thay token mới trong .env rồi chạy lại app.</p><button class="secondary" onclick="openLockedFeature('Làm mới Token','Gói 1 năm / Gói Nhà Bán Hàng Chuyên Nghiệp')">Hướng dẫn làm mới</button></div>
+    <div class="v5-tool-card"><h3>Làm mới Token</h3><p>Khi token lỗi, dán token mới vào Token Center rồi bấm lưu, không cần deploy lại.</p><button class="secondary" onclick="openModule('token')">Cập nhật Token</button></div>
   </div>
-  <table class="v5-table"><tr><th>Fanpage</th><th>Page ID</th><th>Token</th><th>Trạng thái</th></tr>
-    {% for p in pages %}<tr><td>{{ p.name }}</td><td>{{ p.id }}</td><td>{{ 'Có token' if p.token else 'Thiếu token' }}</td><td><span class="v5-status-pill">Đã cấu hình</span></td></tr>{% endfor %}
+  <table class="v5-table"><tr><th>Fanpage</th><th>Page ID</th><th>Token</th><th>Nguồn</th><th>Trạng thái</th></tr>
+    {% for p in pages %}<tr><td>{{ p.name }}</td><td>{{ p.id }}</td><td>{{ p.token_mask }}</td><td>{{ 'Tool' if p.source == 'database' else '.env' }}</td><td><span class="v5-status-pill">{{ 'Đã lưu' if p.token else 'Thiếu token' }}</span></td></tr>{% endfor %}
   </table>
 </section>
 
@@ -4657,13 +4800,50 @@ Ghi chú: {{ r[5] }}</div>
 <section class="panel module-section" id="token">
   <div class="section-open-note">Bạn đang mở: Token Manager.</div>
   <h2>Token Center Pro</h2>
-  <p class="small">Kiểm tra token từng Fanpage trước khi đăng hàng loạt. Nếu gặp OAuth 190 / Session expired thì cần lấy Page Token mới và thay vào file .env.</p>
+  <p class="small">Thêm, cập nhật và kiểm tra Page Token trực tiếp trong tool. Không cần vào Render Environment để sửa PAGES_JSON nữa.</p>
 
-  <form method="post" action="/check_tokens">
-    <button type="submit">Kiểm tra toàn bộ Page Token</button>
-  </form>
+  <div class="grid">
+    <form method="post" action="/fanpage_token_add">
+      <h3>➕ Thêm / cập nhật Fanpage</h3>
+      <input name="page_name" placeholder="Tên Fanpage, ví dụ: GPT Mini Premium">
+      <input name="page_id" placeholder="Page ID">
+      <textarea name="page_token" rows="4" placeholder="Dán Page Access Token tại đây"></textarea>
+      <input name="note" placeholder="Ghi chú, ví dụ: Page chính / Page ads / Page dự phòng">
+      <button type="submit">Lưu Fanpage Token</button>
+    </form>
 
-  <div class="history">{{ token_report }}</div>
+    <div class="history">
+      <h3>📌 Trạng thái cấu hình</h3>
+      {{ token_report }}
+      <form method="post" action="/check_tokens" style="margin-top:12px">
+        <button type="submit">Kiểm tra toàn bộ Page Token</button>
+      </form>
+    </div>
+  </div>
+
+  <h3>Danh sách Fanpage đang kết nối</h3>
+  <table class="v5-table">
+    <tr><th>Fanpage</th><th>Page ID</th><th>Token</th><th>Nguồn</th><th>Ghi chú</th><th>Hành động</th></tr>
+    {% for p in pages %}
+    <tr>
+      <td>{{ p.name }}</td>
+      <td>{{ p.id }}</td>
+      <td>{{ p.token_mask }}</td>
+      <td>{{ 'Tool' if p.source == 'database' else '.env' }}</td>
+      <td>{{ p.note }}</td>
+      <td>
+        {% if p.source == 'database' %}
+        <form method="post" action="/fanpage_token_delete" onsubmit="return confirm('Xóa Fanpage này khỏi Token Center?')">
+          <input type="hidden" name="row_id" value="{{ p.row_id }}">
+          <button class="secondary" type="submit">Xóa</button>
+        </form>
+        {% else %}
+        <span class="small">Sửa trong Environment</span>
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
 
   <h3>Kết quả kiểm tra gần nhất</h3>
   {% for t in token_checks %}
@@ -4681,8 +4861,8 @@ Thời gian: {{ t[4] }}
     <p>1. Vào Meta Graph API Explorer.</p>
     <p>2. Generate User Token có quyền pages_show_list, pages_read_engagement, pages_manage_posts, pages_manage_metadata.</p>
     <p>3. Gọi /me/accounts để lấy Page Access Token mới.</p>
-    <p>4. Dán token mới vào PAGES_JSON trong file .env.</p>
-    <p>5. Chạy lại app.py và bấm kiểm tra token.</p>
+    <p>4. Dán token mới vào form Thêm / cập nhật Fanpage ở Token Center.</p>
+    <p>5. Bấm Lưu Fanpage Token rồi bấm kiểm tra token, không cần deploy lại.</p>
   </div>
 </section>
 
@@ -5126,9 +5306,10 @@ def current_library(selected_industry):
 def render(content="", message="", ok=True, selected_industry="spa", analysis="", plan=""):
     score = score_content(content) if content else 0
     warnings = policy_check(content) if content else []
-    token_warning = "Cấu hình ổn." if PAGES and GEMINI_API_KEY else "Thiếu Gemini API hoặc PAGES_JSON trong file .env."
+    pages_current = get_fanpages()
+    token_warning = "Cấu hình ổn." if pages_current and GEMINI_API_KEY else "Thiếu Gemini API hoặc chưa thêm Fanpage trong Token Center."
     return render_template_string(
-        HTML, title=APP_TITLE, pages=PAGES, content=content, message=message, ok=ok,
+        HTML, title=APP_TITLE, pages=pages_current, content=content, message=message, ok=ok,
         history=get_history(), campaigns=get_campaigns(), s=get_stats(), crm_rows=get_crm(), token_report=token_manager_report(), token_checks=get_latest_token_checks(), clusters=get_page_clusters(), analytics=get_analytics_summary(), free_status=get_free_status(),
         industry_labels=INDUSTRY_LABELS, selected_industry=selected_industry,
         library_items=current_library(selected_industry)[:10], locked_count=max(0, 500 - len(current_library(selected_industry)[:10])),
@@ -5340,14 +5521,15 @@ def batch():
                 content = generate_content(idea, "chuyên nghiệp", "120", variants=1)
             if not content or not schedule_time:
                 continue
+            all_pages = get_fanpages()
             target_pages = []
             for name in [x.strip().lower() for x in page_names.split(",") if x.strip()]:
-                for p in PAGES:
+                for p in all_pages:
                     if name in p["name"].lower():
                         target_pages.append(p)
-            if not target_pages and PAGES:
+            if not target_pages and all_pages:
                 # Nếu file không có page_names, tự chia mỗi dòng content sang Page kế tiếp để tránh trùng bài
-                target_pages = [PAGES[count % len(PAGES)]]
+                target_pages = [all_pages[count % len(all_pages)]]
 
             # File Excel/CSV có thể thêm cột image_path để gắn ảnh riêng từng bài.
             image_path = str(row.get("image_path", "") or row.get("media_path", "") or "").strip()
@@ -5362,10 +5544,27 @@ def batch():
         return render(message="Lỗi đọc file: " + str(e), ok=False)
 
 
+@app.route("/fanpage_token_add", methods=["POST"])
+def fanpage_token_add_route():
+    ok, msg = add_fanpage_token(
+        request.form.get("page_name", ""),
+        request.form.get("page_id", ""),
+        request.form.get("page_token", ""),
+        request.form.get("note", "")
+    )
+    return render(message=msg, ok=ok)
+
+
+@app.route("/fanpage_token_delete", methods=["POST"])
+def fanpage_token_delete_route():
+    ok, msg = delete_fanpage_token(request.form.get("row_id", ""))
+    return render(message=msg, ok=ok)
+
+
 @app.route("/check_tokens", methods=["POST"])
 def check_tokens_route():
-    if not PAGES:
-        return render(message="Chưa có Fanpage trong PAGES_JSON của file .env.", ok=False)
+    if not get_fanpages():
+        return render(message="Chưa có Fanpage. Hãy thêm trực tiếp trong Token Center.", ok=False)
 
     results = check_all_page_tokens()
     alive = sum(1 for x in results if x["status"] == "SỐNG")
@@ -5595,8 +5794,13 @@ def pwa_icon_512():
     return send_file("pwa-icon-512.png", mimetype="image/png")
 
 
-if __name__ == "__main__":
+# Khởi tạo database khi import app để chạy ổn cả python app.py và gunicorn app:app.
+try:
     init_db()
+except Exception as e:
+    print("Init DB error:", e)
+
+if __name__ == "__main__":
     threading.Thread(target=scheduler_loop, daemon=True).start()
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port, debug=False)
