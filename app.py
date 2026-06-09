@@ -3252,6 +3252,51 @@ button:hover{
   .v4-yearly{transform:none}
   .v4-lock-hero .benefit-list{grid-template-columns:1fr}
 }
+
+
+/* ===== V5 PREMIUM DARK POLISH ===== */
+body{
+  background:radial-gradient(circle at top left,rgba(124,58,237,.22),transparent 30%),radial-gradient(circle at top right,rgba(37,99,235,.18),transparent 28%),linear-gradient(135deg,#0B1020,#111827 48%,#1E293B)!important;
+}
+.panel,.rightbar,.top-hero{
+  background:rgba(15,23,42,.92)!important;
+  color:#F8FAFC!important;
+  border:1px solid rgba(148,163,184,.22)!important;
+  box-shadow:0 22px 60px rgba(0,0,0,.28)!important;
+}
+.top-hero h1,h1,.rightbar h2{
+  background:linear-gradient(135deg,#38BDF8,#8B5CF6)!important;
+  -webkit-background-clip:text!important;
+  background-clip:text!important;
+}
+.panel p,.top-hero p,.rightbar p,.small{color:#CBD5E1!important}
+.app-quick-card,.template-card,.stat,.price-card,.preview,.locked-recommend-card{
+  background:rgba(255,255,255,.96)!important;
+}
+.activity-card{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:12px;
+  padding:14px 15px;
+  margin:10px 0;
+  border-radius:18px;
+  background:linear-gradient(135deg,rgba(37,99,235,.15),rgba(124,58,237,.14));
+  border:1px solid rgba(148,163,184,.22);
+  color:#E5E7EB;
+}
+.activity-card span{font-weight:800;color:#CBD5E1}
+.activity-card b{font-size:24px;color:#38BDF8}
+.v5-focus-box{
+  margin-top:14px;
+  padding:16px;
+  border-radius:20px;
+  background:linear-gradient(135deg,rgba(56,189,248,.12),rgba(139,92,246,.16));
+  border:1px solid rgba(56,189,248,.28);
+  color:#E5E7EB;
+  line-height:1.65;
+}
+.v5-focus-box b{color:#FBBF24}
 </style>
 <script>
 function copyText(id){
@@ -3620,7 +3665,7 @@ function closeLockedFeature(){
 <div class="v2-topbar">
   <div class="v2-brand-row">
     <div>
-      <div class="v2-brand-title">🚀 Mkt Automation Pro V3</div>
+      <div class="v2-brand-title">🚀 Mkt Automation Pro V5</div>
       <div class="v2-brand-sub">AI Marketing • Facebook • CRM • Automation</div>
     </div>
     <div class="v2-status-pill">Online</div>
@@ -3700,7 +3745,7 @@ function closeLockedFeature(){
 
   <div class="v2-nav-title">HỆ THỐNG</div>
   <a class="v2-nav-link" href="#premium" onclick="openModule('premium')"><span class="v2-nav-ico">💎</span><span class="v2-nav-text">Premium</span><span class="v2-nav-tag">VIP</span></a>
-  <a class="v2-nav-link" href="#analytics" onclick="openModule('analytics')"><span class="v2-nav-ico">📈</span><span class="v2-nav-text">Thống kê</span></a>
+  <a class="v2-nav-link" href="#analytics" onclick="openModule('analytics')"><span class="v2-nav-ico">📈</span><span class="v2-nav-text">Analytics Center</span></a>
   <a class="v2-nav-link" href="#automation_center" onclick="openModule('automation_center')"><span class="v2-nav-ico">⚙️</span><span class="v2-nav-text">Cài đặt Automation</span></a>
 
   <div class="v2-side-card">
@@ -3727,7 +3772,7 @@ function closeLockedFeature(){
     <b>Đăng bài Facebook</b>
     <span>Soạn nội dung, chọn Page, đăng ngay hoặc lên lịch.</span>
   </div>
-  <div class="app-quick-card" onclick="openModule('studio')">
+  <div class="app-quick-card" onclick="openModule('ai_studio')">
     <div class="app-ico">🤖</div>
     <b>Tạo Content AI</b>
     <span>Viết bài, caption, ý tưởng quảng cáo và nội dung bán hàng.</span>
@@ -3793,7 +3838,7 @@ function closeLockedFeature(){
 
   <div class="hero-actions">
     <button onclick="openModule('post')">Bắt đầu đăng bài</button>
-    <button class="secondary" onclick="openModule('studio')">Tạo content AI</button>
+    <button class="secondary" onclick="openModule('ai_studio')">Tạo content AI</button>
     <button class="secondary" onclick="scrollToPricing()">Xem bảng giá</button>
   </div>
 
@@ -3902,7 +3947,7 @@ function closeLockedFeature(){
   <div class="section-open-note">Bạn đang mở: AI Studio V3.</div>
   <h2>🤖 AI Studio</h2>
   <div class="v3-feature-grid">
-    <div class="v3-feature-card"><h3>AI Content</h3><ul><li>Content Facebook</li><li>Content TikTok</li><li>Caption</li></ul><button onclick="openModule('studio')">Mở AI Content</button></div>
+    <div class="v3-feature-card"><h3>AI Content</h3><ul><li>Content Facebook</li><li>Content TikTok</li><li>Caption</li></ul><button onclick="openModule('ai_studio')">Mở AI Content</button></div>
     <div class="v3-feature-card"><h3>Viral Content Lab</h3><ul><li>Content Viral</li><li>Storytelling</li><li>Seeding</li></ul><form method="post" action="/v3_ai_tool"><input type="hidden" name="tool" value="prompt_premium"><textarea name="topic" rows="3" placeholder="Ví dụ: nội dung viral cho dịch vụ proxy"></textarea><button>Tạo ý tưởng viral</button></form></div>
     <div class="v3-feature-card"><h3>Facebook Ads AI</h3><ul><li>Chấm điểm quảng cáo</li><li>Viết quảng cáo</li><li>Target khách hàng</li></ul><form method="post" action="/v3_ai_tool"><input type="hidden" name="tool" value="facebook_ads_ai"><textarea name="topic" rows="3" placeholder="Nhập sản phẩm/dịch vụ cần chạy ads"></textarea><button>Tạo Facebook Ads AI</button></form></div>
     <div class="v3-feature-card"><span class="v3-premium-badge">VIP</span><h3>AI Marketing Director</h3><p>Khách nhập: Tôi bán Proxy. AI trả: 30 Content, 10 Quảng cáo, 10 Caption, 5 Kịch bản chốt sale, 30 ngày Marketing, tệp khách hàng và ngân sách đề xuất.</p><form method="post" action="/v3_ai_tool"><input type="hidden" name="tool" value="marketing_director"><textarea name="topic" rows="3" placeholder="Tôi bán Proxy / mỹ phẩm / dịch vụ quảng cáo..."></textarea><button>Tạo kế hoạch tổng</button></form></div>
@@ -4643,14 +4688,23 @@ Thời gian tạo: {{ h[9] }}
 </main>
 
 <aside class="rightbar">
-  <h2>Thống kê nhanh</h2>
-  <p>Tổng bài: <b>{{ s.total }}</b></p>
-  <p>Đã đăng: <b>{{ s.posted }}</b></p>
-  <p>Chờ đăng: <b>{{ s.scheduled }}</b></p>
-  <p>Lỗi: <b>{{ s.error }}</b></p>
-  <p>Chiến dịch: <b>{{ s.campaigns }}</b></p>
-  <p>CRM: <b>{{ s.crm }}</b></p>
-  
+  <h2>🔥 Hoạt động hôm nay</h2>
+  <div class="activity-card">
+    <span>📌 Tổng bài</span><b>{{ s.total }}</b>
+  </div>
+  <div class="activity-card">
+    <span>✅ Đã đăng</span><b>{{ s.posted }}</b>
+  </div>
+  <div class="activity-card">
+    <span>⏰ Chờ đăng</span><b>{{ s.scheduled }}</b>
+  </div>
+  <div class="activity-card">
+    <span>👥 Lead CRM</span><b>{{ s.crm }}</b>
+  </div>
+  <div class="activity-card">
+    <span>📊 Chiến dịch</span><b>{{ s.campaigns }}</b>
+  </div>
+
   <div class="{{ 'free-status-card free-expired' if free_status.is_expired else 'free-status-card' }}">
     <b>Gói hiện tại:</b> {{ 'Gói miễn phí' if free_status.package_name == 'free' else free_status.package_name }}<br>
     {% if free_status.is_expired %}
@@ -4666,11 +4720,13 @@ Thời gian tạo: {{ h[9] }}
   </div>
 
   <hr>
-  <h2>Cảnh báo</h2>
+  <h2>⚡ Trạng thái hệ thống</h2>
   <p>{{ token_warning }}</p>
-  <hr>
-  <h2>V3 Enterprise Modules</h2>
-  <p>Token Center Pro, Content Factory, Lịch đăng nâng cao, Page Cluster, Analytics Pro, Premium Center.</p>
+
+  <div class="v5-focus-box">
+    <b>V5 Seller AI Suite</b><br>
+    Fanpage • Group • AI Comment • AI Messenger • CRM Kanban • Marketing Director
+  </div>
 </aside>
 </div>
 
