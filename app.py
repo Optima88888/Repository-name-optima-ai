@@ -7219,6 +7219,440 @@ ADMIN_HTML = """
 })();
 </script>
 
+
+<style id="mkt-final-real-fix-72">
+/* ===== FIX THẬT APP72: menu PRO + chat hoạt động + không tràn khung ===== */
+.v2-nav-ico,.v2-nav-tag{display:none!important}
+.v2-nav-link{
+  position:relative!important;
+  display:flex!important;
+  align-items:center!important;
+  min-height:64px!important;
+  padding:15px 92px 15px 18px!important;
+  cursor:pointer!important;
+  pointer-events:auto!important;
+  user-select:none!important;
+}
+.v2-nav-link .v2-nav-text{line-height:1.18!important}
+.v2-nav-link.mkt-core-pro::after{
+  content:"PRO";
+  position:absolute!important;
+  right:14px!important;
+  top:14px!important;
+  transform:none!important;
+  font-size:12px!important;
+  font-weight:1000!important;
+  letter-spacing:.8px!important;
+  color:#ECFDF5!important;
+  padding:6px 12px!important;
+  border-radius:999px!important;
+  background:linear-gradient(135deg,#15803D,#22C55E,#86EFAC)!important;
+  box-shadow:inset 0 0 10px rgba(255,255,255,.45),0 0 13px rgba(34,197,94,.95),0 0 26px rgba(34,197,94,.55)!important;
+  animation:mktProLight72 1s infinite alternate!important;
+}
+.v2-nav-link.mkt-locked{
+  opacity:.82!important;
+  border-color:rgba(34,197,94,.75)!important;
+  background:linear-gradient(135deg,rgba(20,83,45,.24),rgba(37,99,235,.12))!important;
+}
+.v2-nav-link.mkt-locked::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  border-radius:inherit;
+  box-shadow:inset 0 0 0 1px rgba(34,197,94,.24);
+  pointer-events:none;
+}
+@keyframes mktProLight72{from{filter:brightness(1)}to{filter:brightness(1.45)}}
+
+/* Chat nằm gọn trong panel */
+.floating-bot{
+  position:fixed!important;
+  right:22px!important;
+  bottom:22px!important;
+  z-index:2147483600!important;
+  pointer-events:none!important;
+}
+.bot-bubble{
+  pointer-events:auto!important;
+  cursor:pointer!important;
+  position:relative!important;
+  z-index:2147483602!important;
+}
+.bot-panel{
+  display:none!important;
+  position:absolute!important;
+  right:0!important;
+  bottom:88px!important;
+  width:min(430px,calc(100vw - 32px))!important;
+  height:min(650px,calc(100vh - 118px))!important;
+  max-height:calc(100vh - 118px)!important;
+  overflow:hidden!important;
+  flex-direction:column!important;
+  border-radius:24px!important;
+  background:#fff!important;
+  pointer-events:auto!important;
+  z-index:2147483601!important;
+  box-shadow:0 25px 80px rgba(15,23,42,.40)!important;
+}
+.bot-panel.bot-open{display:flex!important}
+.bot-head{flex:0 0 auto!important}
+.bot-body{
+  flex:1 1 auto!important;
+  min-height:0!important;
+  max-height:none!important;
+  overflow-y:auto!important;
+  padding:18px!important;
+  background:#F8FAFC!important;
+  box-sizing:border-box!important;
+}
+.bot-msg{
+  box-sizing:border-box!important;
+  max-width:100%!important;
+  word-break:break-word!important;
+  overflow-wrap:anywhere!important;
+  margin:0 0 10px!important;
+}
+.bot-msg.user{
+  margin-left:auto!important;
+  background:#EEF2FF!important;
+  border:1px solid #DDD6FE!important;
+  border-radius:16px!important;
+  padding:12px!important;
+}
+.bot-actions{
+  flex:0 0 auto!important;
+  display:grid!important;
+  grid-template-columns:1fr 1fr!important;
+  gap:10px!important;
+  padding:12px 18px!important;
+  background:#fff!important;
+  border-top:1px solid #EEF2FF!important;
+  box-sizing:border-box!important;
+}
+.bot-actions button{
+  pointer-events:auto!important;
+  min-height:56px!important;
+  margin:0!important;
+  white-space:normal!important;
+  line-height:1.18!important;
+  font-size:13px!important;
+  cursor:pointer!important;
+}
+.bot-input{
+  flex:0 0 auto!important;
+  padding:12px 18px 18px!important;
+  display:flex!important;
+  gap:10px!important;
+  background:#fff!important;
+  box-sizing:border-box!important;
+}
+.bot-input input{min-width:0!important;flex:1!important}
+.bot-input button{flex:0 0 62px!important;pointer-events:auto!important;cursor:pointer!important}
+@media(max-width:520px){
+  .floating-bot{right:10px!important;bottom:10px!important}
+  .bot-panel{right:0!important;width:calc(100vw - 20px)!important;height:calc(100vh - 105px)!important}
+}
+</style>
+
+<script id="mkt-final-real-fix-72-js">
+(function(){
+  "use strict";
+
+  var IS_PREMIUM = {{ 'true' if is_device_premium else 'false' }};
+  var TRIAL_EXPIRED = {{ 'true' if free_status.is_expired else 'false' }};
+
+  /* 4 chức năng đầu tiên trong khung Facebook Center */
+  var CORE_PRO = {
+    facebook_center:1,
+    page_center_total:1,
+    post:1,
+    fanpage_manager:1
+  };
+
+  var ALIAS = {
+    page_center:"page_center_total",
+    page_comment_pro:"page_center_total",
+    page_comment_queue:"page_center_total"
+  };
+
+  var NAME = {
+    dashboard:"Dashboard CEO",
+    facebook_center:"Facebook Center",
+    page_center_total:"Page Center Tổng",
+    post:"Đăng bài Facebook",
+    fanpage_manager:"Quản lý Fanpage",
+    group_suite:"Group Center Tổng",
+    comment_manager:"AI Comment",
+    messenger_ai:"AI Messenger",
+    crm_sales:"CRM Kanban",
+    marketing_director:"AI Marketing Director",
+    premium:"Premium",
+    analytics:"Analytics Center",
+    automation_center:"Cài đặt Automation",
+    ai_studio:"AI Studio",
+    creative_center:"Image / Video / Voice"
+  };
+
+  function norm(id){ return ALIAS[id] || id; }
+  function isCorePro(id){ return !!CORE_PRO[norm(id)]; }
+  function isLocked(id){ return !IS_PREMIUM && TRIAL_EXPIRED && isCorePro(id); }
+
+  function getOrMakeDevice(){
+    var id = localStorage.getItem("mkt_device_id");
+    if(!id || id === "Đang tạo..." || id.length < 6){
+      id = "MKT-" + Math.random().toString(36).slice(2,8).toUpperCase() + Date.now().toString().slice(-4);
+      localStorage.setItem("mkt_device_id", id);
+    }
+    document.cookie = "mkt_device_id=" + encodeURIComponent(id) + "; path=/; max-age=" + (60*60*24*365*5);
+    var s = document.getElementById("sidebarDeviceId"); if(s) s.textContent = id;
+    var p = document.getElementById("payDeviceId"); if(p) p.value = id;
+    return id;
+  }
+  window.getOrCreateDeviceId = getOrMakeDevice;
+  window.ensureDeviceId = getOrMakeDevice;
+
+  function escapeHtml(v){
+    return String(v || "").replace(/[&<>"]/g,function(c){
+      return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];
+    }).replace(/\n/g,"<br>");
+  }
+
+  function botBody(){
+    return document.getElementById("floatingBotBody");
+  }
+
+  function addBotMessage(sender, msg){
+    var body = botBody();
+    if(!body || !msg) return;
+    var div = document.createElement("div");
+    if(sender === "user"){
+      div.className = "bot-msg user";
+      div.innerHTML = "<b>Bạn:</b><br>" + escapeHtml(msg);
+    }else{
+      div.className = "bot-msg ai";
+      div.innerHTML = "<b>Bot hỗ trợ:</b><br><br>" + escapeHtml(msg);
+    }
+    body.appendChild(div);
+    body.scrollTop = body.scrollHeight;
+  }
+
+  function supportReply(text){
+    var t = String(text || "").toLowerCase();
+    if(t.indexOf("nâng cấp") >= 0 || t.indexOf("premium") >= 0 || t.indexOf("giá") >= 0){
+      return "Dạ hiện hệ thống có các gói:\n\n• 1 tháng: 159K\n• 3 tháng: 359K\n• 6 tháng: 559K\n• 1 năm: 859K\n• Nhà bán hàng chuyên nghiệp: 1.959K\n\nSau khi thanh toán, anh/chị gửi ID thiết bị để admin duyệt kích hoạt ạ.";
+    }
+    if(t.indexOf("thanh toán") >= 0 || t.indexOf("chuyển khoản") >= 0){
+      return "Dạ sau khi chuyển khoản, anh/chị vui lòng gửi:\n\n• ID thiết bị\n• Ảnh thanh toán\n• Gói đã đăng ký\n\nNếu sau 5 phút chưa kích hoạt, vui lòng liên hệ Zalo 036 338 2629 ạ.";
+    }
+    if(t.indexOf("kích hoạt") >= 0 || t.indexOf("id") >= 0){
+      return "Dạ để kích hoạt tài khoản, anh/chị gửi giúp em ID thiết bị, số điện thoại, Gmail và gói đã thanh toán. Admin duyệt xong đúng ID thiết bị thì tính năng sẽ tự mở ạ.";
+    }
+    if(t.indexOf("zalo") >= 0 || t.indexOf("liên hệ") >= 0 || t.indexOf("hỗ trợ") >= 0){
+      return "Dạ anh/chị liên hệ Zalo hỗ trợ: 036 338 2629\nGmail hỗ trợ: support@gptmini.pro ạ.";
+    }
+    if(t.indexOf("lỗi") >= 0){
+      return "Dạ anh/chị gửi giúp em ảnh màn hình lỗi và mô tả thao tác đang làm. Em sẽ chuyển thông tin cho admin kiểm tra ngay ạ.";
+    }
+    return "Dạ em đã nhận tin nhắn của anh/chị. Anh/chị cần hỗ trợ nâng cấp Premium, thanh toán, kích hoạt tài khoản hay báo lỗi hệ thống ạ?";
+  }
+
+  function sendSupportToAdmin(msg){
+    var device = getOrMakeDevice();
+    try{
+      fetch("/support_send", {
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({device_id:device, sender:"user", message:msg})
+      }).catch(function(){});
+    }catch(e){}
+  }
+
+  var lastSupportId = Number(localStorage.getItem("mkt_support_last_id") || 0);
+  function pollAdmin(){
+    var device = getOrMakeDevice();
+    try{
+      fetch("/support_poll?device_id="+encodeURIComponent(device)+"&after_id="+encodeURIComponent(lastSupportId))
+        .then(function(r){return r.json();})
+        .then(function(data){
+          if(!data || !data.messages) return;
+          data.messages.forEach(function(m){
+            lastSupportId = Math.max(lastSupportId, Number(m.id) || 0);
+            if(m.sender === "admin") addBotMessage("bot", "Admin hỗ trợ:\n" + m.message);
+          });
+          localStorage.setItem("mkt_support_last_id", String(lastSupportId));
+        }).catch(function(){});
+    }catch(e){}
+  }
+
+  function setChatOpen(open){
+    var panel = document.getElementById("floatingBotPanel");
+    if(!panel) return false;
+    panel.classList.toggle("bot-open", !!open);
+    panel.style.display = open ? "flex" : "none";
+    if(open){
+      getOrMakeDevice();
+      setTimeout(function(){ var b=botBody(); if(b) b.scrollTop=b.scrollHeight; }, 50);
+      pollAdmin();
+    }
+    return false;
+  }
+
+  window.toggleFloatingBot = function(){
+    var p = document.getElementById("floatingBotPanel");
+    return setChatOpen(!(p && p.classList.contains("bot-open")));
+  };
+  window.closeFloatingBot = function(){ return setChatOpen(false); };
+
+  window.botQuick = function(text){
+    text = String(text || "").trim();
+    if(!text) return false;
+    addBotMessage("user", text);
+    sendSupportToAdmin(text);
+    setTimeout(function(){ addBotMessage("bot", supportReply(text)); }, 450);
+    if(text.toLowerCase().indexOf("nâng cấp") >= 0 || text.toLowerCase().indexOf("premium") >= 0){
+      var pr = document.getElementById("premium");
+      if(pr) setTimeout(function(){ pr.scrollIntoView({behavior:"smooth", block:"start"}); }, 700);
+    }
+    return false;
+  };
+
+  window.sendBotInput = function(){
+    var input = document.getElementById("botInputText");
+    if(!input) return false;
+    var msg = input.value.trim();
+    if(!msg) return false;
+    input.value = "";
+    return window.botQuick(msg);
+  };
+
+  function openPremiumForLocked(id){
+    var feature = NAME[norm(id)] || "Tính năng PRO";
+    if(typeof window.openLockedFeature === "function"){
+      try{ window.openLockedFeature(feature); }catch(e){}
+    }
+    addBotMessage("bot", "Tính năng " + feature + " thuộc gói PRO. Sau 3 ngày dùng thử, anh/chị cần nâng cấp Premium và chờ admin duyệt theo ID thiết bị để mở lại tính năng.");
+    setChatOpen(true);
+    var pr = document.getElementById("premium");
+    if(pr) setTimeout(function(){ pr.scrollIntoView({behavior:"smooth", block:"start"}); }, 200);
+    return false;
+  }
+
+  window.openModule = function(id){
+    id = norm(id || "dashboard");
+    if(isLocked(id)) return openPremiumForLocked(id);
+
+    document.querySelectorAll(".module-section").forEach(function(el){
+      el.classList.remove("active-module");
+      el.style.display = "none";
+    });
+
+    var target = document.getElementById(id);
+    if(!target && id === "post") target = document.getElementById("page_center_total");
+    if(!target) target = document.getElementById("dashboard");
+
+    if(target){
+      target.classList.add("active-module");
+      target.style.display = "";
+      setTimeout(function(){ target.scrollIntoView({behavior:"smooth", block:"start"}); }, 20);
+    }
+
+    document.querySelectorAll(".v2-nav-link").forEach(function(a){ a.classList.remove("active"); });
+    var active = document.querySelector('.v2-nav-link[href="#'+id+'"]');
+    if(active) active.classList.add("active");
+    return false;
+  };
+
+  function markMenu(){
+    document.querySelectorAll(".v2-nav-link").forEach(function(a){
+      a.querySelectorAll(".v2-nav-ico,.v2-nav-tag").forEach(function(x){ x.remove(); });
+      var href = a.getAttribute("href") || "";
+      var id = href.replace("#","");
+      a.classList.remove("mkt-core-pro","mkt-locked","premium-locked","pro-feature");
+      if(isCorePro(id)) a.classList.add("mkt-core-pro");
+      if(isLocked(id)) a.classList.add("mkt-locked");
+    });
+  }
+
+  /* Chặn lỗi onclick cũ bằng event delegation capture */
+  document.addEventListener("click", function(e){
+    var bubble = e.target.closest && e.target.closest(".bot-bubble");
+    if(bubble){
+      e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
+      window.toggleFloatingBot();
+      return false;
+    }
+
+    var close = e.target.closest && e.target.closest(".bot-close");
+    if(close){
+      e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
+      window.closeFloatingBot();
+      return false;
+    }
+
+    var quick = e.target.closest && e.target.closest(".bot-actions button");
+    if(quick){
+      e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
+      window.botQuick(quick.textContent || "");
+      return false;
+    }
+
+    var send = e.target.closest && e.target.closest(".bot-input button");
+    if(send){
+      e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
+      window.sendBotInput();
+      return false;
+    }
+
+    var nav = e.target.closest && e.target.closest(".v2-nav-link");
+    if(nav){
+      var href = nav.getAttribute("href") || "";
+      if(href.charAt(0) === "#"){
+        e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
+        window.openModule(href.slice(1));
+        return false;
+      }
+    }
+
+    var card = e.target.closest && e.target.closest(".app-quick-card");
+    if(card){
+      var title = (card.textContent || "").toLowerCase();
+      var id = "";
+      if(title.indexOf("đăng bài") >= 0) id = "post";
+      else if(title.indexOf("fanpage") >= 0) id = "fanpage_manager";
+      else if(title.indexOf("group") >= 0) id = "group_suite";
+      else if(title.indexOf("comment") >= 0) id = "comment_manager";
+      else if(title.indexOf("messenger") >= 0) id = "messenger_ai";
+      else if(title.indexOf("crm") >= 0) id = "crm_sales";
+      else if(title.indexOf("marketing director") >= 0) id = "marketing_director";
+      else if(title.indexOf("premium") >= 0) id = "premium";
+      else if(title.indexOf("content") >= 0) id = "ai_studio";
+      if(id){
+        e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
+        window.openModule(id);
+        return false;
+      }
+    }
+  }, true);
+
+  document.addEventListener("keydown", function(e){
+    if(e.key === "Enter" && e.target && e.target.id === "botInputText"){
+      e.preventDefault();
+      window.sendBotInput();
+    }
+  }, true);
+
+  document.addEventListener("DOMContentLoaded", function(){
+    getOrMakeDevice();
+    markMenu();
+    setChatOpen(false);
+    setInterval(pollAdmin, 3000);
+  });
+
+  setTimeout(function(){ getOrMakeDevice(); markMenu(); }, 200);
+  setTimeout(function(){ getOrMakeDevice(); markMenu(); }, 1200);
+})();
+</script>
 </body></html>
 """
 
