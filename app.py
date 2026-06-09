@@ -662,6 +662,16 @@ def init_db():
         updated_at TEXT
     )
     """)
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS support_messages (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        device_id TEXT,
+        sender TEXT,
+        message TEXT,
+        status TEXT DEFAULT 'new',
+        created_at TEXT
+    )
+    """)
     conn.commit()
     conn.close()
 
@@ -6386,6 +6396,92 @@ function dropKanban(ev){ ev.preventDefault(); const col=ev.currentTarget; if(dra
 })();
 </script>
 
+<style id="pro-green-admin-chat-final">
+.v2-nav-ico{display:none!important}.v2-nav-link .v2-nav-tag{display:none!important}
+.v2-nav-link{position:relative!important;padding-right:112px!important;cursor:pointer!important;pointer-events:auto!important}
+.v2-nav-link.pro-feature::after{
+  content:"PRO";position:absolute;right:16px;top:12px;transform:none;
+  font-size:12px;font-weight:1000;letter-spacing:.8px;color:#ECFDF5;padding:6px 12px;border-radius:999px;
+  background:linear-gradient(135deg,#16A34A,#22C55E,#86EFAC);box-shadow:inset 0 0 10px rgba(255,255,255,.45),0 0 12px rgba(34,197,94,.95),0 0 26px rgba(34,197,94,.45);
+  animation:proPulse 1.25s infinite alternate;
+}
+.v2-nav-link.premium-locked::after{
+  content:"PREMIUM"!important;position:absolute;right:12px;top:12px;transform:none;
+  font-size:11px;font-weight:1000;letter-spacing:.6px;color:#fff;padding:6px 10px;border-radius:999px;
+  background:linear-gradient(135deg,#F59E0B,#FB923C,#EF4444);box-shadow:0 0 14px rgba(245,158,11,.95),0 0 24px rgba(239,68,68,.45);
+}
+@keyframes proPulse{from{filter:brightness(1)}to{filter:brightness(1.35)}}
+.bot-panel{display:none;position:absolute!important;right:0!important;bottom:92px!important;width:min(430px,calc(100vw - 30px))!important;height:min(650px,calc(100vh - 130px))!important;overflow:hidden!important;flex-direction:column!important}
+.bot-panel.bot-open{display:flex!important}.bot-body{flex:1 1 auto!important;min-height:0!important;overflow-y:auto!important}.bot-actions,.bot-input{flex:0 0 auto!important}.bot-msg{word-break:break-word!important;overflow-wrap:anywhere!important}
+</style>
+<script id="pro-green-admin-chat-final-js">
+(function(){
+  var IS_PREMIUM = {{ 'true' if is_device_premium else 'false' }};
+  var TRIAL_EXPIRED = {{ 'true' if free_status.is_expired else 'false' }};
+  var CORE_PRO = {facebook_center:1,page_center_total:1,post:1,fanpage_manager:1,group_suite:1,comment_manager:1};
+  var PREMIUM_ONLY = {messenger_ai:1,crm_sales:1,marketing_director:1,ai_studio:1,creative_center:1,analytics:1,analytics_center:1,automation_center:1};
+  var ALIAS = {post:'page_center_total',page_center:'page_center_total',page_comment_pro:'page_center_total',page_comment_queue:'page_center_total'};
+  function norm(id){return ALIAS[id]||id;}
+  function featureName(id){var map={facebook_center:'Facebook Center',page_center_total:'Page Center Tổng',fanpage_manager:'Quản lý Fanpage',group_suite:'Group Center Tổng',comment_manager:'AI Comment',messenger_ai:'AI Messenger',crm_sales:'CRM Kanban',marketing_director:'AI Marketing Director',ai_studio:'AI Studio'};return map[norm(id)]||'Tính năng Premium';}
+  function locked(id){id=norm(id); if(IS_PREMIUM) return false; if(PREMIUM_ONLY[id]) return true; if(TRIAL_EXPIRED && CORE_PRO[id]) return true; return false;}
+  window.openModule=function(id){
+    id=norm(id);
+    if(locked(id)){
+      if(typeof openLockedFeature==='function') openLockedFeature(featureName(id));
+      var pr=document.getElementById('premium'); if(pr) setTimeout(function(){pr.scrollIntoView({behavior:'smooth',block:'start'});},120);
+      return false;
+    }
+    document.querySelectorAll('.module-section').forEach(function(el){el.classList.remove('active-module');});
+    var target=document.getElementById(id)||document.getElementById('dashboard');
+    if(target){target.classList.add('active-module'); setTimeout(function(){target.scrollIntoView({behavior:'smooth',block:'start'});},30);}
+    return false;
+  };
+  function markMenu(){
+    document.querySelectorAll('.v2-nav-link').forEach(function(a){
+      var id=(a.getAttribute('href')||'').replace('#',''); var nid=norm(id);
+      a.querySelectorAll('.v2-nav-ico,.v2-nav-tag').forEach(function(x){x.remove();});
+      a.classList.remove('pro-feature','premium-locked');
+      if(CORE_PRO[nid] && !locked(id)) a.classList.add('pro-feature');
+      if(locked(id)) a.classList.add('premium-locked');
+      a.onclick=function(e){e.preventDefault();e.stopPropagation();return window.openModule(id);};
+    });
+  }
+  function addMsg(sender,msg){
+    var body=document.getElementById('floatingBotBody'); if(!body||!msg) return;
+    var cls = sender==='admin' ? 'bot-msg ai' : 'bot-msg';
+    var label = sender==='admin' ? 'Admin hỗ trợ' : 'Bạn';
+    var div=document.createElement('div'); div.className=cls; div.innerHTML='<b>'+label+':</b><br>'+String(msg).replace(/[&<>]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c];}).replace(/\n/g,'<br>');
+    body.appendChild(div); body.scrollTop=body.scrollHeight;
+  }
+  var lastSupportId=Number(localStorage.getItem('mkt_support_last_id')||0);
+  function sendToAdmin(text){
+    var device=(typeof getOrCreateDeviceId==='function'?getOrCreateDeviceId():(localStorage.getItem('mkt_device_id')||''));
+    fetch('/support_send',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({device_id:device,sender:'user',message:text})}).catch(function(){});
+  }
+  function pollAdmin(){
+    var device=(typeof getOrCreateDeviceId==='function'?getOrCreateDeviceId():(localStorage.getItem('mkt_device_id')||''));
+    if(!device) return;
+    fetch('/support_poll?device_id='+encodeURIComponent(device)+'&after_id='+encodeURIComponent(lastSupportId)).then(function(r){return r.json();}).then(function(data){
+      if(!data||!data.messages) return;
+      data.messages.forEach(function(m){ lastSupportId=Math.max(lastSupportId,Number(m.id)||0); if(m.sender==='admin') addMsg('admin',m.message); });
+      localStorage.setItem('mkt_support_last_id',String(lastSupportId));
+    }).catch(function(){});
+  }
+  var oldBotQuick=window.botQuick;
+  window.botQuick=function(text){ if(oldBotQuick) oldBotQuick(text); sendToAdmin(text); return false; };
+  var oldSend=window.sendBotInput;
+  window.sendBotInput=function(){
+    var input=document.getElementById('botInputText'); if(!input||!input.value.trim()) return false;
+    var text=input.value.trim();
+    if(oldBotQuick) oldBotQuick(text); else addMsg('user',text);
+    sendToAdmin(text); input.value=''; return false;
+  };
+  window.toggleFloatingBot=function(){var p=document.getElementById('floatingBotPanel'); if(!p) return false; var open=!p.classList.contains('bot-open'); p.classList.toggle('bot-open',open); p.style.display=open?'flex':'none'; if(open){if(typeof appendBotGreeting==='function') appendBotGreeting(); pollAdmin();} return false;};
+  window.closeFloatingBot=function(){var p=document.getElementById('floatingBotPanel'); if(p){p.classList.remove('bot-open');p.style.display='none';} return false;};
+  document.addEventListener('DOMContentLoaded',function(){markMenu();setInterval(pollAdmin,3000);setTimeout(pollAdmin,800);});
+})();
+</script>
+
 </body>
 </html>
 """
@@ -6892,6 +6988,56 @@ def premium_request():
     return jsonify({"ok": True, **item})
 
 
+
+
+def ensure_support_table():
+    conn = db(); c = conn.cursor()
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS support_messages (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            device_id TEXT,
+            sender TEXT,
+            message TEXT,
+            status TEXT DEFAULT 'new',
+            created_at TEXT
+        )
+    """)
+    conn.commit(); conn.close()
+
+def save_support_message(device_id, sender, message):
+    ensure_support_table()
+    device_id = (device_id or get_device_id()).strip().upper()
+    message = (message or '').strip()
+    sender = (sender or 'user').strip().lower()
+    if not message:
+        return None
+    now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    conn = db(); c = conn.cursor()
+    c.execute("INSERT INTO support_messages(device_id,sender,message,status,created_at) VALUES(?,?,?,?,?)",
+              (device_id, sender, message, 'new', now))
+    msg_id = c.lastrowid
+    if sender == 'user':
+        try:
+            c.execute("""INSERT INTO notifications(title,detail,level,status,created_at) VALUES(?,?,?,?,?)""",
+                      ("Tin nhắn hỗ trợ mới", f"{device_id}: {message[:120]}", "info", "new", now))
+        except Exception:
+            pass
+    conn.commit(); conn.close()
+    return msg_id
+
+def get_support_messages(device_id=None, after_id=0, limit=100):
+    ensure_support_table()
+    conn = db(); c = conn.cursor()
+    after_id = int(after_id or 0)
+    if device_id:
+        c.execute("SELECT id,device_id,sender,message,created_at FROM support_messages WHERE device_id=? AND id>? ORDER BY id ASC LIMIT ?",
+                  ((device_id or '').strip().upper(), after_id, limit))
+    else:
+        c.execute("SELECT id,device_id,sender,message,created_at FROM support_messages WHERE id>? ORDER BY id DESC LIMIT ?",
+                  (after_id, limit))
+    rows = c.fetchall(); conn.close()
+    return rows
+
 ADMIN_HTML = """
 <!doctype html><html lang="vi"><head><meta charset="utf-8"><title>Web Admin Premium</title>
 <style>body{font-family:system-ui;background:#f8fafc;margin:0;padding:24px;color:#111827}.wrap{max-width:1180px;margin:auto}h1{margin-top:0}.card{background:white;border:1px solid #e5e7eb;border-radius:18px;padding:18px;box-shadow:0 10px 30px rgba(15,23,42,.08)}table{width:100%;border-collapse:collapse}th,td{border-bottom:1px solid #e5e7eb;padding:10px;text-align:left;font-size:13px}th{background:#f1f5f9}.badge{display:inline-block;padding:4px 8px;border-radius:999px;background:#fef3c7;color:#92400e;font-weight:700}.ok{background:#dcfce7;color:#166534}.danger{background:#fee2e2;color:#991b1b}button{border:0;border-radius:10px;padding:9px 12px;font-weight:700;cursor:pointer}.approve{background:#16a34a;color:white}.reject{background:#ef4444;color:white}.top{display:flex;gap:12px;align-items:center;justify-content:space-between;margin-bottom:16px}a{color:#2563eb;text-decoration:none}</style>
@@ -6920,7 +7066,8 @@ ADMIN_HTML = """
 {% for r in rows %}
 <tr><td>{{r[0]}}</td><td><b>{{r[1]}}</b></td><td>{{r[2]}}</td><td>{{r[3]}}</td><td>{{r[5]}}</td><td>{{"{:,.0f}".format(r[6]).replace(",", ".")}}đ</td><td>{{r[7]}}</td><td><span class="badge {% if r[8]=='Đã duyệt' %}ok{% elif r[8]=='Từ chối' %}danger{% endif %}">{{r[8]}}</span></td><td>{{r[10]}}</td><td>{% if r[8]=='Chờ duyệt' %}<form method="post" action="/admin/premium_action" style="display:inline"><input type="hidden" name="request_id" value="{{r[0]}}"><input type="hidden" name="status" value="Đã duyệt"><button class="approve">Kích hoạt</button></form> <form method="post" action="/admin/premium_action" style="display:inline"><input type="hidden" name="request_id" value="{{r[0]}}"><input type="hidden" name="status" value="Từ chối"><button class="reject">Từ chối</button></form>{% else %}{{r[11] or ''}}{% endif %}</td></tr>
 {% endfor %}
-</tbody></table></div></div>
+</tbody></table></div>
+<div class="card" style="margin-top:18px"><h2>Tin nhắn hỗ trợ khách hàng</h2><p>Admin nhập phản hồi theo đúng ID thiết bị, khách sẽ nhận lại trong khung chat.</p><table><thead><tr><th>ID</th><th>ID thiết bị</th><th>Người gửi</th><th>Tin nhắn</th><th>Thời gian</th><th>Phản hồi</th></tr></thead><tbody>{% for m in support_rows %}<tr><td>{{m[0]}}</td><td><b>{{m[1]}}</b></td><td>{{m[2]}}</td><td>{{m[3]}}</td><td>{{m[4]}}</td><td><form method="post" action="/admin/support_reply" style="display:flex;gap:8px"><input type="hidden" name="device_id" value="{{m[1]}}"><input name="message" placeholder="Nhập phản hồi..." style="flex:1;padding:9px;border:1px solid #ddd;border-radius:10px"><button class="approve">Gửi</button></form></td></tr>{% endfor %}</tbody></table></div></div>
 <script id="chat-device-menu-fix-js">
 (function(){
   function ensureDeviceId(){
@@ -7077,7 +7224,7 @@ ADMIN_HTML = """
 
 @app.route("/admin")
 def admin_home():
-    return render_template_string(ADMIN_HTML, rows=get_premium_requests())
+    return render_template_string(ADMIN_HTML, rows=get_premium_requests(), support_rows=get_support_messages(limit=200))
 
 @app.route("/admin/premium_action", methods=["POST"])
 def admin_premium_action():
@@ -7101,11 +7248,31 @@ def healthz_route():
 
 @app.route("/support_poll")
 def support_poll_route():
-    return jsonify({"success": True, "messages": [], "last_id": request.args.get("after_id", 0)})
+    device_id = (request.args.get("device_id") or get_device_id()).strip().upper()
+    after_id = request.args.get("after_id", 0)
+    rows = get_support_messages(device_id=device_id, after_id=after_id, limit=100)
+    messages = [{"id": r[0], "device_id": r[1], "sender": r[2], "message": r[3], "created_at": r[4]} for r in rows]
+    last_id = messages[-1]["id"] if messages else int(after_id or 0)
+    return jsonify({"success": True, "messages": messages, "last_id": last_id})
 
 @app.route("/support_send", methods=["POST"])
 def support_send_route():
-    return jsonify({"success": True, "message": "Đã nhận nội dung hỗ trợ."})
+    data = request.get_json(silent=True) or request.form
+    device_id = (data.get("device_id") or get_device_id()).strip().upper()
+    message = (data.get("message") or "").strip()
+    sender = (data.get("sender") or "user").strip().lower()
+    msg_id = save_support_message(device_id, sender, message)
+    if not msg_id:
+        return jsonify({"success": False, "message": "Tin nhắn trống."}), 400
+    return jsonify({"success": True, "id": msg_id, "message": "Đã gửi tin nhắn hỗ trợ."})
+
+@app.route("/admin/support_reply", methods=["POST"])
+def admin_support_reply_route():
+    device_id = (request.form.get("device_id") or "").strip().upper()
+    message = (request.form.get("message") or "").strip()
+    if device_id and message:
+        save_support_message(device_id, "admin", message)
+    return admin_home()
 
 @app.route("/page_comment_queue_add", methods=["POST"])
 def page_comment_queue_add_route():
