@@ -22,7 +22,7 @@ except Exception:
 
 load_dotenv()
 
-APP_TITLE = "Mkt Automation Pro V6 Group Finder & UID Splitter"
+APP_TITLE = "Mkt Automation Pro V7 Comment Manager Pro"
 DB = "marketing_automation_pro_v11.db"
 UPLOAD_DIR = "uploads"
 REPORT_DIR = "reports"
@@ -563,6 +563,40 @@ def init_db():
         content TEXT,
         status TEXT DEFAULT 'Chờ duyệt',
         note TEXT,
+        created_at TEXT
+    )
+    """)
+
+    # V7 Comment Manager Pro - lưu hàng chờ bình luận hợp lệ, có giãn cách và duyệt trước
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS page_comment_queue (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        page_id TEXT,
+        page_name TEXT,
+        target_type TEXT DEFAULT 'post',
+        user_uid TEXT,
+        post_uid TEXT,
+        group_uid TEXT,
+        comment_text TEXT,
+        min_delay_seconds INTEGER DEFAULT 60,
+        max_delay_seconds INTEGER DEFAULT 120,
+        scheduled_at TEXT,
+        status TEXT DEFAULT 'Chờ duyệt',
+        admin_status TEXT DEFAULT 'Chờ admin duyệt',
+        result_message TEXT,
+        created_at TEXT,
+        processed_at TEXT
+    )
+    """)
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS page_comment_logs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        queue_id INTEGER,
+        page_name TEXT,
+        target_uid TEXT,
+        action TEXT,
+        status TEXT,
+        detail TEXT,
         created_at TEXT
     )
     """)
@@ -1616,6 +1650,121 @@ def add_group_post_queue(page_index, group_ids, content):
 
 def get_group_post_queue(limit=100):
     conn=db(); c=conn.cursor(); c.execute("SELECT id,page_name,group_name,group_uid,content,status,note,created_at FROM group_post_queue ORDER BY id DESC LIMIT ?", (limit,)); rows=c.fetchall(); conn.close(); return rows
+
+def normalize_delay_seconds(value, default=60):
+    try:
+        v = int(value or default)
+    except Exception:
+        v = default
+    return max(60, min(v, 3600))
+
+def add_page_comment_queue(page_index, target_type, user_uid, post_uid, group_uid, comment_text, min_delay=60, max_delay=120, scheduled_at=''):
+    if not comment_text or (not post_uid and not group_uid and not user_uid):
+        return 0
+    selected_page = None
+    try:
+        i = int(page_index)
+        selected_page = PAGES[i] if 0 <= i < len(PAGES) else None
+    except Exception:
+        selected_page = None
+    page_id = str(selected_page.get('id','')) if selected_page else ''
+    page_name = selected_page.get('name','Chưa chọn Page') if selected_page else 'Chưa chọn Page'
+    target_type = target_type or 'post'
+    min_delay = normalize_delay_seconds(min_delay, 60)
+    max_delay = normalize_delay_seconds(max_delay, 120)
+    if max_delay < min_delay:
+        max_delay = min_delay
+    now = datetime.datetime.now()
+    if not scheduled_at:
+        scheduled_at = (now + datetime.timedelta(seconds=min_delay)).strftime('%Y-%m-%d %H:%M:%S')
+    conn = db(); c = conn.cursor()
+    c.execute("""
+    INSERT INTO page_comment_queue(page_id,page_name,target_type,user_uid,post_uid,group_uid,comment_text,min_delay_seconds,max_delay_seconds,scheduled_at,status,admin_status,result_message,created_at,processed_at)
+    VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+    """, (page_id, page_name, target_type, normalize_uid(user_uid), normalize_uid(post_uid), normalize_uid(group_uid), comment_text.strip(), min_delay, max_delay, scheduled_at, 'Chờ duyệt', 'Chờ admin duyệt', 'Chưa xử lý - cần admin duyệt trước khi bình luận.', now.strftime('%Y-%m-%d %H:%M:%S'), ''))
+    qid = c.lastrowid
+    c.execute("INSERT INTO page_comment_logs(queue_id,page_name,target_uid,action,status,detail,created_at) VALUES(?,?,?,?,?,?,?)", (qid, page_name, normalize_uid(post_uid) or normalize_uid(group_uid) or normalize_uid(user_uid), 'Tạo hàng chờ', 'Chờ duyệt', 'Đã tạo hàng chờ bình luận an toàn.', now.strftime('%Y-%m-%d %H:%M:%S')))
+    conn.commit(); conn.close(); return qid
+
+def bulk_import_page_comment_queue(page_index, raw_targets, comment_text, min_delay=60, max_delay=120, target_type='post'):
+    lines = [x.strip() for x in (raw_targets or '').splitlines() if x.strip()]
+    min_delay = normalize_delay_seconds(min_delay, 60)
+    max_delay = normalize_delay_seconds(max_delay, 120)
+    if max_delay < min_delay: max_delay = min_delay
+    added = skipped = 0
+    base = datetime.datetime.now() + datetime.timedelta(seconds=min_delay)
+    for idx, line in enumerate(lines):
+        parts = [x.strip() for x in line.replace('\t', ',').split(',')]
+        uid1 = normalize_uid(parts[0] if parts else '')
+        uid2 = normalize_uid(parts[1] if len(parts) > 1 else '')
+        uid3 = normalize_uid(parts[2] if len(parts) > 2 else '')
+        if not uid1:
+            skipped += 1; continue
+        user_uid = post_uid = group_uid = ''
+        if target_type == 'user': user_uid = uid1
+        elif target_type == 'group': group_uid = uid1
+        else:
+            post_uid = uid1
+            group_uid = uid2
+            user_uid = uid3
+        scheduled_at = (base + datetime.timedelta(seconds=idx * min_delay)).strftime('%Y-%m-%d %H:%M:%S')
+        if add_page_comment_queue(page_index, target_type, user_uid, post_uid, group_uid, comment_text, min_delay, max_delay, scheduled_at):
+            added += 1
+        else:
+            skipped += 1
+    return {'added': added, 'skipped': skipped, 'total': len(lines), 'min_delay': min_delay, 'max_delay': max_delay}
+
+def get_page_comment_queue(limit=200):
+    conn = db(); c = conn.cursor()
+    c.execute("""
+    SELECT id,page_name,target_type,user_uid,post_uid,group_uid,comment_text,min_delay_seconds,max_delay_seconds,scheduled_at,status,admin_status,result_message,created_at,processed_at
+    FROM page_comment_queue ORDER BY id DESC LIMIT ?
+    """, (limit,))
+    rows = c.fetchall(); conn.close(); return rows
+
+def get_page_comment_logs(limit=100):
+    conn = db(); c = conn.cursor()
+    c.execute("SELECT id,queue_id,page_name,target_uid,action,status,detail,created_at FROM page_comment_logs ORDER BY id DESC LIMIT ?", (limit,))
+    rows = c.fetchall(); conn.close(); return rows
+
+def get_page_comment_stats():
+    conn = db(); c = conn.cursor()
+    def one(q):
+        try:
+            c.execute(q); r=c.fetchone(); return r[0] if r else 0
+        except Exception:
+            return 0
+    data = {
+        'total': one('SELECT COUNT(*) FROM page_comment_queue'),
+        'pending': one("SELECT COUNT(*) FROM page_comment_queue WHERE status='Chờ duyệt'"),
+        'approved': one("SELECT COUNT(*) FROM page_comment_queue WHERE admin_status='Đã duyệt'"),
+        'done': one("SELECT COUNT(*) FROM page_comment_queue WHERE status='Hoàn thành'"),
+        'error': one("SELECT COUNT(*) FROM page_comment_queue WHERE status LIKE 'Lỗi%'")
+    }
+    conn.close(); return data
+
+def approve_page_comment_queue(queue_id):
+    now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    conn = db(); c = conn.cursor()
+    c.execute("UPDATE page_comment_queue SET admin_status='Đã duyệt', status='Đã duyệt', result_message='Đã duyệt. Sẵn sàng xử lý thủ công hoặc qua API hợp lệ.', processed_at=? WHERE id=?", (now, queue_id))
+    c.execute("INSERT INTO page_comment_logs(queue_id,page_name,target_uid,action,status,detail,created_at) SELECT id,page_name,COALESCE(NULLIF(post_uid,''),NULLIF(group_uid,''),user_uid),'Duyệt hàng chờ','Đã duyệt','Admin đã duyệt hàng chờ bình luận.',? FROM page_comment_queue WHERE id=?", (now, queue_id))
+    conn.commit(); conn.close()
+
+def mark_page_comment_done(queue_id, status='Hoàn thành', detail='Đã xử lý thủ công hoặc qua API hợp lệ.'):
+    now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    conn = db(); c = conn.cursor()
+    c.execute("UPDATE page_comment_queue SET status=?, result_message=?, processed_at=? WHERE id=?", (status, detail, now, queue_id))
+    c.execute("INSERT INTO page_comment_logs(queue_id,page_name,target_uid,action,status,detail,created_at) SELECT id,page_name,COALESCE(NULLIF(post_uid,''),NULLIF(group_uid,''),user_uid),'Cập nhật trạng thái',?, ?, ? FROM page_comment_queue WHERE id=?", (status, detail, now, queue_id))
+    conn.commit(); conn.close()
+
+def export_page_comment_queue_csv():
+    rows = get_page_comment_queue(10000)
+    path = os.path.join(REPORT_DIR, 'page_comment_queue.csv')
+    with open(path, 'w', newline='', encoding='utf-8-sig') as f:
+        w = csv.writer(f)
+        w.writerow(['id','page_name','target_type','user_uid','post_uid','group_uid','comment_text','min_delay_seconds','max_delay_seconds','scheduled_at','status','admin_status','result_message','created_at','processed_at'])
+        w.writerows(rows)
+    return path
 
 def v3_ceo_summary():
     s = get_stats()
@@ -4133,7 +4282,7 @@ function closeLockedFeature(){
 <div class="layout">
 <aside class="sidebar">
   <div class="logo">Marketing<br>Automation Pro</div>
-  <div class="subtitle">V5 Enterprise Seller AI Suite</div>
+  <div class="subtitle">V7 Group & Comment Manager Pro</div>
   
 
 
@@ -4150,6 +4299,8 @@ function closeLockedFeature(){
   <a class="v2-nav-link" href="#group_uid_splitter" onclick="openModule('group_uid_splitter')"><span class="v2-nav-ico"></span><span class="v2-nav-text">Chia UID Group</span></a>
   <a class="v2-nav-link" href="#group_join_queue" onclick="openModule('group_join_queue')"><span class="v2-nav-ico"></span><span class="v2-nav-text">Hàng chờ tham gia Group</span></a>
   <a class="v2-nav-link" href="#group_post_filter" onclick="openModule('group_post_filter')"><span class="v2-nav-ico"></span><span class="v2-nav-text">Lọc bài viết Group</span></a>
+  <a class="v2-nav-link" href="#page_comment_pro" onclick="openModule('page_comment_pro')"><span class="v2-nav-ico"></span><span class="v2-nav-text">Bình luận Page theo UID</span><span class="v2-nav-tag">V7</span></a>
+  <a class="v2-nav-link" href="#page_comment_queue" onclick="openModule('page_comment_queue')"><span class="v2-nav-ico"></span><span class="v2-nav-text">Hàng chờ bình luận</span></a>
 
   <div class="v2-nav-title">SELLER AI</div>
   <a class="v2-nav-link" href="#comment_manager" onclick="openModule('comment_manager')"><span class="v2-nav-ico">🤖</span><span class="v2-nav-text">AI Comment</span><span class="v2-nav-tag">AI</span></a>
@@ -4387,6 +4538,44 @@ function closeLockedFeature(){
     <button>Lọc và lưu UID bài viết</button>
   </form>
   <table class="gf-table"><tr><th>UID Group</th><th>UID bài viết</th><th>Link</th><th>Người đăng</th><th>Nội dung</th><th>Comment/Reaction</th><th>Trạng thái</th></tr>{% for p in group_post_results %}<tr><td>{{ p[1] }}</td><td>{{ p[2] }}</td><td>{{ p[3] }}</td><td>{{ p[4] }}<br>{{ p[5] }}</td><td>{{ p[6] }}</td><td>{{ p[7] }} / {{ p[8] }}</td><td>{{ p[9] }}</td></tr>{% endfor %}</table>
+</section>
+
+<section class="panel module-section" id="page_comment_pro">
+  <div class="section-open-note">Bạn đang mở: Comment Manager Pro V7.</div>
+  <h2>Comment Manager Pro - Bình luận Page theo UID</h2>
+  <p class="small">Tạo hàng chờ bình luận cho Page theo UID bài viết, UID Group hoặc UID người dùng đã tương tác. Mỗi bình luận có giãn cách tối thiểu 60 giây, cần admin duyệt trước khi xử lý.</p>
+  <div class="gf-warning">Chỉ dùng với bài viết/Group/Page mà Page có quyền truy cập hợp lệ. Không hỗ trợ spam tự động, không bình luận trái phép vào người dùng không tương tác.</div>
+  <div class="gf-grid-3">
+    <div class="stat"><b>{{ page_comment_stats.total }}</b><br>Tổng hàng chờ</div>
+    <div class="stat"><b>{{ page_comment_stats.pending }}</b><br>Chờ duyệt</div>
+    <div class="stat"><b>{{ page_comment_stats.done }}</b><br>Hoàn thành</div>
+  </div>
+  <form method="post" action="/page_comment_queue_add" class="gf-box">
+    <div class="gf-grid-3">
+      <select name="page_index">{% for p in pages %}<option value="{{ loop.index0 }}">{{ p.name }} - {{ p.id }}</option>{% endfor %}</select>
+      <select name="target_type"><option value="post">UID bài viết</option><option value="group">UID Group</option><option value="user">UID người dùng đã tương tác</option></select>
+      <input name="min_delay" type="number" min="60" value="60" placeholder="Giãn cách tối thiểu giây">
+    </div>
+    <div class="gf-grid-3">
+      <input name="max_delay" type="number" min="60" value="120" placeholder="Giãn cách tối đa giây">
+      <input name="single_post_uid" placeholder="UID bài viết nếu thêm 1 dòng">
+      <input name="single_group_uid" placeholder="UID Group nếu có">
+    </div>
+    <input name="single_user_uid" placeholder="UID người dùng đã tương tác nếu có">
+    <textarea name="comment_text" rows="4" placeholder="Nội dung bình luận. Nên viết tự nhiên, không lặp máy móc, không chứa cam kết quá đà."></textarea>
+    <textarea name="raw_targets" rows="6" placeholder="Dán nhiều UID, mỗi dòng một mục. Với UID bài viết: post_uid, group_uid, user_uid. Với UID Group/User: chỉ cần UID ở cột đầu."></textarea>
+    <button>Tạo hàng chờ bình luận</button>
+    <a class="btnlink" href="/export_page_comment_queue">Xuất CSV hàng chờ</a>
+  </form>
+</section>
+
+<section class="panel module-section" id="page_comment_queue">
+  <div class="section-open-note">Bạn đang mở: Hàng chờ bình luận.</div>
+  <h2>Hàng chờ bình luận</h2>
+  <p class="small">Admin duyệt từng dòng, sau đó đánh dấu hoàn thành/lỗi sau khi xử lý hợp lệ. Mỗi dòng có thời gian dự kiến và khoảng nghỉ.</p>
+  <table class="gf-table"><tr><th>ID</th><th>Page</th><th>Loại</th><th>UID đích</th><th>Nội dung</th><th>Giãn cách</th><th>Thời gian</th><th>Trạng thái</th><th>Thao tác</th></tr>{% for q in page_comment_queue %}<tr><td>{{ q[0] }}</td><td>{{ q[1] }}</td><td>{{ q[2] }}</td><td>USER: {{ q[3] }}<br>POST: {{ q[4] }}<br>GROUP: {{ q[5] }}</td><td>{{ q[6] }}</td><td>{{ q[7] }} - {{ q[8] }} giây</td><td>{{ q[9] }}<br>{{ q[13] }}</td><td>{{ q[10] }}<br>{{ q[11] }}<br><small>{{ q[12] }}</small></td><td><form method="post" action="/page_comment_queue_action"><input type="hidden" name="queue_id" value="{{ q[0] }}"><button name="action" value="approve">Duyệt</button><button name="action" value="done">Hoàn thành</button><button name="action" value="error">Báo lỗi</button></form></td></tr>{% endfor %}</table>
+  <h3>Lịch sử bình luận</h3>
+  {% for l in page_comment_logs %}<div class="history"><b>{{ l[5] }}</b> • {{ l[7] }}<br>Page: {{ l[2] }} • UID: {{ l[3] }}<br>{{ l[4] }} - {{ l[6] }}</div>{% endfor %}
 </section>
 
 <section class="panel module-section" id="comment_manager">
@@ -5432,7 +5621,7 @@ def render(content="", message="", ok=True, selected_industry="spa", analysis=""
         industry_labels=INDUSTRY_LABELS, selected_industry=selected_industry,
         library_items=current_library(selected_industry)[:10], locked_count=max(0, 500 - len(current_library(selected_industry)[:10])),
         score=score, warnings=warnings, token_warning=token_warning,
-        analysis=analysis, plan=plan, v3=v3_ceo_summary(), pipeline_rows=get_pipeline_leads(), customer_tasks=get_customer_tasks(), notifications=get_notifications(), fb_groups=get_fb_groups(), group_schedules=get_group_schedules(), comment_leads=get_comment_leads(), messenger_scripts=get_messenger_scripts(), success_assets=get_success_assets(), group_finder_results=get_group_finder_results(), group_finder_stats=get_group_finder_stats(), group_join_queue=get_group_join_queue(), group_uid_files=get_group_uid_files(), group_post_results=get_group_post_results(), group_post_queue=get_group_post_queue()
+        analysis=analysis, plan=plan, v3=v3_ceo_summary(), pipeline_rows=get_pipeline_leads(), customer_tasks=get_customer_tasks(), notifications=get_notifications(), fb_groups=get_fb_groups(), group_schedules=get_group_schedules(), comment_leads=get_comment_leads(), messenger_scripts=get_messenger_scripts(), success_assets=get_success_assets(), group_finder_results=get_group_finder_results(), group_finder_stats=get_group_finder_stats(), group_join_queue=get_group_join_queue(), group_uid_files=get_group_uid_files(), group_post_results=get_group_post_results(), group_post_queue=get_group_post_queue(), page_comment_queue=get_page_comment_queue(), page_comment_logs=get_page_comment_logs(), page_comment_stats=get_page_comment_stats()
     )
 
 @app.route("/")
@@ -5838,6 +6027,47 @@ def export_group_uids_route():
     if not paths:
         return render(message="Chưa có UID Group để xuất.", ok=False)
     return send_file(paths[0], as_attachment=True)
+
+@app.route("/page_comment_queue_add", methods=["POST"])
+def page_comment_queue_add_route():
+    comment_text = request.form.get("comment_text", "").strip()
+    raw_targets = request.form.get("raw_targets", "").strip()
+    target_type = request.form.get("target_type", "post")
+    page_index = request.form.get("page_index", "")
+    min_delay = request.form.get("min_delay", "60")
+    max_delay = request.form.get("max_delay", "120")
+    single_post_uid = request.form.get("single_post_uid", "").strip()
+    single_group_uid = request.form.get("single_group_uid", "").strip()
+    single_user_uid = request.form.get("single_user_uid", "").strip()
+    if not comment_text:
+        return render(message="Vui lòng nhập nội dung bình luận.", ok=False)
+    if raw_targets:
+        result = bulk_import_page_comment_queue(page_index, raw_targets, comment_text, min_delay, max_delay, target_type)
+        return render(message=f"Đã tạo {result['added']} hàng chờ bình luận. Bỏ qua {result['skipped']} dòng. Giãn cách {result['min_delay']}-{result['max_delay']} giây.", ok=True)
+    qid = add_page_comment_queue(page_index, target_type, single_user_uid, single_post_uid, single_group_uid, comment_text, min_delay, max_delay)
+    if not qid:
+        return render(message="Vui lòng nhập ít nhất một UID bài viết, UID Group hoặc UID người dùng hợp lệ.", ok=False)
+    return render(message=f"Đã tạo hàng chờ bình luận ID {qid}. Cần admin duyệt trước khi xử lý.", ok=True)
+
+@app.route("/page_comment_queue_action", methods=["POST"])
+def page_comment_queue_action_route():
+    queue_id = request.form.get("queue_id", "")
+    action = request.form.get("action", "")
+    if not queue_id:
+        return render(message="Thiếu ID hàng chờ.", ok=False)
+    if action == "approve":
+        approve_page_comment_queue(queue_id)
+        return render(message=f"Đã duyệt hàng chờ bình luận ID {queue_id}.", ok=True)
+    if action == "done":
+        mark_page_comment_done(queue_id, "Hoàn thành", "Đã xử lý hợp lệ và đã ghi log.")
+        return render(message=f"Đã đánh dấu hoàn thành ID {queue_id}.", ok=True)
+    mark_page_comment_done(queue_id, "Lỗi quyền", "Không xử lý vì thiếu quyền hoặc điều kiện truy cập không hợp lệ.")
+    return render(message=f"Đã đánh dấu lỗi quyền ID {queue_id}.", ok=True)
+
+@app.route("/export_page_comment_queue")
+def export_page_comment_queue_route():
+    path = export_page_comment_queue_csv()
+    return send_file(path, as_attachment=True)
 
 @app.route("/comment_ai", methods=["POST"])
 def comment_ai_route():
