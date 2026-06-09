@@ -2794,53 +2794,6 @@ button:hover{
   background:#22C55E;
   border:3px solid white;
 }
-.bot-bubble-label{
-  position:absolute;
-  right:76px;
-  bottom:12px;
-  min-width:126px;
-  background:white;
-  color:#1E1B4B;
-  border:1px solid #DDD6FE;
-  border-radius:999px;
-  padding:9px 12px;
-  font-size:13px;
-  font-weight:900;
-  box-shadow:0 12px 30px rgba(30,41,59,.16);
-  display:flex;
-  align-items:center;
-  gap:6px;
-}
-.bot-bubble-label:before{content:"";width:8px;height:8px;border-radius:50%;background:#22C55E;box-shadow:0 0 0 5px rgba(34,197,94,.12)}
-
-/* FIX V13: Bot ngoài màn hình chỉ là chấm xanh nhấp nháy; chữ chỉ hiện khi mở khung chat */
-.bot-bubble{
-  width:24px!important;
-  height:24px!important;
-  min-width:24px!important;
-  min-height:24px!important;
-  padding:0!important;
-  border:3px solid #fff!important;
-  background:#22C55E!important;
-  box-shadow:0 0 0 0 rgba(34,197,94,.45),0 12px 28px rgba(34,197,94,.32)!important;
-  font-size:0!important;
-  animation:botGreenPulse 1.25s infinite!important;
-}
-.bot-bubble-label{display:none!important}
-.bot-status{display:none!important}
-.bot-bubble.opened{
-  width:66px!important;
-  height:66px!important;
-  background:linear-gradient(135deg,#2563EB,#7C3AED)!important;
-  font-size:30px!important;
-  animation:botFloat 2.2s ease-in-out infinite!important;
-}
-@keyframes botGreenPulse{
-  0%{transform:scale(1);box-shadow:0 0 0 0 rgba(34,197,94,.45),0 12px 28px rgba(34,197,94,.32)}
-  70%{transform:scale(1.08);box-shadow:0 0 0 14px rgba(34,197,94,0),0 12px 28px rgba(34,197,94,.32)}
-  100%{transform:scale(1);box-shadow:0 0 0 0 rgba(34,197,94,0),0 12px 28px rgba(34,197,94,.32)}
-}
-
 .bot-panel{
   display:none;
   position:absolute;
@@ -2904,7 +2857,6 @@ button:hover{
 }
 .bot-body{
   padding:16px;
-  min-height:230px;
   max-height:360px;
   overflow:auto;
   background:#F8FAFC;
@@ -2946,9 +2898,6 @@ button:hover{
   border:1px solid #DDD6FE;
   box-shadow:none;
 }
-.bot-suggestion-row{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 10px}
-.bot-suggestion-row button{border:1px solid #DDD6FE;background:white;color:#4C1D95;border-radius:999px;padding:8px 10px;font-weight:800;box-shadow:none;margin:0;cursor:pointer;font-size:12px}
-.bot-typing{display:inline-flex;gap:4px;align-items:center}.bot-typing span{width:6px;height:6px;border-radius:50%;background:#7C3AED;animation:typingDot 1s infinite ease-in-out}.bot-typing span:nth-child(2){animation-delay:.15s}.bot-typing span:nth-child(3){animation-delay:.3s}
 .bot-input{
   display:flex;
   gap:8px;
@@ -4417,65 +4366,59 @@ function closePremiumPopup(){
 
 function toggleFloatingBot(){
   const panel=document.getElementById("floatingBotPanel");
-  const bubble=document.querySelector(".bot-bubble");
-  if(!panel) return false;
-  const isOpen=panel.classList.contains("bot-open") || panel.style.display==="block";
-  if(isOpen){
-    panel.classList.remove("bot-open");
-    panel.style.display="none";
-    if(bubble) bubble.classList.remove("opened");
-  }else{
-    panel.classList.add("bot-open");
-    panel.style.display="block";
-    if(bubble) bubble.classList.add("opened");
-    const input=document.getElementById("botInputText");
-    if(input) setTimeout(()=>input.focus(),150);
+  if(!panel) return;
+  const isOpen=panel.style.display==="block";
+  panel.style.display=isOpen?"none":"block";
+  if(!isOpen){
+    setTimeout(()=>appendBotGreeting(),250);
   }
-  return false;
 }
 function closeFloatingBot(){
   const panel=document.getElementById("floatingBotPanel");
-  const bubble=document.querySelector(".bot-bubble");
-  if(panel){ panel.classList.remove("bot-open"); panel.style.display="none"; }
-  if(bubble) bubble.classList.remove("opened");
-  return false;
+  if(panel) panel.style.display="none";
 }
-function escapeBotHtml(text){
-  return String(text || "").replace(/[&<>"']/g,function(m){
-    return ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"})[m];
-  });
-}
-function botReplyFor(text){
-  const lower=(text||"").toLowerCase();
-  let reply="Dạ mình đang cần hỗ trợ vấn đề gì ạ? Anh/chị có thể nhắn: nâng cấp Premium, thanh toán, kích hoạt tài khoản, hướng dẫn sử dụng hoặc báo lỗi hệ thống.";
-  if(lower.includes("premium") || lower.includes("giá") || lower.includes("gói") || lower.includes("nâng cấp")){
-    reply="Dạ em đang trực tuyến ạ. Hiện hệ thống có các gói:<br><br>1 tháng: <b>159K</b><br>3 tháng: <b>359K</b><br>6 tháng: <b>559K</b><br>1 năm: <b>859K</b><br>Nhà bán hàng chuyên nghiệp: <b>1.959K</b><br><br>Anh/chị muốn em tư vấn gói phù hợp nhu cầu không ạ?";
-  }else if(lower.includes("thanh toán") || lower.includes("chuyển khoản") || lower.includes("qr") || lower.includes("đã thanh toán")){
-    reply="Dạ anh/chị vui lòng gửi giúp em <b>ID thiết bị</b>, <b>ảnh thanh toán</b> và <b>gói đã đăng ký</b>. Em sẽ kiểm tra và hỗ trợ kích hoạt nhanh nhất ạ.";
-  }else if(lower.includes("kích hoạt") || lower.includes("duyệt")){
-    reply="Dạ để kích hoạt Premium, anh/chị gửi giúp em ID thiết bị, số điện thoại, Gmail và ảnh thanh toán. Em sẽ chuyển admin duyệt nhanh ạ.";
-  }else if(lower.includes("lỗi") || lower.includes("không dùng") || lower.includes("không được") || lower.includes("bị lỗi")){
-    reply="Dạ anh/chị gửi giúp em ảnh màn hình lỗi và mô tả thao tác đang dùng. Em sẽ kiểm tra nguyên nhân và hướng dẫn xử lý ngay ạ.";
-  }else if(lower.includes("tính năng") || lower.includes("hướng dẫn")){
-    reply="Dạ tool hỗ trợ đăng bài Facebook, quản lý Page/Group, AI Comment, AI Messenger, CRM Kanban, Marketing Director và duyệt Premium theo ID thiết bị.";
-  }
-  reply += '<div class="support-mini-box"><b>Zalo hỗ trợ:</b><br>036 338 2629</div><div class="support-mini-box"><b>Gmail hỗ trợ:</b><br>support@gptmini.pro</div>';
-  return reply;
+let botGreeted=false;
+function appendBotGreeting(){
+  if(botGreeted) return;
+  botGreeted=true;
+  const body=document.getElementById("floatingBotBody");
+  if(!body) return;
+  body.innerHTML = `
+    <div class="bot-msg ai">
+      <b>Bot hỗ trợ</b><br><br>
+      Dạ mình đang cần hỗ trợ vấn đề gì?<br><br>
+      • Nâng cấp Premium<br>
+      • Kích hoạt tài khoản<br>
+      • Thanh toán<br>
+      • Hướng dẫn sử dụng<br>
+      • Báo lỗi hệ thống
+    </div>
+    <div class="support-mini-box"><b>Zalo hỗ trợ:</b><br>036 338 2629</div>
+    <div class="support-mini-box"><b>Gmail hỗ trợ:</b><br>support@gptmini.pro</div>
+    <div class="bot-msg ai">
+      Nếu đã thanh toán, vui lòng gửi <b>ID thiết bị</b>, <b>ảnh thanh toán</b> và <b>gói đã đăng ký</b> để được ưu tiên kích hoạt nhanh.
+    </div>`;
+  body.scrollTop=body.scrollHeight;
 }
 function botQuick(text){
   const body=document.getElementById("floatingBotBody");
   if(!body) return;
-  body.innerHTML += `<div class="bot-msg"><b>Bạn:</b> ${escapeBotHtml(text)}</div>`;
-  const typingId="botTyping_"+Date.now();
-  body.innerHTML += `<div class="bot-msg ai" id="${typingId}"><b>AI đang trực tuyến</b><br><span class="bot-typing"><span></span><span></span><span></span></span></div>`;
+  body.innerHTML += `<div class="bot-msg"><b>Bạn:</b> ${text}</div>`;
+  let reply="Dạ mình đang cần hỗ trợ vấn đề gì? Anh/chị có thể chọn: Nâng cấp Premium, Thanh toán, Kích hoạt tài khoản, Hướng dẫn sử dụng hoặc Báo lỗi hệ thống.";
+  const lower=text.toLowerCase();
+  if(lower.includes("premium") || lower.includes("giá") || lower.includes("gói") || lower.includes("nâng cấp")){
+    reply="Dạ hiện hệ thống có các gói:<br><br>1 tháng: <b>159K</b><br>3 tháng: <b>359K</b><br>6 tháng: <b>559K</b><br>1 năm: <b>859K</b><br>Nhà bán hàng chuyên nghiệp: <b>1.959K</b><br><br>Anh/chị muốn em tư vấn gói phù hợp không ạ?<br><br><b>Zalo:</b> 036 338 2629<br><b>Gmail:</b> support@gptmini.pro";
+  }else if(lower.includes("thanh toán") || lower.includes("chuyển khoản") || lower.includes("qr")){
+    reply="Dạ sau khi chuyển khoản vui lòng gửi:<br><br>• ID thiết bị<br>• Ảnh thanh toán<br>• Gói đã đăng ký<br><br>Nếu sau 5 phút chưa kích hoạt, vui lòng liên hệ Zalo <b>036 338 2629</b>.";
+  }else if(lower.includes("kích hoạt") || lower.includes("duyệt")){
+    reply="Dạ anh/chị gửi giúp em ID thiết bị, số điện thoại, Gmail và ảnh thanh toán. Hệ thống sẽ kiểm tra và kích hoạt Premium nhanh nhất.";
+  }else if(lower.includes("lỗi") || lower.includes("không dùng") || lower.includes("không được")){
+    reply="Dạ anh/chị vui lòng mô tả lỗi đang gặp hoặc gửi ảnh màn hình. Bộ phận kỹ thuật sẽ kiểm tra và hỗ trợ ngay. Zalo hỗ trợ: <b>036 338 2629</b>.";
+  }else if(lower.includes("tính năng") || lower.includes("hướng dẫn")){
+    reply="Dạ tool hỗ trợ đăng bài Facebook, quản lý Page/Group, AI Comment, AI Messenger, CRM Kanban, Marketing Director, bảng giá Premium và duyệt kích hoạt theo ID thiết bị.";
+  }
+  body.innerHTML += `<div class="bot-msg ai"><b>Bot hỗ trợ:</b><br>${reply}</div>`;
   body.scrollTop=body.scrollHeight;
-  setTimeout(function(){
-    const typing=document.getElementById(typingId);
-    if(typing){
-      typing.innerHTML = `<b>Nhân viên hỗ trợ:</b><br>${botReplyFor(text)}<div class="bot-suggestion-row"><button onclick="botQuick('Nâng cấp Premium')">Nâng cấp Premium</button><button onclick="botQuick('Hướng dẫn thanh toán')">Hướng dẫn thanh toán</button><button onclick="botQuick('Kích hoạt tài khoản')">Kích hoạt</button><button onclick="botQuick('Báo lỗi hệ thống')">Báo lỗi</button></div>`;
-    }
-    body.scrollTop=body.scrollHeight;
-  },900);
 }
 function sendBotInput(){
   const input=document.getElementById("botInputText");
@@ -4509,39 +4452,43 @@ function openModule(moduleId){
     "page_comment_pro":"page_center_total",
     "page_comment_queue":"page_center_total",
     "page_center":"page_center_total",
-    "facebook_ads":"facebook_center",
-    "analytics_center":"analytics",
-    "premium_center":"premium",
-    "payment":"pricing",
-    "plans":"pricing"
+    "post":"page_center_total"
   };
-  moduleId = moduleAlias[moduleId] || moduleId || "dashboard";
+  moduleId = moduleAlias[moduleId] || moduleId;
+  const trialAllowed = ["dashboard", "fanpage_manager", "page_center_total", "group_suite", "group_marketing", "comment_manager"];
+  const premiumLocked = {
+    "messenger_ai": "AI Messenger",
+    "crm_sales": "CRM Kanban",
+    "marketing_director": "AI Marketing Director",
+    "ai_video": "AI Video",
+    "ai_image": "AI Image",
+    "ai_business": "AI Kinh Doanh",
+    "ai_voice": "AI Giọng Nói",
+    "ai_livestream": "AI Livestream",
+    "analytics_center": "Analytics Center"
+  };
 
-  const target=document.getElementById(moduleId);
-  if(!target){
-    console.warn("Không tìm thấy module:", moduleId);
+  if(!trialAllowed.includes(moduleId) && premiumLocked[moduleId]){
+    openLockedFeature(premiumLocked[moduleId], "Gói 1 tháng / 3 tháng / 6 tháng / 1 năm / Nhà bán hàng chuyên nghiệp");
     return false;
   }
 
   document.querySelectorAll(".module-section").forEach(function(el){
     el.classList.remove("active-module");
   });
-
-  if(target.classList.contains("module-section")){
+  const target=document.getElementById(moduleId);
+  if(target){
     target.classList.add("active-module");
+    setTimeout(function(){
+      const top = target.getBoundingClientRect().top + window.pageYOffset - 16;
+      window.scrollTo({top: top, behavior: "smooth"});
+    }, 30);
   }
-
-  setTimeout(function(){
-    const top = target.getBoundingClientRect().top + window.pageYOffset - 16;
-    window.scrollTo({top: Math.max(0, top), behavior: "smooth"});
-  }, 30);
-
   document.querySelectorAll(".v2-nav-link").forEach(function(a){ a.classList.remove("active"); });
   const active=document.querySelector('.v2-nav-link[href="#'+moduleId+'"]');
   if(active){ active.classList.add("active"); }
   return false;
 }
-
 function showAllModules(){
   document.querySelectorAll(".module-section").forEach(function(el){
     el.classList.add("active-module");
@@ -4550,12 +4497,10 @@ function showAllModules(){
 document.addEventListener("DOMContentLoaded",function(){
   const first=document.getElementById("dashboard");
   if(first){first.classList.add("active-module");}
-  document.querySelectorAll("a[href^='#']").forEach(function(a){
-    if(a.dataset.moduleBound === "1") return;
-    a.dataset.moduleBound = "1";
+  document.querySelectorAll(".v2-nav-link[href^='#']").forEach(function(a){
     a.addEventListener("click", function(e){
       const id=(a.getAttribute("href")||"").replace("#","");
-      if(id && document.getElementById(id)){ e.preventDefault(); openModule(id); }
+      if(id){ e.preventDefault(); openModule(id); }
     });
   });
 });
@@ -4806,21 +4751,31 @@ function closeLockedFeature(){
   <div class="bot-panel" id="floatingBotPanel">
     <div class="bot-head">
       <div>
-        <div class="bot-title">AI Nhân viên hỗ trợ</div>
-        <div class="bot-online">AI đang trực tuyến
+        <div class="bot-title">Mini Chat Support</div>
+        <div class="bot-online">Đang trực tuyến
           <span class="typing-dots"><span></span><span></span><span></span></span>
         </div>
       </div>
       <button class="bot-close" onclick="closeFloatingBot()">×</button>
     </div>
-    <div class="bot-body" id="floatingBotBody"></div>
+    <div class="bot-body" id="floatingBotBody">
+      <div class="bot-msg ai">
+        <b>Bot hỗ trợ đang trực tuyến</b>
+        <span class="typing-dots" style="vertical-align:middle"><span></span><span></span><span></span></span>
+      </div>
+    </div>
+    <div class="bot-actions">
+      <button onclick="botQuick('Nâng cấp Premium')">Nâng cấp Premium</button>
+      <button class="light" onclick="botQuick('Hướng dẫn thanh toán')">Hướng dẫn thanh toán</button>
+      <button class="light" onclick="botQuick('Kích hoạt tài khoản')">Kích hoạt tài khoản</button>
+      <a href="https://zalo.me/0363382629" target="_blank">Liên hệ Zalo 036 338 2629</a>
+    </div>
     <div class="bot-input">
-      <input id="botInputText" placeholder="Dạ mình đang cần hỗ trợ vấn đề gì?" onkeydown="if(event.key==='Enter')sendBotInput()">
+      <input id="botInputText" placeholder="Nhập câu hỏi nhanh..." onkeydown="if(event.key==='Enter')sendBotInput()">
       <button onclick="sendBotInput()">Gửi</button>
     </div>
   </div>
-  <button class="bot-bubble" onclick="return toggleFloatingBot()" aria-label="Mở AI hỗ trợ">
-    <span class="bot-bubble-label">AI đang trực tuyến</span>
+  <button class="bot-bubble" onclick="toggleFloatingBot()">
     🤖
     <span class="bot-status"></span>
   </button>
@@ -6163,7 +6118,7 @@ function toggleMenuGroup(el){
       });
       var action = card.querySelector('.plan-button,.safe-pricing-action');
       if(action) {
-        action.innerText = 'Xem chi tiết gói';
+        action.innerText = action.innerText.replace('','Xem chi tiết gói');
       }
     });
   }
