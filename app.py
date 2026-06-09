@@ -636,7 +636,7 @@ def create_premium_request(device_id, phone, email, plan_key, plan_name, amount,
     """, (device_id, phone, email, "pending", now, now))
     conn.commit()
     conn.close()
-    return True, "Đã gửi yêu cầu kích hoạt Premium. Admin sẽ kiểm tra và duyệt trực tiếp trên Web Admin."
+    return True, "Đã gửi yêu cầu kích hoạt Premium. Bộ phận quản trị sẽ kiểm tra và duyệt trực tiếp trên hệ thống."
 
 
 def get_premium_status_by_device(device_id):
@@ -4028,17 +4028,22 @@ async function submitPremiumRequest(){
 }
 
 function openModule(moduleId){
-  const trialAllowed = ["dashboard", "fanpage_manager", "group_marketing", "comment_manager"];
+  const trialAllowed = ["dashboard", "facebook_center", "fanpage_manager", "group_marketing", "comment_manager", "post", "token", "premium"];
   const premiumLocked = {
     "messenger_ai": "AI Messenger",
     "crm_sales": "CRM Kanban",
     "marketing_director": "AI Marketing Director",
-    "ai_video": "AI Video",
-    "ai_image": "AI Image",
-    "ai_business": "AI Kinh Doanh",
-    "ai_voice": "AI Giọng Nói",
-    "ai_livestream": "AI Livestream",
-    "analytics_center": "Analytics Center"
+    "ai_studio": "AI Studio",
+    "creative_center": "Creative Center",
+    "scheduler": "Content Calendar",
+    "plan": "Kế hoạch Marketing 30 ngày",
+    "analytics": "Analytics Center",
+    "automation_center": "Automation Center",
+    "success_center": "Success Center",
+    "batch": "Đăng hàng loạt",
+    "factory": "Content Factory",
+    "clusters": "Page Cluster",
+    "campaign": "Campaign Manager"
   };
 
   if(!trialAllowed.includes(moduleId) && premiumLocked[moduleId] && !MKT_PREMIUM_ACTIVE){
@@ -4338,37 +4343,53 @@ function closeLockedFeature(){
   </div>
 
 <div class="nav">
-  <div class="v2-nav-title">MENU CHÍNH</div>
+  <div class="v2-nav-title">🏠 DASHBOARD CEO</div>
   <a class="v2-nav-link" href="#dashboard"><span class="v2-nav-ico">🏠</span><span class="v2-nav-text">Dashboard CEO</span><span class="v2-nav-tag">Home</span></a>
+  <a class="v2-nav-link" href="#analytics" onclick="openModule('analytics')"><span class="v2-nav-ico">📌</span><span class="v2-nav-text">Thống kê nhanh</span></a>
+  <a class="v2-nav-link" href="#history" onclick="openModule('history')"><span class="v2-nav-ico">🔥</span><span class="v2-nav-text">Hoạt động hôm nay</span></a>
 
-  <div class="v2-nav-title">FACEBOOK CENTER</div>
+  <div class="v2-nav-title">📣 FACEBOOK CENTER</div>
   <a class="v2-nav-link" href="#facebook_center" onclick="openModule('facebook_center')"><span class="v2-nav-ico">📣</span><span class="v2-nav-text">Facebook Center</span><span class="v2-nav-tag">Core</span></a>
   <a class="v2-nav-link" href="#post" onclick="openModule('post')"><span class="v2-nav-ico">📝</span><span class="v2-nav-text">Đăng bài Facebook</span></a>
   <a class="v2-nav-link" href="#fanpage_manager" onclick="openModule('fanpage_manager')"><span class="v2-nav-ico">📄</span><span class="v2-nav-text">Quản lý Fanpage</span><span class="v2-nav-tag">V5</span></a>
   <a class="v2-nav-link" href="#group_marketing" onclick="openModule('group_marketing')"><span class="v2-nav-ico">👥</span><span class="v2-nav-text">Quản lý Group</span><span class="v2-nav-tag">V5</span></a>
+  <a class="v2-nav-link" href="#token" onclick="openModule('token')"><span class="v2-nav-ico">🔑</span><span class="v2-nav-text">Token Fanpage</span><span class="v2-nav-tag">Pro</span></a>
 
-  <div class="v2-nav-title">SELLER AI</div>
+  <div class="v2-nav-title">🤖 AI BÁN HÀNG</div>
   <a class="v2-nav-link" href="#comment_manager" onclick="openModule('comment_manager')"><span class="v2-nav-ico">🤖</span><span class="v2-nav-text">AI Comment</span><span class="v2-nav-tag">AI</span></a>
   <a class="v2-nav-link" href="#messenger_ai" onclick="openModule('messenger_ai')"><span class="v2-nav-ico">💬</span><span class="v2-nav-text">AI Messenger</span><span class="v2-nav-tag">AI</span></a>
   <a class="v2-nav-link" href="#crm_sales" onclick="openModule('crm_sales')"><span class="v2-nav-ico">📋</span><span class="v2-nav-text">CRM Kanban</span><span class="v2-nav-tag">CRM</span></a>
+  <a class="v2-nav-link" href="#messenger_ai" onclick="openModule('messenger_ai')"><span class="v2-nav-ico">🧾</span><span class="v2-nav-text">Kịch bản chốt sale</span></a>
+  <a class="v2-nav-link" href="#crm_sales" onclick="openModule('crm_sales')"><span class="v2-nav-ico">♻️</span><span class="v2-nav-text">Chăm sóc khách cũ</span></a>
+
+  <div class="v2-nav-title">🧠 MARKETING DIRECTOR</div>
   <a class="v2-nav-link" href="#marketing_director" onclick="openModule('marketing_director')"><span class="v2-nav-ico">🧠</span><span class="v2-nav-text">AI Marketing Director</span><span class="v2-nav-tag">HOT</span></a>
+  <a class="v2-nav-link" href="#plan" onclick="openModule('plan')"><span class="v2-nav-ico">📅</span><span class="v2-nav-text">Kế hoạch 30 ngày</span></a>
+  <a class="v2-nav-link" href="#marketing_director" onclick="openModule('marketing_director')"><span class="v2-nav-ico">🧲</span><span class="v2-nav-text">Phễu bán hàng</span></a>
+  <a class="v2-nav-link" href="#ai_studio" onclick="openModule('ai_studio')"><span class="v2-nav-ico">🔎</span><span class="v2-nav-text">Phân tích đối thủ</span></a>
+  <a class="v2-nav-link" href="#scheduler" onclick="openModule('scheduler')"><span class="v2-nav-ico">🗓️</span><span class="v2-nav-text">Content Calendar</span></a>
 
-  <div class="v2-nav-title">AI STUDIO</div>
-  <a class="v2-nav-link" href="#ai_studio" onclick="openModule('ai_studio')"><span class="v2-nav-ico">🎨</span><span class="v2-nav-text">AI Studio</span><span class="v2-nav-tag">Pro</span></a>
-  <a class="v2-nav-link" href="#creative_center" onclick="openModule('creative_center')"><span class="v2-nav-ico">🖼️</span><span class="v2-nav-text">Image / Video / Voice</span></a>
+  <div class="v2-nav-title">📊 ANALYTICS CENTER</div>
+  <a class="v2-nav-link" href="#analytics" onclick="openModule('analytics')"><span class="v2-nav-ico">📊</span><span class="v2-nav-text">Analytics Center</span></a>
+  <a class="v2-nav-link" href="#fanpage_manager" onclick="openModule('fanpage_manager')"><span class="v2-nav-ico">📈</span><span class="v2-nav-text">Báo cáo Fanpage</span></a>
+  <a class="v2-nav-link" href="#group_marketing" onclick="openModule('group_marketing')"><span class="v2-nav-ico">👥</span><span class="v2-nav-text">Báo cáo Group</span></a>
+  <a class="v2-nav-link" href="#crm_sales" onclick="openModule('crm_sales')"><span class="v2-nav-ico">💼</span><span class="v2-nav-text">Báo cáo CRM</span></a>
+  <a class="v2-nav-link" href="/export"><span class="v2-nav-ico">📤</span><span class="v2-nav-text">Xuất Excel/CSV</span></a>
+  <a class="v2-nav-link" href="/export_pdf"><span class="v2-nav-ico">📄</span><span class="v2-nav-text">Xuất PDF</span></a>
 
-  <div class="v2-nav-title">AI BUSINESS</div>
-  <a class="v2-nav-link" href="#ai_studio" onclick="openModule('ai_studio')"><span class="v2-nav-ico">🚀</span><span class="v2-nav-text">AI Facebook</span></a>
-  <a class="v2-nav-link" href="#marketing_director" onclick="openModule('marketing_director')"><span class="v2-nav-ico">💼</span><span class="v2-nav-text">AI Kinh Doanh</span></a>
+  <div class="v2-nav-title">💎 PREMIUM CENTER</div>
+  <a class="v2-nav-link" href="#premium" onclick="openModule('premium')"><span class="v2-nav-ico">💎</span><span class="v2-nav-text">Bảng giá Premium</span><span class="v2-nav-tag">VIP</span></a>
+  <a class="v2-nav-link" href="#premium" onclick="openModule('premium')"><span class="v2-nav-ico">💳</span><span class="v2-nav-text">Gửi xác nhận thanh toán</span></a>
+  <a class="v2-nav-link" href="#premium" onclick="openModule('premium')"><span class="v2-nav-ico">✅</span><span class="v2-nav-text">Trạng thái kích hoạt</span></a>
 
-  <div class="v2-nav-title">HỆ THỐNG</div>
-  <a class="v2-nav-link" href="#premium" onclick="openModule('premium')"><span class="v2-nav-ico">💎</span><span class="v2-nav-text">Premium</span><span class="v2-nav-tag">VIP</span></a>
-  <a class="v2-nav-link" href="#analytics" onclick="openModule('analytics')"><span class="v2-nav-ico">📈</span><span class="v2-nav-text">Analytics Center</span></a>
-  <a class="v2-nav-link" href="#automation_center" onclick="openModule('automation_center')"><span class="v2-nav-ico">⚙️</span><span class="v2-nav-text">Cài đặt Automation</span></a>
+  <div class="v2-nav-title">⚙️ TÀI KHOẢN</div>
+  <a class="v2-nav-link" href="#premium" onclick="openModule('premium')"><span class="v2-nav-ico">🖥️</span><span class="v2-nav-text">ID thiết bị</span></a>
+  <a class="v2-nav-link" href="#premium" onclick="openModule('premium')"><span class="v2-nav-ico">📧</span><span class="v2-nav-text">Gmail / SĐT</span></a>
+  <a class="v2-nav-link" href="#premium" onclick="openModule('premium')"><span class="v2-nav-ico">👑</span><span class="v2-nav-text">Trạng thái gói</span></a>
 
   <div class="v2-side-card">
-    🚀 Mkt Automation Pro V5<br>
-    Fanpage • Group • Comment • Messenger • CRM • Marketing Director.
+    🚀 Mkt Automation Pro V6<br>
+    Fanpage • Group • Comment • Messenger • CRM • Marketing Director • Analytics • Premium.
   </div>
 </div>
 </aside>
@@ -5386,7 +5407,7 @@ Thời gian tạo: {{ h[9] }}
 
         <div class="payment-alert">
           Khi chuyển khoản, vui lòng giữ đúng <b>Nội dung CK</b> có kèm ID thiết bị.
-          Sau khi thanh toán, nhập <b>Số điện thoại</b> và <b>Gmail</b> bên dưới để gửi yêu cầu về Web Admin duyệt kích hoạt.
+          Sau khi thanh toán, nhập <b>Số điện thoại</b> và <b>Gmail</b> bên dưới để gửi yêu cầu kích hoạt Premium. Bộ phận quản trị sẽ kiểm tra và duyệt trên hệ thống.
         </div>
 
         <div class="premium-confirm-box" id="premiumConfirmFormBox">
