@@ -4380,7 +4380,7 @@ function closeFloatingBot(){
 let botGreeted=false;
 function escapeBotText(value){
   return String(value || "").replace(/[&<>"]/g,function(ch){
-    return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[ch];
+    return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[ch];
   });
 }
 function appendBotGreeting(){
@@ -6280,115 +6280,108 @@ function dropKanban(ev){ ev.preventDefault(); const col=ev.currentTarget; if(dra
 })();
 </script>
 
-<script id="ultimate-button-repair-js">
+
+<style id="final-chat-lock-premium-fix">
+/* FIX CUỐI: chat không tràn, menu trái bỏ ký hiệu, khóa menu Premium */
+.v2-nav-ico{display:none!important;width:0!important;min-width:0!important;margin:0!important;padding:0!important}
+.v2-nav-link{position:relative!important;gap:8px!important;padding-right:112px!important;cursor:pointer!important;pointer-events:auto!important}
+.v2-nav-link .v2-nav-tag{display:none!important}
+.v2-nav-link.premium-locked::after{
+  content:"PREMIUM";
+  position:absolute;right:14px;top:50%;transform:translateY(-50%);
+  font-size:11px;font-weight:1000;letter-spacing:.6px;color:#fff;
+  padding:5px 10px;border-radius:999px;
+  background:linear-gradient(135deg,#facc15,#fb923c,#ef4444);
+  box-shadow:0 0 12px rgba(250,204,21,.95),0 0 22px rgba(124,58,237,.65);
+  animation:premiumGlow 1.2s infinite alternate;
+}
+.v2-nav-link.premium-locked{border-color:rgba(250,204,21,.55)!important;background:linear-gradient(135deg,rgba(49,46,129,.55),rgba(76,29,149,.45))!important}
+@keyframes premiumGlow{from{filter:brightness(1)}to{filter:brightness(1.35)}}
+
+.floating-bot{position:fixed!important;right:24px!important;bottom:24px!important;z-index:2147483000!important;pointer-events:none!important}
+.bot-bubble{pointer-events:auto!important;position:relative!important;z-index:2147483002!important}
+.bot-panel{
+  pointer-events:auto!important;display:none;position:absolute!important;right:0!important;bottom:92px!important;
+  width:min(420px,calc(100vw - 28px))!important;height:min(660px,calc(100vh - 120px))!important;
+  max-height:calc(100vh - 120px)!important;overflow:hidden!important;
+  border-radius:24px!important;background:#fff!important;box-shadow:0 25px 80px rgba(15,23,42,.35)!important;
+  z-index:2147483001!important;flex-direction:column!important;
+}
+.bot-panel.bot-open{display:flex!important}
+.bot-head{flex:0 0 auto!important}
+.bot-body{flex:1 1 auto!important;min-height:0!important;max-height:none!important;overflow-y:auto!important;padding:18px!important;background:#F8FAFC!important}
+.bot-msg{max-width:100%!important;box-sizing:border-box!important;word-break:break-word!important;overflow-wrap:anywhere!important;margin:0 0 10px!important}
+.bot-actions{flex:0 0 auto!important;display:grid!important;grid-template-columns:1fr 1fr!important;gap:10px!important;padding:12px 18px!important;background:#fff!important;border-top:1px solid #EEF2FF!important;box-sizing:border-box!important}
+.bot-actions button{min-height:56px!important;margin:0!important;white-space:normal!important;line-height:1.2!important;font-size:13px!important}
+.bot-input{flex:0 0 auto!important;padding:12px 18px 18px!important;background:#fff!important;display:flex!important;gap:10px!important;box-sizing:border-box!important}
+.bot-input input{min-width:0!important;flex:1!important}
+.bot-input button{flex:0 0 62px!important}
+@media(max-width:520px){.floating-bot{right:10px!important;bottom:10px!important}.bot-panel{right:0!important;width:calc(100vw - 20px)!important;height:calc(100vh - 110px)!important}}
+</style>
+
+<script id="final-chat-lock-premium-fix-js">
 (function(){
-  function byId(id){ return document.getElementById(id); }
-  function show(el, display){ if(el) el.style.display = display || 'block'; }
-  function hide(el){ if(el) el.style.display = 'none'; }
-  function ensureDeviceIdSafe(){
-    var id = localStorage.getItem('mkt_device_id');
-    if(!id || id === 'Đang tạo...'){
-      id = 'MKT-' + Math.random().toString(36).slice(2,8).toUpperCase() + Date.now().toString().slice(-4);
-      localStorage.setItem('mkt_device_id', id);
-    }
-    document.cookie = 'mkt_device_id=' + encodeURIComponent(id) + '; path=/; max-age=' + (60*60*24*365*5);
-    var side = byId('sidebarDeviceId'); if(side) side.textContent = id;
-    var pay = byId('payDeviceId'); if(pay) pay.value = id;
-    return id;
-  }
-  var alias = {
-    post:'page_center_total', page_center:'page_center_total', page_comment_pro:'page_center_total', page_comment_queue:'page_center_total',
-    group_marketing:'group_suite', group_finder:'group_suite', group_uid_splitter:'group_suite', group_join_queue:'group_suite', group_post_filter:'group_suite',
-    analytics:'analytics_center', premium:'pricing', plan:'pricing', home:'dashboard'
+  var MKT_IS_PREMIUM = {{ 'true' if is_device_premium else 'false' }};
+  var premiumModules = {
+    messenger_ai:'AI Messenger', crm_sales:'CRM Kanban', marketing_director:'AI Marketing Director',
+    ai_studio:'AI Studio', creative_center:'Image / Video / Voice', analytics:'Analytics Center',
+    analytics_center:'Analytics Center', automation_center:'Cài đặt Automation'
   };
-  window.openModule = function(moduleId){
-    moduleId = alias[moduleId] || moduleId || 'dashboard';
-    if(moduleId === 'pricing'){
-      if(typeof window.scrollToPricing === 'function') { window.scrollToPricing(); return false; }
-      var pr = byId('pricing'); if(pr){ show(pr,'block'); pr.scrollIntoView({behavior:'smooth',block:'start'}); }
-      return false;
-    }
-    var target = byId(moduleId);
-    if(!target && moduleId === 'dashboard') target = byId('facebook_center') || document.querySelector('.module-section');
-    document.querySelectorAll('.module-section').forEach(function(sec){ sec.classList.remove('active-module'); });
+  var aliases = {post:'page_center_total', page_center:'page_center_total', page_comment_pro:'page_center_total', page_comment_queue:'page_center_total'};
+  function normalizeId(id){ return aliases[id] || id; }
+  function isLocked(id){ return !MKT_IS_PREMIUM && !!premiumModules[normalizeId(id)]; }
+  function lockFeature(id){
+    var name = premiumModules[normalizeId(id)] || 'Tính năng Premium';
+    if(typeof openLockedFeature === 'function') return openLockedFeature(name);
+    if(typeof openPremiumPopup === 'function') openPremiumPopup();
+    var p=document.getElementById('premium'); if(p) p.scrollIntoView({behavior:'smooth',block:'start'});
+    return false;
+  }
+  function showOnlyModule(id){
+    id = normalizeId(id);
+    if(isLocked(id)) return lockFeature(id);
+    document.querySelectorAll('.module-section').forEach(function(el){el.classList.remove('active-module');});
+    var target=document.getElementById(id) || document.getElementById('dashboard');
     if(target){
       target.classList.add('active-module');
-      setTimeout(function(){ target.scrollIntoView({behavior:'smooth',block:'start'}); }, 20);
+      setTimeout(function(){target.scrollIntoView({behavior:'smooth',block:'start'});},30);
     }
-    document.querySelectorAll('.v2-nav-link').forEach(function(a){ a.classList.remove('active'); });
-    var active = document.querySelector('.v2-nav-link[href="#'+moduleId+'"]');
+    document.querySelectorAll('.v2-nav-link').forEach(function(a){a.classList.remove('active');});
+    var active=document.querySelector('.v2-nav-link[href="#'+id+'"]');
     if(active) active.classList.add('active');
     return false;
-  };
-  window.toggleFloatingBot = function(){
-    var panel = byId('floatingBotPanel');
-    if(!panel) return false;
-    panel.style.display = (panel.style.display === 'block') ? 'none' : 'block';
-    if(panel.style.display === 'block' && typeof window.appendBotGreeting === 'function') window.appendBotGreeting();
-    return false;
-  };
-  window.closeFloatingBot = function(){ hide(byId('floatingBotPanel')); return false; };
-  window.botQuick = window.botQuick || function(text){
-    var body = byId('floatingBotBody'); if(!body) return false;
-    var safe = String(text||'').replace(/[&<>\"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[c];});
-    var reply = (typeof window.getBotReply === 'function') ? window.getBotReply(text) : 'Dạ em đã nhận thông tin. Anh/chị vui lòng gửi thêm chi tiết để em hỗ trợ ạ.';
-    body.innerHTML += '<div class="bot-msg"><b>Bạn:</b> '+safe+'</div>';
-    body.innerHTML += '<div class="bot-msg ai"><b>Bot hỗ trợ:</b><br>'+reply+'</div>';
-    body.scrollTop = body.scrollHeight;
-    return false;
-  };
-  window.sendBotInput = function(){
-    var input = byId('botInputText'); if(!input || !input.value.trim()) return false;
-    window.botQuick(input.value.trim()); input.value=''; return false;
-  };
-  window.scrollToPricing = function(){
-    var el = byId('pricing');
-    if(el){ show(el,'block'); el.scrollIntoView({behavior:'smooth',block:'start'}); }
-    return false;
-  };
-  window.openPayment = window.openPayment || function(planKey){
-    var modal = byId('paymentModal');
-    if(modal){ show(modal,'flex'); ensureDeviceIdSafe(); }
-    else window.scrollToPricing();
-    return false;
-  };
-  window.closePayment = window.closePayment || function(){ hide(byId('paymentModal')); return false; };
-  window.openLockedFeature = window.openLockedFeature || function(){ window.scrollToPricing(); return false; };
+  }
+  window.openModule = showOnlyModule;
 
-  document.addEventListener('click', function(e){
-    var btn = e.target.closest('button, a, .app-quick-card, .module-card, .price-card, .premium-plan, .bot-bubble');
-    if(!btn) return;
-    if(btn.classList.contains('bot-bubble')){ e.preventDefault(); window.toggleFloatingBot(); return; }
-    if(btn.classList.contains('payment-close')){ e.preventDefault(); window.closePayment(); return; }
-    var txt = (btn.innerText || btn.textContent || '').trim().toLowerCase();
-    var href = btn.getAttribute && btn.getAttribute('href');
-    if(href && href.charAt(0)==='#'){
-      var id = href.slice(1); e.preventDefault(); window.openModule(id); return;
-    }
-    var cardModule = btn.closest('[onclick*="openModule"]');
-    var onclick = (btn.getAttribute && btn.getAttribute('onclick')) || '';
-    var m = onclick.match(/openModule\(['\"]([^'\"]+)['\"]\)/);
-    if(m){ e.preventDefault(); window.openModule(m[1]); return; }
-    var p = onclick.match(/openPayment\(['\"]([^'\"]+)['\"]\)/);
-    if(p){ e.preventDefault(); if(typeof window.openPayment === 'function') window.openPayment(p[1]); return; }
-    var q = onclick.match(/botQuick\(['\"]([^'\"]+)['\"]\)/);
-    if(q){ e.preventDefault(); window.botQuick(q[1]); return; }
-    if(txt.includes('nâng cấp premium')){ e.preventDefault(); window.botQuick('Nâng cấp Premium'); return; }
-    if(txt.includes('hướng dẫn thanh toán')){ e.preventDefault(); window.botQuick('Hướng dẫn thanh toán'); return; }
-    if(txt.includes('kích hoạt tài khoản')){ e.preventDefault(); window.botQuick('Kích hoạt tài khoản'); return; }
-    if(txt.includes('liên hệ hỗ trợ')){ e.preventDefault(); window.botQuick('Liên hệ hỗ trợ'); return; }
-    if(txt.includes('xem chi tiết gói') || txt.includes('xem bảng giá')){ e.preventDefault(); window.scrollToPricing(); return; }
-  }, true);
+  function setBotOpen(open){
+    var panel=document.getElementById('floatingBotPanel');
+    if(!panel) return;
+    panel.classList.toggle('bot-open', !!open);
+    panel.style.display = open ? 'flex' : 'none';
+    if(open && typeof appendBotGreeting === 'function') appendBotGreeting();
+    setTimeout(function(){var body=document.getElementById('floatingBotBody'); if(body) body.scrollTop=body.scrollHeight;},50);
+  }
+  window.toggleFloatingBot=function(){
+    var panel=document.getElementById('floatingBotPanel');
+    setBotOpen(!(panel && panel.classList.contains('bot-open')));
+    return false;
+  };
+  window.closeFloatingBot=function(){setBotOpen(false);return false;};
 
-  document.addEventListener('DOMContentLoaded', function(){
-    ensureDeviceIdSafe();
-    setTimeout(ensureDeviceIdSafe, 300);
-    var input = byId('botInputText');
-    if(input){ input.addEventListener('keydown', function(e){ if(e.key === 'Enter'){ e.preventDefault(); window.sendBotInput(); } }); }
-    if(!document.querySelector('.module-section.active-module')){
-      var first = byId('dashboard') || byId('facebook_center') || document.querySelector('.module-section');
-      if(first) first.classList.add('active-module');
-    }
+  document.addEventListener('DOMContentLoaded',function(){
+    document.querySelectorAll('.v2-nav-link').forEach(function(a){
+      var id=(a.getAttribute('href')||'').replace('#','');
+      a.querySelectorAll('.v2-nav-ico').forEach(function(x){x.remove();});
+      if(isLocked(id)) a.classList.add('premium-locked');
+      else a.classList.remove('premium-locked');
+      a.addEventListener('click',function(e){
+        var mid=(a.getAttribute('href')||'').replace('#','');
+        if(mid){e.preventDefault();e.stopPropagation();showOnlyModule(mid);}
+      },true);
+    });
+    var panel=document.getElementById('floatingBotPanel');
+    if(panel){panel.style.display='none';panel.classList.remove('bot-open');}
+    document.querySelectorAll('.bot-actions button,.bot-input button,.bot-bubble,.bot-close').forEach(function(btn){btn.style.pointerEvents='auto';});
   });
 })();
 </script>
@@ -6410,7 +6403,7 @@ def render(content="", message="", ok=True, selected_industry="spa", analysis=""
         industry_labels=INDUSTRY_LABELS, selected_industry=selected_industry,
         library_items=current_library(selected_industry)[:10], locked_count=max(0, 500 - len(current_library(selected_industry)[:10])),
         score=score, warnings=warnings, token_warning=token_warning,
-        analysis=analysis, plan=plan, v3=v3_ceo_summary(), pipeline_rows=get_pipeline_leads(), customer_tasks=get_customer_tasks(), notifications=get_notifications(), fb_groups=get_fb_groups(), group_schedules=get_group_schedules(), comment_leads=get_comment_leads(), messenger_scripts=get_messenger_scripts(), success_assets=get_success_assets(), group_finder_results=get_group_finder_results(), group_finder_stats=get_group_finder_stats(), group_join_queue=get_group_join_queue(), group_uid_files=get_group_uid_files(), group_post_results=get_group_post_results(), group_post_queue=get_group_post_queue(), page_comment_queue=get_page_comment_queue(), page_comment_logs=get_page_comment_logs(), page_comment_stats=get_page_comment_stats(), page_token_rows=get_page_token_rows(), page_group_memberships=get_page_group_memberships(), renewal_notice=get_renewal_notice(), device_id=get_device_id()
+        analysis=analysis, plan=plan, v3=v3_ceo_summary(), pipeline_rows=get_pipeline_leads(), customer_tasks=get_customer_tasks(), notifications=get_notifications(), fb_groups=get_fb_groups(), group_schedules=get_group_schedules(), comment_leads=get_comment_leads(), messenger_scripts=get_messenger_scripts(), success_assets=get_success_assets(), group_finder_results=get_group_finder_results(), group_finder_stats=get_group_finder_stats(), group_join_queue=get_group_join_queue(), group_uid_files=get_group_uid_files(), group_post_results=get_group_post_results(), group_post_queue=get_group_post_queue(), page_comment_queue=get_page_comment_queue(), page_comment_logs=get_page_comment_logs(), page_comment_stats=get_page_comment_stats(), page_token_rows=get_page_token_rows(), page_group_memberships=get_page_group_memberships(), renewal_notice=get_renewal_notice(), device_id=get_device_id(), is_device_premium=bool(get_device_subscription())
     )
 
 @app.route("/")
@@ -6972,6 +6965,113 @@ ADMIN_HTML = """
   });
 })();
 </script>
+
+
+<style id="final-chat-lock-premium-fix">
+/* FIX CUỐI: chat không tràn, menu trái bỏ ký hiệu, khóa menu Premium */
+.v2-nav-ico{display:none!important;width:0!important;min-width:0!important;margin:0!important;padding:0!important}
+.v2-nav-link{position:relative!important;gap:8px!important;padding-right:112px!important;cursor:pointer!important;pointer-events:auto!important}
+.v2-nav-link .v2-nav-tag{display:none!important}
+.v2-nav-link.premium-locked::after{
+  content:"PREMIUM";
+  position:absolute;right:14px;top:50%;transform:translateY(-50%);
+  font-size:11px;font-weight:1000;letter-spacing:.6px;color:#fff;
+  padding:5px 10px;border-radius:999px;
+  background:linear-gradient(135deg,#facc15,#fb923c,#ef4444);
+  box-shadow:0 0 12px rgba(250,204,21,.95),0 0 22px rgba(124,58,237,.65);
+  animation:premiumGlow 1.2s infinite alternate;
+}
+.v2-nav-link.premium-locked{border-color:rgba(250,204,21,.55)!important;background:linear-gradient(135deg,rgba(49,46,129,.55),rgba(76,29,149,.45))!important}
+@keyframes premiumGlow{from{filter:brightness(1)}to{filter:brightness(1.35)}}
+
+.floating-bot{position:fixed!important;right:24px!important;bottom:24px!important;z-index:2147483000!important;pointer-events:none!important}
+.bot-bubble{pointer-events:auto!important;position:relative!important;z-index:2147483002!important}
+.bot-panel{
+  pointer-events:auto!important;display:none;position:absolute!important;right:0!important;bottom:92px!important;
+  width:min(420px,calc(100vw - 28px))!important;height:min(660px,calc(100vh - 120px))!important;
+  max-height:calc(100vh - 120px)!important;overflow:hidden!important;
+  border-radius:24px!important;background:#fff!important;box-shadow:0 25px 80px rgba(15,23,42,.35)!important;
+  z-index:2147483001!important;flex-direction:column!important;
+}
+.bot-panel.bot-open{display:flex!important}
+.bot-head{flex:0 0 auto!important}
+.bot-body{flex:1 1 auto!important;min-height:0!important;max-height:none!important;overflow-y:auto!important;padding:18px!important;background:#F8FAFC!important}
+.bot-msg{max-width:100%!important;box-sizing:border-box!important;word-break:break-word!important;overflow-wrap:anywhere!important;margin:0 0 10px!important}
+.bot-actions{flex:0 0 auto!important;display:grid!important;grid-template-columns:1fr 1fr!important;gap:10px!important;padding:12px 18px!important;background:#fff!important;border-top:1px solid #EEF2FF!important;box-sizing:border-box!important}
+.bot-actions button{min-height:56px!important;margin:0!important;white-space:normal!important;line-height:1.2!important;font-size:13px!important}
+.bot-input{flex:0 0 auto!important;padding:12px 18px 18px!important;background:#fff!important;display:flex!important;gap:10px!important;box-sizing:border-box!important}
+.bot-input input{min-width:0!important;flex:1!important}
+.bot-input button{flex:0 0 62px!important}
+@media(max-width:520px){.floating-bot{right:10px!important;bottom:10px!important}.bot-panel{right:0!important;width:calc(100vw - 20px)!important;height:calc(100vh - 110px)!important}}
+</style>
+
+<script id="final-chat-lock-premium-fix-js">
+(function(){
+  var MKT_IS_PREMIUM = {{ 'true' if is_device_premium else 'false' }};
+  var premiumModules = {
+    messenger_ai:'AI Messenger', crm_sales:'CRM Kanban', marketing_director:'AI Marketing Director',
+    ai_studio:'AI Studio', creative_center:'Image / Video / Voice', analytics:'Analytics Center',
+    analytics_center:'Analytics Center', automation_center:'Cài đặt Automation'
+  };
+  var aliases = {post:'page_center_total', page_center:'page_center_total', page_comment_pro:'page_center_total', page_comment_queue:'page_center_total'};
+  function normalizeId(id){ return aliases[id] || id; }
+  function isLocked(id){ return !MKT_IS_PREMIUM && !!premiumModules[normalizeId(id)]; }
+  function lockFeature(id){
+    var name = premiumModules[normalizeId(id)] || 'Tính năng Premium';
+    if(typeof openLockedFeature === 'function') return openLockedFeature(name);
+    if(typeof openPremiumPopup === 'function') openPremiumPopup();
+    var p=document.getElementById('premium'); if(p) p.scrollIntoView({behavior:'smooth',block:'start'});
+    return false;
+  }
+  function showOnlyModule(id){
+    id = normalizeId(id);
+    if(isLocked(id)) return lockFeature(id);
+    document.querySelectorAll('.module-section').forEach(function(el){el.classList.remove('active-module');});
+    var target=document.getElementById(id) || document.getElementById('dashboard');
+    if(target){
+      target.classList.add('active-module');
+      setTimeout(function(){target.scrollIntoView({behavior:'smooth',block:'start'});},30);
+    }
+    document.querySelectorAll('.v2-nav-link').forEach(function(a){a.classList.remove('active');});
+    var active=document.querySelector('.v2-nav-link[href="#'+id+'"]');
+    if(active) active.classList.add('active');
+    return false;
+  }
+  window.openModule = showOnlyModule;
+
+  function setBotOpen(open){
+    var panel=document.getElementById('floatingBotPanel');
+    if(!panel) return;
+    panel.classList.toggle('bot-open', !!open);
+    panel.style.display = open ? 'flex' : 'none';
+    if(open && typeof appendBotGreeting === 'function') appendBotGreeting();
+    setTimeout(function(){var body=document.getElementById('floatingBotBody'); if(body) body.scrollTop=body.scrollHeight;},50);
+  }
+  window.toggleFloatingBot=function(){
+    var panel=document.getElementById('floatingBotPanel');
+    setBotOpen(!(panel && panel.classList.contains('bot-open')));
+    return false;
+  };
+  window.closeFloatingBot=function(){setBotOpen(false);return false;};
+
+  document.addEventListener('DOMContentLoaded',function(){
+    document.querySelectorAll('.v2-nav-link').forEach(function(a){
+      var id=(a.getAttribute('href')||'').replace('#','');
+      a.querySelectorAll('.v2-nav-ico').forEach(function(x){x.remove();});
+      if(isLocked(id)) a.classList.add('premium-locked');
+      else a.classList.remove('premium-locked');
+      a.addEventListener('click',function(e){
+        var mid=(a.getAttribute('href')||'').replace('#','');
+        if(mid){e.preventDefault();e.stopPropagation();showOnlyModule(mid);}
+      },true);
+    });
+    var panel=document.getElementById('floatingBotPanel');
+    if(panel){panel.style.display='none';panel.classList.remove('bot-open');}
+    document.querySelectorAll('.bot-actions button,.bot-input button,.bot-bubble,.bot-close').forEach(function(btn){btn.style.pointerEvents='auto';});
+  });
+})();
+</script>
+
 </body></html>
 """
 
