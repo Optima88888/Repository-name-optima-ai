@@ -1,13 +1,24 @@
 from flask import Flask, request, render_template_string, jsonify, send_file
 from dotenv import load_dotenv
-from google import genai
+import google.generativeai as genai
 from werkzeug.utils import secure_filename
-import os, json, requests, sqlite3, datetime, threading, time, tempfile, csv, random, io, shutil
+import os
+import json
+import requests
+import sqlite3
+import datetime
+import threading
+import time
+import tempfile
+import csv
+import random
+import io
+import shutil
 
 try:
-    import openpyxl
+import openpyxl
 except Exception:
-    openpyxl = None
+openpyxl = None
 
 load_dotenv()
 
@@ -16,22 +27,27 @@ DB = "marketing_automation_pro_v11.db"
 UPLOAD_DIR = "uploads"
 REPORT_DIR = "reports"
 BACKUP_DIR = "backups"
+
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 os.makedirs(REPORT_DIR, exist_ok=True)
 os.makedirs(BACKUP_DIR, exist_ok=True)
 
-app = Flask(__name__)
+app = Flask(**name**)
 app.config["MAX_CONTENT_LENGTH"] = 100 * 1024 * 1024
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "").strip()
 PAGES_JSON = os.getenv("PAGES_JSON", "[]").strip()
 
 try:
-    PAGES = json.loads(PAGES_JSON)
+PAGES = json.loads(PAGES_JSON)
 except Exception:
-    PAGES = []
+PAGES = []
 
-client = genai.Client(api_key=GEMINI_API_KEY) if GEMINI_API_KEY else None
+if GEMINI_API_KEY:
+genai.configure(api_key=GEMINI_API_KEY)
+
+client = genai
+
 
 CONTENT_LIBRARY = {
     "spa": [
@@ -5257,9 +5273,22 @@ def pwa_icon_512():
     return send_file("pwa-icon-512.png", mimetype="image/png")
 
 
-if __name__ == "__main__":
-    init_db()
-    threading.Thread(target=scheduler_loop, daemon=True).start()
-    app.run(debug=True, port=5010)
+if **name** == "**main**":
+init_db()
+
+```
+threading.Thread(
+    target=scheduler_loop,
+    daemon=True
+).start()
+
+port = int(os.environ.get("PORT", 10000))
+
+app.run(
+    host="0.0.0.0",
+    port=port,
+    debug=False
+)
+```
 
 
