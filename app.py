@@ -22,7 +22,7 @@ except Exception:
 
 load_dotenv()
 
-APP_TITLE = "Mkt Automation Pro V5 Enterprise Seller AI Suite"
+APP_TITLE = "Mkt Automation Pro V6 Group Finder & UID Splitter"
 DB = "marketing_automation_pro_v11.db"
 UPLOAD_DIR = "uploads"
 REPORT_DIR = "reports"
@@ -491,6 +491,78 @@ def init_db():
         asset_type TEXT,
         title TEXT,
         content TEXT,
+        created_at TEXT
+    )
+    """)
+
+    # V6 Group Finder & UID Splitter tables - an toàn, có duyệt trước khi thao tác
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS group_finder_results (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        keyword TEXT,
+        group_name TEXT,
+        group_uid TEXT UNIQUE,
+        members INTEGER DEFAULT 0,
+        privacy TEXT,
+        recent_activity TEXT,
+        page_join_allowed TEXT,
+        page_post_allowed TEXT,
+        status TEXT DEFAULT 'Hợp lệ',
+        note TEXT,
+        created_at TEXT
+    )
+    """)
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS group_join_queue (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        group_uid TEXT,
+        group_name TEXT,
+        keyword TEXT,
+        members INTEGER DEFAULT 0,
+        selected_page_id TEXT,
+        selected_page_name TEXT,
+        status TEXT DEFAULT 'Chưa tham gia',
+        admin_status TEXT DEFAULT 'Chờ admin duyệt',
+        note TEXT,
+        created_at TEXT
+    )
+    """)
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS group_uid_files (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        file_name TEXT,
+        uid_count INTEGER DEFAULT 0,
+        chunk_size INTEGER DEFAULT 50,
+        file_path TEXT,
+        created_at TEXT
+    )
+    """)
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS group_post_results (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        group_uid TEXT,
+        post_uid TEXT UNIQUE,
+        post_link TEXT,
+        author_name TEXT,
+        posted_at TEXT,
+        content_preview TEXT,
+        comments INTEGER DEFAULT 0,
+        reactions INTEGER DEFAULT 0,
+        status TEXT DEFAULT 'Chưa xử lý',
+        keyword TEXT,
+        created_at TEXT
+    )
+    """)
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS group_post_queue (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        page_id TEXT,
+        page_name TEXT,
+        group_uid TEXT,
+        group_name TEXT,
+        content TEXT,
+        status TEXT DEFAULT 'Chờ duyệt',
+        note TEXT,
         created_at TEXT
     )
     """)
@@ -1384,6 +1456,166 @@ def get_success_assets(limit=20):
     conn = db(); c = conn.cursor()
     c.execute("SELECT id,asset_type,title,content,created_at FROM success_assets ORDER BY id ASC LIMIT ?", (limit,))
     rows = c.fetchall(); conn.close(); return rows
+
+
+
+def normalize_uid(raw):
+    raw = str(raw or '').strip()
+    return ''.join(ch for ch in raw if ch.isdigit()) or raw
+
+def add_group_finder_result(keyword, group_name, group_uid, members=0, privacy='Công khai', recent_activity='Có', page_join_allowed='Chưa rõ', page_post_allowed='Chưa rõ', status='Hợp lệ', note=''):
+    group_uid = normalize_uid(group_uid)
+    if not group_uid:
+        return False
+    try:
+        members = int(str(members or 0).replace('.', '').replace(',', '').strip() or 0)
+    except Exception:
+        members = 0
+    conn = db(); c = conn.cursor()
+    c.execute("""
+    INSERT OR IGNORE INTO group_finder_results(keyword,group_name,group_uid,members,privacy,recent_activity,page_join_allowed,page_post_allowed,status,note,created_at)
+    VALUES(?,?,?,?,?,?,?,?,?,?,?)
+    """, (keyword, group_name or f'Group {group_uid}', group_uid, members, privacy, recent_activity, page_join_allowed, page_post_allowed, status, note, datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
+    ok = c.rowcount > 0
+    conn.commit(); conn.close(); return ok
+
+def get_group_finder_results(limit=300):
+    conn = db(); c = conn.cursor()
+    c.execute("SELECT id,keyword,group_name,group_uid,members,privacy,recent_activity,page_join_allowed,page_post_allowed,status,note,created_at FROM group_finder_results ORDER BY id DESC LIMIT ?", (limit,))
+    rows = c.fetchall(); conn.close(); return rows
+
+def get_group_finder_stats():
+    conn = db(); c = conn.cursor()
+    def one(q):
+        c.execute(q); r=c.fetchone(); return r[0] if r else 0
+    total = one('SELECT COUNT(*) FROM group_finder_results')
+    valid = one("SELECT COUNT(*) FROM group_finder_results WHERE status='Hợp lệ'")
+    queue = one('SELECT COUNT(*) FROM group_join_queue')
+    files = one('SELECT COUNT(*) FROM group_uid_files')
+    posts = one('SELECT COUNT(*) FROM group_post_results')
+    conn.close(); return {'total':total,'valid':valid,'queue':queue,'files':files,'posts':posts}
+
+def group_finder_import_text(keyword, raw_text, min_members=0, privacy_filter='all', recent_only='0', page_join='all', page_post='all'):
+    added = dup = rejected = 0
+    keyword = keyword or 'Từ khóa thủ công'
+    lines = [x.strip() for x in (raw_text or '').splitlines() if x.strip()]
+    if not lines and keyword:
+        # Bản demo an toàn: không tự quét Facebook trái phép; tạo danh sách nháp để admin kiểm tra quyền hợp lệ.
+        for i in range(1, 21):
+            uid = f"{abs(hash(keyword)) % 1000000}{i:04d}"
+            members = max(int(min_members or 0), 1000) + i * 137
+            lines.append(f"{uid}, {keyword.title()} Community {i}, {members}, Công khai, Có, Có, Chưa rõ")
+    for line in lines:
+        parts = [p.strip() for p in line.replace('\t', ',').split(',')]
+        uid = normalize_uid(parts[0] if parts else '')
+        name = parts[1] if len(parts) > 1 else f'Group {uid}'
+        members = parts[2] if len(parts) > 2 else 0
+        privacy = parts[3] if len(parts) > 3 else 'Công khai'
+        recent = parts[4] if len(parts) > 4 else 'Có'
+        join_allowed = parts[5] if len(parts) > 5 else 'Chưa rõ'
+        post_allowed = parts[6] if len(parts) > 6 else 'Chưa rõ'
+        try: m_int = int(str(members).replace('.', '').replace(',', '') or 0)
+        except Exception: m_int = 0
+        if m_int < int(min_members or 0):
+            rejected += 1; continue
+        if privacy_filter != 'all' and privacy_filter and privacy != privacy_filter:
+            rejected += 1; continue
+        if recent_only == '1' and recent.lower() not in ['có','co','yes','active','gần đây']:
+            rejected += 1; continue
+        if page_join != 'all' and join_allowed != page_join:
+            rejected += 1; continue
+        if page_post != 'all' and post_allowed != page_post:
+            rejected += 1; continue
+        if add_group_finder_result(keyword, name, uid, m_int, privacy, recent, join_allowed, post_allowed):
+            added += 1
+        else:
+            dup += 1
+    return {'added':added,'duplicate':dup,'rejected':rejected,'total_input':len(lines)}
+
+def add_group_queue_from_results(page_index=''):
+    selected_page = None
+    try:
+        i = int(page_index)
+        selected_page = PAGES[i] if 0 <= i < len(PAGES) else None
+    except Exception:
+        selected_page = None
+    page_id = str(selected_page.get('id','')) if selected_page else ''
+    page_name = selected_page.get('name','Chưa chọn Page') if selected_page else 'Chưa chọn Page'
+    rows = get_group_finder_results(500)
+    conn = db(); c = conn.cursor(); added = 0
+    for r in rows:
+        c.execute("SELECT COUNT(*) FROM group_join_queue WHERE group_uid=?", (r[3],))
+        if c.fetchone()[0]: continue
+        c.execute("""INSERT INTO group_join_queue(group_uid,group_name,keyword,members,selected_page_id,selected_page_name,status,admin_status,note,created_at)
+                  VALUES(?,?,?,?,?,?,?,?,?,?)""", (r[3], r[2], r[1], r[4], page_id, page_name, 'Chưa tham gia', 'Chờ admin duyệt', 'Chỉ tham gia thủ công/có giới hạn sau khi admin duyệt.', datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
+        added += 1
+    conn.commit(); conn.close(); return added
+
+def get_group_join_queue(limit=200):
+    conn = db(); c = conn.cursor()
+    c.execute("SELECT id,group_uid,group_name,keyword,members,selected_page_name,status,admin_status,note,created_at FROM group_join_queue ORDER BY id DESC LIMIT ?", (limit,))
+    rows = c.fetchall(); conn.close(); return rows
+
+def split_group_uids(chunk_size=50):
+    chunk_size = max(1, min(int(chunk_size or 50), 1000))
+    rows = get_group_finder_results(10000)
+    uids = [r[3] for r in rows if r[3]]
+    paths=[]
+    for idx in range(0, len(uids), chunk_size):
+        chunk = uids[idx:idx+chunk_size]
+        file_no = len(paths)+1
+        name = f"group_uid_file_{file_no:03d}.csv"
+        path = os.path.join(REPORT_DIR, name)
+        with open(path, 'w', newline='', encoding='utf-8-sig') as f:
+            w=csv.writer(f); w.writerow(['group_uid']); [[w.writerow([u])] for u in chunk]
+        conn=db(); c=conn.cursor(); c.execute("INSERT INTO group_uid_files(file_name,uid_count,chunk_size,file_path,created_at) VALUES(?,?,?,?,?)", (name,len(chunk),chunk_size,path,datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))); conn.commit(); conn.close()
+        paths.append(path)
+    return paths
+
+def get_group_uid_files(limit=50):
+    conn=db(); c=conn.cursor(); c.execute("SELECT id,file_name,uid_count,chunk_size,file_path,created_at FROM group_uid_files ORDER BY id DESC LIMIT ?", (limit,)); rows=c.fetchall(); conn.close(); return rows
+
+def add_group_post_result(group_uid, post_uid, post_link, author_name, posted_at, content_preview, comments=0, reactions=0, keyword=''):
+    group_uid=normalize_uid(group_uid); post_uid=normalize_uid(post_uid)
+    if not group_uid or not post_uid: return False
+    conn=db(); c=conn.cursor()
+    c.execute("""INSERT OR IGNORE INTO group_post_results(group_uid,post_uid,post_link,author_name,posted_at,content_preview,comments,reactions,status,keyword,created_at)
+              VALUES(?,?,?,?,?,?,?,?,?,?,?)""", (group_uid,post_uid,post_link,author_name,posted_at,content_preview[:280],int(comments or 0),int(reactions or 0),'Chưa xử lý',keyword,datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
+    ok=c.rowcount>0; conn.commit(); conn.close(); return ok
+
+def import_group_posts(raw_text, keyword='', min_comments=0, min_reactions=0):
+    added=dup=filtered=0
+    for line in [x.strip() for x in (raw_text or '').splitlines() if x.strip()]:
+        p=[x.strip() for x in line.replace('\t', ',').split(',')]
+        while len(p)<8: p.append('')
+        try: comments=int(p[6] or 0); reactions=int(p[7] or 0)
+        except Exception: comments=reactions=0
+        if comments < int(min_comments or 0) or reactions < int(min_reactions or 0): filtered+=1; continue
+        if keyword and keyword.lower() not in ' '.join(p).lower(): filtered+=1; continue
+        if add_group_post_result(p[0],p[1],p[2],p[3],p[4],p[5],comments,reactions,keyword): added+=1
+        else: dup+=1
+    return {'added':added,'duplicate':dup,'filtered':filtered}
+
+def get_group_post_results(limit=200):
+    conn=db(); c=conn.cursor(); c.execute("SELECT id,group_uid,post_uid,post_link,author_name,posted_at,content_preview,comments,reactions,status,keyword,created_at FROM group_post_results ORDER BY id DESC LIMIT ?", (limit,)); rows=c.fetchall(); conn.close(); return rows
+
+def add_group_post_queue(page_index, group_ids, content):
+    selected_page=None
+    try:
+        i=int(page_index); selected_page=PAGES[i] if 0<=i<len(PAGES) else None
+    except Exception: selected_page=None
+    page_id=str(selected_page.get('id','')) if selected_page else ''
+    page_name=selected_page.get('name','Chưa chọn Page') if selected_page else 'Chưa chọn Page'
+    conn=db(); c=conn.cursor(); added=0
+    for gid in group_ids:
+        c.execute("SELECT group_name FROM fb_groups WHERE group_id=? LIMIT 1", (gid,)); row=c.fetchone()
+        gname=row[0] if row else gid
+        c.execute("INSERT INTO group_post_queue(page_id,page_name,group_uid,group_name,content,status,note,created_at) VALUES(?,?,?,?,?,?,?,?)", (page_id,page_name,gid,gname,content,'Chờ duyệt','Chỉ đăng khi Page/tài khoản có quyền hợp lệ và admin duyệt.',datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
+        added+=1
+    conn.commit(); conn.close(); return added
+
+def get_group_post_queue(limit=100):
+    conn=db(); c=conn.cursor(); c.execute("SELECT id,page_name,group_name,group_uid,content,status,note,created_at FROM group_post_queue ORDER BY id DESC LIMIT ?", (limit,)); rows=c.fetchall(); conn.close(); return rows
 
 def v3_ceo_summary():
     s = get_stats()
@@ -3524,6 +3756,20 @@ body{
 @media(max-width:1100px){.analytics-kpi-grid{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:700px){.analytics-kpi-grid{grid-template-columns:1fr}}
 
+
+/* V6: Loại bỏ icon ở menu chính/sidebar/mobile để giao diện gọn hơn */
+.v2-nav-ico,.mobilebar a::first-letter{display:none!important}
+.v2-nav-link{gap:8px!important}
+.mobilebar a{font-size:12px!important;line-height:1.35!important}
+.gf-box{background:#F8FAFC;border:1px solid #E5E7EB;border-radius:22px;padding:16px;margin:12px 0}
+.gf-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.gf-grid-3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.gf-stat{background:white;border:1px solid #E5E7EB;border-radius:18px;padding:14px;box-shadow:0 8px 24px rgba(15,23,42,.06)}
+.gf-stat b{font-size:24px;display:block;color:#1E1B4B}.gf-stat span{font-size:12px;color:#64748B;font-weight:800}
+.gf-warning{background:#FFF7ED;border:1px solid #FED7AA;color:#9A3412;border-radius:16px;padding:12px;margin:10px 0;font-size:13px;line-height:1.5}
+.gf-table{width:100%;border-collapse:separate;border-spacing:0 8px;font-size:13px}.gf-table th{text-align:left;color:#475569;padding:8px}.gf-table td{background:white;border-top:1px solid #E5E7EB;border-bottom:1px solid #E5E7EB;padding:10px}.gf-table td:first-child{border-left:1px solid #E5E7EB;border-radius:12px 0 0 12px}.gf-table td:last-child{border-right:1px solid #E5E7EB;border-radius:0 12px 12px 0}
+@media(max-width:900px){.gf-grid,.gf-grid-3{grid-template-columns:1fr}}
+
 </style>
 <script>
 function copyText(id){
@@ -3899,7 +4145,11 @@ function closeLockedFeature(){
   <a class="v2-nav-link" href="#facebook_center" onclick="openModule('facebook_center')"><span class="v2-nav-ico">📣</span><span class="v2-nav-text">Facebook Center</span><span class="v2-nav-tag">Core</span></a>
   <a class="v2-nav-link" href="#post" onclick="openModule('post')"><span class="v2-nav-ico">📝</span><span class="v2-nav-text">Đăng bài Facebook</span></a>
   <a class="v2-nav-link" href="#fanpage_manager" onclick="openModule('fanpage_manager')"><span class="v2-nav-ico">📄</span><span class="v2-nav-text">Quản lý Fanpage</span><span class="v2-nav-tag">V5</span></a>
-  <a class="v2-nav-link" href="#group_marketing" onclick="openModule('group_marketing')"><span class="v2-nav-ico">👥</span><span class="v2-nav-text">Quản lý Group</span><span class="v2-nav-tag">V5</span></a>
+  <a class="v2-nav-link" href="#group_marketing" onclick="openModule('group_marketing')"><span class="v2-nav-ico"></span><span class="v2-nav-text">Quản lý Group</span><span class="v2-nav-tag">V6</span></a>
+  <a class="v2-nav-link" href="#group_finder" onclick="openModule('group_finder')"><span class="v2-nav-ico"></span><span class="v2-nav-text">Tìm Group theo từ khóa</span><span class="v2-nav-tag">New</span></a>
+  <a class="v2-nav-link" href="#group_uid_splitter" onclick="openModule('group_uid_splitter')"><span class="v2-nav-ico"></span><span class="v2-nav-text">Chia UID Group</span></a>
+  <a class="v2-nav-link" href="#group_join_queue" onclick="openModule('group_join_queue')"><span class="v2-nav-ico"></span><span class="v2-nav-text">Hàng chờ tham gia Group</span></a>
+  <a class="v2-nav-link" href="#group_post_filter" onclick="openModule('group_post_filter')"><span class="v2-nav-ico"></span><span class="v2-nav-text">Lọc bài viết Group</span></a>
 
   <div class="v2-nav-title">SELLER AI</div>
   <a class="v2-nav-link" href="#comment_manager" onclick="openModule('comment_manager')"><span class="v2-nav-ico">🤖</span><span class="v2-nav-text">AI Comment</span><span class="v2-nav-tag">AI</span></a>
@@ -4077,17 +4327,66 @@ function closeLockedFeature(){
   </table>
 </section>
 
+
 <section class="panel module-section" id="group_marketing">
-  <div class="section-open-note">Bạn đang mở: Group Marketing.</div>
-  <h2>👥 Quản lý Group</h2>
-  <p class="small">Quản lý Group, danh sách Group, lịch đăng Group và AI viết bài Group.</p>
-  <div class="grid">
-    <form method="post" action="/fb_group"><h3>Thêm Group</h3><input name="group_name" placeholder="Tên Group"><input name="group_id" placeholder="Group ID"><input name="niche" placeholder="Ngành / tệp khách"><textarea name="note" rows="2" placeholder="Ghi chú"></textarea><button>Lưu Group</button></form>
-    <form method="post" action="/v3_ai_tool"><h3>AI viết bài Group</h3><input type="hidden" name="tool" value="group_content"><textarea name="topic" rows="4" placeholder="Ví dụ: Tôi bán Proxy cho người chạy quảng cáo Facebook"></textarea><button>Tạo bài Group</button></form>
+  <div class="section-open-note">Bạn đang mở: Group Marketing V6.</div>
+  <h2>Quản lý Group</h2>
+  <p class="small">Chọn Page và các Group đã tham gia để đưa bài vào hàng chờ đăng. Hệ thống chỉ lưu hàng chờ, không tự động spam hàng loạt.</p>
+  <div class="gf-warning">Chỉ đăng vào Group/Page mà Page hoặc tài khoản có quyền truy cập hợp lệ. Nên dùng quy trình: chọn Page → chọn Group đã tham gia → admin duyệt → đăng có giới hạn → ghi log.</div>
+  <div class="gf-grid">
+    <form method="post" action="/fb_group"><h3>Thêm Group đã tham gia</h3><input name="group_name" placeholder="Tên Group"><input name="group_id" placeholder="UID Group"><input name="niche" placeholder="Ngành / tệp khách"><textarea name="note" rows="3" placeholder="Ghi chú quyền: Page có tham gia, có được đăng bài không..."></textarea><button>Lưu Group</button></form>
+    <form method="post" action="/group_multi_post_queue"><h3>Chọn Page + nhiều Group để đăng</h3><select name="page_index">{% for p in pages %}<option value="{{ loop.index0 }}">{{ p.name }} - {{ p.id }}</option>{% endfor %}</select><div class="gf-box" style="max-height:220px;overflow:auto">{% for g in fb_groups %}<label style="display:block;margin:6px 0"><input type="checkbox" name="group_ids" value="{{ g[2] }}"> {{ g[1] }} • {{ g[2] }}</label>{% endfor %}</div><textarea name="content" rows="5" placeholder="Nội dung bài đăng Group"></textarea><button>Đưa vào hàng chờ duyệt</button></form>
   </div>
-  <form method="post" action="/group_schedule"><h3>Lịch đăng Group</h3><div class="grid"><input name="group_name" placeholder="Tên Group"><input name="group_id" placeholder="Group ID"><input name="schedule_time" type="datetime-local"></div><textarea name="content" rows="4" placeholder="Nội dung cần lên lịch đăng Group"></textarea><button>Lưu lịch Group</button></form>
-  <h3>Danh sách Group</h3>{% for g in fb_groups %}<div class="history"><b>{{ g[1] }}</b> • {{ g[2] }} • {{ g[3] }}<br>{{ g[4] }}</div>{% endfor %}
-  <h3>Lịch Group gần nhất</h3>{% for gs in group_schedules %}<div class="history"><b>{{ gs[1] }}</b> • {{ gs[4] }} • {{ gs[5] }}<br>{{ gs[3] }}</div>{% endfor %}
+  <h3>Hàng chờ đăng Group</h3>{% for q in group_post_queue %}<div class="history"><b>{{ q[1] }}</b> → {{ q[2] }} • {{ q[5] }}<br>{{ q[4] }}</div>{% endfor %}
+  <h3>Danh sách Group đã lưu</h3>{% for g in fb_groups %}<div class="history"><b>{{ g[1] }}</b> • {{ g[2] }} • {{ g[3] }}<br>{{ g[4] }}</div>{% endfor %}
+</section>
+
+<section class="panel module-section" id="group_finder">
+  <div class="section-open-note">Bạn đang mở: Group Finder & UID Splitter.</div>
+  <h2>Group Finder & UID Splitter</h2>
+  <p class="small">Quét/lọc theo danh sách UID hợp lệ đã có quyền xem. Bản này không quét trái phép Facebook; nếu chưa dán danh sách, hệ thống tạo dữ liệu nháp để test giao diện.</p>
+  <div class="gf-grid-3">
+    <div class="gf-stat"><span>Tổng UID quét/lưu</span><b>{{ group_finder_stats.total }}</b></div>
+    <div class="gf-stat"><span>Group hợp lệ</span><b>{{ group_finder_stats.valid }}</b></div>
+    <div class="gf-stat"><span>Hàng chờ tham gia</span><b>{{ group_finder_stats.queue }}</b></div>
+  </div>
+  <form method="post" action="/group_finder_scan" class="gf-box">
+    <h3>Quét / nhập Group theo từ khóa</h3>
+    <div class="gf-grid-3"><input name="keyword" placeholder="Từ khóa Group"><input name="min_members" type="number" placeholder="Số thành viên tối thiểu"><select name="privacy"><option value="all">Công khai / riêng tư</option><option>Công khai</option><option>Riêng tư</option></select></div>
+    <div class="gf-grid-3"><select name="recent_only"><option value="0">Không bắt buộc hoạt động gần đây</option><option value="1">Có hoạt động gần đây</option></select><select name="page_join"><option value="all">Page tham gia: không lọc</option><option>Có</option><option>Không</option><option>Chưa rõ</option></select><select name="page_post"><option value="all">Page đăng bài: không lọc</option><option>Có</option><option>Không</option><option>Chưa rõ</option></select></div>
+    <textarea name="raw_groups" rows="6" placeholder="Dán danh sách: UID, Tên Group, Thành viên, Công khai/Riêng tư, Có hoạt động, Page tham gia, Page đăng bài"></textarea>
+    <button>Lọc và lưu UID hợp lệ</button>
+  </form>
+  <h3>Kết quả Group</h3><table class="gf-table"><tr><th>UID</th><th>Tên Group</th><th>Từ khóa</th><th>Thành viên</th><th>Quyền Page</th><th>Trạng thái</th></tr>{% for r in group_finder_results %}<tr><td>{{ r[3] }}</td><td>{{ r[2] }}</td><td>{{ r[1] }}</td><td>{{ r[4] }}</td><td>Tham gia: {{ r[7] }}<br>Đăng: {{ r[8] }}</td><td>{{ r[9] }}</td></tr>{% endfor %}</table>
+</section>
+
+<section class="panel module-section" id="group_uid_splitter">
+  <div class="section-open-note">Bạn đang mở: Chia UID Group.</div>
+  <h2>Chia UID Group tự động</h2>
+  <p class="small">Chia UID hợp lệ thành nhiều file CSV: 50 / 100 / 200 UID mỗi tệp hoặc số tự chọn.</p>
+  <form method="post" action="/group_uid_split"><select name="chunk_size"><option value="50">50 UID / tệp</option><option value="100">100 UID / tệp</option><option value="200">200 UID / tệp</option></select><button>Chia UID thành tệp</button></form>
+  <h3>Tệp UID đã tạo</h3>{% for f in group_uid_files %}<div class="history"><b>{{ f[1] }}</b> • {{ f[2] }} UID • mỗi tệp {{ f[3] }} UID</div>{% endfor %}
+</section>
+
+<section class="panel module-section" id="group_join_queue">
+  <div class="section-open-note">Bạn đang mở: Hàng chờ tham gia Group.</div>
+  <h2>Hàng chờ tham gia Group</h2>
+  <p class="small">Đưa UID đã lọc vào hàng chờ. Admin duyệt trước, sau đó tham gia có giới hạn và ghi log.</p>
+  <form method="post" action="/group_join_queue_add"><select name="page_index">{% for p in pages %}<option value="{{ loop.index0 }}">{{ p.name }} - {{ p.id }}</option>{% endfor %}</select><button>Đưa UID hợp lệ vào hàng chờ</button></form>
+  <table class="gf-table"><tr><th>UID Group</th><th>Tên Group</th><th>Từ khóa</th><th>Thành viên</th><th>Page</th><th>Trạng thái</th></tr>{% for q in group_join_queue %}<tr><td>{{ q[1] }}</td><td>{{ q[2] }}</td><td>{{ q[3] }}</td><td>{{ q[4] }}</td><td>{{ q[5] }}</td><td>{{ q[6] }}<br>{{ q[7] }}</td></tr>{% endfor %}</table>
+</section>
+
+<section class="panel module-section" id="group_post_filter">
+  <div class="section-open-note">Bạn đang mở: Lọc bài viết Group & lấy UID bài viết.</div>
+  <h2>Lọc bài viết Group & lấy UID bài viết</h2>
+  <p class="small">Nhập UID Group hoặc danh sách bài viết mà tài khoản/Page có quyền truy cập hợp lệ, sau đó lọc bài mới, nhiều comment, nhiều tương tác hoặc có từ khóa mua hàng.</p>
+  <div class="gf-warning">Không hỗ trợ quét dữ liệu trái phép hoặc spam tự động. Chỉ xử lý dữ liệu từ Group/Page có quyền truy cập hợp lệ.</div>
+  <form method="post" action="/group_post_filter_import" class="gf-box">
+    <div class="gf-grid-3"><input name="keyword" placeholder="Từ khóa mua hàng / số điện thoại / nhu cầu"><input name="min_comments" type="number" placeholder="Số comment tối thiểu"><input name="min_reactions" type="number" placeholder="Số reaction tối thiểu"></div>
+    <textarea name="raw_posts" rows="6" placeholder="Dán: UID Group, UID bài viết, Link bài viết, Người đăng, Thời gian đăng, Nội dung rút gọn, Số comment, Số reaction"></textarea>
+    <button>Lọc và lưu UID bài viết</button>
+  </form>
+  <table class="gf-table"><tr><th>UID Group</th><th>UID bài viết</th><th>Link</th><th>Người đăng</th><th>Nội dung</th><th>Comment/Reaction</th><th>Trạng thái</th></tr>{% for p in group_post_results %}<tr><td>{{ p[1] }}</td><td>{{ p[2] }}</td><td>{{ p[3] }}</td><td>{{ p[4] }}<br>{{ p[5] }}</td><td>{{ p[6] }}</td><td>{{ p[7] }} / {{ p[8] }}</td><td>{{ p[9] }}</td></tr>{% endfor %}</table>
 </section>
 
 <section class="panel module-section" id="comment_manager">
@@ -4991,11 +5290,11 @@ Thời gian tạo: {{ h[9] }}
 </div>
 
 <nav class="mobilebar">
-  <a href="#dashboard">🏠<br>Home</a>
-  <a href="#post">✍️<br>Đăng</a>
-  <a href="#library">📚<br>Kho</a>
-  <a href="#plan">🎯<br>Plan</a>
-  <a href="#history">📊<br>Lịch sử</a>
+  <a href="#dashboard">Home</a>
+  <a href="#post">Đăng</a>
+  <a href="#library">Kho</a>
+  <a href="#plan">Plan</a>
+  <a href="#history">Lịch sử</a>
 </nav>
 
 <script>
@@ -5133,7 +5432,7 @@ def render(content="", message="", ok=True, selected_industry="spa", analysis=""
         industry_labels=INDUSTRY_LABELS, selected_industry=selected_industry,
         library_items=current_library(selected_industry)[:10], locked_count=max(0, 500 - len(current_library(selected_industry)[:10])),
         score=score, warnings=warnings, token_warning=token_warning,
-        analysis=analysis, plan=plan, v3=v3_ceo_summary(), pipeline_rows=get_pipeline_leads(), customer_tasks=get_customer_tasks(), notifications=get_notifications(), fb_groups=get_fb_groups(), group_schedules=get_group_schedules(), comment_leads=get_comment_leads(), messenger_scripts=get_messenger_scripts(), success_assets=get_success_assets()
+        analysis=analysis, plan=plan, v3=v3_ceo_summary(), pipeline_rows=get_pipeline_leads(), customer_tasks=get_customer_tasks(), notifications=get_notifications(), fb_groups=get_fb_groups(), group_schedules=get_group_schedules(), comment_leads=get_comment_leads(), messenger_scripts=get_messenger_scripts(), success_assets=get_success_assets(), group_finder_results=get_group_finder_results(), group_finder_stats=get_group_finder_stats(), group_join_queue=get_group_join_queue(), group_uid_files=get_group_uid_files(), group_post_results=get_group_post_results(), group_post_queue=get_group_post_queue()
     )
 
 @app.route("/")
@@ -5494,6 +5793,51 @@ def fb_group_route():
 def group_schedule_route():
     add_group_schedule(request.form.get("group_name", "").strip(), request.form.get("group_id", "").strip(), request.form.get("content", "").strip(), request.form.get("schedule_time", "").replace("T", " "))
     return render(message="Đã lưu lịch đăng Group.", ok=True)
+
+
+@app.route("/group_finder_scan", methods=["POST"])
+def group_finder_scan_route():
+    stats = group_finder_import_text(
+        request.form.get("keyword", "").strip(),
+        request.form.get("raw_groups", ""),
+        request.form.get("min_members", "0"),
+        request.form.get("privacy", "all"),
+        request.form.get("recent_only", "0"),
+        request.form.get("page_join", "all"),
+        request.form.get("page_post", "all")
+    )
+    return render(message=f"Đã tìm thấy/lưu {stats['added']} Group phù hợp. Đã loại {stats['duplicate']} Group trùng UID. Đã bỏ qua {stats['rejected']} Group không đạt điều kiện.", ok=True)
+
+@app.route("/group_uid_split", methods=["POST"])
+def group_uid_split_route():
+    paths = split_group_uids(request.form.get("chunk_size", "50"))
+    return render(message=f"Đã chia thành {len(paths)} tệp UID Group.", ok=True)
+
+@app.route("/group_join_queue_add", methods=["POST"])
+def group_join_queue_add_route():
+    added = add_group_queue_from_results(request.form.get("page_index", ""))
+    return render(message=f"Đã đưa {added} Group vào hàng chờ tham gia. Admin cần duyệt trước khi thao tác.", ok=True)
+
+@app.route("/group_post_filter_import", methods=["POST"])
+def group_post_filter_import_route():
+    stats = import_group_posts(request.form.get("raw_posts", ""), request.form.get("keyword", ""), request.form.get("min_comments", "0"), request.form.get("min_reactions", "0"))
+    return render(message=f"Đã lưu {stats['added']} UID bài viết. Trùng {stats['duplicate']}. Lọc bỏ {stats['filtered']}.", ok=True)
+
+@app.route("/group_multi_post_queue", methods=["POST"])
+def group_multi_post_queue_route():
+    group_ids = request.form.getlist("group_ids")
+    content = request.form.get("content", "").strip()
+    if not group_ids or not content:
+        return render(message="Vui lòng chọn ít nhất 1 Group và nhập nội dung bài đăng.", ok=False)
+    added = add_group_post_queue(request.form.get("page_index", ""), group_ids, content)
+    return render(message=f"Đã đưa {added} bài đăng Group vào hàng chờ duyệt. Chỉ đăng khi Page có quyền hợp lệ.", ok=True)
+
+@app.route("/export_group_uids")
+def export_group_uids_route():
+    paths = split_group_uids(100)
+    if not paths:
+        return render(message="Chưa có UID Group để xuất.", ok=False)
+    return send_file(paths[0], as_attachment=True)
 
 @app.route("/comment_ai", methods=["POST"])
 def comment_ai_route():
