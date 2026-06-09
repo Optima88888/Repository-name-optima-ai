@@ -1937,6 +1937,10 @@ HTML = """
 <meta name="apple-mobile-web-app-title" content="Mkt Automation Pro">
 <link rel="manifest" href="/manifest.json">
 <link rel="apple-touch-icon" href="/pwa-icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
 
 <style>
 :root{
@@ -1957,7 +1961,7 @@ HTML = """
 html{scroll-behavior:smooth}
 body{
   margin:0;
-  font-family:Arial,sans-serif;
+  font-family:'Manrope','Inter',Arial,sans-serif;
   background:
     radial-gradient(circle at top left,rgba(124,58,237,.18),transparent 32%),
     radial-gradient(circle at top right,rgba(37,99,235,.16),transparent 30%),
@@ -2359,7 +2363,7 @@ button:hover{
   right:22px;
   bottom:22px;
   z-index:9999;
-  font-family:Arial,sans-serif;
+  font-family:'Manrope','Inter',Arial,sans-serif;
 }
 .bot-bubble{
   width:60px;
@@ -3976,6 +3980,112 @@ body.premium-active .premium-status-text{
 body.premium-active .device-status-card{
   border-color:rgba(37,99,235,.45)!important;
   background:linear-gradient(135deg,rgba(219,234,254,.95),rgba(255,255,255,.96))!important;
+}
+
+
+
+/* ===== PREMIUM FONT UPGRADE - LUXURY SAAS TYPOGRAPHY ===== */
+:root{
+  --font-heading:'Manrope','Inter',Arial,sans-serif;
+  --font-body:'Inter','Manrope',Arial,sans-serif;
+  --luxury-blue:#38BDF8;
+  --luxury-indigo:#6366F1;
+  --luxury-purple:#A855F7;
+  --luxury-gold:#FACC15;
+}
+html,body,button,input,textarea,select{
+  font-family:var(--font-body)!important;
+  text-rendering:geometricPrecision;
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+}
+body{font-weight:500;letter-spacing:-.01em;}
+h1,h2,h3,.logo,.v2-brand-title,.premium-title h2,.price-bottom-title h2,.rightbar h2,.module-card h3,.app-quick-card h3,.template-card h3,.plan-name,.card-title,.section-title,.analytics-section-title{
+  font-family:var(--font-heading)!important;
+  letter-spacing:-.045em!important;
+}
+h1,.top-hero h1{
+  font-size:clamp(38px,4.2vw,62px)!important;
+  line-height:1.02!important;
+  font-weight:800!important;
+  background:linear-gradient(90deg,#38BDF8 0%,#60A5FA 28%,#6366F1 58%,#A855F7 100%)!important;
+  -webkit-background-clip:text!important;
+  background-clip:text!important;
+  -webkit-text-fill-color:transparent!important;
+  text-shadow:0 18px 55px rgba(99,102,241,.25)!important;
+}
+.logo{
+  font-size:30px!important;
+  line-height:1.08!important;
+  font-weight:800!important;
+  letter-spacing:-.055em!important;
+}
+.subtitle,.panel p,.top-hero p,.rightbar p,.module-card p,.app-quick-card p,.template-card p,.plan-desc,.price-sub,.small{
+  font-family:var(--font-body)!important;
+  font-size:15px!important;
+  line-height:1.72!important;
+  font-weight:500!important;
+  letter-spacing:-.01em!important;
+}
+.nav a,.safe-menu-link,.v2-nav-link{
+  font-family:var(--font-heading)!important;
+  font-weight:800!important;
+  letter-spacing:-.025em!important;
+}
+.module-card h3,.app-quick-card h3,.template-card h3,.price-card h3,.plan-name{
+  font-size:22px!important;
+  line-height:1.18!important;
+  font-weight:800!important;
+  color:#0F172A!important;
+}
+.module-card p,.app-quick-card p,.template-card p{
+  color:#64748B!important;
+  font-size:15px!important;
+  line-height:1.75!important;
+}
+.price,.plan-price,.rec-price{
+  font-family:var(--font-heading)!important;
+  font-size:clamp(28px,2.3vw,38px)!important;
+  font-weight:800!important;
+  letter-spacing:-.06em!important;
+  line-height:1.04!important;
+  background:linear-gradient(90deg,#FDE68A 0%,#FACC15 35%,#F59E0B 68%,#FFEFD5 100%)!important;
+  -webkit-background-clip:text!important;
+  background-clip:text!important;
+  -webkit-text-fill-color:transparent!important;
+  text-shadow:0 0 28px rgba(250,204,21,.35)!important;
+}
+.price-card,.premium-plan,.locked-recommend-card{
+  border-radius:30px!important;
+  box-shadow:0 24px 70px rgba(15,23,42,.15)!important;
+}
+.price-card:hover,.premium-plan:hover,.module-card:hover,.app-quick-card:hover{
+  transform:translateY(-6px)!important;
+  box-shadow:0 30px 85px rgba(99,102,241,.22)!important;
+}
+.premium-status-text,#liveMemberCount,.activity-card b,.stat b{
+  font-family:var(--font-heading)!important;
+  font-weight:800!important;
+  letter-spacing:-.045em!important;
+}
+.premium-title .mini,.ribbon,.plan-ribbon,.module-pill,.safe-tag{
+  font-family:var(--font-heading)!important;
+  font-weight:800!important;
+  letter-spacing:-.02em!important;
+}
+button,.btn,.safe-pricing-action,.support-send{
+  font-family:var(--font-heading)!important;
+  font-weight:800!important;
+  letter-spacing:-.025em!important;
+}
+.device-status-card b,.premium-confirm-box h3{
+  font-family:var(--font-heading)!important;
+  letter-spacing:-.03em!important;
+}
+@media(max-width:720px){
+  h1,.top-hero h1{font-size:36px!important;letter-spacing:-.05em!important}
+  .logo{font-size:26px!important}
+  .module-card h3,.app-quick-card h3,.template-card h3{font-size:20px!important}
 }
 
 </style>
@@ -5800,6 +5910,16 @@ window.addEventListener('appinstalled', function(){
 .support-float{right:18px!important;bottom:18px!important}
 .support-online-dot{width:10px!important;height:10px!important;right:5px!important;bottom:6px!important}
 .support-btn{width:60px!important;height:60px!important;transition:transform .18s ease,box-shadow .18s ease}
+
+
+/* Premium support bot typography */
+.support-float,.support-panel,.support-panel *{
+  font-family:'Manrope','Inter',Arial,sans-serif!important;
+  letter-spacing:-.015em;
+}
+.support-head{font-weight:800!important;letter-spacing:-.03em!important;}
+.support-tooltip{font-family:'Inter','Manrope',Arial,sans-serif!important;font-weight:700!important;}
+.support-mini-menu button,.support-close,.support-send{font-family:'Manrope','Inter',Arial,sans-serif!important;font-weight:800!important;}
 </style>
 <div class="support-float">
   <button class="support-btn" title="AI Online" onclick="toggleSupportChat()"><span class="support-robot">🤖</span><span class="support-online-dot"></span><span class="support-tooltip">AI Online<br>Phản hồi trong vài giây</span></button>
