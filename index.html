@@ -1482,6 +1482,12 @@ gtag('config', 'G-1ZNYNTMNYC');
             <div class="menu-separator"></div>
             <div class="menu-group-title">📈 MARKETING HUB</div>
 
+            <div class="tool-menu premium-tool vip" data-tool="Quản lý Fanpage">📄 Quản lý Fanpage <small class="tag-vip">VIP</small></div>
+            <div class="tool-menu premium-tool vip" data-tool="Quản lý Group">👥 Quản lý Group <small class="tag-vip">VIP</small></div>
+            <div class="tool-menu premium-tool hot" data-tool="AI Comment">💬 AI Comment <small class="tag-hot">Hot</small></div>
+            <div class="tool-menu premium-tool hot" data-tool="AI Messenger">📨 AI Messenger <small class="tag-hot">Hot</small></div>
+            <div class="tool-menu premium-tool vip" data-tool="CRM Kanban">📊 CRM Kanban <small class="tag-vip">VIP</small></div>
+            <div class="tool-menu premium-tool hot" data-tool="AI Marketing Director">🧠 AI Marketing Director <small class="tag-hot">HOT</small></div>
             <div class="tool-menu premium-tool" data-tool="AI Marketing">📈 AI Marketing <small class="tag-pro">Pro</small></div>
             <div class="tool-menu premium-tool vip" data-tool="AI Phễu Bán Hàng">🧲 AI Phễu Bán Hàng <small class="tag-vip">VIP</small></div>
             <div class="tool-menu premium-tool vip" data-tool="AI Phân Tích Đối Thủ">🕵️ AI Phân Tích Đối Thủ <small class="tag-vip">VIP</small></div>
@@ -1759,6 +1765,8 @@ gtag('config', 'G-1ZNYNTMNYC');
         <div class="lock-list">
             ◆ Không giới hạn công cụ AI nâng cao<br>
             ◆ AI Viết Bài Facebook, Trả Lời Inbox, Chốt Sale<br>
+            ◆ Quản lý Fanpage, Quản lý Group, AI Comment, AI Messenger<br>
+            ◆ CRM Kanban, AI Marketing Director, Kế Hoạch Marketing<br>
             ◆ Kịch Bản Video, Lịch Content, Báo Giá Dịch Vụ<br>
             ◆ Hạn mức sử dụng cao hơn<br>
             ◆ Tốc độ phản hồi ưu tiên<br>
@@ -2793,16 +2801,147 @@ const TOOL_PROMPTS = {
     "Landing Page Bán Hàng": "Tạo cấu trúc landing page bán hàng gồm headline, nỗi đau, lợi ích, bảng giá, cam kết, FAQ và CTA. Sản phẩm/dịch vụ là:"
 };
 
+const TOOL_INTROS = {
+    "Quản lý Fanpage": `📄 TRUNG TÂM QUẢN LÝ FANPAGE
+
+Mục tiêu:
+◆ Quản lý nội dung Fanpage rõ ràng hơn
+◆ Theo dõi lịch đăng bài và hiệu suất nội dung
+◆ Gợi ý bài viết tăng tương tác, inbox và chuyển đổi
+◆ Hỗ trợ phản hồi comment/inbox theo từng tình huống
+
+Bảng thao tác nhanh:
+◆ Lập lịch đăng bài 7 ngày
+◆ Phân tích nội dung Fanpage
+◆ Gợi ý bài viết kéo inbox
+◆ Tạo kịch bản trả lời comment
+◆ Tạo checklist tối ưu Fanpage
+
+Kết quả nhận được:
+◆ Kế hoạch nội dung rõ ràng
+◆ Việc cần làm mỗi ngày
+◆ Mẫu bài đăng, mẫu phản hồi và hướng tối ưu`,
+
+    "Quản lý Group": `👥 TRUNG TÂM QUẢN LÝ GROUP
+
+Mục tiêu:
+◆ Quản lý Group Facebook chuyên nghiệp
+◆ Tăng tương tác tự nhiên trong nhóm
+◆ Tạo nội dung seeding và chăm sóc cộng đồng
+◆ Lọc khách tiềm năng từ bài viết và bình luận
+
+Bảng thao tác nhanh:
+◆ Lịch đăng bài Group 7 ngày
+◆ Ý tưởng seeding tăng tương tác
+◆ Bộ quy tắc Group
+◆ Kịch bản kéo thành viên thảo luận
+◆ Mẫu bài ghim giới thiệu dịch vụ
+
+Kết quả nhận được:
+◆ Group có nội dung đều hơn
+◆ Tăng tương tác và niềm tin
+◆ Tạo tệp khách hàng tiềm năng`,
+
+    "AI Comment": `💬 AI COMMENT CENTER
+
+Mục tiêu:
+◆ Trả lời bình luận nhanh, tự nhiên, không máy móc
+◆ Lọc bình luận có khả năng mua hàng
+◆ Gợi ý câu kéo khách vào inbox
+◆ Xử lý khách hỏi giá, chê đắt, so sánh, phân vân
+
+Bảng thao tác nhanh:
+◆ Mẫu trả lời khách hỏi giá
+◆ Mẫu kéo khách vào inbox
+◆ Mẫu xử lý khách chê đắt
+◆ Mẫu cảm ơn khách đã quan tâm
+◆ Mẫu phản hồi bình luận tiêu cực
+
+Kết quả nhận được:
+◆ Tăng tỷ lệ phản hồi
+◆ Tăng inbox từ comment
+◆ Giảm bỏ sót khách tiềm năng`,
+
+    "AI Messenger": `📨 AI MESSENGER CENTER
+
+Mục tiêu:
+◆ Soạn kịch bản tư vấn khách hàng
+◆ Chăm sóc khách theo từng giai đoạn
+◆ Xử lý từ chối và chốt đơn mềm mại
+◆ Tạo tin nhắn nhắc thanh toán, chăm sóc lại
+
+Bảng thao tác nhanh:
+◆ Kịch bản chào khách mới
+◆ Kịch bản tư vấn nhu cầu
+◆ Kịch bản báo giá
+◆ Kịch bản xử lý từ chối
+◆ Kịch bản chăm sóc lại sau 24 giờ
+
+Kết quả nhận được:
+◆ Tư vấn chuyên nghiệp hơn
+◆ Tăng tỷ lệ chốt đơn
+◆ Giảm thời gian trả lời khách`,
+
+    "CRM Kanban": `📊 CRM KANBAN BÁN HÀNG
+
+Quy trình đề xuất:
+◆ Khách mới
+◆ Đang tư vấn
+◆ Đã báo giá
+◆ Chờ thanh toán
+◆ Đã chốt đơn
+◆ Chăm sóc lại
+
+Mỗi khách nên lưu:
+◆ Tên khách
+◆ Sản phẩm quan tâm
+◆ Nhu cầu chính
+◆ Mức độ nóng
+◆ Lần chăm sóc gần nhất
+◆ Hành động tiếp theo
+
+Kết quả nhận được:
+◆ Không bỏ sót khách
+◆ Biết khách đang ở bước nào
+◆ Dễ giao việc cho nhân sự
+◆ Tăng tỷ lệ chăm sóc lại`,
+
+    "AI Marketing Director": `🧠 AI MARKETING DIRECTOR
+
+Vai trò:
+◆ Đóng vai Giám đốc Marketing AI cho doanh nghiệp của anh/chị
+◆ Phân tích thị trường, khách hàng, đối thủ và kênh bán hàng
+◆ Lập kế hoạch content, quảng cáo, phễu bán hàng và KPI
+
+Bảng thao tác nhanh:
+◆ Kế hoạch Marketing 30 ngày
+◆ Chân dung khách hàng mục tiêu
+◆ Lịch content theo tuần
+◆ Kịch bản quảng cáo Facebook/TikTok
+◆ Phễu bán hàng từ nhận diện đến chốt đơn
+◆ KPI doanh thu và hành động mỗi ngày
+
+Kết quả nhận được:
+◆ Có chiến lược rõ ràng
+◆ Biết nên làm gì từng ngày
+◆ Tối ưu nội dung, quảng cáo và chăm sóc khách`
+};
+
 function launchPremiumTool(toolName){
     const prompt = TOOL_PROMPTS[toolName] || ("Hỗ trợ tôi với công cụ: " + toolName);
+    const intro = TOOL_INTROS[toolName] || `✅ Đã mở công cụ: ${toolName}
+
+Anh/chị bổ sung thông tin sau dấu hai chấm rồi bấm Gửi để AI xử lý chính xác hơn.`;
     newChat();
     const input = document.getElementById("input");
     input.value = prompt;
     input.focus();
     const c = chats[currentIndex];
-    c.push({role:"ai", text:`✅ Đã mở công cụ: ${toolName}
+    c.push({role:"ai", text:intro + `
 
-Anh/chị bổ sung thông tin sau dấu hai chấm rồi bấm Gửi để AI xử lý chính xác hơn.`});
+━━━━━━━━━━━━━━━
+
+Ô nhập bên dưới đã được chuẩn bị sẵn prompt. Anh/chị chỉ cần bổ sung thông tin sau dấu hai chấm rồi bấm Gửi.`});
     saveChats();
     renderMessages();
 }
@@ -2826,13 +2965,16 @@ Tài khoản hiện tại chưa kích hoạt Premium nên chưa thể sử dụn
 
 💎 Khi nâng cấp Premium anh/chị sẽ được mở khóa:
 
+◆ Quản lý Fanpage
+◆ Quản lý Group
+◆ AI Comment
+◆ AI Messenger
+◆ CRM Kanban
+◆ AI Marketing Director
 ◆ AI Viết Bài Facebook
 ◆ AI Trả Lời Inbox
 ◆ AI Chốt Sale
-◆ Kịch Bản Video Viral
-◆ Lịch Content 7 Ngày
 ◆ Kế Hoạch Marketing 30 Ngày
-◆ AI Báo Giá Dịch Vụ
 ◆ Landing Page Chuyên Nghiệp
 
 ━━━━━━━━━━━━━━━
