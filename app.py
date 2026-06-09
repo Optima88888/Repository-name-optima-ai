@@ -4380,7 +4380,7 @@ function closeFloatingBot(){
 let botGreeted=false;
 function escapeBotText(value){
   return String(value || "").replace(/[&<>"]/g,function(ch){
-    return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[ch];
+    return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[ch];
   });
 }
 function appendBotGreeting(){
@@ -6280,137 +6280,116 @@ function dropKanban(ev){ ev.preventDefault(); const col=ev.currentTarget; if(dra
 })();
 </script>
 
-
-<style id="final-click-fix-css">
-/* FINAL FIX: mở lại toàn bộ nút/menu/bot, bỏ icon dư */
-.v2-nav-link,.module-card,.app-quick-card,.bot-bubble,.bot-panel button{cursor:pointer!important;pointer-events:auto!important;position:relative!important}
-.v2-nav-ico,.v2-nav-tag{display:none!important;width:0!important;min-width:0!important;margin:0!important;padding:0!important;overflow:hidden!important}
-.activity-card span::before{content:none!important}
-.activity-card span{font-size:16px!important;color:#CBD5E1!important}
-.floating-bot{position:fixed!important;right:28px!important;bottom:28px!important;z-index:2147483640!important;pointer-events:auto!important}
-.bot-panel{z-index:2147483641!important;pointer-events:auto!important}
-.bot-bubble{z-index:2147483642!important;pointer-events:auto!important}
-#sidebarDeviceId{display:inline-block!important;color:#fff!important;font-weight:900!important;font-size:14px!important;letter-spacing:.4px;margin:4px 0}
-</style>
-<script id="final-click-fix-js">
+<script id="ultimate-button-repair-js">
 (function(){
-  var alias = {
-    post:'page_center_total', page_center:'page_center_total', page_comment_pro:'page_center_total', page_comment_queue:'page_center_total',
-    group_marketing:'group_suite', group_finder:'group_suite', group_uid_splitter:'group_suite', group_join_queue:'group_suite', group_post_filter:'group_suite',
-    analytics_center:'analytics'
-  };
-  function ensureDeviceIdFinal(){
+  function byId(id){ return document.getElementById(id); }
+  function show(el, display){ if(el) el.style.display = display || 'block'; }
+  function hide(el){ if(el) el.style.display = 'none'; }
+  function ensureDeviceIdSafe(){
     var id = localStorage.getItem('mkt_device_id');
     if(!id || id === 'Đang tạo...'){
       id = 'MKT-' + Math.random().toString(36).slice(2,8).toUpperCase() + Date.now().toString().slice(-4);
       localStorage.setItem('mkt_device_id', id);
     }
     document.cookie = 'mkt_device_id=' + encodeURIComponent(id) + '; path=/; max-age=' + (60*60*24*365*5);
-    var side = document.getElementById('sidebarDeviceId'); if(side) side.textContent = id;
-    var pay = document.getElementById('payDeviceId'); if(pay) pay.value = id;
+    var side = byId('sidebarDeviceId'); if(side) side.textContent = id;
+    var pay = byId('payDeviceId'); if(pay) pay.value = id;
     return id;
   }
-  function openModuleFinal(id){
-    id = (id || 'dashboard').replace('#','');
-    id = alias[id] || id;
-    if(id === 'premium'){
-      var pricing = document.getElementById('pricing') || document.getElementById('premium');
-      if(pricing){
-        document.querySelectorAll('.module-section').forEach(function(el){el.classList.remove('active-module'); el.style.display='none';});
-        pricing.classList.add('active-module'); pricing.style.display='block'; pricing.scrollIntoView({behavior:'smooth',block:'start'});
-      } else if(typeof openPayment === 'function') { openPayment('monthly'); }
+  var alias = {
+    post:'page_center_total', page_center:'page_center_total', page_comment_pro:'page_center_total', page_comment_queue:'page_center_total',
+    group_marketing:'group_suite', group_finder:'group_suite', group_uid_splitter:'group_suite', group_join_queue:'group_suite', group_post_filter:'group_suite',
+    analytics:'analytics_center', premium:'pricing', plan:'pricing', home:'dashboard'
+  };
+  window.openModule = function(moduleId){
+    moduleId = alias[moduleId] || moduleId || 'dashboard';
+    if(moduleId === 'pricing'){
+      if(typeof window.scrollToPricing === 'function') { window.scrollToPricing(); return false; }
+      var pr = byId('pricing'); if(pr){ show(pr,'block'); pr.scrollIntoView({behavior:'smooth',block:'start'}); }
       return false;
     }
-    var target = document.getElementById(id);
-    if(!target) target = document.getElementById(alias[id] || 'dashboard');
+    var target = byId(moduleId);
+    if(!target && moduleId === 'dashboard') target = byId('facebook_center') || document.querySelector('.module-section');
+    document.querySelectorAll('.module-section').forEach(function(sec){ sec.classList.remove('active-module'); });
     if(target){
-      document.querySelectorAll('.module-section').forEach(function(el){ el.classList.remove('active-module'); el.style.display='none'; });
-      target.classList.add('active-module'); target.style.display='block';
-      document.querySelectorAll('.v2-nav-link').forEach(function(a){a.classList.remove('active');});
-      var active = document.querySelector('.v2-nav-link[href="#'+id+'"]') || document.querySelector('.v2-nav-link[href="#'+(alias[id]||id)+'"]');
-      if(active) active.classList.add('active');
+      target.classList.add('active-module');
       setTimeout(function(){ target.scrollIntoView({behavior:'smooth',block:'start'}); }, 20);
     }
+    document.querySelectorAll('.v2-nav-link').forEach(function(a){ a.classList.remove('active'); });
+    var active = document.querySelector('.v2-nav-link[href="#'+moduleId+'"]');
+    if(active) active.classList.add('active');
     return false;
-  }
-  function botPanel(){return document.getElementById('floatingBotPanel');}
-  function openBotFinal(){
-    var p = botPanel(); if(!p) return false;
-    p.style.display = 'block';
-    if(typeof appendBotGreeting === 'function') appendBotGreeting();
+  };
+  window.toggleFloatingBot = function(){
+    var panel = byId('floatingBotPanel');
+    if(!panel) return false;
+    panel.style.display = (panel.style.display === 'block') ? 'none' : 'block';
+    if(panel.style.display === 'block' && typeof window.appendBotGreeting === 'function') window.appendBotGreeting();
     return false;
-  }
-  function toggleBotFinal(){
-    var p = botPanel(); if(!p) return false;
-    if(p.style.display === 'block'){ p.style.display = 'none'; }
-    else { openBotFinal(); }
+  };
+  window.closeFloatingBot = function(){ hide(byId('floatingBotPanel')); return false; };
+  window.botQuick = window.botQuick || function(text){
+    var body = byId('floatingBotBody'); if(!body) return false;
+    var safe = String(text||'').replace(/[&<>\"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[c];});
+    var reply = (typeof window.getBotReply === 'function') ? window.getBotReply(text) : 'Dạ em đã nhận thông tin. Anh/chị vui lòng gửi thêm chi tiết để em hỗ trợ ạ.';
+    body.innerHTML += '<div class="bot-msg"><b>Bạn:</b> '+safe+'</div>';
+    body.innerHTML += '<div class="bot-msg ai"><b>Bot hỗ trợ:</b><br>'+reply+'</div>';
+    body.scrollTop = body.scrollHeight;
     return false;
-  }
-  function sendBotFinal(){
-    if(typeof sendBotInput === 'function') sendBotInput();
+  };
+  window.sendBotInput = function(){
+    var input = byId('botInputText'); if(!input || !input.value.trim()) return false;
+    window.botQuick(input.value.trim()); input.value=''; return false;
+  };
+  window.scrollToPricing = function(){
+    var el = byId('pricing');
+    if(el){ show(el,'block'); el.scrollIntoView({behavior:'smooth',block:'start'}); }
     return false;
-  }
-  function quickBotFinal(text){
-    if(typeof botQuick === 'function') botQuick(text);
-    else openBotFinal();
+  };
+  window.openPayment = window.openPayment || function(planKey){
+    var modal = byId('paymentModal');
+    if(modal){ show(modal,'flex'); ensureDeviceIdSafe(); }
+    else window.scrollToPricing();
     return false;
-  }
-  window.ensureDeviceId = ensureDeviceIdFinal;
-  window.getOrCreateDeviceId = ensureDeviceIdFinal;
-  window.openModule = openModuleFinal;
-  window.toggleFloatingBot = toggleBotFinal;
-  window.closeFloatingBot = function(){ var p=botPanel(); if(p) p.style.display='none'; return false; };
-  window.sendBotInput = window.sendBotInput || sendBotFinal;
-  window.botQuick = window.botQuick || quickBotFinal;
-  window.scrollToPricing = function(){ return openModuleFinal('premium'); };
-
-  document.addEventListener('DOMContentLoaded', function(){
-    ensureDeviceIdFinal(); setTimeout(ensureDeviceIdFinal,300); setTimeout(ensureDeviceIdFinal,1200);
-    var dash = document.getElementById('dashboard');
-    if(dash && !document.querySelector('.module-section.active-module')){ dash.classList.add('active-module'); dash.style.display='block'; }
-    var input = document.getElementById('botInputText');
-    if(input){ input.addEventListener('keydown', function(e){ if(e.key === 'Enter'){ e.preventDefault(); sendBotFinal(); } }); }
-  });
+  };
+  window.closePayment = window.closePayment || function(){ hide(byId('paymentModal')); return false; };
+  window.openLockedFeature = window.openLockedFeature || function(){ window.scrollToPricing(); return false; };
 
   document.addEventListener('click', function(e){
-    var botBubble = e.target.closest && e.target.closest('.bot-bubble');
-    if(botBubble){ e.preventDefault(); e.stopPropagation(); toggleBotFinal(); return false; }
-
-    var closeBot = e.target.closest && e.target.closest('.bot-close');
-    if(closeBot){ e.preventDefault(); e.stopPropagation(); window.closeFloatingBot(); return false; }
-
-    var quick = e.target.closest && e.target.closest('.bot-actions button');
-    if(quick){ e.preventDefault(); e.stopPropagation(); openBotFinal(); quickBotFinal((quick.textContent||'').trim()); return false; }
-
-    var send = e.target.closest && e.target.closest('.bot-input button');
-    if(send){ e.preventDefault(); e.stopPropagation(); sendBotFinal(); return false; }
-
-    var card = e.target.closest && e.target.closest('.module-card,.app-quick-card');
-    if(card){
-      var oc = card.getAttribute('onclick') || '';
-      var m = oc.match(/openModule\(['\"]([^'\"]+)['\"]\)/);
-      if(m){ e.preventDefault(); e.stopPropagation(); openModuleFinal(m[1]); return false; }
-      if(oc.indexOf("#premium") >= 0){ e.preventDefault(); e.stopPropagation(); openModuleFinal('premium'); return false; }
+    var btn = e.target.closest('button, a, .app-quick-card, .module-card, .price-card, .premium-plan, .bot-bubble');
+    if(!btn) return;
+    if(btn.classList.contains('bot-bubble')){ e.preventDefault(); window.toggleFloatingBot(); return; }
+    if(btn.classList.contains('payment-close')){ e.preventDefault(); window.closePayment(); return; }
+    var txt = (btn.innerText || btn.textContent || '').trim().toLowerCase();
+    var href = btn.getAttribute && btn.getAttribute('href');
+    if(href && href.charAt(0)==='#'){
+      var id = href.slice(1); e.preventDefault(); window.openModule(id); return;
     }
-
-    var link = e.target.closest && e.target.closest('a.v2-nav-link[href^="#"]');
-    if(link){ e.preventDefault(); e.stopPropagation(); openModuleFinal((link.getAttribute('href')||'').slice(1)); return false; }
-
-    var btn = e.target.closest && e.target.closest('button[onclick]');
-    if(btn){
-      var onclick = btn.getAttribute('onclick') || '';
-      var mm = onclick.match(/openModule\(['\"]([^'\"]+)['\"]\)/);
-      if(mm){ e.preventDefault(); e.stopPropagation(); openModuleFinal(mm[1]); return false; }
-      if(onclick.indexOf('scrollToPricing') >= 0){ e.preventDefault(); e.stopPropagation(); openModuleFinal('premium'); return false; }
-      if(onclick.indexOf('openPremiumPopup') >= 0){
-        var pop = document.getElementById('premiumPopup'); if(pop){ e.preventDefault(); e.stopPropagation(); pop.style.display='flex'; return false; }
-      }
-      if(onclick.indexOf('openPayment') >= 0 && typeof window.openPayment === 'function'){
-        var plan = (onclick.match(/openPayment\(['\"]([^'\"]+)['\"]\)/)||[])[1] || 'monthly';
-        e.preventDefault(); e.stopPropagation(); window.openPayment(plan); return false;
-      }
-    }
+    var cardModule = btn.closest('[onclick*="openModule"]');
+    var onclick = (btn.getAttribute && btn.getAttribute('onclick')) || '';
+    var m = onclick.match(/openModule\(['\"]([^'\"]+)['\"]\)/);
+    if(m){ e.preventDefault(); window.openModule(m[1]); return; }
+    var p = onclick.match(/openPayment\(['\"]([^'\"]+)['\"]\)/);
+    if(p){ e.preventDefault(); if(typeof window.openPayment === 'function') window.openPayment(p[1]); return; }
+    var q = onclick.match(/botQuick\(['\"]([^'\"]+)['\"]\)/);
+    if(q){ e.preventDefault(); window.botQuick(q[1]); return; }
+    if(txt.includes('nâng cấp premium')){ e.preventDefault(); window.botQuick('Nâng cấp Premium'); return; }
+    if(txt.includes('hướng dẫn thanh toán')){ e.preventDefault(); window.botQuick('Hướng dẫn thanh toán'); return; }
+    if(txt.includes('kích hoạt tài khoản')){ e.preventDefault(); window.botQuick('Kích hoạt tài khoản'); return; }
+    if(txt.includes('liên hệ hỗ trợ')){ e.preventDefault(); window.botQuick('Liên hệ hỗ trợ'); return; }
+    if(txt.includes('xem chi tiết gói') || txt.includes('xem bảng giá')){ e.preventDefault(); window.scrollToPricing(); return; }
   }, true);
+
+  document.addEventListener('DOMContentLoaded', function(){
+    ensureDeviceIdSafe();
+    setTimeout(ensureDeviceIdSafe, 300);
+    var input = byId('botInputText');
+    if(input){ input.addEventListener('keydown', function(e){ if(e.key === 'Enter'){ e.preventDefault(); window.sendBotInput(); } }); }
+    if(!document.querySelector('.module-section.active-module')){
+      var first = byId('dashboard') || byId('facebook_center') || document.querySelector('.module-section');
+      if(first) first.classList.add('active-module');
+    }
+  });
 })();
 </script>
 
