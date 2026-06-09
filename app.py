@@ -22,7 +22,7 @@ except Exception:
 
 load_dotenv()
 
-APP_TITLE = "Mkt Automation Pro V7 Comment Manager Pro"
+APP_TITLE = "Mkt Automation Pro V10 Page Group Token Center Pro"
 DB = "marketing_automation_pro_v11.db"
 UPLOAD_DIR = "uploads"
 REPORT_DIR = "reports"
@@ -578,8 +578,8 @@ def init_db():
         post_uid TEXT,
         group_uid TEXT,
         comment_text TEXT,
-        min_delay_seconds INTEGER DEFAULT 60,
-        max_delay_seconds INTEGER DEFAULT 120,
+        min_delay_seconds INTEGER DEFAULT 45,
+        max_delay_seconds INTEGER DEFAULT 90,
         scheduled_at TEXT,
         status TEXT DEFAULT 'Chờ duyệt',
         admin_status TEXT DEFAULT 'Chờ admin duyệt',
@@ -600,11 +600,203 @@ def init_db():
         created_at TEXT
     )
     """)
+
+    # V10 Page Token Center - thêm Page ID/Token ngay trong tool, không cần sửa Render Environment
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS page_tokens (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        page_name TEXT,
+        page_id TEXT UNIQUE,
+        page_token TEXT,
+        status TEXT DEFAULT 'active',
+        note TEXT,
+        created_at TEXT,
+        updated_at TEXT
+    )
+    """)
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS page_group_memberships (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        page_id TEXT,
+        page_name TEXT,
+        group_id TEXT,
+        group_name TEXT,
+        status TEXT DEFAULT 'Đã tham gia',
+        can_post TEXT DEFAULT 'Có',
+        note TEXT,
+        created_at TEXT,
+        UNIQUE(page_id, group_id)
+    )
+    """)
     conn.commit()
     conn.close()
 
 def db():
     return sqlite3.connect(DB)
+
+
+def get_pages_dynamic():
+    """Lấy Page từ PAGES_JSON và Page Token lưu trong tool.
+    Page thêm trong giao diện sẽ dùng ngay cho dropdown đăng bài/bình luận mà không cần sửa Render Environment.
+    """
+    pages = []
+    seen = set()
+    for page in PAGES:
+        pid = str(page.get("id", "")).strip()
+        if not pid or pid in seen:
+            continue
+        pages.append({"name": page.get("name", "No name"), "id": pid, "token": page.get("token", ""), "source": "env"})
+        seen.add(pid)
+    try:
+        conn = db(); c = conn.cursor()
+        c.execute("""
+            CREATE TABLE IF NOT EXISTS page_tokens (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                page_name TEXT,
+                page_id TEXT UNIQUE,
+                page_token TEXT,
+                status TEXT DEFAULT 'active',
+                note TEXT,
+                created_at TEXT,
+                updated_at TEXT
+            )
+        """)
+        c.execute("SELECT page_name,page_id,page_token,status,note FROM page_tokens WHERE COALESCE(status,'active')!='deleted' ORDER BY id DESC")
+        rows = c.fetchall(); conn.close()
+        for name, pid, token, status, note in rows:
+            pid = str(pid or "").strip()
+            if not pid or pid in seen:
+                continue
+            pages.append({"name": name or f"Page {pid}", "id": pid, "token": token or "", "source": "db", "status": status or "active", "note": note or ""})
+            seen.add(pid)
+    except Exception:
+        pass
+    return pages
+
+def get_page_by_index(page_index):
+    pages = get_pages_dynamic()
+    try:
+        i = int(page_index)
+        if 0 <= i < len(pages):
+            return pages[i]
+    except Exception:
+        pass
+    return None
+
+def save_page_token(page_name, page_id, page_token, note=''):
+    page_id = str(page_id or '').strip()
+    page_token = str(page_token or '').strip()
+    if not page_id or not page_token:
+        return False
+    page_name = (page_name or f'Page {page_id}').strip()
+    now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    conn = db(); c = conn.cursor()
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS page_tokens (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            page_name TEXT,
+            page_id TEXT UNIQUE,
+            page_token TEXT,
+            status TEXT DEFAULT 'active',
+            note TEXT,
+            created_at TEXT,
+            updated_at TEXT
+        )
+    """)
+    c.execute("""
+        INSERT INTO page_tokens(page_name,page_id,page_token,status,note,created_at,updated_at)
+        VALUES(?,?,?,?,?,?,?)
+        ON CONFLICT(page_id) DO UPDATE SET
+            page_name=excluded.page_name,
+            page_token=excluded.page_token,
+            status='active',
+            note=excluded.note,
+            updated_at=excluded.updated_at
+    """, (page_name, page_id, page_token, 'active', note, now, now))
+    conn.commit(); conn.close(); return True
+
+def get_page_token_rows(limit=100):
+    conn = db(); c = conn.cursor()
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS page_tokens (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            page_name TEXT,
+            page_id TEXT UNIQUE,
+            page_token TEXT,
+            status TEXT DEFAULT 'active',
+            note TEXT,
+            created_at TEXT,
+            updated_at TEXT
+        )
+    """)
+    c.execute("SELECT id,page_name,page_id,CASE WHEN page_token!='' THEN substr(page_token,1,8)||'...' ELSE '' END,status,note,updated_at FROM page_tokens WHERE COALESCE(status,'active')!='deleted' ORDER BY id DESC LIMIT ?", (limit,))
+    rows = c.fetchall(); conn.close(); return rows
+
+def add_page_group_membership(page_index, group_id, status='Đã tham gia', can_post='Có', note=''):
+    page = get_page_by_index(page_index)
+    group_id = normalize_uid(group_id)
+    if not page or not group_id:
+        return False
+    conn = db(); c = conn.cursor()
+    c.execute("SELECT group_name FROM fb_groups WHERE group_id=? LIMIT 1", (group_id,))
+    row = c.fetchone(); group_name = row[0] if row else group_id
+    now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS page_group_memberships (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            page_id TEXT,
+            page_name TEXT,
+            group_id TEXT,
+            group_name TEXT,
+            status TEXT DEFAULT 'Đã tham gia',
+            can_post TEXT DEFAULT 'Có',
+            note TEXT,
+            created_at TEXT,
+            UNIQUE(page_id, group_id)
+        )
+    """)
+    c.execute("""
+        INSERT INTO page_group_memberships(page_id,page_name,group_id,group_name,status,can_post,note,created_at)
+        VALUES(?,?,?,?,?,?,?,?)
+        ON CONFLICT(page_id, group_id) DO UPDATE SET
+            page_name=excluded.page_name,
+            group_name=excluded.group_name,
+            status=excluded.status,
+            can_post=excluded.can_post,
+            note=excluded.note
+    """, (str(page.get('id','')), page.get('name','Chưa chọn Page'), group_id, group_name, status, can_post, note, now))
+    conn.commit(); conn.close(); return True
+
+def get_page_group_memberships(limit=200):
+    conn = db(); c = conn.cursor()
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS page_group_memberships (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            page_id TEXT,
+            page_name TEXT,
+            group_id TEXT,
+            group_name TEXT,
+            status TEXT DEFAULT 'Đã tham gia',
+            can_post TEXT DEFAULT 'Có',
+            note TEXT,
+            created_at TEXT,
+            UNIQUE(page_id, group_id)
+        )
+    """)
+    c.execute("SELECT id,page_name,page_id,group_name,group_id,status,can_post,note,created_at FROM page_group_memberships ORDER BY id DESC LIMIT ?", (limit,))
+    rows = c.fetchall(); conn.close(); return rows
+
+def page_group_can_post(page_id, group_id):
+    conn = db(); c = conn.cursor()
+    try:
+        c.execute("SELECT status,can_post FROM page_group_memberships WHERE page_id=? AND group_id=? LIMIT 1", (str(page_id), str(group_id)))
+        row = c.fetchone()
+    except Exception:
+        row = None
+    conn.close()
+    if not row:
+        return False
+    return str(row[0]).lower() in ['đã tham gia','da tham gia','joined','active'] and str(row[1]).lower() in ['có','co','yes','1','true']
 
 def save_post(page_name, page_id, content, status, post_id="", schedule_time="", image_path="", campaign="", score=0):
     conn = db(); c = conn.cursor()
@@ -659,11 +851,12 @@ def get_stats():
 
 def selected_pages(page_indexes):
     result = []
+    pages = get_pages_dynamic()
     for idx in page_indexes:
         try:
             i = int(idx)
-            if 0 <= i < len(PAGES):
-                result.append(PAGES[i])
+            if 0 <= i < len(pages):
+                result.append(pages[i])
         except Exception:
             pass
     return result
@@ -878,7 +1071,7 @@ def scheduler_loop():
             """, (now,))
             jobs = c.fetchall(); conn.close()
             for row_id, page_name, page_id, content, schedule_time, image_path in jobs:
-                page = next((p for p in PAGES if str(p["id"]) == str(page_id)), None)
+                page = next((p for p in get_pages_dynamic() if str(p["id"]) == str(page_id)), None)
                 if not page:
                     update_post(row_id, "error", "Không tìm thấy Page trong .env")
                     continue
@@ -1000,7 +1193,7 @@ def check_single_page_token(page):
 
 def check_all_page_tokens():
     results = []
-    for page in PAGES:
+    for page in get_pages_dynamic():
         item = check_single_page_token(page)
         save_token_check(item["page_name"], item["page_id"], item["status"], item["detail"])
         results.append(item)
@@ -1378,7 +1571,7 @@ def plan_required_message(feature_name, plans):
 
 def token_manager_report():
     reports = []
-    for p in PAGES:
+    for p in get_pages_dynamic():
         token = p.get("token", "")
         status = "Có token" if token and token.startswith("EA") else "Thiếu token hoặc sai định dạng"
         reports.append(f"{p.get('name','No name')} | {p.get('id','No ID')} | {status}")
@@ -1570,7 +1763,7 @@ def add_group_queue_from_results(page_index=''):
     selected_page = None
     try:
         i = int(page_index)
-        selected_page = PAGES[i] if 0 <= i < len(PAGES) else None
+        selected_page = get_page_by_index(i)
     except Exception:
         selected_page = None
     page_id = str(selected_page.get('id','')) if selected_page else ''
@@ -1636,7 +1829,7 @@ def get_group_post_results(limit=200):
 def add_group_post_queue(page_index, group_ids, content):
     selected_page=None
     try:
-        i=int(page_index); selected_page=PAGES[i] if 0<=i<len(PAGES) else None
+        i=int(page_index); selected_page=get_page_by_index(i)
     except Exception: selected_page=None
     page_id=str(selected_page.get('id','')) if selected_page else ''
     page_name=selected_page.get('name','Chưa chọn Page') if selected_page else 'Chưa chọn Page'
@@ -1648,30 +1841,76 @@ def add_group_post_queue(page_index, group_ids, content):
         added+=1
     conn.commit(); conn.close(); return added
 
+
+def add_group_pair_post_queue(page_indexes, group_ids, contents, schedule_mode="now", min_delay=45, max_delay=90):
+    page_indexes = list(page_indexes or [])
+    # khử trùng group trong đúng thứ tự người dùng chọn
+    unique_group_ids = []
+    seen = set()
+    for gid in group_ids or []:
+        gid = normalize_uid(gid)
+        if gid and gid not in seen:
+            seen.add(gid); unique_group_ids.append(gid)
+    contents = [c.strip() for c in (contents or []) if c.strip()]
+    if not page_indexes or not unique_group_ids or not contents:
+        return {"added": 0, "skipped": 0, "pairs": []}
+    try:
+        min_delay = normalize_delay_seconds(min_delay, 45)
+        max_delay = normalize_delay_seconds(max_delay, 60)
+    except Exception:
+        min_delay, max_delay = 45, 90
+    count = min(len(page_indexes), len(unique_group_ids))
+    base_time = None
+    if str(schedule_mode).isdigit():
+        base_time = datetime.datetime.now() + datetime.timedelta(minutes=int(schedule_mode))
+    conn = db(); c = conn.cursor(); added = skipped = 0; pairs = []
+    for idx in range(count):
+        page_index = page_indexes[idx]
+        try:
+            pi = int(page_index); selected_page = get_page_by_index(pi)
+        except Exception:
+            selected_page = None
+        if not selected_page:
+            skipped += 1; continue
+        gid = unique_group_ids[idx]
+        c.execute("SELECT group_name FROM fb_groups WHERE group_id=? LIMIT 1", (gid,)); row = c.fetchone()
+        gname = row[0] if row else gid
+        content = contents[idx % len(contents)]
+        if not page_group_can_post(selected_page.get('id',''), gid):
+            skipped += 1
+            continue
+        schedule_note = "Đăng ngay sau khi admin duyệt" if not base_time else "Hẹn giờ: " + (base_time + datetime.timedelta(minutes=idx * 5)).strftime("%Y-%m-%d %H:%M")
+        note = f"Ghép riêng Page đã tham gia Group → Group riêng, không trùng Group. {schedule_note}. Giãn cách {min_delay}-{max_delay} giây. Chỉ xử lý khi có quyền hợp lệ."
+        c.execute("""INSERT INTO group_post_queue(page_id,page_name,group_uid,group_name,content,status,note,created_at) VALUES(?,?,?,?,?,?,?,?)""", (str(selected_page.get('id','')), selected_page.get('name','Chưa chọn Page'), gid, gname, content, 'Chờ duyệt', note, datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
+        added += 1
+        pairs.append(f"{selected_page.get('name')} → {gname}")
+    conn.commit(); conn.close()
+    return {"added": added, "skipped": skipped, "pairs": pairs}
+
 def get_group_post_queue(limit=100):
     conn=db(); c=conn.cursor(); c.execute("SELECT id,page_name,group_name,group_uid,content,status,note,created_at FROM group_post_queue ORDER BY id DESC LIMIT ?", (limit,)); rows=c.fetchall(); conn.close(); return rows
 
-def normalize_delay_seconds(value, default=60):
+def normalize_delay_seconds(value, default=45):
     try:
         v = int(value or default)
     except Exception:
         v = default
-    return max(60, min(v, 3600))
+    return max(45, min(v, 3600))
 
-def add_page_comment_queue(page_index, target_type, user_uid, post_uid, group_uid, comment_text, min_delay=60, max_delay=120, scheduled_at=''):
+def add_page_comment_queue(page_index, target_type, user_uid, post_uid, group_uid, comment_text, min_delay=45, max_delay=60, scheduled_at=''):
     if not comment_text or (not post_uid and not group_uid and not user_uid):
         return 0
     selected_page = None
     try:
         i = int(page_index)
-        selected_page = PAGES[i] if 0 <= i < len(PAGES) else None
+        selected_page = get_page_by_index(i)
     except Exception:
         selected_page = None
     page_id = str(selected_page.get('id','')) if selected_page else ''
     page_name = selected_page.get('name','Chưa chọn Page') if selected_page else 'Chưa chọn Page'
     target_type = target_type or 'post'
-    min_delay = normalize_delay_seconds(min_delay, 60)
-    max_delay = normalize_delay_seconds(max_delay, 120)
+    min_delay = normalize_delay_seconds(min_delay, 45)
+    max_delay = normalize_delay_seconds(max_delay, 60)
     if max_delay < min_delay:
         max_delay = min_delay
     now = datetime.datetime.now()
@@ -1686,10 +1925,10 @@ def add_page_comment_queue(page_index, target_type, user_uid, post_uid, group_ui
     c.execute("INSERT INTO page_comment_logs(queue_id,page_name,target_uid,action,status,detail,created_at) VALUES(?,?,?,?,?,?,?)", (qid, page_name, normalize_uid(post_uid) or normalize_uid(group_uid) or normalize_uid(user_uid), 'Tạo hàng chờ', 'Chờ duyệt', 'Đã tạo hàng chờ bình luận an toàn.', now.strftime('%Y-%m-%d %H:%M:%S')))
     conn.commit(); conn.close(); return qid
 
-def bulk_import_page_comment_queue(page_index, raw_targets, comment_text, min_delay=60, max_delay=120, target_type='post'):
+def bulk_import_page_comment_queue(page_index, raw_targets, comment_text, min_delay=45, max_delay=60, target_type='post'):
     lines = [x.strip() for x in (raw_targets or '').splitlines() if x.strip()]
-    min_delay = normalize_delay_seconds(min_delay, 60)
-    max_delay = normalize_delay_seconds(max_delay, 120)
+    min_delay = normalize_delay_seconds(min_delay, 45)
+    max_delay = normalize_delay_seconds(max_delay, 60)
     if max_delay < min_delay: max_delay = min_delay
     added = skipped = 0
     base = datetime.datetime.now() + datetime.timedelta(seconds=min_delay)
@@ -1779,7 +2018,7 @@ def v3_ceo_summary():
     leads_today = c.fetchone()[0]
     conn.close()
     return {
-        'fanpages': len(PAGES),
+        'fanpages': len(get_pages_dynamic()),
         'posts': s.get('total', 0),
         'posted': s.get('posted', 0),
         'scheduled': s.get('scheduled', 0),
@@ -1791,7 +2030,7 @@ def v3_ceo_summary():
         'premium': get_free_status().get('label','🎁 Dùng thử miễn phí'),
         'token_live': live_tokens,
         'token_dead': dead_tokens,
-        'token_total': len(PAGES)
+        'token_total': len(get_pages_dynamic())
     }
 
 def add_pipeline_lead(customer_name, phone, zalo, source, stage, value, note):
@@ -4012,11 +4251,13 @@ function openModule(moduleId){
     "group_uid_splitter":"group_suite",
     "group_join_queue":"group_suite",
     "group_post_filter":"group_suite",
-    "page_comment_pro":"group_suite",
-    "page_comment_queue":"group_suite"
+    "page_comment_pro":"page_center_total",
+    "page_comment_queue":"page_center_total",
+    "page_center":"page_center_total",
+    "post":"page_center_total"
   };
   moduleId = moduleAlias[moduleId] || moduleId;
-  const trialAllowed = ["dashboard", "fanpage_manager", "group_suite", "group_marketing", "comment_manager"];
+  const trialAllowed = ["dashboard", "fanpage_manager", "page_center_total", "group_suite", "group_marketing", "comment_manager"];
   const premiumLocked = {
     "messenger_ai": "AI Messenger",
     "crm_sales": "CRM Kanban",
@@ -4040,8 +4281,14 @@ function openModule(moduleId){
   const target=document.getElementById(moduleId);
   if(target){
     target.classList.add("active-module");
-    target.scrollIntoView({behavior:"smooth",block:"start"});
+    setTimeout(function(){
+      const top = target.getBoundingClientRect().top + window.pageYOffset - 16;
+      window.scrollTo({top: top, behavior: "smooth"});
+    }, 30);
   }
+  document.querySelectorAll(".v2-nav-link").forEach(function(a){ a.classList.remove("active"); });
+  const active=document.querySelector('.v2-nav-link[href="#'+moduleId+'"]');
+  if(active){ active.classList.add("active"); }
   return false;
 }
 function showAllModules(){
@@ -4307,29 +4554,30 @@ function closeLockedFeature(){
   <a class="v2-nav-link" href="#dashboard"><span class="v2-nav-ico">🏠</span><span class="v2-nav-text">Dashboard CEO</span><span class="v2-nav-tag">Home</span></a>
 
   <div class="v2-nav-title">FACEBOOK CENTER</div>
-  <a class="v2-nav-link" href="#facebook_center" onclick="openModule('facebook_center')"><span class="v2-nav-ico">📣</span><span class="v2-nav-text">Facebook Center</span><span class="v2-nav-tag">Core</span></a>
-  <a class="v2-nav-link" href="#post" onclick="openModule('post')"><span class="v2-nav-ico">📝</span><span class="v2-nav-text">Đăng bài Facebook</span></a>
-  <a class="v2-nav-link" href="#fanpage_manager" onclick="openModule('fanpage_manager')"><span class="v2-nav-ico">📄</span><span class="v2-nav-text">Quản lý Fanpage</span><span class="v2-nav-tag">V5</span></a>
+  <a class="v2-nav-link" href="#facebook_center" onclick="return openModule('facebook_center')"><span class="v2-nav-ico">📣</span><span class="v2-nav-text">Facebook Center</span><span class="v2-nav-tag">Core</span></a>
+  <a class="v2-nav-link" href="#page_center_total" onclick="return openModule('page_center_total')"><span class="v2-nav-ico"></span><span class="v2-nav-text">Page Center Tổng</span><span class="v2-nav-tag">V9</span></a>
+  <a class="v2-nav-link" href="#post" onclick="return openModule('page_center_total')"><span class="v2-nav-ico"></span><span class="v2-nav-text">Đăng bài Facebook</span></a>
+  <a class="v2-nav-link" href="#fanpage_manager" onclick="return openModule('fanpage_manager')"><span class="v2-nav-ico">📄</span><span class="v2-nav-text">Quản lý Fanpage</span><span class="v2-nav-tag">V5</span></a>
   <a class="v2-nav-link" href="#group_suite" onclick="return openModule('group_suite')"><span class="v2-nav-ico"></span><span class="v2-nav-text">Group Center Tổng</span><span class="v2-nav-tag">V8</span></a>
 
   <div class="v2-nav-title">SELLER AI</div>
-  <a class="v2-nav-link" href="#comment_manager" onclick="openModule('comment_manager')"><span class="v2-nav-ico">🤖</span><span class="v2-nav-text">AI Comment</span><span class="v2-nav-tag">AI</span></a>
-  <a class="v2-nav-link" href="#messenger_ai" onclick="openModule('messenger_ai')"><span class="v2-nav-ico">💬</span><span class="v2-nav-text">AI Messenger</span><span class="v2-nav-tag">AI</span></a>
-  <a class="v2-nav-link" href="#crm_sales" onclick="openModule('crm_sales')"><span class="v2-nav-ico">📋</span><span class="v2-nav-text">CRM Kanban</span><span class="v2-nav-tag">CRM</span></a>
-  <a class="v2-nav-link" href="#marketing_director" onclick="openModule('marketing_director')"><span class="v2-nav-ico">🧠</span><span class="v2-nav-text">AI Marketing Director</span><span class="v2-nav-tag">HOT</span></a>
+  <a class="v2-nav-link" href="#comment_manager" onclick="return openModule('comment_manager')"><span class="v2-nav-ico">🤖</span><span class="v2-nav-text">AI Comment</span><span class="v2-nav-tag">AI</span></a>
+  <a class="v2-nav-link" href="#messenger_ai" onclick="return openModule('messenger_ai')"><span class="v2-nav-ico">💬</span><span class="v2-nav-text">AI Messenger</span><span class="v2-nav-tag">AI</span></a>
+  <a class="v2-nav-link" href="#crm_sales" onclick="return openModule('crm_sales')"><span class="v2-nav-ico">📋</span><span class="v2-nav-text">CRM Kanban</span><span class="v2-nav-tag">CRM</span></a>
+  <a class="v2-nav-link" href="#marketing_director" onclick="return openModule('marketing_director')"><span class="v2-nav-ico">🧠</span><span class="v2-nav-text">AI Marketing Director</span><span class="v2-nav-tag">HOT</span></a>
 
   <div class="v2-nav-title">AI STUDIO</div>
-  <a class="v2-nav-link" href="#ai_studio" onclick="openModule('ai_studio')"><span class="v2-nav-ico">🎨</span><span class="v2-nav-text">AI Studio</span><span class="v2-nav-tag">Pro</span></a>
-  <a class="v2-nav-link" href="#creative_center" onclick="openModule('creative_center')"><span class="v2-nav-ico">🖼️</span><span class="v2-nav-text">Image / Video / Voice</span></a>
+  <a class="v2-nav-link" href="#ai_studio" onclick="return openModule('ai_studio')"><span class="v2-nav-ico">🎨</span><span class="v2-nav-text">AI Studio</span><span class="v2-nav-tag">Pro</span></a>
+  <a class="v2-nav-link" href="#creative_center" onclick="return openModule('creative_center')"><span class="v2-nav-ico">🖼️</span><span class="v2-nav-text">Image / Video / Voice</span></a>
 
   <div class="v2-nav-title">AI BUSINESS</div>
-  <a class="v2-nav-link" href="#ai_studio" onclick="openModule('ai_studio')"><span class="v2-nav-ico">🚀</span><span class="v2-nav-text">AI Facebook</span></a>
-  <a class="v2-nav-link" href="#marketing_director" onclick="openModule('marketing_director')"><span class="v2-nav-ico">💼</span><span class="v2-nav-text">AI Kinh Doanh</span></a>
+  <a class="v2-nav-link" href="#ai_studio" onclick="return openModule('ai_studio')"><span class="v2-nav-ico">🚀</span><span class="v2-nav-text">AI Facebook</span></a>
+  <a class="v2-nav-link" href="#marketing_director" onclick="return openModule('marketing_director')"><span class="v2-nav-ico">💼</span><span class="v2-nav-text">AI Kinh Doanh</span></a>
 
   <div class="v2-nav-title">HỆ THỐNG</div>
-  <a class="v2-nav-link" href="#premium" onclick="openModule('premium')"><span class="v2-nav-ico">💎</span><span class="v2-nav-text">Premium</span><span class="v2-nav-tag">VIP</span></a>
-  <a class="v2-nav-link" href="#analytics" onclick="openModule('analytics')"><span class="v2-nav-ico">📈</span><span class="v2-nav-text">Analytics Center</span></a>
-  <a class="v2-nav-link" href="#automation_center" onclick="openModule('automation_center')"><span class="v2-nav-ico">⚙️</span><span class="v2-nav-text">Cài đặt Automation</span></a>
+  <a class="v2-nav-link" href="#premium" onclick="return openModule('premium')"><span class="v2-nav-ico">💎</span><span class="v2-nav-text">Premium</span><span class="v2-nav-tag">VIP</span></a>
+  <a class="v2-nav-link" href="#analytics" onclick="return openModule('analytics')"><span class="v2-nav-ico">📈</span><span class="v2-nav-text">Analytics Center</span></a>
+  <a class="v2-nav-link" href="#automation_center" onclick="return openModule('automation_center')"><span class="v2-nav-ico">⚙️</span><span class="v2-nav-text">Cài đặt Automation</span></a>
 
   <div class="v2-side-card">
     🚀 Mkt Automation Pro V5<br>
@@ -4350,42 +4598,42 @@ function closeLockedFeature(){
 </div>
 
 <div class="app-quick-grid">
-  <div class="app-quick-card" onclick="openModule('post')">
+  <div class="app-quick-card" onclick="return openModule('post')">
     <div class="app-ico">📢</div>
     <b>Đăng bài Facebook</b>
     <span>Soạn nội dung, chọn Page, đăng ngay hoặc lên lịch.</span>
   </div>
-  <div class="app-quick-card" onclick="openModule('ai_studio')">
+  <div class="app-quick-card" onclick="return openModule('ai_studio')">
     <div class="app-ico">🤖</div>
     <b>Tạo Content AI</b>
     <span>Viết bài, caption, ý tưởng quảng cáo và nội dung bán hàng.</span>
   </div>
-  <div class="app-quick-card" onclick="openModule('fanpage_manager')">
+  <div class="app-quick-card" onclick="return openModule('fanpage_manager')">
     <div class="app-ico">📄</div>
     <b>Quản lý Fanpage</b>
     <span>Kiểm tra Page, Token, quyền đăng bài và trạng thái hoạt động.</span>
   </div>
-  <div class="app-quick-card" onclick="openModule('group_suite')">
+  <div class="app-quick-card" onclick="return openModule('group_suite')">
     <div class="app-ico">👥</div>
     <b>Quản lý Group</b>
     <span>Lưu group, tạo lịch đăng group và viết bài seeding mềm.</span>
   </div>
-  <div class="app-quick-card" onclick="openModule('comment_manager')">
+  <div class="app-quick-card" onclick="return openModule('comment_manager')">
     <div class="app-ico">💬</div>
     <b>AI Comment</b>
     <span>Ẩn số điện thoại, trả lời comment, gắn nhãn và chuyển CRM.</span>
   </div>
-  <div class="app-quick-card" onclick="openModule('messenger_ai')">
+  <div class="app-quick-card" onclick="return openModule('messenger_ai')">
     <div class="app-ico">📨</div>
     <b>AI Messenger</b>
     <span>Tạo kịch bản inbox, chốt sale, xử lý từ chối và chăm sóc lại.</span>
   </div>
-  <div class="app-quick-card" onclick="openModule('crm_sales')">
+  <div class="app-quick-card" onclick="return openModule('crm_sales')">
     <div class="app-ico">📊</div>
     <b>CRM Kanban</b>
     <span>Quản lý khách theo các cột: mới, tư vấn, báo giá, chốt, đã mua.</span>
   </div>
-  <div class="app-quick-card" onclick="openModule('marketing_director')">
+  <div class="app-quick-card" onclick="return openModule('marketing_director')">
     <div class="app-ico">🧠</div>
     <b>AI Marketing Director</b>
     <span>Lập kế hoạch 30 ngày, ads, content, funnel và KPI bán hàng.</span>
@@ -4420,21 +4668,21 @@ function closeLockedFeature(){
   </div>
 
   <div class="hero-actions">
-    <button onclick="openModule('post')">Bắt đầu đăng bài</button>
-    <button class="secondary" onclick="openModule('ai_studio')">Tạo content AI</button>
+    <button onclick="return openModule('post')">Bắt đầu đăng bài</button>
+    <button class="secondary" onclick="return openModule('ai_studio')">Tạo content AI</button>
     <button class="secondary" onclick="scrollToPricing()">Xem bảng giá</button>
   </div>
 
   <div class="module-hub v3-main-hub">
-    <div class="module-card" onclick="openModule('facebook_center')"><div class="icon">📣</div><h3>Facebook Center</h3><p>Trung tâm đăng bài, lên lịch, quản lý Fanpage, Group, Token và lịch sử đăng.</p><span class="module-pill">Mở Facebook Center</span></div>
-    <div class="module-card" onclick="openModule('fanpage_manager')"><div class="icon">📄</div><h3>Quản lý Fanpage</h3><p>Kiểm tra Page, Token, quyền đăng bài và trạng thái hoạt động.</p><span class="module-pill">Mở Fanpage</span></div>
-    <div class="module-card" onclick="openModule('group_suite')"><div class="icon">👥</div><h3>Quản lý Group</h3><p>Lưu Group, tạo lịch đăng Group và viết bài seeding mềm.</p><span class="module-pill">Mở Group</span></div>
-    <div class="module-card" onclick="openModule('comment_manager')"><div class="icon">🤖</div><h3>AI Comment</h3><p>Ẩn số điện thoại, trả lời bình luận, gắn nhãn khách nóng/ấm/lạnh và chuyển CRM.</p><span class="module-pill">Mở AI Comment</span></div>
-    <div class="module-card" onclick="openModule('messenger_ai')"><div class="icon">💬</div><h3>AI Messenger</h3><p>Tạo kịch bản inbox, chốt sale, xử lý từ chối và chăm sóc lại.</p><span class="module-pill">Mở AI Messenger</span></div>
-    <div class="module-card" onclick="openModule('crm_sales')"><div class="icon">📋</div><h3>CRM Kanban</h3><p>Quản lý khách theo các cột: mới, tư vấn, báo giá, theo dõi, đã chốt.</p><span class="module-pill">Mở CRM</span></div>
-    <div class="module-card" onclick="openModule('marketing_director')"><div class="icon">🧠</div><h3>AI Marketing Director</h3><p>Lập kế hoạch 30 ngày, Ads, Content, Funnel, KPI và chiến lược tăng doanh thu.</p><span class="module-pill">Mở Marketing Director</span></div>
-    <div class="module-card" onclick="openModule('ai_studio')"><div class="icon">🎨</div><h3>AI Studio</h3><p>Gộp AI Facebook, AI Image, AI Video, AI Giọng Nói và AI Livestream vào một khu vực.</p><span class="module-pill">Mở AI Studio</span></div>
-    <div class="module-card" onclick="openModule('premium')"><div class="icon">💎</div><h3>Premium</h3><p>Mở khóa hạn mức cao hơn, module nâng cao và hỗ trợ ưu tiên.</p><span class="module-pill">Xem gói</span></div>
+    <div class="module-card" onclick="return openModule('facebook_center')"><div class="icon">📣</div><h3>Facebook Center</h3><p>Trung tâm đăng bài, lên lịch, quản lý Fanpage, Group, Token và lịch sử đăng.</p><span class="module-pill">Mở Facebook Center</span></div>
+    <div class="module-card" onclick="return openModule('fanpage_manager')"><div class="icon">📄</div><h3>Quản lý Fanpage</h3><p>Kiểm tra Page, Token, quyền đăng bài và trạng thái hoạt động.</p><span class="module-pill">Mở Fanpage</span></div>
+    <div class="module-card" onclick="return openModule('group_suite')"><div class="icon">👥</div><h3>Quản lý Group</h3><p>Lưu Group, tạo lịch đăng Group và viết bài seeding mềm.</p><span class="module-pill">Mở Group</span></div>
+    <div class="module-card" onclick="return openModule('comment_manager')"><div class="icon">🤖</div><h3>AI Comment</h3><p>Ẩn số điện thoại, trả lời bình luận, gắn nhãn khách nóng/ấm/lạnh và chuyển CRM.</p><span class="module-pill">Mở AI Comment</span></div>
+    <div class="module-card" onclick="return openModule('messenger_ai')"><div class="icon">💬</div><h3>AI Messenger</h3><p>Tạo kịch bản inbox, chốt sale, xử lý từ chối và chăm sóc lại.</p><span class="module-pill">Mở AI Messenger</span></div>
+    <div class="module-card" onclick="return openModule('crm_sales')"><div class="icon">📋</div><h3>CRM Kanban</h3><p>Quản lý khách theo các cột: mới, tư vấn, báo giá, theo dõi, đã chốt.</p><span class="module-pill">Mở CRM</span></div>
+    <div class="module-card" onclick="return openModule('marketing_director')"><div class="icon">🧠</div><h3>AI Marketing Director</h3><p>Lập kế hoạch 30 ngày, Ads, Content, Funnel, KPI và chiến lược tăng doanh thu.</p><span class="module-pill">Mở Marketing Director</span></div>
+    <div class="module-card" onclick="return openModule('ai_studio')"><div class="icon">🎨</div><h3>AI Studio</h3><p>Gộp AI Facebook, AI Image, AI Video, AI Giọng Nói và AI Livestream vào một khu vực.</p><span class="module-pill">Mở AI Studio</span></div>
+    <div class="module-card" onclick="return openModule('premium')"><div class="icon">💎</div><h3>Premium</h3><p>Mở khóa hạn mức cao hơn, module nâng cao và hỗ trợ ưu tiên.</p><span class="module-pill">Xem gói</span></div>
   </div>
 </section>
 
@@ -4444,7 +4692,7 @@ function closeLockedFeature(){
     <p class="small">Nội dung AI tạo sẽ hiển thị tại đây để khách xem, copy hoặc đưa sang phần đăng Fanpage.</p>
     <div class="history" id="aiGeneratedContent">{{ content }}</div>
     <button onclick="copyText('aiGeneratedContent')">Copy nội dung</button>
-    <button class="secondary" onclick="openModule('post')">Mở phần đăng Fanpage</button>
+    <button class="secondary" onclick="return openModule('post')">Mở phần đăng Fanpage</button>
   </div>
   {% endif %}
 
@@ -4455,20 +4703,20 @@ function closeLockedFeature(){
   <h2>📢 Facebook Center</h2>
   <p class="small">Gộp toàn bộ công cụ Facebook vào một trung tâm: đăng bài, Scheduler, Fanpage Manager, Group Marketing, Comment Manager và Messenger AI.</p>
   <div class="fb-submenu-pro">
-    <button onclick="openModule('post')">📢 Đăng bài</button>
-    <button onclick="openModule('scheduler')">📅 Scheduler</button>
-    <button onclick="openModule('fanpage_manager')">📄 Fanpage Manager</button>
-    <button onclick="openModule('group_suite')">👥 Group Marketing</button>
-    <button onclick="openModule('comment_manager')">💬 Comment Manager AI</button>
-    <button onclick="openModule('messenger_ai')">🤖 Messenger AI</button>
+    <button onclick="return openModule('post')">📢 Đăng bài</button>
+    <button onclick="return openModule('scheduler')">📅 Scheduler</button>
+    <button onclick="return openModule('fanpage_manager')">📄 Fanpage Manager</button>
+    <button onclick="return openModule('group_suite')">👥 Group Marketing</button>
+    <button onclick="return openModule('comment_manager')">💬 Comment Manager AI</button>
+    <button onclick="return openModule('messenger_ai')">🤖 Messenger AI</button>
   </div>
   <div class="v3-feature-grid">
-    <div class="v3-feature-card"><h3>Đăng bài</h3><ul><li>Đăng ngay</li><li>Đăng hàng loạt</li><li>Đăng nhiều Page</li><li>Đăng ảnh/video</li></ul><button onclick="openModule('post')">Mở công cụ đăng bài</button></div>
-    <div class="v3-feature-card"><h3>Scheduler</h3><ul><li>Lên lịch tự động</li><li>Đăng chiến dịch</li><li>Chia khung giờ</li><li>Tự lưu lịch</li></ul><button onclick="openModule('scheduler')">Mở lịch đăng</button></div>
-    <div class="v3-feature-card"><h3>Quản lý Fanpage</h3><ul><li>Kết nối Fanpage</li><li>Kiểm tra Token</li><li>Kiểm tra quyền</li><li>Trạng thái hoạt động</li><li>Làm mới Token</li></ul><button onclick="openModule('fanpage_manager')">Mở Fanpage Manager</button></div>
-    <div class="v3-feature-card"><h3>Tiếp thị nhóm</h3><ul><li>Quản lý Group</li><li>Danh sách Group</li><li>Lịch đăng Group</li><li>AI viết bài Group</li></ul><button onclick="openModule('group_suite')">Mở Group Marketing</button></div>
-    <div class="v3-feature-card"><h3>Trình quản lý bình luận</h3><ul><li>AI trả lời comment</li><li>Ẩn SĐT</li><li>Gắn nhãn khách</li><li>Chuyển CRM</li></ul><button onclick="openModule('comment_manager')">Mở Comment AI</button></div>
-    <div class="v3-feature-card"><h3>Trí tuệ nhân tạo Messenger</h3><ul><li>Kịch bản Inbox</li><li>Kịch bản Chốt Sale</li><li>Xử lý từ chối</li><li>Chăm sóc khách cũ</li></ul><button onclick="openModule('messenger_ai')">Mở Messenger AI</button></div>
+    <div class="v3-feature-card"><h3>Đăng bài</h3><ul><li>Đăng ngay</li><li>Đăng hàng loạt</li><li>Đăng nhiều Page</li><li>Đăng ảnh/video</li></ul><button onclick="return openModule('post')">Mở công cụ đăng bài</button></div>
+    <div class="v3-feature-card"><h3>Scheduler</h3><ul><li>Lên lịch tự động</li><li>Đăng chiến dịch</li><li>Chia khung giờ</li><li>Tự lưu lịch</li></ul><button onclick="return openModule('scheduler')">Mở lịch đăng</button></div>
+    <div class="v3-feature-card"><h3>Quản lý Fanpage</h3><ul><li>Kết nối Fanpage</li><li>Kiểm tra Token</li><li>Kiểm tra quyền</li><li>Trạng thái hoạt động</li><li>Làm mới Token</li></ul><button onclick="return openModule('fanpage_manager')">Mở Fanpage Manager</button></div>
+    <div class="v3-feature-card"><h3>Tiếp thị nhóm</h3><ul><li>Quản lý Group</li><li>Danh sách Group</li><li>Lịch đăng Group</li><li>AI viết bài Group</li></ul><button onclick="return openModule('group_suite')">Mở Group Marketing</button></div>
+    <div class="v3-feature-card"><h3>Trình quản lý bình luận</h3><ul><li>AI trả lời comment</li><li>Ẩn SĐT</li><li>Gắn nhãn khách</li><li>Chuyển CRM</li></ul><button onclick="return openModule('comment_manager')">Mở Comment AI</button></div>
+    <div class="v3-feature-card"><h3>Trí tuệ nhân tạo Messenger</h3><ul><li>Kịch bản Inbox</li><li>Kịch bản Chốt Sale</li><li>Xử lý từ chối</li><li>Chăm sóc khách cũ</li></ul><button onclick="return openModule('messenger_ai')">Mở Messenger AI</button></div>
   </div>
 </section>
 
@@ -4478,7 +4726,7 @@ function closeLockedFeature(){
   <h2>📄 Quản lý Fanpage</h2>
   <p class="small">Trung tâm kiểm tra kết nối Page, Token, quyền và trạng thái hoạt động trước khi đăng bài.</p>
   <div class="v5-seller-grid">
-    <div class="v5-tool-card"><h3>Kết nối Fanpage</h3><p>Thêm Page qua biến PAGES_JSON trong file .env gồm name, id, token.</p><button onclick="openModule('token')">Mở Token Center</button></div>
+    <div class="v5-tool-card"><h3>Kết nối Fanpage</h3><p>Thêm Page qua biến PAGES_JSON trong file .env gồm name, id, token.</p><button onclick="return openModule('token')">Mở Token Center</button></div>
     <div class="v5-tool-card"><h3>Kiểm tra Token</h3><p>Quét toàn bộ Page để phát hiện token chết, thiếu quyền hoặc phiên bị giới hạn.</p><form method="post" action="/check_tokens"><button>Kiểm tra Token ngay</button></form></div>
     <div class="v5-tool-card"><h3>Kiểm tra quyền</h3><ul><li>pages_manage_posts</li><li>pages_read_engagement</li><li>pages_manage_metadata</li></ul><span class="v5-warning-pill">Cần kiểm tra từ Meta App</span></div>
     <div class="v5-tool-card"><h3>Làm mới Token</h3><p>Khi token lỗi, hệ thống hướng dẫn thay token mới trong .env rồi chạy lại app.</p><button class="secondary" onclick="openLockedFeature('Làm mới Token','Gói 1 năm / Gói Nhà Bán Hàng Chuyên Nghiệp')">Hướng dẫn làm mới</button></div>
@@ -4489,11 +4737,116 @@ function closeLockedFeature(){
 </section>
 
 
+
+<section class="panel module-section" id="page_center_total">
+  <div class="section-open-note">Bạn đang mở: Page Center Tổng V9.</div>
+  <h2>Page Center Tổng - đăng bài, hẹn giờ và bình luận UID trong một khung</h2>
+  <p class="small">Chọn nhiều Page, nhập nhiều nội dung mỗi dòng một bài, chia nội dung không trùng nhau. Có nút Đăng ngay, Hẹn giờ nhanh 30 phút / 1h / 2h / 3h. Bình luận UID người dùng, UID bài viết, UID nhóm được đưa vào hàng chờ duyệt với giãn cách 45-60 giây.</p>
+  <div class="gf-warning">Chỉ dùng với Page và bài viết/Group mà bạn có quyền quản lý hợp lệ. Bình luận UID được lưu hàng chờ và cần duyệt trước; không thiết kế spam tự động hàng loạt.</div>
+
+  <div class="gf-box">
+    <h3>0. Thêm Page ID & Page Token trực tiếp trong tool</h3>
+    <form method="post" action="/page_token_save">
+      <div class="gf-grid-3"><input name="page_name" placeholder="Tên Page"><input name="page_id" placeholder="Page ID"><input name="page_token" placeholder="Page Access Token"></div>
+      <textarea name="note" rows="2" placeholder="Ghi chú quyền: pages_manage_posts, pages_read_engagement, Page đã tham gia Group nào..."></textarea>
+      <button>Lưu / cập nhật Page Token</button>
+      <button type="submit" formaction="/check_tokens">Kiểm tra toàn bộ Token</button>
+    </form>
+    <div style="max-height:180px;overflow:auto"><table class="gf-table"><tr><th>Page</th><th>Page ID</th><th>Token</th><th>Trạng thái</th><th>Cập nhật</th></tr>{% for t in page_token_rows %}<tr><td>{{ t[1] }}</td><td>{{ t[2] }}</td><td>{{ t[3] }}</td><td>{{ t[4] }}</td><td>{{ t[6] }}</td></tr>{% endfor %}</table></div>
+  </div>
+
+  <div class="gf-grid-3">
+    <div class="gf-stat"><span>Fanpage cấu hình</span><b>{{ pages|length }}</b></div>
+    <div class="gf-stat"><span>Bài đã đăng/lên lịch</span><b>{{ s.total }}</b></div>
+    <div class="gf-stat"><span>Hàng chờ bình luận</span><b>{{ page_comment_stats.total }}</b></div>
+  </div>
+
+  <div class="gf-box">
+    <h3>1. Đăng bài nhiều Page - chia nội dung không trùng</h3>
+    <form method="post" action="/multi_post" enctype="multipart/form-data">
+      <div class="gf-grid-3">
+        <div>
+          <label>Chọn nhiều Page hoạt động</label>
+          <div class="gf-box" style="max-height:220px;overflow:auto;padding:10px">
+            {% for p in pages %}<label style="display:block;margin:6px 0"><input type="checkbox" name="page_indexes" value="{{ loop.index0 }}"> {{ p.name }} - {{ p.id }}</label>{% endfor %}
+          </div>
+        </div>
+        <div>
+          <label>Nội dung - mỗi dòng là 1 bài</label>
+          <textarea name="bulk_content" rows="9" placeholder="Bài 1...\nBài 2...\nBài 3...\nHệ thống sẽ chia lần lượt cho Page, không trùng nội dung."></textarea>
+        </div>
+        <div>
+          <label>Ảnh/video nếu có</label>
+          <input type="file" name="images" multiple>
+          <input name="campaign" placeholder="Tên chiến dịch / ghi chú">
+          <label><input type="checkbox" name="use_ai_enhance" value="1"> AI viết lại nhẹ để tránh trùng giọng văn</label>
+          <small class="small">Mặc định giữ nguyên nội dung. Chỉ bật AI nếu muốn biến thể nhẹ.</small>
+        </div>
+      </div>
+      <div class="gf-grid-3">
+        <button name="action" value="now">Đăng ngay</button>
+        <button name="action" value="schedule_quick_30">Hẹn giờ 30 phút</button>
+        <button name="action" value="schedule_quick_60">Hẹn giờ 1h</button>
+      </div>
+      <div class="gf-grid-3">
+        <button name="action" value="schedule_quick_120">Hẹn giờ 2h</button>
+        <button name="action" value="schedule_quick_180">Hẹn giờ 3h</button>
+        <input type="datetime-local" name="schedule_time" placeholder="Hoặc chọn giờ cụ thể">
+      </div>
+    </form>
+  </div>
+
+  <div class="gf-box">
+    <h3>2. Bình luận UID bằng Page - hàng chờ duyệt 45-60 giây</h3>
+    <form method="post" action="/page_comment_queue_add">
+      <div class="gf-grid-3">
+        <div>
+          <label>Chọn nhiều Page bình luận</label>
+          <div class="gf-box" style="max-height:180px;overflow:auto;padding:10px">
+            {% for p in pages %}<label style="display:block;margin:6px 0"><input type="checkbox" name="page_indexes" value="{{ loop.index0 }}"> {{ p.name }} - {{ p.id }}</label>{% endfor %}
+          </div>
+        </div>
+        <div>
+          <label>Loại UID đích</label>
+          <select name="target_type"><option value="post">UID bài viết</option><option value="group">UID nhóm</option><option value="user">UID người dùng đã tương tác</option></select>
+          <input name="min_delay" type="number" min="45" value="45" placeholder="Giãn cách tối thiểu 45 giây">
+          <input name="max_delay" type="number" min="45" value="60" placeholder="Giãn cách tối đa 60 giây">
+        </div>
+        <div>
+          <label>Nội dung bình luận</label>
+          <textarea name="comment_text" rows="6" placeholder="Nội dung bình luận hợp lệ, không spam, không lặp quá nhiều."></textarea>
+        </div>
+      </div>
+      <textarea name="raw_targets" rows="6" placeholder="Dán nhiều UID, mỗi dòng một mục. Ví dụ:\nPOST_UID\nPOST_UID, GROUP_UID\nUSER_UID"></textarea>
+      <div class="gf-grid-3"><input name="single_post_uid" placeholder="UID bài viết đơn"><input name="single_group_uid" placeholder="UID Group đơn"><input name="single_user_uid" placeholder="UID người dùng đơn"></div>
+      <button>Tạo hàng chờ bình luận</button>
+      <a class="btnlink" href="/export_page_comment_queue">Xuất CSV hàng chờ</a>
+    </form>
+  </div>
+
+  <h3>Lịch sử đăng Page gần đây</h3>
+  <div style="max-height:260px;overflow:auto"><table class="gf-table"><tr><th>Page</th><th>Nội dung</th><th>Trạng thái</th><th>Giờ</th></tr>{% for h in history %}<tr><td>{{ h[1] }}</td><td>{{ h[2][:120] }}</td><td>{{ h[3] }}</td><td>{{ h[9] }}</td></tr>{% endfor %}</table></div>
+</section>
+
+
 <section class="panel module-section" id="group_suite">
-  <div class="section-open-note">Bạn đang mở: Group Center Tổng V8.</div>
-  <h2>Group Center Tổng - quản lý Group trong một khung</h2>
-  <p class="small">Gom chung: sắp xếp Group, tìm theo từ khóa, chia UID, hàng chờ tham gia, đăng bài nhóm, lọc bài viết Group và bình luận Group/Page theo UID. Chọn nhiều Page để chuẩn bị hàng chờ đăng nhóm trong cùng một khung.</p>
-  <div class="gf-warning">Chỉ dùng với Group/Page mà tài khoản hoặc Page có quyền truy cập hợp lệ. Tool lưu hàng chờ, duyệt và log; không thiết kế spam tự động hoặc tham gia/bình luận hàng loạt trái quyền.</div>
+  <div class="section-open-note">Bạn đang mở: Group Center Tổng V9.</div>
+  <h2>Group Center Tổng - Page nào đăng Group đó, không trùng nhau</h2>
+  <p class="small">Gom chung: sắp xếp Group, tìm từ khóa, chia UID, tham gia nhóm, đăng bài nhóm và bình luận nhóm trong một khung. Bản này có chế độ ghép 1 Page với 1 Group riêng, tránh Page đăng trùng nhiều Group khi không cần.</p>
+  <div class="gf-warning">Chỉ dùng với Group/Page mà tài khoản hoặc Page có quyền truy cập hợp lệ. Hệ thống tạo hàng chờ, duyệt và log; không tự động spam hàng loạt hoặc thao tác trái quyền.</div>
+
+  <div class="gf-box">
+    <h3>0. Chọn Page đã tham gia Group</h3>
+    <form method="post" action="/page_group_membership_add">
+      <div class="gf-grid-3">
+        <select name="page_index">{% for p in pages %}<option value="{{ loop.index0 }}">{{ p.name }} - {{ p.id }}</option>{% endfor %}</select>
+        <select name="group_id">{% for g in fb_groups %}<option value="{{ g[2] }}">{{ g[1] }} - {{ g[2] }}</option>{% endfor %}</select>
+        <select name="can_post"><option value="Có">Page có quyền đăng bài</option><option value="Không">Chưa có quyền đăng</option></select>
+      </div>
+      <div class="gf-grid-3"><select name="status"><option>Đã tham gia</option><option>Đang chờ duyệt</option><option>Không đủ quyền</option></select><input name="note" placeholder="Ghi chú kiểm tra quyền"><button>Lưu Page đã tham gia Group</button></div>
+    </form>
+    <div style="max-height:180px;overflow:auto"><table class="gf-table"><tr><th>Page</th><th>Group</th><th>Trạng thái</th><th>Quyền đăng</th><th>Ghi chú</th></tr>{% for m in page_group_memberships %}<tr><td>{{ m[1] }}<br>{{ m[2] }}</td><td>{{ m[3] }}<br>{{ m[4] }}</td><td>{{ m[5] }}</td><td>{{ m[6] }}</td><td>{{ m[7] }}</td></tr>{% endfor %}</table></div>
+  </div>
 
   <div class="gf-grid-3">
     <div class="gf-stat"><span>Tổng UID Group</span><b>{{ group_finder_stats.total }}</b></div>
@@ -4502,31 +4855,33 @@ function closeLockedFeature(){
   </div>
 
   <div class="gf-box">
-    <h3>1. Chọn nhiều Page + nhiều Group đã tham gia để đăng nhóm</h3>
-    <form method="post" action="/group_multi_post_queue">
+    <h3>1. Ghép Page đăng Group riêng - không trùng Group</h3>
+    <form method="post" action="/group_pair_post_queue">
       <div class="gf-grid-3">
         <div>
-          <label>Chọn Page đăng nhóm</label>
-          <div class="gf-box" style="max-height:180px;overflow:auto;padding:10px">
+          <label>Chọn nhiều Page</label>
+          <div class="gf-box" style="max-height:220px;overflow:auto;padding:10px">
             {% for p in pages %}<label style="display:block;margin:6px 0"><input type="checkbox" name="page_indexes" value="{{ loop.index0 }}"> {{ p.name }} - {{ p.id }}</label>{% endfor %}
           </div>
-          <small class="small">Có thể chọn nhiều Page. Nếu route cũ chỉ nhận 1 Page, hệ thống mới vẫn nên xử lý nhiều Page bằng cách lặp từng Page.</small>
+          <small class="small">Page thứ 1 ghép Group thứ 1, Page thứ 2 ghép Group thứ 2. Không tạo chéo tất cả Page x tất cả Group.</small>
         </div>
         <div>
           <label>Chọn Group đã tham gia</label>
-          <div class="gf-box" style="max-height:180px;overflow:auto;padding:10px">
+          <div class="gf-box" style="max-height:220px;overflow:auto;padding:10px">
             {% for g in fb_groups %}<label style="display:block;margin:6px 0"><input type="checkbox" name="group_ids" value="{{ g[2] }}"> {{ g[1] }} • {{ g[2] }}</label>{% endfor %}
           </div>
+          <small class="small">Mỗi Group chỉ được dùng 1 lần trong một lượt tạo hàng chờ.</small>
         </div>
         <div>
-          <label>Cài đặt duyệt</label>
+          <label>Cài đặt đăng Group</label>
           <select name="approval_mode"><option value="manual">Admin duyệt trước</option><option value="limited">Duyệt có giới hạn</option></select>
-          <input name="min_delay" type="number" min="60" value="60" placeholder="Giãn cách tối thiểu 60 giây">
-          <input name="max_delay" type="number" min="60" value="120" placeholder="Giãn cách tối đa">
+          <select name="schedule_mode"><option value="now">Đăng ngay sau khi duyệt</option><option value="30">Hẹn 30 phút</option><option value="60">Hẹn 1 giờ</option><option value="120">Hẹn 2 giờ</option><option value="180">Hẹn 3 giờ</option></select>
+          <input name="min_delay" type="number" min="45" value="45" placeholder="Giãn cách tối thiểu 45 giây">
+          <input name="max_delay" type="number" min="45" value="60" placeholder="Giãn cách tối đa 60 giây">
         </div>
       </div>
-      <textarea name="content" rows="5" placeholder="Nội dung bài đăng Group"></textarea>
-      <button>Đưa vào hàng chờ đăng Group</button>
+      <textarea name="bulk_content" rows="6" placeholder="Mỗi dòng là 1 nội dung Group. Page/Group thứ 1 dùng nội dung dòng 1, Page/Group thứ 2 dùng dòng 2... Không trùng nội dung nếu đủ dòng."></textarea>
+      <button>Tạo hàng chờ Page → Group riêng</button>
     </form>
   </div>
 
@@ -4549,13 +4904,13 @@ function closeLockedFeature(){
   <div class="gf-box">
     <h3>7. Bình luận Group/Page theo UID</h3>
     <form method="post" action="/page_comment_queue_add">
-      <div class="gf-grid-3"><select name="page_index">{% for p in pages %}<option value="{{ loop.index0 }}">{{ p.name }} - {{ p.id }}</option>{% endfor %}</select><select name="target_type"><option value="post">UID bài viết Group</option><option value="group">UID Group</option><option value="user">UID người dùng đã tương tác</option></select><input name="min_delay" type="number" min="60" value="60" placeholder="Giãn cách tối thiểu giây"></div>
-      <div class="gf-grid-3"><input name="max_delay" type="number" min="60" value="120" placeholder="Giãn cách tối đa giây"><input name="single_post_uid" placeholder="UID bài viết"><input name="single_group_uid" placeholder="UID Group"></div>
+      <div class="gf-grid-3"><select name="page_index">{% for p in pages %}<option value="{{ loop.index0 }}">{{ p.name }} - {{ p.id }}</option>{% endfor %}</select><select name="target_type"><option value="post">UID bài viết Group</option><option value="group">UID Group</option><option value="user">UID người dùng đã tương tác</option></select><input name="min_delay" type="number" min="45" value="45" placeholder="Giãn cách tối thiểu giây"></div>
+      <div class="gf-grid-3"><input name="max_delay" type="number" min="45" value="60" placeholder="Giãn cách tối đa giây"><input name="single_post_uid" placeholder="UID bài viết"><input name="single_group_uid" placeholder="UID Group"></div>
       <input name="single_user_uid" placeholder="UID người dùng đã tương tác nếu có"><textarea name="comment_text" rows="4" placeholder="Nội dung bình luận"></textarea><textarea name="raw_targets" rows="5" placeholder="Dán nhiều UID, mỗi dòng một mục: post_uid, group_uid, user_uid"></textarea><button>Tạo hàng chờ bình luận</button><a class="btnlink" href="/export_page_comment_queue">Xuất CSV hàng chờ</a>
     </form>
   </div>
 
-  <h3>Hàng chờ đăng Group</h3>{% for q in group_post_queue %}<div class="history"><b>{{ q[1] }}</b> → {{ q[2] }} • {{ q[5] }}<br>{{ q[4] }}</div>{% endfor %}
+  <h3>Hàng chờ đăng Group</h3><div style="max-height:300px;overflow:auto"><table class="gf-table"><tr><th>Page</th><th>Group</th><th>Nội dung</th><th>Trạng thái</th><th>Ghi chú</th></tr>{% for q in group_post_queue %}<tr><td>{{ q[1] }}</td><td>{{ q[2] }}<br>{{ q[3] }}</td><td>{{ q[4] }}</td><td>{{ q[5] }}</td><td>{{ q[6] }}</td></tr>{% endfor %}</table></div>
   <h3>Hàng chờ bình luận</h3><div style="max-height:300px;overflow:auto"><table class="gf-table"><tr><th>ID</th><th>Page</th><th>Loại</th><th>UID đích</th><th>Nội dung</th><th>Giãn cách</th><th>Trạng thái</th><th>Thao tác</th></tr>{% for q in page_comment_queue %}<tr><td>{{ q[0] }}</td><td>{{ q[1] }}</td><td>{{ q[2] }}</td><td>USER: {{ q[3] }}<br>POST: {{ q[4] }}<br>GROUP: {{ q[5] }}</td><td>{{ q[6] }}</td><td>{{ q[7] }} - {{ q[8] }} giây</td><td>{{ q[10] }}<br>{{ q[11] }}</td><td><form method="post" action="/page_comment_queue_action"><input type="hidden" name="queue_id" value="{{ q[0] }}"><button name="action" value="approve">Duyệt</button><button name="action" value="done">Hoàn thành</button><button name="action" value="error">Báo lỗi</button></form></td></tr>{% endfor %}</table></div>
 
   <h3>Danh sách Group đã lưu</h3>{% for g in fb_groups %}<div class="history"><b>{{ g[1] }}</b> • {{ g[2] }} • {{ g[3] }}<br>{{ g[4] }}</div>{% endfor %}
@@ -4590,7 +4945,7 @@ function closeLockedFeature(){
   <div class="section-open-note">Bạn đang mở: AI Studio V3.</div>
   <h2>🤖 AI Studio</h2>
   <div class="v3-feature-grid">
-    <div class="v3-feature-card"><h3>AI Content</h3><ul><li>Content Facebook</li><li>Content TikTok</li><li>Caption</li></ul><button onclick="openModule('ai_studio')">Mở AI Content</button></div>
+    <div class="v3-feature-card"><h3>AI Content</h3><ul><li>Content Facebook</li><li>Content TikTok</li><li>Caption</li></ul><button onclick="return openModule('ai_studio')">Mở AI Content</button></div>
     <div class="v3-feature-card"><h3>Viral Content Lab</h3><ul><li>Content Viral</li><li>Storytelling</li><li>Seeding</li></ul><form method="post" action="/v3_ai_tool"><input type="hidden" name="tool" value="prompt_premium"><textarea name="topic" rows="3" placeholder="Ví dụ: nội dung viral cho dịch vụ proxy"></textarea><button>Tạo ý tưởng viral</button></form></div>
     <div class="v3-feature-card"><h3>Facebook Ads AI</h3><ul><li>Chấm điểm quảng cáo</li><li>Viết quảng cáo</li><li>Target khách hàng</li></ul><form method="post" action="/v3_ai_tool"><input type="hidden" name="tool" value="facebook_ads_ai"><textarea name="topic" rows="3" placeholder="Nhập sản phẩm/dịch vụ cần chạy ads"></textarea><button>Tạo Facebook Ads AI</button></form></div>
     <div class="v3-feature-card"><span class="v3-premium-badge">VIP</span><h3>AI Marketing Director</h3><p>Khách nhập: Tôi bán Proxy. AI trả: 30 Content, 10 Quảng cáo, 10 Caption, 5 Kịch bản chốt sale, 30 ngày Marketing, tệp khách hàng và ngân sách đề xuất.</p><form method="post" action="/v3_ai_tool"><input type="hidden" name="tool" value="marketing_director"><textarea name="topic" rows="3" placeholder="Tôi bán Proxy / mỹ phẩm / dịch vụ quảng cáo..."></textarea><button>Tạo kế hoạch tổng</button></form></div>
@@ -4624,8 +4979,8 @@ function closeLockedFeature(){
     <textarea name="topic" rows="4" placeholder="Ví dụ: Tôi bán proxy Việt Nam cho người chạy Facebook Ads, giá từ 80k/tháng, mục tiêu tăng inbox và chốt khách qua Zalo."></textarea>
     <textarea name="extra" rows="3" placeholder="Thông tin thêm: ngân sách ads, khu vực, ưu đãi, số Zalo, đối thủ, điểm mạnh sản phẩm..."></textarea>
     <button>🧠 Tạo kế hoạch Marketing Director</button>
-    <button type="button" class="secondary" onclick="openModule('ai_studio')">Mở AI Studio</button>
-    <button type="button" class="secondary" onclick="openModule('crm_sales')">Mở CRM Kanban</button>
+    <button type="button" class="secondary" onclick="return openModule('ai_studio')">Mở AI Studio</button>
+    <button type="button" class="secondary" onclick="return openModule('crm_sales')">Mở CRM Kanban</button>
   </form>
 </section>
 
@@ -5599,12 +5954,12 @@ def render(content="", message="", ok=True, selected_industry="spa", analysis=""
     warnings = policy_check(content) if content else []
     token_warning = "Cấu hình ổn." if PAGES and GEMINI_API_KEY else "Thiếu Gemini API hoặc PAGES_JSON trong file .env."
     return render_template_string(
-        HTML, title=APP_TITLE, pages=PAGES, content=content, message=message, ok=ok,
+        HTML, title=APP_TITLE, pages=get_pages_dynamic(), content=content, message=message, ok=ok,
         history=get_history(), campaigns=get_campaigns(), s=get_stats(), crm_rows=get_crm(), token_report=token_manager_report(), token_checks=get_latest_token_checks(), clusters=get_page_clusters(), analytics=get_analytics_summary(), free_status=get_free_status(),
         industry_labels=INDUSTRY_LABELS, selected_industry=selected_industry,
         library_items=current_library(selected_industry)[:10], locked_count=max(0, 500 - len(current_library(selected_industry)[:10])),
         score=score, warnings=warnings, token_warning=token_warning,
-        analysis=analysis, plan=plan, v3=v3_ceo_summary(), pipeline_rows=get_pipeline_leads(), customer_tasks=get_customer_tasks(), notifications=get_notifications(), fb_groups=get_fb_groups(), group_schedules=get_group_schedules(), comment_leads=get_comment_leads(), messenger_scripts=get_messenger_scripts(), success_assets=get_success_assets(), group_finder_results=get_group_finder_results(), group_finder_stats=get_group_finder_stats(), group_join_queue=get_group_join_queue(), group_uid_files=get_group_uid_files(), group_post_results=get_group_post_results(), group_post_queue=get_group_post_queue(), page_comment_queue=get_page_comment_queue(), page_comment_logs=get_page_comment_logs(), page_comment_stats=get_page_comment_stats()
+        analysis=analysis, plan=plan, v3=v3_ceo_summary(), pipeline_rows=get_pipeline_leads(), customer_tasks=get_customer_tasks(), notifications=get_notifications(), fb_groups=get_fb_groups(), group_schedules=get_group_schedules(), comment_leads=get_comment_leads(), messenger_scripts=get_messenger_scripts(), success_assets=get_success_assets(), group_finder_results=get_group_finder_results(), group_finder_stats=get_group_finder_stats(), group_join_queue=get_group_join_queue(), group_uid_files=get_group_uid_files(), group_post_results=get_group_post_results(), group_post_queue=get_group_post_queue(), page_comment_queue=get_page_comment_queue(), page_comment_logs=get_page_comment_logs(), page_comment_stats=get_page_comment_stats(), page_token_rows=get_page_token_rows(), page_group_memberships=get_page_group_memberships()
     )
 
 @app.route("/")
@@ -5680,12 +6035,30 @@ def distribute_content_to_pages(contents, pages):
     if not contents or not pages:
         return jobs
 
-    # Ví dụ 10 content + 10 page => content 1 page 1, content 2 page 2...
-    # Nếu content nhiều hơn page thì quay vòng page.
+    # Mỗi dòng nội dung là 1 bài riêng, chia lần lượt cho Page.
+    # Không nhân bản cùng một nội dung trong một lượt xử lý.
     for i, content in enumerate(contents):
         page = pages[i % len(pages)]
         jobs.append((page, content))
     return jobs
+
+def quick_schedule_base(action, explicit_time=""):
+    action = action or "now"
+    explicit_time = (explicit_time or "").replace("T", " ").strip()
+    if action == "schedule" and explicit_time:
+        try:
+            return datetime.datetime.strptime(explicit_time, "%Y-%m-%d %H:%M")
+        except Exception:
+            return datetime.datetime.now() + datetime.timedelta(minutes=30)
+    quick_map = {
+        "schedule_quick_30": 30,
+        "schedule_quick_60": 60,
+        "schedule_quick_120": 120,
+        "schedule_quick_180": 180,
+    }
+    if action in quick_map:
+        return datetime.datetime.now() + datetime.timedelta(minutes=quick_map[action])
+    return None
 
 
 @app.route("/multi_post", methods=["POST"])
@@ -5742,12 +6115,12 @@ def multi_post():
         content_score = score_content(final_content)
         image_path = choose_best_media_for_content(final_content, media_paths, used_media)
 
-        if action == "schedule":
-            if not schedule_time:
-                return render(message="Chưa chọn thời gian đặt lịch.", ok=False)
-            save_post(page["name"], page["id"], final_content, "scheduled", "", schedule_time, image_path, campaign, content_score)
+        schedule_base = quick_schedule_base(action, schedule_time)
+        if schedule_base:
+            item_schedule = (schedule_base + datetime.timedelta(minutes=idx * 5)).strftime("%Y-%m-%d %H:%M")
+            save_post(page["name"], page["id"], final_content, "scheduled", "", item_schedule, image_path, campaign, content_score)
             media_note = f" | Media: {os.path.basename(image_path)}" if image_path else ""
-            messages.append(f"Đã lưu lịch cho {page['name']}{media_note}")
+            messages.append(f"Đã lưu lịch {item_schedule} cho {page['name']}{media_note}")
         else:
             result = post_to_facebook(page, final_content, image_path)
             if "id" in result or "post_id" in result:
@@ -5813,12 +6186,13 @@ def batch():
                 continue
             target_pages = []
             for name in [x.strip().lower() for x in page_names.split(",") if x.strip()]:
-                for p in PAGES:
+                for p in get_pages_dynamic():
                     if name in p["name"].lower():
                         target_pages.append(p)
-            if not target_pages and PAGES:
+            pages_dynamic = get_pages_dynamic()
+            if not target_pages and pages_dynamic:
                 # Nếu file không có page_names, tự chia mỗi dòng content sang Page kế tiếp để tránh trùng bài
-                target_pages = [PAGES[count % len(PAGES)]]
+                target_pages = [pages_dynamic[count % len(pages_dynamic)]]
 
             # File Excel/CSV có thể thêm cột image_path để gắn ảnh riêng từng bài.
             image_path = str(row.get("image_path", "") or row.get("media_path", "") or "").strip()
@@ -5995,22 +6369,42 @@ def group_post_filter_import_route():
     stats = import_group_posts(request.form.get("raw_posts", ""), request.form.get("keyword", ""), request.form.get("min_comments", "0"), request.form.get("min_reactions", "0"))
     return render(message=f"Đã lưu {stats['added']} UID bài viết. Trùng {stats['duplicate']}. Lọc bỏ {stats['filtered']}.", ok=True)
 
+@app.route("/group_pair_post_queue", methods=["POST"])
+def group_pair_post_queue_route():
+    page_indexes = request.form.getlist("page_indexes")
+    group_ids = request.form.getlist("group_ids")
+    contents = split_bulk_contents(request.form.get("bulk_content", ""))
+    if not contents:
+        content_single = request.form.get("content", "").strip()
+        contents = [content_single] if content_single else []
+    if not page_indexes:
+        return render(message="Vui lòng chọn ít nhất 1 Page.", ok=False)
+    if not group_ids:
+        return render(message="Vui lòng chọn ít nhất 1 Group đã tham gia.", ok=False)
+    if not contents:
+        return render(message="Vui lòng nhập nội dung. Mỗi dòng là một bài để chia không trùng.", ok=False)
+    result = add_group_pair_post_queue(page_indexes, group_ids, contents, request.form.get("schedule_mode", "now"), request.form.get("min_delay", "45"), request.form.get("max_delay", "60"))
+    detail = "\n".join(result.get("pairs", [])[:20])
+    return render(message=f"Đã tạo {result['added']} hàng chờ Page → Group riêng, bỏ qua {result['skipped']}.\n{detail}", ok=True)
+
 @app.route("/group_multi_post_queue", methods=["POST"])
 def group_multi_post_queue_route():
+    # Giữ route cũ nhưng chuyển sang logic an toàn: 1 Page ghép 1 Group riêng, không tạo toàn bộ tổ hợp Page x Group.
     group_ids = request.form.getlist("group_ids")
     page_indexes = request.form.getlist("page_indexes")
     if not page_indexes:
         single_page = request.form.get("page_index", "")
         page_indexes = [single_page] if single_page != "" else []
+    contents = split_bulk_contents(request.form.get("bulk_content", ""))
     content = request.form.get("content", "").strip()
-    if not group_ids or not content:
+    if not contents and content:
+        contents = [content]
+    if not group_ids or not contents:
         return render(message="Vui lòng chọn ít nhất 1 Group và nhập nội dung bài đăng.", ok=False)
     if not page_indexes:
         return render(message="Vui lòng chọn ít nhất 1 Page để đưa vào hàng chờ đăng Group.", ok=False)
-    added = 0
-    for page_index in page_indexes:
-        added += add_group_post_queue(page_index, group_ids, content)
-    return render(message=f"Đã đưa {added} dòng vào hàng chờ duyệt cho {len(page_indexes)} Page và {len(group_ids)} Group. Chỉ đăng khi Page có quyền hợp lệ.", ok=True)
+    result = add_group_pair_post_queue(page_indexes, group_ids, contents, request.form.get("schedule_mode", "now"), request.form.get("min_delay", "45"), request.form.get("max_delay", "60"))
+    return render(message=f"Đã tạo {result['added']} hàng chờ theo kiểu 1 Page → 1 Group riêng, không trùng Group. Bỏ qua {result['skipped']}.", ok=True)
 
 @app.route("/export_group_uids")
 def export_group_uids_route():
@@ -6019,26 +6413,65 @@ def export_group_uids_route():
         return render(message="Chưa có UID Group để xuất.", ok=False)
     return send_file(paths[0], as_attachment=True)
 
+@app.route("/page_token_save", methods=["POST"])
+def page_token_save_route():
+    page_name = request.form.get("page_name", "").strip()
+    page_id = request.form.get("page_id", "").strip()
+    page_token = request.form.get("page_token", "").strip()
+    note = request.form.get("note", "").strip()
+    if not save_page_token(page_name, page_id, page_token, note):
+        return render(message="Vui lòng nhập đủ Page ID và Page Token.", ok=False)
+    return render(message="Đã lưu/cập nhật Page Token. Page này sẽ xuất hiện trong danh sách chọn Page ngay trong tool.", ok=True)
+
+@app.route("/page_group_membership_add", methods=["POST"])
+def page_group_membership_add_route():
+    page_index = request.form.get("page_index", "")
+    group_id = request.form.get("group_id", "").strip()
+    status = request.form.get("status", "Đã tham gia")
+    can_post = request.form.get("can_post", "Có")
+    note = request.form.get("note", "")
+    if not add_page_group_membership(page_index, group_id, status, can_post, note):
+        return render(message="Vui lòng chọn Page và Group hợp lệ trước khi lưu quyền tham gia Group.", ok=False)
+    return render(message="Đã lưu Page đã tham gia Group. Khi tạo hàng chờ đăng Group, hệ thống chỉ nhận cặp Page → Group có quyền đăng.", ok=True)
+
+@app.route("/support_poll")
+def support_poll_route():
+    return jsonify({"success": True, "messages": [], "last_id": request.args.get("after_id", 0)})
+
+@app.route("/support_send", methods=["POST"])
+def support_send_route():
+    return jsonify({"success": True, "message": "Đã nhận nội dung hỗ trợ."})
+
 @app.route("/page_comment_queue_add", methods=["POST"])
 def page_comment_queue_add_route():
     comment_text = request.form.get("comment_text", "").strip()
     raw_targets = request.form.get("raw_targets", "").strip()
     target_type = request.form.get("target_type", "post")
+    page_indexes = request.form.getlist("page_indexes")
     page_index = request.form.get("page_index", "")
-    min_delay = request.form.get("min_delay", "60")
-    max_delay = request.form.get("max_delay", "120")
+    if not page_indexes and page_index != "":
+        page_indexes = [page_index]
+    min_delay = request.form.get("min_delay", "45")
+    max_delay = request.form.get("max_delay", "60")
     single_post_uid = request.form.get("single_post_uid", "").strip()
     single_group_uid = request.form.get("single_group_uid", "").strip()
     single_user_uid = request.form.get("single_user_uid", "").strip()
     if not comment_text:
         return render(message="Vui lòng nhập nội dung bình luận.", ok=False)
-    if raw_targets:
-        result = bulk_import_page_comment_queue(page_index, raw_targets, comment_text, min_delay, max_delay, target_type)
-        return render(message=f"Đã tạo {result['added']} hàng chờ bình luận. Bỏ qua {result['skipped']} dòng. Giãn cách {result['min_delay']}-{result['max_delay']} giây.", ok=True)
-    qid = add_page_comment_queue(page_index, target_type, single_user_uid, single_post_uid, single_group_uid, comment_text, min_delay, max_delay)
-    if not qid:
+    if not page_indexes:
+        return render(message="Vui lòng chọn ít nhất 1 Page để tạo hàng chờ bình luận.", ok=False)
+    total_added = total_skipped = 0
+    for pi in page_indexes:
+        if raw_targets:
+            result = bulk_import_page_comment_queue(pi, raw_targets, comment_text, min_delay, max_delay, target_type)
+            total_added += result['added']; total_skipped += result['skipped']
+        else:
+            qid = add_page_comment_queue(pi, target_type, single_user_uid, single_post_uid, single_group_uid, comment_text, min_delay, max_delay)
+            if qid: total_added += 1
+            else: total_skipped += 1
+    if total_added <= 0:
         return render(message="Vui lòng nhập ít nhất một UID bài viết, UID Group hoặc UID người dùng hợp lệ.", ok=False)
-    return render(message=f"Đã tạo hàng chờ bình luận ID {qid}. Cần admin duyệt trước khi xử lý.", ok=True)
+    return render(message=f"Đã tạo {total_added} hàng chờ bình luận cho {len(page_indexes)} Page. Bỏ qua {total_skipped}. Giãn cách {normalize_delay_seconds(min_delay,45)}-{normalize_delay_seconds(max_delay,60)} giây.", ok=True)
 
 @app.route("/page_comment_queue_action", methods=["POST"])
 def page_comment_queue_action_route():
