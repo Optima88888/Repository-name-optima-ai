@@ -2097,8 +2097,15 @@ def add_page_comment_queue(page_index, target_type, user_uid, post_uid, group_ui
     c.execute("INSERT INTO page_comment_logs(queue_id,page_name,target_uid,action,status,detail,created_at) VALUES(?,?,?,?,?,?,?)", (qid, page_name, normalize_uid(post_uid) or normalize_uid(group_uid) or normalize_uid(user_uid), 'Tạo hàng chờ', 'Chờ duyệt', 'Đã tạo hàng chờ bình luận an toàn.', now.strftime('%Y-%m-%d %H:%M:%S')))
     conn.commit(); conn.close(); return qid
 
+def split_comment_lines(comment_text):
+    """Tách nội dung bình luận: mỗi dòng là một bình luận riêng.
+    Khi số UID nhiều hơn số bình luận, hệ thống tự quay vòng nội dung theo thứ tự.
+    """
+    return [line.strip() for line in (comment_text or '').splitlines() if line.strip()]
+
 def bulk_import_page_comment_queue(page_index, raw_targets, comment_text, min_delay=45, max_delay=60, target_type='post'):
     lines = [x.strip() for x in (raw_targets or '').splitlines() if x.strip()]
+    comments = split_comment_lines(comment_text)
     min_delay = normalize_comment_delay_seconds(min_delay, 45)
     max_delay = normalize_comment_delay_seconds(max_delay, 60)
     if max_delay < min_delay: max_delay = min_delay
@@ -2109,7 +2116,7 @@ def bulk_import_page_comment_queue(page_index, raw_targets, comment_text, min_de
         uid1 = normalize_uid(parts[0] if parts else '')
         uid2 = normalize_uid(parts[1] if len(parts) > 1 else '')
         uid3 = normalize_uid(parts[2] if len(parts) > 2 else '')
-        if not uid1:
+        if not uid1 or not comments:
             skipped += 1; continue
         user_uid = post_uid = group_uid = ''
         if target_type == 'user': user_uid = uid1
@@ -2118,12 +2125,13 @@ def bulk_import_page_comment_queue(page_index, raw_targets, comment_text, min_de
             post_uid = uid1
             group_uid = uid2
             user_uid = uid3
+        comment_for_uid = comments[idx % len(comments)]
         scheduled_at = (base + datetime.timedelta(seconds=idx * min_delay)).strftime('%Y-%m-%d %H:%M:%S')
-        if add_page_comment_queue(page_index, target_type, user_uid, post_uid, group_uid, comment_text, min_delay, max_delay, scheduled_at):
+        if add_page_comment_queue(page_index, target_type, user_uid, post_uid, group_uid, comment_for_uid, min_delay, max_delay, scheduled_at):
             added += 1
         else:
             skipped += 1
-    return {'added': added, 'skipped': skipped, 'total': len(lines), 'min_delay': min_delay, 'max_delay': max_delay}
+    return {'added': added, 'skipped': skipped, 'total': len(lines), 'comments': len(comments), 'min_delay': min_delay, 'max_delay': max_delay}
 
 def get_page_comment_queue(limit=200):
     conn = db(); c = conn.cursor()
@@ -4368,15 +4376,20 @@ function appendBotGreeting(){
   botGreeted=true;
   const body=document.getElementById("floatingBotBody");
   if(!body) return;
-  body.innerHTML += `
+  body.innerHTML = `
     <div class="bot-msg ai">
-      Xin chào anh/chị 👋<br><br>
-      Em là trợ lý hỗ trợ của <b>Marketing Automation Pro V10</b>.<br>
-      Anh/chị cần tư vấn gói Premium, kích hoạt tài khoản, thanh toán hay hướng dẫn sử dụng tool thì em hỗ trợ ngay ạ.
+      <b>Bot hỗ trợ</b><br><br>
+      Dạ mình đang cần hỗ trợ vấn đề gì?<br><br>
+      • Nâng cấp Premium<br>
+      • Kích hoạt tài khoản<br>
+      • Thanh toán<br>
+      • Hướng dẫn sử dụng<br>
+      • Báo lỗi hệ thống
     </div>
+    <div class="support-mini-box"><b>Zalo hỗ trợ:</b><br>036 338 2629</div>
+    <div class="support-mini-box"><b>Gmail hỗ trợ:</b><br>support@gptmini.pro</div>
     <div class="bot-msg ai">
-      Hiện hệ thống có các gói: <b>1 tháng 159K</b>, <b>3 tháng 359K</b>, <b>6 tháng 559K</b>, <b>1 năm 859K</b> và <b>Nhà bán hàng chuyên nghiệp 1.959K</b>.<br>
-      Nếu đã thanh toán mà sau 5 phút chưa kích hoạt, vui lòng liên hệ Zalo <b>036 338 2629</b>.
+      Nếu đã thanh toán, vui lòng gửi <b>ID thiết bị</b>, <b>ảnh thanh toán</b> và <b>gói đã đăng ký</b> để được ưu tiên kích hoạt nhanh.
     </div>`;
   body.scrollTop=body.scrollHeight;
 }
@@ -4384,14 +4397,18 @@ function botQuick(text){
   const body=document.getElementById("floatingBotBody");
   if(!body) return;
   body.innerHTML += `<div class="bot-msg"><b>Bạn:</b> ${text}</div>`;
-  let reply="Dạ em đã nhận yêu cầu. Nếu hệ thống AI báo quá tải hoặc hết lượt tạm thời, anh/chị vui lòng thử lại sau ít phút hoặc liên hệ Zalo để kỹ thuật hỗ trợ nhanh ạ.";
+  let reply="Dạ mình đang cần hỗ trợ vấn đề gì? Anh/chị có thể chọn: Nâng cấp Premium, Thanh toán, Kích hoạt tài khoản, Hướng dẫn sử dụng hoặc Báo lỗi hệ thống.";
   const lower=text.toLowerCase();
-  if(lower.includes("giá") || lower.includes("gói")){
-    reply="Dạ gói Premium hiện có: 1 tháng 159K, 3 tháng 359K, 6 tháng 559K, 1 năm 859K và Nhà bán hàng chuyên nghiệp 1.959K. Gói 1 năm đang phổ biến nhất, còn gói Nhà bán hàng chuyên nghiệp mở toàn bộ tính năng và cập nhật tương lai.";
-  }else if(lower.includes("thanh toán")){
-    reply="Anh/chị bấm Bảng Giá Premium Seller AI, chọn gói cần mua, hệ thống sẽ mở popup thanh toán kèm QR Agribank, STK 8888363382629 - NGUYEN DANG THI XUAN. Nếu sau 5 phút chưa kích hoạt, liên hệ Zalo 036 338 2629.";
-  }else if(lower.includes("tính năng")){
-    reply="Tool hỗ trợ AI Content Brain, đăng nhiều Fanpage, lịch đăng, chia content/ảnh, CRM Pro, AI Sales Bot, Marketing Funnel, kho content 50.000+, xuất báo cáo và backup dữ liệu.";
+  if(lower.includes("premium") || lower.includes("giá") || lower.includes("gói") || lower.includes("nâng cấp")){
+    reply="Dạ hiện hệ thống có các gói:<br><br>1 tháng: <b>159K</b><br>3 tháng: <b>359K</b><br>6 tháng: <b>559K</b><br>1 năm: <b>859K</b><br>Nhà bán hàng chuyên nghiệp: <b>1.959K</b><br><br>Anh/chị muốn em tư vấn gói phù hợp không ạ?<br><br><b>Zalo:</b> 036 338 2629<br><b>Gmail:</b> support@gptmini.pro";
+  }else if(lower.includes("thanh toán") || lower.includes("chuyển khoản") || lower.includes("qr")){
+    reply="Dạ sau khi chuyển khoản vui lòng gửi:<br><br>• ID thiết bị<br>• Ảnh thanh toán<br>• Gói đã đăng ký<br><br>Nếu sau 5 phút chưa kích hoạt, vui lòng liên hệ Zalo <b>036 338 2629</b>.";
+  }else if(lower.includes("kích hoạt") || lower.includes("duyệt")){
+    reply="Dạ anh/chị gửi giúp em ID thiết bị, số điện thoại, Gmail và ảnh thanh toán. Hệ thống sẽ kiểm tra và kích hoạt Premium nhanh nhất.";
+  }else if(lower.includes("lỗi") || lower.includes("không dùng") || lower.includes("không được")){
+    reply="Dạ anh/chị vui lòng mô tả lỗi đang gặp hoặc gửi ảnh màn hình. Bộ phận kỹ thuật sẽ kiểm tra và hỗ trợ ngay. Zalo hỗ trợ: <b>036 338 2629</b>.";
+  }else if(lower.includes("tính năng") || lower.includes("hướng dẫn")){
+    reply="Dạ tool hỗ trợ đăng bài Facebook, quản lý Page/Group, AI Comment, AI Messenger, CRM Kanban, Marketing Director, bảng giá Premium và duyệt kích hoạt theo ID thiết bị.";
   }
   body.innerHTML += `<div class="bot-msg ai"><b>Bot hỗ trợ:</b><br>${reply}</div>`;
   body.scrollTop=body.scrollHeight;
@@ -4698,6 +4715,10 @@ function closeLockedFeature(){
 .v2-nav-link[href="#crm_sales"] .v2-nav-tag,
 .v2-nav-link[href="#marketing_director"] .v2-nav-tag{background:linear-gradient(135deg,#F59E0B,#EF4444)!important;color:white!important}
 
+.comment-guide{background:#EEF4FF;border:1px solid #C8D8FF;padding:12px;border-radius:14px;margin:8px 0 10px;font-size:14px;line-height:1.5;color:#1E293B}
+.support-mini-box{background:#F4F7FF;border:1px solid #D8E0FF;border-radius:14px;padding:10px 12px;margin:9px 0;font-size:14px;color:#111827}
+.support-mini-box b{color:#4C1D95}
+
 </style>
 
 </head>
@@ -4737,9 +4758,9 @@ function closeLockedFeature(){
       </div>
     </div>
     <div class="bot-actions">
-      <button onclick="botQuick('Tư vấn giá gói Premium')">Tư vấn gói Premium</button>
+      <button onclick="botQuick('Nâng cấp Premium')">Nâng cấp Premium</button>
       <button class="light" onclick="botQuick('Hướng dẫn thanh toán')">Hướng dẫn thanh toán</button>
-      <button class="light" onclick="botQuick('Tôi muốn xem tính năng')">Xem tính năng nổi bật</button>
+      <button class="light" onclick="botQuick('Kích hoạt tài khoản')">Kích hoạt tài khoản</button>
       <a href="https://zalo.me/0363382629" target="_blank">Liên hệ Zalo 036 338 2629</a>
     </div>
     <div class="bot-input">
@@ -5036,7 +5057,8 @@ function closeLockedFeature(){
         </div>
         <div>
           <label>Nội dung bình luận</label>
-          <textarea name="comment_text" rows="6" placeholder="Nội dung bình luận hợp lệ, không spam, không lặp quá nhiều."></textarea>
+          <div class="comment-guide"><b>Hướng dẫn:</b><br>Mỗi dòng là 1 bình luận riêng.<br>Hệ thống tự ghép 1 UID = 1 bình luận.<br>Nếu UID nhiều hơn số bình luận, nội dung sẽ tự quay vòng.</div>
+          <textarea name="comment_text" rows="6" placeholder="Mỗi dòng là 1 bình luận riêng.\nVí dụ:\nxin chào\nbạn khỏe không\nngày mai bạn làm gì"></textarea>
         </div>
       </div>
       <textarea name="raw_targets" rows="6" placeholder="Dán nhiều UID, mỗi dòng một mục. Ví dụ:\nPOST_UID\nPOST_UID, GROUP_UID\nUSER_UID"></textarea>
@@ -5129,7 +5151,7 @@ function closeLockedFeature(){
     <form method="post" action="/page_comment_queue_add">
       <div class="gf-grid-3"><select name="page_index">{% for p in pages %}<option value="{{ loop.index0 }}">{{ p.name }} - {{ p.id }}</option>{% endfor %}</select><select name="target_type"><option value="post">UID bài viết Group</option><option value="group">UID Group</option><option value="user">UID người dùng đã tương tác</option></select><input name="min_delay" type="number" min="45" value="45" placeholder="Giãn cách tối thiểu giây"></div>
       <div class="gf-grid-3"><input name="max_delay" type="number" min="45" value="60" placeholder="Giãn cách tối đa giây"><input name="single_post_uid" placeholder="UID bài viết"><input name="single_group_uid" placeholder="UID Group"></div>
-      <input name="single_user_uid" placeholder="UID người dùng đã tương tác nếu có"><textarea name="comment_text" rows="4" placeholder="Nội dung bình luận"></textarea><textarea name="raw_targets" rows="5" placeholder="Dán nhiều UID, mỗi dòng một mục: post_uid, group_uid, user_uid"></textarea><button>Tạo hàng chờ bình luận</button><a class="btnlink" href="/export_page_comment_queue">Xuất CSV hàng chờ</a>
+      <input name="single_user_uid" placeholder="UID người dùng đã tương tác nếu có"><textarea name="comment_text" rows="4" placeholder="Mỗi dòng là 1 bình luận riêng. Ví dụ: xin chào / bạn khỏe không / ngày mai bạn làm gì"></textarea><textarea name="raw_targets" rows="5" placeholder="Dán nhiều UID, mỗi dòng một mục: post_uid, group_uid, user_uid"></textarea><button>Tạo hàng chờ bình luận</button><a class="btnlink" href="/export_page_comment_queue">Xuất CSV hàng chờ</a>
     </form>
   </div>
 
@@ -6735,8 +6757,9 @@ def page_comment_queue_add_route():
     single_post_uid = request.form.get("single_post_uid", "").strip()
     single_group_uid = request.form.get("single_group_uid", "").strip()
     single_user_uid = request.form.get("single_user_uid", "").strip()
-    if not comment_text:
-        return render(message="Vui lòng nhập nội dung bình luận.", ok=False)
+    comments = split_comment_lines(comment_text)
+    if not comments:
+        return render(message="Vui lòng nhập nội dung bình luận. Mỗi dòng là 1 bình luận riêng.", ok=False)
     if not page_indexes:
         return render(message="Vui lòng chọn ít nhất 1 Page để tạo hàng chờ bình luận.", ok=False)
     total_added = total_skipped = 0
@@ -6745,12 +6768,13 @@ def page_comment_queue_add_route():
             result = bulk_import_page_comment_queue(pi, raw_targets, comment_text, min_delay, max_delay, target_type)
             total_added += result['added']; total_skipped += result['skipped']
         else:
-            qid = add_page_comment_queue(pi, target_type, single_user_uid, single_post_uid, single_group_uid, comment_text, min_delay, max_delay)
+            first_comment = comments[0]
+            qid = add_page_comment_queue(pi, target_type, single_user_uid, single_post_uid, single_group_uid, first_comment, min_delay, max_delay)
             if qid: total_added += 1
             else: total_skipped += 1
     if total_added <= 0:
         return render(message="Vui lòng nhập ít nhất một UID bài viết, UID Group hoặc UID người dùng hợp lệ.", ok=False)
-    return render(message=f"Đã tạo {total_added} hàng chờ bình luận cho {len(page_indexes)} Page. Bỏ qua {total_skipped}. Giãn cách {normalize_comment_delay_seconds(min_delay,45)}-{normalize_comment_delay_seconds(max_delay,60)} giây.", ok=True)
+    return render(message=f"Đã tạo {total_added} hàng chờ bình luận cho {len(page_indexes)} Page. Tổng bình luận nhập: {len(comments)}. Mỗi UID nhận 1 bình luận theo từng dòng và tự quay vòng nếu thiếu nội dung. Bỏ qua {total_skipped}. Giãn cách {normalize_comment_delay_seconds(min_delay,45)}-{normalize_comment_delay_seconds(max_delay,60)} giây.", ok=True)
 
 @app.route("/page_comment_queue_action", methods=["POST"])
 def page_comment_queue_action_route():
