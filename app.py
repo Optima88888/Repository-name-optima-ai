@@ -2812,6 +2812,35 @@ button:hover{
   gap:6px;
 }
 .bot-bubble-label:before{content:"";width:8px;height:8px;border-radius:50%;background:#22C55E;box-shadow:0 0 0 5px rgba(34,197,94,.12)}
+
+/* FIX V13: Bot ngoài màn hình chỉ là chấm xanh nhấp nháy; chữ chỉ hiện khi mở khung chat */
+.bot-bubble{
+  width:24px!important;
+  height:24px!important;
+  min-width:24px!important;
+  min-height:24px!important;
+  padding:0!important;
+  border:3px solid #fff!important;
+  background:#22C55E!important;
+  box-shadow:0 0 0 0 rgba(34,197,94,.45),0 12px 28px rgba(34,197,94,.32)!important;
+  font-size:0!important;
+  animation:botGreenPulse 1.25s infinite!important;
+}
+.bot-bubble-label{display:none!important}
+.bot-status{display:none!important}
+.bot-bubble.opened{
+  width:66px!important;
+  height:66px!important;
+  background:linear-gradient(135deg,#2563EB,#7C3AED)!important;
+  font-size:30px!important;
+  animation:botFloat 2.2s ease-in-out infinite!important;
+}
+@keyframes botGreenPulse{
+  0%{transform:scale(1);box-shadow:0 0 0 0 rgba(34,197,94,.45),0 12px 28px rgba(34,197,94,.32)}
+  70%{transform:scale(1.08);box-shadow:0 0 0 14px rgba(34,197,94,0),0 12px 28px rgba(34,197,94,.32)}
+  100%{transform:scale(1);box-shadow:0 0 0 0 rgba(34,197,94,0),0 12px 28px rgba(34,197,94,.32)}
+}
+
 .bot-panel{
   display:none;
   position:absolute;
@@ -4388,17 +4417,28 @@ function closePremiumPopup(){
 
 function toggleFloatingBot(){
   const panel=document.getElementById("floatingBotPanel");
-  if(!panel) return;
-  const isOpen=panel.style.display==="block";
-  panel.style.display=isOpen?"none":"block";
-  if(!isOpen){
+  const bubble=document.querySelector(".bot-bubble");
+  if(!panel) return false;
+  const isOpen=panel.classList.contains("bot-open") || panel.style.display==="block";
+  if(isOpen){
+    panel.classList.remove("bot-open");
+    panel.style.display="none";
+    if(bubble) bubble.classList.remove("opened");
+  }else{
+    panel.classList.add("bot-open");
+    panel.style.display="block";
+    if(bubble) bubble.classList.add("opened");
     const input=document.getElementById("botInputText");
     if(input) setTimeout(()=>input.focus(),150);
   }
+  return false;
 }
 function closeFloatingBot(){
   const panel=document.getElementById("floatingBotPanel");
-  if(panel) panel.style.display="none";
+  const bubble=document.querySelector(".bot-bubble");
+  if(panel){ panel.classList.remove("bot-open"); panel.style.display="none"; }
+  if(bubble) bubble.classList.remove("opened");
+  return false;
 }
 function escapeBotHtml(text){
   return String(text || "").replace(/[&<>"']/g,function(m){
@@ -4469,43 +4509,39 @@ function openModule(moduleId){
     "page_comment_pro":"page_center_total",
     "page_comment_queue":"page_center_total",
     "page_center":"page_center_total",
-    "post":"page_center_total"
+    "facebook_ads":"facebook_center",
+    "analytics_center":"analytics",
+    "premium_center":"premium",
+    "payment":"pricing",
+    "plans":"pricing"
   };
-  moduleId = moduleAlias[moduleId] || moduleId;
-  const trialAllowed = ["dashboard", "fanpage_manager", "page_center_total", "group_suite", "group_marketing", "comment_manager"];
-  const premiumLocked = {
-    "messenger_ai": "AI Messenger",
-    "crm_sales": "CRM Kanban",
-    "marketing_director": "AI Marketing Director",
-    "ai_video": "AI Video",
-    "ai_image": "AI Image",
-    "ai_business": "AI Kinh Doanh",
-    "ai_voice": "AI Giọng Nói",
-    "ai_livestream": "AI Livestream",
-    "analytics_center": "Analytics Center"
-  };
+  moduleId = moduleAlias[moduleId] || moduleId || "dashboard";
 
-  if(!trialAllowed.includes(moduleId) && premiumLocked[moduleId]){
-    openLockedFeature(premiumLocked[moduleId], "Gói 1 tháng / 3 tháng / 6 tháng / 1 năm / Nhà bán hàng chuyên nghiệp");
+  const target=document.getElementById(moduleId);
+  if(!target){
+    console.warn("Không tìm thấy module:", moduleId);
     return false;
   }
 
   document.querySelectorAll(".module-section").forEach(function(el){
     el.classList.remove("active-module");
   });
-  const target=document.getElementById(moduleId);
-  if(target){
+
+  if(target.classList.contains("module-section")){
     target.classList.add("active-module");
-    setTimeout(function(){
-      const top = target.getBoundingClientRect().top + window.pageYOffset - 16;
-      window.scrollTo({top: top, behavior: "smooth"});
-    }, 30);
   }
+
+  setTimeout(function(){
+    const top = target.getBoundingClientRect().top + window.pageYOffset - 16;
+    window.scrollTo({top: Math.max(0, top), behavior: "smooth"});
+  }, 30);
+
   document.querySelectorAll(".v2-nav-link").forEach(function(a){ a.classList.remove("active"); });
   const active=document.querySelector('.v2-nav-link[href="#'+moduleId+'"]');
   if(active){ active.classList.add("active"); }
   return false;
 }
+
 function showAllModules(){
   document.querySelectorAll(".module-section").forEach(function(el){
     el.classList.add("active-module");
@@ -4514,10 +4550,12 @@ function showAllModules(){
 document.addEventListener("DOMContentLoaded",function(){
   const first=document.getElementById("dashboard");
   if(first){first.classList.add("active-module");}
-  document.querySelectorAll(".v2-nav-link[href^='#']").forEach(function(a){
+  document.querySelectorAll("a[href^='#']").forEach(function(a){
+    if(a.dataset.moduleBound === "1") return;
+    a.dataset.moduleBound = "1";
     a.addEventListener("click", function(e){
       const id=(a.getAttribute("href")||"").replace("#","");
-      if(id){ e.preventDefault(); openModule(id); }
+      if(id && document.getElementById(id)){ e.preventDefault(); openModule(id); }
     });
   });
 });
@@ -4781,7 +4819,7 @@ function closeLockedFeature(){
       <button onclick="sendBotInput()">Gửi</button>
     </div>
   </div>
-  <button class="bot-bubble" onclick="toggleFloatingBot()">
+  <button class="bot-bubble" onclick="return toggleFloatingBot()" aria-label="Mở AI hỗ trợ">
     <span class="bot-bubble-label">AI đang trực tuyến</span>
     🤖
     <span class="bot-status"></span>
@@ -6125,7 +6163,7 @@ function toggleMenuGroup(el){
       });
       var action = card.querySelector('.plan-button,.safe-pricing-action');
       if(action) {
-        action.innerText = action.innerText.replace('','Xem chi tiết gói');
+        action.innerText = 'Xem chi tiết gói';
       }
     });
   }
