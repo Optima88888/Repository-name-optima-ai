@@ -1904,6 +1904,22 @@ Viết bài đăng Group Facebook bằng tiếng Việt cho: {topic}
 Yêu cầu: gần gũi, không quá quảng cáo, tạo thảo luận, có CTA mềm, dưới 120 từ, kèm 3 biến thể tiêu đề.
 Thông tin thêm: {extra}
 """
+    if tool == 'smart_engagement':
+        return f"""
+Bạn là chuyên gia tăng tương tác Facebook an toàn cho chủ shop/doanh nghiệp nhỏ.
+Sản phẩm/dịch vụ hoặc bài viết cần tối ưu: {topic}
+Thông tin thêm: {extra}
+
+Tạo kế hoạch Tăng tương tác thông minh gồm:
+1. Gợi ý 5 khung giờ đăng tốt
+2. 10 caption kéo comment tự nhiên
+3. 10 câu hỏi tạo thảo luận thật
+4. 5 mẫu phản hồi comment để kéo khách vào inbox
+5. Cách nhận diện bài ít tương tác và việc admin cần làm
+6. Kịch bản chăm sóc lại khách đã comment
+7. Lưu ý an toàn: không auto like hàng loạt, không dùng nhiều tài khoản, không tạo tương tác giả.
+Trình bày rõ ràng, dễ copy, không cam kết quá đà.
+"""
     if tool == 'comment_reply':
         return f"""
 Bạn là Comment Manager AI. Hãy tạo phản hồi comment chuyên nghiệp cho khách hàng.
@@ -4280,7 +4296,7 @@ async function submitPremiumRequest(){
 }
 
 function openModule(moduleId){
-  const trialAllowed = ["dashboard", "facebook_center", "fanpage_manager", "group_marketing", "comment_manager", "post", "token", "premium"];
+  const trialAllowed = ["dashboard", "facebook_center", "fanpage_manager", "group_marketing", "comment_manager", "post", "facebook_publisher_pro", "token", "premium"];
   const premiumLocked = {
     "messenger_ai": "AI Messenger",
     "crm_sales": "CRM Kanban",
@@ -4295,7 +4311,8 @@ function openModule(moduleId){
     "batch": "Đăng hàng loạt",
     "factory": "Content Factory",
     "clusters": "Page Cluster",
-    "campaign": "Campaign Manager"
+    "campaign": "Campaign Manager",
+    "smart_engagement": "Tăng tương tác thông minh"
   };
 
   if(!trialAllowed.includes(moduleId) && premiumLocked[moduleId] && !MKT_PREMIUM_ACTIVE){
@@ -4337,13 +4354,13 @@ function scrollToPricing(){
 
 const premiumPlans = {
   trial:{
-    title:"🎁 DÙNG THỬ MIỄN PHÍ – 3 NGÀY",
-    price:"0Đ",
+    title:"🎁 GÓI TRẢI NGHIỆM",
+    price:"3 ngày miễn phí",
     amount:"0",
     package:"TRIAL",
-    desc:"Dùng thử 3 ngày sau khi đăng ký. Chỉ mở Quản lý Fanpage, Quản lý Group và AI Comment.",
-    benefits:["Quản lý Fanpage", "Quản lý Group", "AI Comment", "Xem giao diện hệ thống", "Trải nghiệm quy trình bán hàng"],
-    locked:["AI Messenger", "CRM Kanban", "AI Marketing Director", "AI Video", "AI Image", "AI Kinh Doanh", "AI Giọng Nói", "AI Livestream"]
+    desc:"Nâng cấp để mở toàn bộ hệ sinh thái AI bán hàng.",
+    benefits:["Quản lý Fanpage", "Quản lý Group", "AI Comment"],
+    locked:["AI Messenger", "CRM Kanban", "AI Marketing Director"]
   },
   monthly:{
     title:"🚀 GÓI 1 THÁNG",
@@ -4528,6 +4545,120 @@ function closeLockedFeature(){
 .premium-confirm-box button{width:100%;margin-top:8px}
 .premium-request-status{margin-top:10px;font-weight:800;color:#047857;line-height:1.5}
 
+/* Trial Experience Premium Card - fixed readable design */
+.trial-experience-card{
+  position:relative;
+  overflow:hidden;
+  background:linear-gradient(180deg,#FFFFFF 0%,#F8FAFF 100%)!important;
+  border:1px solid rgba(37,99,235,.16)!important;
+  box-shadow:0 24px 70px rgba(15,23,42,.13)!important;
+}
+.trial-ribbon{background:linear-gradient(135deg,#2563EB,#7C3AED)!important;color:#fff!important}
+.trial-badge-pro{
+  font-size:24px;
+  font-weight:900;
+  color:#1E1B4B;
+  margin:12px 0 6px;
+  letter-spacing:-.5px;
+}
+.trial-days-pro{
+  font-size:44px;
+  line-height:1.05;
+  font-weight:950;
+  background:linear-gradient(135deg,#F59E0B,#FACC15);
+  -webkit-background-clip:text;
+  -webkit-text-fill-color:transparent;
+  margin:8px 0 18px;
+}
+.trial-features-pro{margin:8px 0 18px}
+.feature-open-pro,.feature-lock-pro{
+  display:flex;
+  align-items:center;
+  min-height:38px;
+  padding:8px 0;
+  border-bottom:1px dashed rgba(37,99,235,.16);
+  font-size:17px;
+  line-height:1.35;
+  font-weight:850;
+}
+.feature-open-pro{color:#047857!important}
+.feature-lock-pro{color:#DC2626!important}
+.trial-upgrade-pro{
+  margin-top:18px;
+  padding:14px 15px;
+  border-radius:16px;
+  text-align:center;
+  font-weight:900;
+  line-height:1.45;
+  color:#1E3A8A;
+  background:linear-gradient(135deg,#DBEAFE,#EEF2FF);
+  border:1px solid rgba(37,99,235,.16);
+}
+.trial-upgrade-btn{margin-top:14px!important;width:100%}
+.trial-side-card h3{color:#1E1B4B!important;font-weight:950}
+.trial-side-days{
+  font-size:28px;
+  font-weight:950;
+  margin:8px 0 10px;
+  color:#F59E0B;
+}
+.trial-side-list{
+  padding:12px 0;
+  border-bottom:1px dashed rgba(37,99,235,.15);
+  font-weight:850;
+  line-height:1.8;
+}
+.trial-side-list.open{color:#047857!important}
+.trial-side-list.locked{color:#DC2626!important}
+.trial-side-upgrade{
+  margin:14px 0;
+  padding:12px;
+  border-radius:14px;
+  background:linear-gradient(135deg,#DBEAFE,#EEF2FF);
+  color:#1E3A8A;
+  font-weight:900;
+  line-height:1.45;
+}
+
+
+/* Facebook Publisher Pro + Smart Engagement */
+.fb-pro-badge{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:8px 14px;border-radius:999px;
+  background:linear-gradient(135deg,#DBEAFE,#EEF2FF);
+  color:#1E3A8A;font-weight:950;font-size:13px;
+  border:1px solid rgba(37,99,235,.18);margin-bottom:12px;
+}
+.fb-pro-card{
+  position:relative;overflow:hidden;
+  background:linear-gradient(180deg,rgba(255,255,255,.96),rgba(248,250,252,.92));
+  border:1px solid rgba(37,99,235,.12);
+  border-radius:24px;padding:22px;
+  box-shadow:0 18px 45px rgba(15,23,42,.08);
+}
+.fb-pro-card h3{margin-top:0;color:#1E1B4B;font-size:21px;font-weight:950;letter-spacing:-.4px}
+.fb-pro-card p{color:#64748B;line-height:1.7;font-weight:650}
+.fb-pro-card ul{padding-left:18px;color:#334155;line-height:1.9;font-weight:750}
+.fb-pro-card li::marker{color:#2563EB}
+.fb-safe-note{
+  padding:16px 18px;border-radius:18px;
+  background:linear-gradient(135deg,#F0FDF4,#ECFDF5);
+  border:1px solid rgba(16,185,129,.22);
+  color:#065F46;font-weight:850;line-height:1.65;margin:16px 0;
+}
+.fb-danger-note{
+  padding:16px 18px;border-radius:18px;
+  background:linear-gradient(135deg,#FEF2F2,#FFF7ED);
+  border:1px solid rgba(239,68,68,.18);
+  color:#991B1B;font-weight:850;line-height:1.65;margin:16px 0;
+}
+.smart-chip-row{display:flex;flex-wrap:wrap;gap:10px;margin:14px 0 18px}
+.smart-chip{
+  border:1px solid rgba(37,99,235,.18);
+  background:#fff;color:#1E3A8A;font-weight:900;
+  padding:10px 13px;border-radius:999px;font-size:13px;
+}
+
 </style>
 
 </head>
@@ -4572,6 +4703,11 @@ function closeLockedFeature(){
   <a class="v2-nav-link" href="#fanpage_manager" onclick="openModule('fanpage_manager')"><span class="v2-nav-ico">📄</span><span class="v2-nav-text">Quản lý Fanpage</span><span class="v2-nav-tag">V5</span></a>
   <a class="v2-nav-link" href="#group_marketing" onclick="openModule('group_marketing')"><span class="v2-nav-ico">👥</span><span class="v2-nav-text">Quản lý Group</span><span class="v2-nav-tag">V5</span></a>
   <a class="v2-nav-link" href="#token" onclick="openModule('token')"><span class="v2-nav-ico">🔑</span><span class="v2-nav-text">Token Fanpage</span><span class="v2-nav-tag">Pro</span></a>
+  <a class="v2-nav-link" href="#facebook_publisher_pro" onclick="openModule('facebook_publisher_pro')"><span class="v2-nav-ico">🚀</span><span class="v2-nav-text">Đăng bài Fanpage</span><span class="v2-nav-tag">Pro</span></a>
+  <a class="v2-nav-link" href="#scheduler" onclick="openModule('scheduler')"><span class="v2-nav-ico">🗓️</span><span class="v2-nav-text">Lên lịch đăng bài</span></a>
+  <a class="v2-nav-link" href="#history" onclick="openModule('history')"><span class="v2-nav-ico">📜</span><span class="v2-nav-text">Nhật ký đăng bài</span></a>
+  <a class="v2-nav-link" href="#smart_engagement" onclick="openModule('smart_engagement')"><span class="v2-nav-ico">⚡</span><span class="v2-nav-text">Tăng tương tác thông minh</span><span class="v2-nav-tag">Safe</span></a>
+  <a class="v2-nav-link" href="#comment_manager" onclick="openModule('comment_manager')"><span class="v2-nav-ico">💬</span><span class="v2-nav-text">AI trả lời comment</span></a>
 
   <div class="v2-nav-title">🤖 AI BÁN HÀNG</div>
   <a class="v2-nav-link" href="#comment_manager" onclick="openModule('comment_manager')"><span class="v2-nav-ico">🤖</span><span class="v2-nav-text">AI Comment</span><span class="v2-nav-tag">AI</span></a>
@@ -4704,6 +4840,7 @@ function closeLockedFeature(){
 
   <div class="module-hub v3-main-hub">
     <div class="module-card" onclick="openModule('facebook_center')"><div class="icon">📣</div><h3>Facebook Center</h3><p>Trung tâm đăng bài, lên lịch, quản lý Fanpage, Group, Token và lịch sử đăng.</p><span class="module-pill">Mở Facebook Center</span></div>
+    <div class="module-card" onclick="openModule('smart_engagement')"><div class="icon">⚡</div><h3>Tăng tương tác thông minh</h3><p>Gợi ý giờ đăng, caption kéo comment, câu hỏi tương tác và nhắc chăm sóc khách đã comment.</p><span class="module-pill">Mở Smart Engagement</span></div>
     <div class="module-card" onclick="openModule('fanpage_manager')"><div class="icon">📄</div><h3>Quản lý Fanpage</h3><p>Kiểm tra Page, Token, quyền đăng bài và trạng thái hoạt động.</p><span class="module-pill">Mở Fanpage</span></div>
     <div class="module-card" onclick="openModule('group_marketing')"><div class="icon">👥</div><h3>Quản lý Group</h3><p>Lưu Group, tạo lịch đăng Group và viết bài seeding mềm.</p><span class="module-pill">Mở Group</span></div>
     <div class="module-card" onclick="openModule('comment_manager')"><div class="icon">🤖</div><h3>AI Comment</h3><p>Ẩn số điện thoại, trả lời bình luận, gắn nhãn khách nóng/ấm/lạnh và chuyển CRM.</p><span class="module-pill">Mở AI Comment</span></div>
@@ -4728,27 +4865,58 @@ function closeLockedFeature(){
 
 
 <section class="panel module-section" id="facebook_center">
-  <div class="section-open-note">Bạn đang mở: Facebook Center V3.</div>
-  <h2>📢 Facebook Center</h2>
-  <p class="small">Gộp toàn bộ công cụ Facebook vào một trung tâm: đăng bài, Scheduler, Fanpage Manager, Group Marketing, Comment Manager và Messenger AI.</p>
+  <div class="section-open-note">Bạn đang mở: Facebook Center Pro.</div>
+  <h2>📣 Facebook Center</h2>
+  <p class="small">Trung tâm đăng bài Fanpage, lên lịch, quản lý nội dung, nhật ký đăng bài, tăng tương tác thông minh và AI trả lời comment.</p>
   <div class="fb-submenu-pro">
-    <button onclick="openModule('post')">📢 Đăng bài</button>
-    <button onclick="openModule('scheduler')">📅 Scheduler</button>
-    <button onclick="openModule('fanpage_manager')">📄 Fanpage Manager</button>
-    <button onclick="openModule('group_marketing')">👥 Group Marketing</button>
-    <button onclick="openModule('comment_manager')">💬 Comment Manager AI</button>
-    <button onclick="openModule('messenger_ai')">🤖 Messenger AI</button>
+    <button onclick="openModule('facebook_publisher_pro')">🚀 Đăng bài Fanpage</button>
+    <button onclick="openModule('scheduler')">🗓️ Lên lịch đăng bài</button>
+    <button onclick="openModule('library')">🗂️ Quản lý nội dung</button>
+    <button onclick="openModule('history')">📜 Nhật ký đăng bài</button>
+    <button onclick="openModule('smart_engagement')">⚡ Tăng tương tác thông minh</button>
+    <button onclick="openModule('comment_manager')">💬 AI trả lời comment</button>
   </div>
+
+  <div class="fb-safe-note">
+    Hệ thống không dùng auto like hàng loạt, không tương tác giả bằng nhiều tài khoản. Thay vào đó dùng chiến lược tăng tương tác thông minh: giờ đăng tốt, caption kéo comment, câu hỏi tương tác, theo dõi bài yếu và nhắc admin chăm sóc khách thật.
+  </div>
+
   <div class="v3-feature-grid">
-    <div class="v3-feature-card"><h3>Đăng bài</h3><ul><li>Đăng ngay</li><li>Đăng hàng loạt</li><li>Đăng nhiều Page</li><li>Đăng ảnh/video</li></ul><button onclick="openModule('post')">Mở công cụ đăng bài</button></div>
-    <div class="v3-feature-card"><h3>Scheduler</h3><ul><li>Lên lịch tự động</li><li>Đăng chiến dịch</li><li>Chia khung giờ</li><li>Tự lưu lịch</li></ul><button onclick="openModule('scheduler')">Mở lịch đăng</button></div>
-    <div class="v3-feature-card"><h3>Quản lý Fanpage</h3><ul><li>Kết nối Fanpage</li><li>Kiểm tra Token</li><li>Kiểm tra quyền</li><li>Trạng thái hoạt động</li><li>Làm mới Token</li></ul><button onclick="openModule('fanpage_manager')">Mở Fanpage Manager</button></div>
-    <div class="v3-feature-card"><h3>Tiếp thị nhóm</h3><ul><li>Quản lý Group</li><li>Danh sách Group</li><li>Lịch đăng Group</li><li>AI viết bài Group</li></ul><button onclick="openModule('group_marketing')">Mở Group Marketing</button></div>
-    <div class="v3-feature-card"><h3>Trình quản lý bình luận</h3><ul><li>AI trả lời comment</li><li>Ẩn SĐT</li><li>Gắn nhãn khách</li><li>Chuyển CRM</li></ul><button onclick="openModule('comment_manager')">Mở Comment AI</button></div>
-    <div class="v3-feature-card"><h3>Trí tuệ nhân tạo Messenger</h3><ul><li>Kịch bản Inbox</li><li>Kịch bản Chốt Sale</li><li>Xử lý từ chối</li><li>Chăm sóc khách cũ</li></ul><button onclick="openModule('messenger_ai')">Mở Messenger AI</button></div>
+    <div class="fb-pro-card"><div class="fb-pro-badge">🚀 Facebook Publisher Pro</div><h3>Đăng bài Fanpage chuyên nghiệp</h3><ul><li>Chọn Fanpage</li><li>Soạn bài</li><li>Upload ảnh/video</li><li>Đăng ngay</li><li>Lên lịch đăng</li><li>Lưu nháp</li><li>Nhật ký đăng bài</li><li>Báo lỗi token/page rõ ràng</li></ul><button onclick="openModule('facebook_publisher_pro')">Mở Publisher Pro</button></div>
+    <div class="fb-pro-card"><div class="fb-pro-badge">💬 Engagement Assistant</div><h3>Chăm sóc tương tác thật</h3><ul><li>Gợi ý phản hồi comment</li><li>Lọc comment cần chăm sóc</li><li>Gắn nhãn khách quan tâm</li><li>Chuyển comment sang CRM</li><li>Gợi ý bài nên tương tác lại</li><li>Nhắc admin vào Facebook xử lý tương tác</li></ul><button onclick="openModule('comment_manager')">Mở AI Comment</button></div>
+    <div class="fb-pro-card"><div class="fb-pro-badge">⚡ Safe Growth</div><h3>Tăng tương tác thông minh</h3><ul><li>Gợi ý giờ đăng tốt</li><li>Gợi ý caption tăng comment</li><li>Tạo câu hỏi kéo tương tác</li><li>Gợi ý trả lời comment</li><li>Theo dõi bài ít tương tác</li><li>Nhắc chăm sóc khách đã comment</li></ul><button onclick="openModule('smart_engagement')">Mở Smart Engagement</button></div>
+  </div>
+
+  <div class="fb-danger-note">
+    Không tích hợp: tự động like hàng loạt, tự động like bằng nhiều tài khoản, tự động tương tác để tăng reach giả. Đây là nhóm hành vi dễ checkpoint, giảm uy tín Page và rủi ro khóa tài khoản.
   </div>
 </section>
 
+<section class="panel module-section" id="facebook_publisher_pro">
+  <div class="section-open-note">Bạn đang mở: Facebook Publisher Pro.</div>
+  <h2>🚀 Facebook Publisher Pro</h2>
+  <p class="small">Đăng bài Fanpage trực tiếp, tải ảnh/video, lên lịch và theo dõi lỗi token/page rõ ràng.</p>
+  <div class="v3-feature-grid">
+    <div class="fb-pro-card"><h3>Quy trình đăng bài</h3><ul><li>Chọn Fanpage từ Token Center</li><li>Soạn nội dung hoặc lấy nội dung AI</li><li>Upload ảnh/video</li><li>Đăng ngay hoặc lên lịch</li><li>Lưu lịch sử đăng bài</li></ul><button onclick="openModule('post')">Mở form đăng bài</button></div>
+    <div class="fb-pro-card"><h3>Lên lịch & lưu nháp</h3><p>Quản lý lịch đăng, chiến dịch nội dung và kiểm tra bài sắp đăng để tránh lỗi nội dung trùng lặp.</p><button onclick="openModule('scheduler')">Mở lịch đăng</button></div>
+    <div class="fb-pro-card"><h3>Báo lỗi rõ ràng</h3><ul><li>Thiếu Page Token</li><li>Thiếu Page ID</li><li>Token chết / hết phiên</li><li>Thiếu quyền pages_manage_posts</li><li>Page chưa đủ quyền đăng</li></ul><button onclick="openModule('token')">Kiểm tra Token</button></div>
+  </div>
+</section>
+
+<section class="panel module-section" id="smart_engagement">
+  <div class="section-open-note">Bạn đang mở: Tăng tương tác thông minh.</div>
+  <h2>⚡ Tăng tương tác thông minh</h2>
+  <p class="small">Thay thế an toàn cho auto like: tăng tương tác bằng nội dung, giờ đăng, CTA và chăm sóc comment thật.</p>
+  <div class="smart-chip-row"><span class="smart-chip">Gợi ý giờ đăng tốt</span><span class="smart-chip">Caption tăng comment</span><span class="smart-chip">Câu hỏi kéo tương tác</span><span class="smart-chip">Gợi ý trả lời comment</span><span class="smart-chip">Theo dõi bài ít tương tác</span><span class="smart-chip">Nhắc chăm sóc khách</span></div>
+  <form method="post" action="/v3_ai_tool">
+    <input type="hidden" name="tool" value="smart_engagement">
+    <textarea name="topic" rows="4" placeholder="Nhập sản phẩm/dịch vụ hoặc dán nội dung bài viết cần tăng tương tác. Ví dụ: Dịch vụ chạy quảng cáo Facebook cho shop online"></textarea>
+    <textarea name="extra" rows="3" placeholder="Thông tin thêm: tệp khách, ưu đãi, giờ đăng hiện tại, vấn đề đang gặp..."></textarea>
+    <button>AI tạo kế hoạch tăng tương tác</button>
+    <button type="button" class="secondary" onclick="openModule('comment_manager')">Mở AI trả lời comment</button>
+  </form>
+  <div class="fb-safe-note">Mục này chỉ tạo gợi ý và nhắc admin xử lý tương tác thật. Không tự động like hàng loạt, không dùng nhiều tài khoản, không tạo reach giả.</div>
+</section>
 
 <section class="panel module-section" id="fanpage_manager">
   <div class="section-open-note">Bạn đang mở: Fanpage Manager Pro.</div>
@@ -5455,20 +5623,25 @@ Thời gian tạo: {{ h[9] }}
     </div>
 
     <div class="premium-grid-pro v4-premium-grid">
-      <div class="premium-plan free-plan v4-plan">
-        <div class="plan-ribbon">DÙNG THỬ</div>
-        <div class="plan-name">Dùng thử miễn phí</div>
-        <div class="plan-price">3 ngày</div>
-        <div class="plan-desc">Dùng thử 3 ngày sau khi đăng ký, chỉ mở 3 công cụ chính để khách trải nghiệm trước khi nâng cấp.</div>
-        <div class="benefit-title">Quyền lợi dùng thử</div>
-        <ul class="benefit-list">
-          <li class="open">Quản lý Fanpage</li>
-          <li class="open">Quản lý Group</li>
-          <li class="open">AI Comment</li>
-          <li class="locked">AI Messenger cần Premium</li>
-          <li class="locked">CRM Kanban cần Premium</li>
-          <li class="locked">AI Marketing Director cần Premium</li>
-        </ul>
+      <div class="premium-plan free-plan v4-plan trial-experience-card">
+        <div class="plan-ribbon trial-ribbon">DÙNG THỬ</div>
+        <div class="trial-badge-pro">🎁 Gói Trải Nghiệm</div>
+        <div class="trial-days-pro">3 ngày miễn phí</div>
+
+        <div class="trial-features-pro">
+          <div class="feature-open-pro">✓ Quản lý Fanpage</div>
+          <div class="feature-open-pro">✓ Quản lý Group</div>
+          <div class="feature-open-pro">✓ AI Comment</div>
+
+          <div class="feature-lock-pro">🔒 AI Messenger</div>
+          <div class="feature-lock-pro">🔒 CRM Kanban</div>
+          <div class="feature-lock-pro">🔒 AI Marketing Director</div>
+        </div>
+
+        <div class="trial-upgrade-pro">
+          📈 Nâng cấp để mở toàn bộ hệ sinh thái AI bán hàng
+        </div>
+        <button class="plan-button premium-btn trial-upgrade-btn" onclick="openPayment('monthly')">Nâng cấp Premium</button>
       </div>
 
       <div class="premium-plan v4-plan">
@@ -5685,28 +5858,26 @@ Thời gian tạo: {{ h[9] }}
     <span>📊 Chiến dịch</span><b>{{ s.campaigns }}</b>
   </div>
 
-  <div class="{{ 'free-status-card free-expired' if free_status.is_expired else 'free-status-card' }}">
-    <h3>🎁 Gói dùng thử 3 ngày</h3>
+  <div class="{{ 'free-status-card free-expired' if free_status.is_expired else 'free-status-card' }} trial-side-card">
+    <h3>🎁 Gói Trải Nghiệm</h3>
     {% if free_status.is_expired %}
       <b>Trạng thái:</b> Đã hết dùng thử<br>
-      Vui lòng nâng cấp Premium để tiếp tục sử dụng các công cụ.
+      Vui lòng nâng cấp Premium để mở toàn bộ hệ sinh thái AI bán hàng.
     {% else %}
+      <div class="trial-side-days">3 ngày miễn phí</div>
       <b>Còn lại:</b> {{ free_status.days }} ngày {{ free_status.hours }} giờ
       <div class="free-progress"><span style="width:{{ free_status.percent }}%"></span></div>
-      <div class="trial-box">
-        <b>Được sử dụng:</b><br>
+      <div class="trial-side-list open">
         ✓ Quản lý Fanpage<br>
         ✓ Quản lý Group<br>
         ✓ AI Comment
       </div>
-      <div class="trial-box locked-list">
-        <b>Chưa mở khóa:</b><br>
+      <div class="trial-side-list locked">
         🔒 AI Messenger<br>
         🔒 CRM Kanban<br>
-        🔒 AI Marketing Director<br>
-        🔒 AI Video • AI Image<br>
-        🔒 AI Giọng Nói • AI Livestream
+        🔒 AI Marketing Director
       </div>
+      <div class="trial-side-upgrade">📈 Nâng cấp để mở toàn bộ hệ sinh thái AI bán hàng</div>
       <button onclick="scrollToPricing()">Xem chi tiết gói</button>
       <button onclick="openPayment('monthly')">Nâng cấp Premium</button>
     {% endif %}
