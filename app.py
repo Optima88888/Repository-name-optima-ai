@@ -3957,7 +3957,6 @@ body{
 @media(max-width:1100px){.analytics-kpi-grid{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:700px){.analytics-kpi-grid{grid-template-columns:1fr}}
 
-</style>
 
 /* Premium active status: blue 3D seller badge */
 .premium-status-text{
@@ -3978,6 +3977,8 @@ body.premium-active .device-status-card{
   border-color:rgba(37,99,235,.45)!important;
   background:linear-gradient(135deg,rgba(219,234,254,.95),rgba(255,255,255,.96))!important;
 }
+
+</style>
 
 <script>
 function copyText(id){
@@ -4437,40 +4438,6 @@ function closeLockedFeature(){
   <span>Đã có <b id="liveMemberCount">231</b> khách hàng nâng cấp Premium</span>
 </div>
 
-<div class="floating-bot">
-  <div class="bot-panel" id="floatingBotPanel">
-    <div class="bot-head">
-      <div>
-        <div class="bot-title">🤖 Bot AI</div>
-        <div class="bot-online">Đang trực tuyến
-          <span class="typing-dots"><span></span><span></span><span></span></span>
-        </div>
-      </div>
-      <button class="bot-close" onclick="closeFloatingBot()">×</button>
-    </div>
-    <div class="bot-body" id="floatingBotBody">
-      <div class="bot-msg ai">
-        <b>Bot hỗ trợ đang trực tuyến</b>
-        <span class="typing-dots" style="vertical-align:middle"><span></span><span></span><span></span></span>
-      </div>
-    </div>
-    <div class="bot-actions compact-actions">
-      <button onclick="botQuick('Tư vấn giá gói Premium')">👑 Gói</button>
-      <button class="light" onclick="botQuick('Hướng dẫn thanh toán')">💳 Thanh toán</button>
-      <button class="light" onclick="botQuick('Tôi muốn xem tính năng')">✨ Tính năng</button>
-      <a href="https://zalo.me/0363382629" target="_blank">Zalo hỗ trợ</a>
-    </div>
-    <div class="bot-input">
-      <input id="botInputText" placeholder="Nhập câu hỏi nhanh..." onkeydown="if(event.key==='Enter')sendBotInput()">
-      <button onclick="sendBotInput()">Gửi</button>
-    </div>
-  </div>
-  <button class="bot-bubble" onclick="toggleFloatingBot()">
-    🤖
-    <span class="bot-status"></span>
-  </button>
-</div>
-
 <div class="layout">
 <aside class="sidebar">
   <div class="logo">Marketing<br>Automation Pro</div>
@@ -4542,7 +4509,7 @@ function closeLockedFeature(){
 <div class="app-install-banner">
   <b>📲 App Mini đã sẵn sàng</b><br>
   Bấm nút bên dưới để cài Mkt Automation Pro vào điện thoại/máy tính và mở như phần mềm riêng.
-  <button onclick="showInstallGuide()">⬇️ Tải xuống / Cài đặt ngay</button>
+  <button onclick="showInstallGuide()">📲 Cài đặt ứng dụng</button>
   <div id="installStatus" style="margin-top:8px;font-size:13px;color:#4C1D95;font-weight:800"></div>
 </div>
 
@@ -5634,7 +5601,7 @@ Thời gian tạo: {{ h[9] }}
 
   <hr>
   <h2>⚡ Trạng thái hệ thống</h2>
-  <p>{{ token_warning }}</p>
+  <p style="white-space:pre-line">{{ token_warning }}</p>
 
   <div class="v5-focus-box">
     <b>V5 Seller AI Suite</b><br>
@@ -5778,21 +5745,33 @@ window.addEventListener('beforeinstallprompt', function(e){
   e.preventDefault();
   window.mktDeferredInstallPrompt = e;
   var st=document.getElementById('installStatus');
-  if(st){st.innerText='Có thể cài đặt ngay trên thiết bị này.';}
+  if(st){st.innerText='Thiết bị này đã sẵn sàng cài đặt ứng dụng.';}
 });
 function showInstallGuide(){
   var st=document.getElementById('installStatus');
-  if(window.matchMedia && window.matchMedia('(display-mode: standalone)').matches){
+  var isStandalone = (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone;
+  if(isStandalone){
     if(st) st.innerText='App đã được cài đặt trên thiết bị này.';
     alert('Mkt Automation Pro đã được cài đặt trên thiết bị này.');
     return;
   }
+  var title='Cài đặt Mkt Automation Pro';
+  var intro=`✔ Dùng như app trên điện thoại
+✔ Không cần mở trình duyệt
+✔ Nhận thông báo nhanh
+✔ Truy cập chỉ 1 chạm`;
   if(window.mktDeferredInstallPrompt){
-    window.mktDeferredInstallPrompt.prompt();
-    window.mktDeferredInstallPrompt.userChoice.then(function(choice){
-      if(st){st.innerText = choice.outcome === 'accepted' ? 'Đã gửi yêu cầu cài đặt app.' : 'Anh/chị có thể bấm cài đặt lại bất kỳ lúc nào.';}
-      window.mktDeferredInstallPrompt = null;
-    });
+    if(confirm(`${title}
+
+${intro}
+
+Bấm OK để cài đặt ngay.`)){
+      window.mktDeferredInstallPrompt.prompt();
+      window.mktDeferredInstallPrompt.userChoice.then(function(choice){
+        if(st){st.innerText = choice.outcome === 'accepted' ? 'Đã gửi yêu cầu cài đặt ứng dụng.' : 'Anh/chị có thể bấm cài đặt lại bất kỳ lúc nào.';}
+        window.mktDeferredInstallPrompt = null;
+      });
+    }
     return;
   }
   var isIOS=/iphone|ipad|ipod/i.test(navigator.userAgent);
@@ -5800,7 +5779,11 @@ function showInstallGuide(){
     ? 'iPhone/iPad: mở bằng Safari → bấm Chia sẻ → Thêm vào Màn hình chính.'
     : 'Chrome/Edge: bấm biểu tượng cài đặt trên thanh địa chỉ hoặc menu ⋮ → Cài đặt ứng dụng / Thêm vào màn hình chính.';
   if(st){st.innerText='Trình duyệt chưa bật hộp cài đặt tự động. Làm theo hướng dẫn vừa hiển thị.';}
-  alert('Cài Mkt Automation Pro như app:\n\n'+msg+'\n\nSau khi cài, khách mở app trực tiếp như phần mềm trên máy.');
+  alert(`${title}
+
+${intro}
+
+${msg}`);
 }
 window.addEventListener('appinstalled', function(){
   var st=document.getElementById('installStatus');
@@ -5810,7 +5793,13 @@ window.addEventListener('appinstalled', function(){
 
 <!-- Mini Chat Support - lưu tin nhắn để Admin trả lời trong /admin -->
 <style>
-.support-float{position:fixed;right:22px;bottom:88px;z-index:9999;font-family:Arial,sans-serif}.support-btn{width:60px;height:60px;padding:0;border:0;border-radius:50%;cursor:pointer;position:relative;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#2563eb,#7c3aed);box-shadow:0 0 0 5px rgba(37,99,235,.12),0 14px 34px rgba(37,99,235,.38);animation:supportBotFloat 2.2s ease-in-out infinite}.support-robot{font-size:27px;line-height:1}.support-online-dot{position:absolute;right:5px;bottom:6px;width:10px;height:10px;border-radius:50%;background:#00ff88;border:2px solid white;box-shadow:0 0 8px #00ff88,0 0 15px rgba(0,255,136,.85);animation:supportOnlinePulse 1.5s infinite}.support-tooltip{position:absolute;right:66px;bottom:7px;min-width:150px;background:rgba(15,23,42,.96);color:#E0F2FE;border:1px solid rgba(34,197,94,.35);border-radius:14px;padding:9px 11px;font-size:12px;line-height:1.35;text-align:left;opacity:0;pointer-events:none;transform:translateX(8px);transition:.18s ease;box-shadow:0 14px 34px rgba(15,23,42,.28)}.support-btn:hover .support-tooltip{opacity:1;transform:translateX(0)}@keyframes supportBotFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}@keyframes supportOnlinePulse{0%{transform:scale(1);opacity:1}50%{transform:scale(1.35);opacity:.78}100%{transform:scale(1);opacity:1}}.support-panel{display:none;width:340px;max-width:calc(100vw - 30px);background:#0f172a;color:#e5e7eb;border:1px solid #334155;border-radius:20px;box-shadow:0 18px 60px rgba(0,0,0,.45);overflow:hidden}.support-panel.open{display:block}.support-head{background:#1e1b4b;padding:12px 14px;font-weight:900;color:#bfdbfe;display:flex;align-items:center;justify-content:space-between}.support-close{background:#020617;color:white;border:1px solid #334155;border-radius:10px;width:28px;height:28px;cursor:pointer}.support-body{padding:12px}.support-mini-menu{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:8px}.support-mini-menu button{border:1px solid #334155;background:#111827;color:#dbeafe;border-radius:12px;padding:8px 5px;font-size:12px;font-weight:900;cursor:pointer}.support-mini-menu button:hover{background:#1e40af}.support-log{height:170px;overflow-y:auto;background:#020617;border:1px solid #1f2937;border-radius:14px;padding:10px;margin-bottom:10px;font-size:13px}.support-log .me{background:#1d4ed8;margin:6px 0 6px 35px;padding:8px;border-radius:12px}.support-log .ad{background:#14532d;margin:6px 35px 6px 0;padding:8px;border-radius:12px}.support-body input,.support-body textarea{width:100%;background:#020617;color:white;border:1px solid #334155;border-radius:12px;padding:10px;margin:5px 0}.support-body textarea{height:78px}.support-send{width:100%;background:#22c55e;color:white;border:0;border-radius:12px;padding:11px;font-weight:900;cursor:pointer}.support-note{font-size:12px;color:#94a3b8;margin-top:8px}.compact-actions{display:grid!important;grid-template-columns:repeat(3,1fr);gap:6px!important}.compact-actions button,.compact-actions a{font-size:12px!important;padding:8px 6px!important;border-radius:12px!important;text-align:center!important}
+.support-float{position:fixed;right:18px;bottom:18px;z-index:9999;font-family:Arial,sans-serif}.support-btn{width:60px;height:60px;padding:0;border:0;border-radius:50%;cursor:pointer;position:relative;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#2563eb,#7c3aed);box-shadow:0 0 0 5px rgba(37,99,235,.12),0 14px 34px rgba(37,99,235,.38);animation:supportBotFloat 2.2s ease-in-out infinite}.support-robot{font-size:27px;line-height:1}.support-online-dot{position:absolute;right:5px;bottom:6px;width:10px;height:10px;border-radius:50%;background:#00ff88;border:2px solid white;box-shadow:0 0 8px #00ff88,0 0 15px rgba(0,255,136,.85);animation:supportOnlinePulse 1.5s infinite}.support-tooltip{position:absolute;right:66px;bottom:7px;min-width:150px;background:rgba(15,23,42,.96);color:#E0F2FE;border:1px solid rgba(34,197,94,.35);border-radius:14px;padding:9px 11px;font-size:12px;line-height:1.35;text-align:left;opacity:0;pointer-events:none;transform:translateX(8px);transition:.18s ease;box-shadow:0 14px 34px rgba(15,23,42,.28)}.support-btn:hover{transform:scale(1.08)}.support-btn:hover .support-tooltip{opacity:1;transform:translateX(0)}@keyframes supportBotFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}@keyframes supportOnlinePulse{0%{transform:scale(1);opacity:1}50%{transform:scale(1.35);opacity:.78}100%{transform:scale(1);opacity:1}}.support-panel{display:none;width:340px;max-width:calc(100vw - 30px);background:#0f172a;color:#e5e7eb;border:1px solid #334155;border-radius:20px;box-shadow:0 18px 60px rgba(0,0,0,.45);overflow:hidden}.support-panel.open{display:block}.support-head{background:#1e1b4b;padding:12px 14px;font-weight:900;color:#bfdbfe;display:flex;align-items:center;justify-content:space-between}.support-close{background:#020617;color:white;border:1px solid #334155;border-radius:10px;width:28px;height:28px;cursor:pointer}.support-body{padding:12px}.support-mini-menu{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:8px}.support-mini-menu button{border:1px solid #334155;background:#111827;color:#dbeafe;border-radius:12px;padding:8px 5px;font-size:12px;font-weight:900;cursor:pointer}.support-mini-menu button:hover{background:#1e40af}.support-log{height:170px;overflow-y:auto;background:#020617;border:1px solid #1f2937;border-radius:14px;padding:10px;margin-bottom:10px;font-size:13px}.support-log .me{background:#1d4ed8;margin:6px 0 6px 35px;padding:8px;border-radius:12px}.support-log .ad{background:#14532d;margin:6px 35px 6px 0;padding:8px;border-radius:12px}.support-body input,.support-body textarea{width:100%;background:#020617;color:white;border:1px solid #334155;border-radius:12px;padding:10px;margin:5px 0}.support-body textarea{height:78px}.support-send{width:100%;background:#22c55e;color:white;border:0;border-radius:12px;padding:11px;font-weight:900;cursor:pointer}.support-note{font-size:12px;color:#94a3b8;margin-top:8px}.compact-actions{display:grid!important;grid-template-columns:repeat(3,1fr);gap:6px!important}.compact-actions button,.compact-actions a{font-size:12px!important;padding:8px 6px!important;border-radius:12px!important;text-align:center!important}
+
+/* SaaS cleanup: keep only one AI support bot */
+.floating-bot{display:none!important}
+.support-float{right:18px!important;bottom:18px!important}
+.support-online-dot{width:10px!important;height:10px!important;right:5px!important;bottom:6px!important}
+.support-btn{width:60px!important;height:60px!important;transition:transform .18s ease,box-shadow .18s ease}
 </style>
 <div class="support-float">
   <button class="support-btn" title="AI Online" onclick="toggleSupportChat()"><span class="support-robot">🤖</span><span class="support-online-dot"></span><span class="support-tooltip">AI Online<br>Phản hồi trong vài giây</span></button>
@@ -5880,7 +5869,11 @@ def render(content="", message="", ok=True, selected_industry="spa", analysis=""
     score = score_content(content) if content else 0
     warnings = policy_check(content) if content else []
     pages_current = get_fanpages()
-    token_warning = "Cấu hình ổn." if pages_current and GEMINI_API_KEY else "Thiếu Gemini API hoặc chưa thêm Fanpage trong Token Center."
+    
+    if pages_current and GEMINI_API_KEY:
+        token_warning = f"🟢 Hệ thống sẵn sàng\nGemini AI: Đã kết nối\nFanpage: {len(pages_current)} Fanpage\nPremium: Hoạt động"
+    else:
+        token_warning = "🟡 Hệ thống cần cấu hình thêm\nGemini AI hoặc Fanpage chưa sẵn sàng\nVui lòng vào Token Fanpage để kiểm tra."
     return render_template_string(
         HTML, title=APP_TITLE, pages=pages_current, content=content, message=message, ok=ok,
         history=get_history(), campaigns=get_campaigns(), s=get_stats(), crm_rows=get_crm(), token_report=token_manager_report(), token_checks=get_latest_token_checks(), clusters=get_page_clusters(), analytics=get_analytics_summary(), free_status=get_free_status(),
