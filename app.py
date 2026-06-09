@@ -2830,6 +2830,13 @@ button:hover{
 .module-section.active-module{
   display:block;
 }
+
+.v2-nav-link.active{
+  background:linear-gradient(135deg,rgba(56,189,248,.18),rgba(139,92,246,.22))!important;
+  border-color:rgba(56,189,248,.45)!important;
+  color:#FFFFFF!important;
+}
+
 .section-open-note{
   margin-bottom:14px;
   background:#EEF2FF;
@@ -4553,6 +4560,12 @@ function openModule(moduleId){
     "smart_engagement": "Tăng tương tác thông minh"
   };
 
+  const target = document.getElementById(moduleId);
+  if(!target){
+    console.warn("Không tìm thấy module:", moduleId);
+    return false;
+  }
+
   if(!trialAllowed.includes(moduleId) && premiumLocked[moduleId] && !MKT_PREMIUM_ACTIVE){
     openLockedFeature(premiumLocked[moduleId], "Gói 1 tháng / 3 tháng / 6 tháng / 1 năm / Nhà bán hàng chuyên nghiệp");
     return false;
@@ -4561,13 +4574,25 @@ function openModule(moduleId){
   document.querySelectorAll(".module-section").forEach(function(el){
     el.classList.remove("active-module");
   });
-  const target=document.getElementById(moduleId);
-  if(target){
-    target.classList.add("active-module");
-    target.scrollIntoView({behavior:"smooth",block:"start"});
-  }
+
+  target.classList.add("active-module");
+  document.querySelectorAll(".v2-nav-link").forEach(function(a){ a.classList.remove("active"); });
+  document.querySelectorAll('.v2-nav-link[href="#' + moduleId + '"]').forEach(function(a){ a.classList.add("active"); });
+  target.scrollIntoView({behavior:"smooth",block:"start"});
   return false;
 }
+
+document.addEventListener("DOMContentLoaded", function(){
+  document.querySelectorAll(".v2-nav-link[href^='#']").forEach(function(link){
+    link.addEventListener("click", function(ev){
+      const moduleId = (link.getAttribute("href") || "").replace("#", "").trim();
+      if(moduleId){
+        ev.preventDefault();
+        openModule(moduleId);
+      }
+    });
+  });
+});
 function showAllModules(){
   document.querySelectorAll(".module-section").forEach(function(el){
     el.classList.add("active-module");
@@ -4990,7 +5015,7 @@ function closeLockedFeature(){
 
 <main class="main">
 
-<section class="top-hero" id="dashboard">
+<section class="top-hero module-section" id="dashboard">
   <h1>Mkt Automation Pro V5 Seller AI Suite</h1>
 
 <div class="app-install-banner">
