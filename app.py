@@ -1660,6 +1660,7 @@ PREMIUM_PACKAGES = {
     "quarterly": {"name": "Gói 3 tháng", "price": "359.000đ", "amount": 359000},
     "halfyear": {"name": "Gói 6 tháng", "price": "559.000đ", "amount": 559000},
     "yearly": {"name": "Gói 1 năm", "price": "859.000đ", "amount": 859000},
+    "lifetime": {"name": "Gói nhà bán hàng chuyên nghiệp", "price": "1.959.000đ", "amount": 1959000},
     "sellerpro": {"name": "Gói nhà bán hàng chuyên nghiệp", "price": "1.959.000đ", "amount": 1959000}
 }
 
@@ -5133,6 +5134,210 @@ function closeLockedFeature(){
 
 </style>
 
+
+<!-- V59 MENU + PRICING UPGRADE FIX: giữ nguyên nội dung, chỉ nâng UI/UX nút menu và bảng giá -->
+<style>
+.sidebar{
+  background:radial-gradient(circle at top left,rgba(59,130,246,.22),transparent 32%),linear-gradient(180deg,#07111f 0%,#0f172a 48%,#111827 100%)!important;
+  border-right:1px solid rgba(148,163,184,.20)!important;
+  box-shadow:22px 0 55px rgba(15,23,42,.26)!important;
+}
+.sidebar .logo{
+  color:#fff!important;
+  letter-spacing:.4px!important;
+  text-shadow:0 6px 22px rgba(37,99,235,.38)!important;
+}
+.sidebar .subtitle{color:#c7d2fe!important;font-weight:800!important}
+.nav-upgraded-v59{display:flex!important;flex-direction:column!important;gap:7px!important;padding-bottom:18px!important}
+.nav-upgraded-v59 .v2-nav-title{
+  margin:16px 0 5px!important;
+  padding:10px 12px!important;
+  border-radius:15px!important;
+  background:linear-gradient(135deg,rgba(59,130,246,.20),rgba(168,85,247,.16))!important;
+  border:1px solid rgba(191,219,254,.18)!important;
+  color:#dbeafe!important;
+  font-size:12px!important;
+  letter-spacing:.8px!important;
+  text-transform:uppercase!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.08)!important;
+}
+.nav-upgraded-v59 .v2-nav-link{
+  position:relative!important;
+  display:flex!important;
+  align-items:center!important;
+  gap:10px!important;
+  min-height:45px!important;
+  padding:11px 12px!important;
+  margin:2px 0!important;
+  border-radius:17px!important;
+  border:1px solid rgba(148,163,184,.16)!important;
+  background:linear-gradient(135deg,rgba(255,255,255,.075),rgba(255,255,255,.025))!important;
+  color:#f8fafc!important;
+  text-decoration:none!important;
+  box-shadow:0 10px 24px rgba(0,0,0,.14)!important;
+  transition:transform .18s ease, box-shadow .18s ease, background .18s ease, border-color .18s ease!important;
+}
+.nav-upgraded-v59 .v2-nav-link:hover{
+  transform:translateX(6px) scale(1.015)!important;
+  background:linear-gradient(135deg,rgba(37,99,235,.55),rgba(124,58,237,.45))!important;
+  border-color:rgba(255,255,255,.28)!important;
+  box-shadow:0 16px 34px rgba(37,99,235,.25)!important;
+}
+.nav-upgraded-v59 .v2-nav-link.active{
+  background:linear-gradient(135deg,#2563eb,#7c3aed)!important;
+  border-color:rgba(255,255,255,.35)!important;
+  box-shadow:0 18px 42px rgba(37,99,235,.35)!important;
+}
+.nav-upgraded-v59 .v2-nav-ico{
+  width:30px!important;height:30px!important;min-width:30px!important;
+  display:inline-flex!important;align-items:center!important;justify-content:center!important;
+  border-radius:12px!important;
+  background:rgba(255,255,255,.12)!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 7px 16px rgba(0,0,0,.18)!important;
+}
+.nav-upgraded-v59 .v2-nav-text{font-size:13.5px!important;font-weight:900!important;line-height:1.15!important;color:#fff!important}
+.nav-upgraded-v59 .v2-nav-tag{
+  margin-left:auto!important;
+  padding:4px 7px!important;
+  border-radius:999px!important;
+  font-size:10px!important;
+  font-weight:950!important;
+  text-transform:uppercase!important;
+  background:rgba(59,130,246,.22)!important;
+  color:#dbeafe!important;
+  border:1px solid rgba(147,197,253,.32)!important;
+}
+.nav-upgraded-v59 .premium-tag,.nav-upgraded-v59 .vip-tag,.nav-upgraded-v59 .hot-tag{
+  background:linear-gradient(135deg,#f59e0b,#f97316)!important;
+  color:#fff7ed!important;
+  border-color:rgba(254,215,170,.55)!important;
+  box-shadow:0 8px 18px rgba(249,115,22,.20)!important;
+}
+.nav-upgraded-v59 .menu-star{border-color:rgba(96,165,250,.34)!important;background:linear-gradient(135deg,rgba(37,99,235,.24),rgba(124,58,237,.16))!important}
+.nav-upgraded-v59 .menu-premium-cta{
+  background:linear-gradient(135deg,#f59e0b,#ef4444,#7c3aed)!important;
+  border-color:rgba(253,230,138,.55)!important;
+  animation:v59MenuPulse 1.65s infinite ease-in-out!important;
+}
+@keyframes v59MenuPulse{0%,100%{box-shadow:0 12px 28px rgba(245,158,11,.18)}50%{box-shadow:0 18px 46px rgba(245,158,11,.42);transform:translateX(3px)}}
+.menu-health-box{
+  margin:10px 0 12px!important;
+  padding:11px 12px!important;
+  border-radius:16px!important;
+  background:linear-gradient(135deg,rgba(34,197,94,.18),rgba(59,130,246,.14))!important;
+  border:1px solid rgba(134,239,172,.28)!important;
+  color:#dcfce7!important;
+  font-size:12px!important;
+  font-weight:800!important;
+  line-height:1.45!important;
+}
+.premium-pricing-pro.v4-pricing-shell{
+  background:radial-gradient(circle at top left,rgba(37,99,235,.12),transparent 30%),linear-gradient(180deg,#ffffff,#f8fafc)!important;
+  border:1px solid rgba(37,99,235,.12)!important;
+  box-shadow:0 28px 90px rgba(15,23,42,.12)!important;
+}
+.premium-grid-pro.v4-premium-grid{align-items:stretch!important;gap:18px!important}
+.premium-plan.v4-plan,.price-card{
+  position:relative!important;
+  overflow:hidden!important;
+  border:1px solid rgba(37,99,235,.13)!important;
+  border-radius:28px!important;
+  background:linear-gradient(180deg,#fff,#f8fbff)!important;
+  box-shadow:0 18px 42px rgba(15,23,42,.10)!important;
+  transition:transform .2s ease, box-shadow .2s ease, border-color .2s ease!important;
+}
+.premium-plan.v4-plan:before{
+  content:'';position:absolute;left:0;top:0;right:0;height:5px;
+  background:linear-gradient(90deg,#2563eb,#7c3aed,#f59e0b);
+}
+.premium-plan.v4-plan:hover,.price-card:hover{
+  transform:translateY(-7px)!important;
+  border-color:rgba(124,58,237,.34)!important;
+  box-shadow:0 28px 70px rgba(37,99,235,.20)!important;
+}
+.premium-plan.featured.v4-plan{
+  border:2px solid rgba(245,158,11,.48)!important;
+  box-shadow:0 28px 80px rgba(245,158,11,.18)!important;
+}
+.plan-price{color:#1d4ed8!important;text-shadow:0 10px 30px rgba(37,99,235,.16)!important}
+.plan-button,.premium-btn,.safe-pricing-action,.v2-pricing-action{
+  min-height:48px!important;
+  border-radius:16px!important;
+  font-weight:950!important;
+  letter-spacing:.1px!important;
+  background:linear-gradient(135deg,#2563eb,#7c3aed)!important;
+  color:#fff!important;
+  box-shadow:0 16px 34px rgba(37,99,235,.28)!important;
+  border:0!important;
+  cursor:pointer!important;
+}
+.plan-button:hover,.premium-btn:hover,.safe-pricing-action:hover,.v2-pricing-action:hover{transform:translateY(-2px)!important;filter:brightness(1.05)!important}
+.plan-button.light{background:#fff!important;color:#1d4ed8!important;border:1px solid #bfdbfe!important;box-shadow:0 8px 20px rgba(37,99,235,.08)!important}
+.v4-save-box,.v4-value-received{border-radius:18px!important;border:1px solid rgba(245,158,11,.22)!important;background:linear-gradient(135deg,#fff7ed,#eff6ff)!important}
+@media(max-width:720px){.nav-upgraded-v59 .v2-nav-link{min-height:44px}.premium-plan.v4-plan{border-radius:22px!important}}
+</style>
+<script>
+(function(){
+  function showSectionById(id){
+    if(!id) return;
+    var target=document.getElementById(id);
+    if(!target){
+      if(id==='premium') target=document.getElementById('pricing');
+      if(!target) return;
+    }
+    document.querySelectorAll('.module-section').forEach(function(sec){sec.classList.remove('active-module');sec.style.display='none';});
+    target.classList.add('active-module');target.style.display='block';
+    document.querySelectorAll('.v2-nav-link').forEach(function(a){a.classList.remove('active');});
+    document.querySelectorAll('.v2-nav-link').forEach(function(a){
+      var oc=a.getAttribute('onclick')||'';
+      var href=(a.getAttribute('href')||'').replace('#','');
+      if(href===id || oc.indexOf("'"+id+"'")>-1 || oc.indexOf('"'+id+'"')>-1) a.classList.add('active');
+    });
+    try{target.scrollIntoView({behavior:'smooth',block:'start'});}catch(e){}
+  }
+  var oldOpen=window.openModule;
+  window.openModule=function(id){
+    if(typeof oldOpen==='function'){
+      try{oldOpen(id);}catch(e){}
+    }
+    showSectionById(id);
+    return false;
+  };
+  window.scrollToPricingFinal=window.scrollToPricingFinal||function(){showSectionById('pricing');};
+  function initV59Menu(){
+    document.querySelectorAll('.nav-upgraded-v59 .v2-nav-title').forEach(function(title){
+      if(title.dataset.v59Ready==='1') return;
+      title.dataset.v59Ready='1';
+      title.addEventListener('click',function(){
+        var collapsed=title.classList.toggle('is-collapsed');
+        var n=title.nextElementSibling;
+        while(n && !n.classList.contains('v2-nav-title') && !n.classList.contains('v2-side-card')){
+          if(n.classList && n.classList.contains('v2-nav-link')) n.style.display=collapsed?'none':'flex';
+          n=n.nextElementSibling;
+        }
+      });
+    });
+    document.querySelectorAll('.nav-upgraded-v59 .v2-nav-link').forEach(function(a){
+      if(a.dataset.v59Ready==='1') return;
+      a.dataset.v59Ready='1';
+      a.addEventListener('click',function(){
+        document.querySelectorAll('.nav-upgraded-v59 .v2-nav-link').forEach(function(x){x.classList.remove('active');});
+        a.classList.add('active');
+      });
+    });
+    document.querySelectorAll('.premium-plan.v4-plan,.price-card').forEach(function(card){
+      if(card.dataset.v59CardReady==='1') return;
+      card.dataset.v59CardReady='1';
+      card.addEventListener('click',function(e){
+        if(e.target.closest('button,a,input,select,textarea')) return;
+        var btn=card.querySelector('.premium-btn,.plan-button:not(.light),.safe-pricing-action');
+        if(btn) btn.click();
+      });
+    });
+  }
+  document.addEventListener('DOMContentLoaded',function(){initV59Menu();setTimeout(initV59Menu,500);});
+})();
+</script>
 </head>
 <body>
 
@@ -5164,40 +5369,40 @@ function closeLockedFeature(){
     <div class="device-help-text">Khách gửi ID này để Admin duyệt và mở gói Premium đúng thiết bị.</div>
   </div>
 
-<div class="nav">
-  <div class="v2-nav-title">DASHBOARD CEO</div>
-  <a class="v2-nav-link" href="#dashboard"><span class="v2-nav-ico">🏠</span><span class="v2-nav-text">Dashboard CEO</span><span class="v2-nav-tag">Home</span></a>
-  <a class="v2-nav-link" href="#analytics" onclick="openModule('analytics')"><span class="v2-nav-ico">📌</span><span class="v2-nav-text">Thống kê nhanh</span></a>
+<div class="nav nav-upgraded-v59">
+  <div class="menu-health-box">Menu đã tối ưu: nhóm chức năng rõ hơn, nút nổi bật hơn, khách dễ thấy Premium.</div>
+
+  <div class="v2-nav-title">🏠 DASHBOARD CEO</div>
+  <a class="v2-nav-link menu-star" href="#dashboard" onclick="openModule('dashboard')"><span class="v2-nav-ico">🏠</span><span class="v2-nav-text">Dashboard CEO</span><span class="v2-nav-tag">Home</span></a>
+  <a class="v2-nav-link" href="#analytics" onclick="openModule('analytics')"><span class="v2-nav-ico">📊</span><span class="v2-nav-text">Thống kê nhanh</span></a>
   <a class="v2-nav-link" href="#history" onclick="openModule('history')"><span class="v2-nav-ico">🔥</span><span class="v2-nav-text">Hoạt động hôm nay</span></a>
 
-  <div class="v2-nav-title">FACEBOOK CENTER</div>
-  <a class="v2-nav-link" href="#facebook_center" onclick="openModule('facebook_center')"><span class="v2-nav-ico">📣</span><span class="v2-nav-text">Facebook Center</span><span class="v2-nav-tag">Core</span></a>
-  <a class="v2-nav-link" href="#post" onclick="openModule('post')"><span class="v2-nav-ico">📝</span><span class="v2-nav-text">Đăng bài Facebook</span></a>
-  <a class="v2-nav-link" href="#fanpage_manager" onclick="openModule('fanpage_manager')"><span class="v2-nav-ico">📄</span><span class="v2-nav-text">Quản lý Fanpage</span><span class="v2-nav-tag">V5</span></a>
-  <a class="v2-nav-link" href="#group_marketing" onclick="openModule('group_marketing')"><span class="v2-nav-ico">👥</span><span class="v2-nav-text">Quản lý Group</span><span class="v2-nav-tag">V5</span></a>
-  <a class="v2-nav-link" href="#group_marketing" onclick="openModule('group_marketing')"><span class="v2-nav-ico">🧩</span><span class="v2-nav-text">Đăng nhiều Group</span><span class="v2-nav-tag">New</span></a>
+  <div class="v2-nav-title">📣 FACEBOOK CENTER</div>
+  <a class="v2-nav-link menu-star" href="#facebook_center" onclick="openModule('facebook_center')"><span class="v2-nav-ico">📣</span><span class="v2-nav-text">Facebook Center</span><span class="v2-nav-tag">Core</span></a>
+  <a class="v2-nav-link" href="#fanpage_manager" onclick="openModule('fanpage_manager')"><span class="v2-nav-ico">📄</span><span class="v2-nav-text">Quản lý Fanpage</span><span class="v2-nav-tag">Trial</span></a>
+  <a class="v2-nav-link" href="#group_marketing" onclick="openModule('group_marketing')"><span class="v2-nav-ico">👥</span><span class="v2-nav-text">Quản lý Group</span><span class="v2-nav-tag">Trial</span></a>
+  <a class="v2-nav-link" href="#comment_manager" onclick="openModule('comment_manager')"><span class="v2-nav-ico">💬</span><span class="v2-nav-text">AI Comment</span><span class="v2-nav-tag">Trial</span></a>
   <a class="v2-nav-link" href="#token" onclick="openModule('token')"><span class="v2-nav-ico">🔑</span><span class="v2-nav-text">Token Fanpage</span><span class="v2-nav-tag">Pro</span></a>
-  <a class="v2-nav-link" href="#facebook_publisher_pro" onclick="openModule('facebook_publisher_pro')"><span class="v2-nav-ico">🚀</span><span class="v2-nav-text">Đăng bài Fanpage</span><span class="v2-nav-tag">Pro</span></a>
+  <a class="v2-nav-link" href="#post" onclick="openModule('post')"><span class="v2-nav-ico">📝</span><span class="v2-nav-text">Đăng bài Facebook</span></a>
+  <a class="v2-nav-link" href="#facebook_publisher_pro" onclick="openModule('facebook_publisher_pro')"><span class="v2-nav-ico">🚀</span><span class="v2-nav-text">Đăng bài Fanpage Pro</span><span class="v2-nav-tag hot-tag">Hot</span></a>
   <a class="v2-nav-link" href="#scheduler" onclick="openModule('scheduler')"><span class="v2-nav-ico">🗓️</span><span class="v2-nav-text">Lên lịch đăng bài</span></a>
   <a class="v2-nav-link" href="#history" onclick="openModule('history')"><span class="v2-nav-ico">📜</span><span class="v2-nav-text">Nhật ký đăng bài</span></a>
-  <a class="v2-nav-link" href="#smart_engagement" onclick="openModule('smart_engagement')"><span class="v2-nav-ico">⚡</span><span class="v2-nav-text">Tăng tương tác thông minh</span><span class="v2-nav-tag">Safe</span></a>
-  <a class="v2-nav-link" href="#comment_manager" onclick="openModule('comment_manager')"><span class="v2-nav-ico">💬</span><span class="v2-nav-text">AI trả lời comment</span></a>
 
-  <div class="v2-nav-title">AI BÁN HÀNG</div>
-  <a class="v2-nav-link" href="#comment_manager" onclick="openModule('comment_manager')"><span class="v2-nav-ico">🤖</span><span class="v2-nav-text">AI Comment</span><span class="v2-nav-tag">AI</span></a>
-  <a class="v2-nav-link" href="#messenger_ai" onclick="openModule('messenger_ai')"><span class="v2-nav-ico">💬</span><span class="v2-nav-text">AI Messenger</span><span class="v2-nav-tag">AI</span></a>
-  <a class="v2-nav-link" href="#crm_sales" onclick="openModule('crm_sales')"><span class="v2-nav-ico">📋</span><span class="v2-nav-text">CRM Kanban</span><span class="v2-nav-tag">CRM</span></a>
+  <div class="v2-nav-title">🤖 AI BÁN HÀNG</div>
+  <a class="v2-nav-link" href="#messenger_ai" onclick="openModule('messenger_ai')"><span class="v2-nav-ico">💬</span><span class="v2-nav-text">AI Messenger</span><span class="v2-nav-tag premium-tag">Premium</span></a>
+  <a class="v2-nav-link" href="#crm_sales" onclick="openModule('crm_sales')"><span class="v2-nav-ico">📋</span><span class="v2-nav-text">CRM Kanban</span><span class="v2-nav-tag premium-tag">Premium</span></a>
   <a class="v2-nav-link" href="#messenger_ai" onclick="openModule('messenger_ai')"><span class="v2-nav-ico">🧾</span><span class="v2-nav-text">Kịch bản chốt sale</span></a>
   <a class="v2-nav-link" href="#crm_sales" onclick="openModule('crm_sales')"><span class="v2-nav-ico">♻️</span><span class="v2-nav-text">Chăm sóc khách cũ</span></a>
+  <a class="v2-nav-link" href="#smart_engagement" onclick="openModule('smart_engagement')"><span class="v2-nav-ico">⚡</span><span class="v2-nav-text">Tăng tương tác thông minh</span><span class="v2-nav-tag">Safe</span></a>
 
-  <div class="v2-nav-title">MARKETING DIRECTOR</div>
-  <a class="v2-nav-link" href="#marketing_director" onclick="openModule('marketing_director')"><span class="v2-nav-ico">🧠</span><span class="v2-nav-text">AI Marketing Director</span><span class="v2-nav-tag">HOT</span></a>
+  <div class="v2-nav-title">🧠 MARKETING DIRECTOR</div>
+  <a class="v2-nav-link menu-star" href="#marketing_director" onclick="openModule('marketing_director')"><span class="v2-nav-ico">🧠</span><span class="v2-nav-text">AI Marketing Director</span><span class="v2-nav-tag hot-tag">HOT</span></a>
   <a class="v2-nav-link" href="#plan" onclick="openModule('plan')"><span class="v2-nav-ico">📅</span><span class="v2-nav-text">Kế hoạch 30 ngày</span></a>
   <a class="v2-nav-link" href="#marketing_director" onclick="openModule('marketing_director')"><span class="v2-nav-ico">🧲</span><span class="v2-nav-text">Phễu bán hàng</span></a>
   <a class="v2-nav-link" href="#ai_studio" onclick="openModule('ai_studio')"><span class="v2-nav-ico">🔎</span><span class="v2-nav-text">Phân tích đối thủ</span></a>
   <a class="v2-nav-link" href="#scheduler" onclick="openModule('scheduler')"><span class="v2-nav-ico">🗓️</span><span class="v2-nav-text">Content Calendar</span></a>
 
-  <div class="v2-nav-title">ANALYTICS CENTER</div>
+  <div class="v2-nav-title">📊 ANALYTICS CENTER</div>
   <a class="v2-nav-link" href="#analytics" onclick="openModule('analytics')"><span class="v2-nav-ico">📊</span><span class="v2-nav-text">Analytics Center</span></a>
   <a class="v2-nav-link" href="#fanpage_manager" onclick="openModule('fanpage_manager')"><span class="v2-nav-ico">📈</span><span class="v2-nav-text">Báo cáo Fanpage</span></a>
   <a class="v2-nav-link" href="#group_marketing" onclick="openModule('group_marketing')"><span class="v2-nav-ico">👥</span><span class="v2-nav-text">Báo cáo Group</span></a>
@@ -5205,13 +5410,13 @@ function closeLockedFeature(){
   <a class="v2-nav-link" href="/export"><span class="v2-nav-ico">📤</span><span class="v2-nav-text">Xuất Excel/CSV</span></a>
   <a class="v2-nav-link" href="/export_pdf"><span class="v2-nav-ico">📄</span><span class="v2-nav-text">Xuất PDF</span></a>
 
-  <div class="v2-nav-title">PREMIUM CENTER</div>
-  <a class="v2-nav-link" href="#premium" onclick="openModule('premium')"><span class="v2-nav-ico">💎</span><span class="v2-nav-text">Bảng giá Premium</span><span class="v2-nav-tag">VIP</span></a>
-  <a class="v2-nav-link" href="#premium" onclick="openModule('premium')"><span class="v2-nav-ico">💳</span><span class="v2-nav-text">Gửi xác nhận thanh toán</span></a>
+  <div class="v2-nav-title">💎 PREMIUM CENTER</div>
+  <a class="v2-nav-link menu-premium-cta" href="#pricing" onclick="openModule('premium');setTimeout(scrollToPricingFinal,120)"><span class="v2-nav-ico">💎</span><span class="v2-nav-text">Bảng giá Premium</span><span class="v2-nav-tag vip-tag">VIP</span></a>
+  <a class="v2-nav-link" href="#pricing" onclick="openModule('premium');setTimeout(scrollToPricingFinal,120)"><span class="v2-nav-ico">💳</span><span class="v2-nav-text">Gửi xác nhận thanh toán</span></a>
   <a class="v2-nav-link" href="#premium" onclick="openModule('premium')"><span class="v2-nav-ico">💬</span><span class="v2-nav-text">Trạng thái kích hoạt</span></a>
   <a class="v2-nav-link" href="/install" target="_blank"><span class="v2-nav-ico">📲</span><span class="v2-nav-text">Cài đặt App</span><span class="v2-nav-tag">App</span></a>
 
-  <div class="v2-nav-title">TÀI KHOẢN</div>
+  <div class="v2-nav-title">👤 TÀI KHOẢN</div>
   <a class="v2-nav-link" href="#premium" onclick="openModule('premium')"><span class="v2-nav-ico">🖥️</span><span class="v2-nav-text">ID thiết bị</span></a>
   <a class="v2-nav-link" href="#premium" onclick="openModule('premium')"><span class="v2-nav-ico">📧</span><span class="v2-nav-text">Gmail / SĐT</span></a>
   <a class="v2-nav-link" href="#premium" onclick="openModule('premium')"><span class="v2-nav-ico">👑</span><span class="v2-nav-text">Trạng thái gói</span></a>
@@ -8525,3 +8730,737 @@ if __name__ == "__main__":
     threading.Thread(target=scheduler_loop, daemon=True).start()
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port, debug=False)
+
+
+# =========================================================
+# TOOL NANG CAP: GROUP FINDER + UID SPLITTER + JOIN QUEUE
+# Ban an toan: nhap danh sach group -> loc -> chia tep -> dua vao hang cho admin duyet.
+# Khong tu dong tham gia hang loat, khong ne chong spam Facebook.
+# =========================================================
+
+# Yeu cau import neu app.py chua co:
+# import sqlite3, datetime, csv, io
+# from flask import request, jsonify, send_file
+
+def ensure_group_finder_tables():
+    conn = sqlite3.connect(DB)
+    c = conn.cursor()
+
+    c.execute('''
+    CREATE TABLE IF NOT EXISTS group_finder_results (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        keyword TEXT,
+        group_uid TEXT UNIQUE,
+        group_name TEXT,
+        group_url TEXT,
+        privacy TEXT,
+        member_count INTEGER DEFAULT 0,
+        recent_activity TEXT,
+        allow_page_join TEXT DEFAULT 'unknown',
+        allow_page_post TEXT DEFAULT 'unknown',
+        status TEXT DEFAULT 'found',
+        note TEXT,
+        created_at TEXT
+    )
+    ''')
+
+    c.execute('''
+    CREATE TABLE IF NOT EXISTS group_uid_batches (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        batch_name TEXT,
+        keyword TEXT,
+        total_uid INTEGER DEFAULT 0,
+        uid_per_file INTEGER DEFAULT 50,
+        status TEXT DEFAULT 'created',
+        created_at TEXT
+    )
+    ''')
+
+    c.execute('''
+    CREATE TABLE IF NOT EXISTS group_join_queue (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        batch_id INTEGER,
+        group_uid TEXT,
+        group_name TEXT,
+        group_url TEXT,
+        keyword TEXT,
+        status TEXT DEFAULT 'pending_review',
+        note TEXT,
+        created_at TEXT
+    )
+    ''')
+
+    conn.commit()
+    conn.close()
+
+
+def save_group_finder_item(keyword, group_uid, group_name="", group_url="", privacy="", member_count=0, recent_activity="", allow_page_join="unknown", allow_page_post="unknown", note=""):
+    ensure_group_finder_tables()
+
+    if not group_uid:
+        return False, "Thieu UID Group."
+
+    conn = sqlite3.connect(DB)
+    c = conn.cursor()
+    now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    try:
+        c.execute('''
+        INSERT INTO group_finder_results(keyword,group_uid,group_name,group_url,privacy,member_count,recent_activity,allow_page_join,allow_page_post,status,note,created_at)
+        VALUES(?,?,?,?,?,?,?,?,?,?,?,?)
+        ON CONFLICT(group_uid) DO UPDATE SET
+            keyword=excluded.keyword,
+            group_name=excluded.group_name,
+            group_url=excluded.group_url,
+            privacy=excluded.privacy,
+            member_count=excluded.member_count,
+            recent_activity=excluded.recent_activity,
+            allow_page_join=excluded.allow_page_join,
+            allow_page_post=excluded.allow_page_post,
+            note=excluded.note
+        ''', (
+            keyword, group_uid, group_name, group_url, privacy,
+            int(member_count or 0), recent_activity,
+            allow_page_join, allow_page_post, "found", note, now
+        ))
+        conn.commit()
+        return True, "Da luu UID Group."
+    except Exception as e:
+        return False, "Loi luu UID Group: " + str(e)
+    finally:
+        conn.close()
+
+
+def import_group_uid_bulk(keyword, raw_text):
+    ensure_group_finder_tables()
+
+    lines = [x.strip() for x in (raw_text or "").splitlines() if x.strip()]
+    saved = 0
+    skipped = 0
+
+    for line in lines:
+        # Ho tro dinh dang:
+        # UID
+        # UID|Ten group
+        # UID|Ten group|Link
+        parts = [p.strip() for p in line.split("|")]
+        group_uid = parts[0] if len(parts) >= 1 else ""
+        group_name = parts[1] if len(parts) >= 2 else ""
+        group_url = parts[2] if len(parts) >= 3 else ""
+
+        if not group_uid:
+            skipped += 1
+            continue
+
+        ok, _ = save_group_finder_item(
+            keyword=keyword,
+            group_uid=group_uid,
+            group_name=group_name,
+            group_url=group_url,
+            note="Nhap thu cong / quet ben ngoai"
+        )
+        if ok:
+            saved += 1
+        else:
+            skipped += 1
+
+    return True, f"Da nhap {saved} UID Group. Bo qua {skipped} dong loi."
+
+
+def get_group_finder_results(keyword="", min_members=0, privacy="", allow_page_join="", allow_page_post="", status="", limit=1000):
+    ensure_group_finder_tables()
+
+    sql = '''
+    SELECT id,keyword,group_uid,group_name,group_url,privacy,member_count,recent_activity,allow_page_join,allow_page_post,status,note,created_at
+    FROM group_finder_results
+    WHERE 1=1
+    '''
+    params = []
+
+    if keyword:
+        sql += " AND (keyword LIKE ? OR group_name LIKE ? OR group_uid LIKE ?)"
+        kw = f"%{keyword}%"
+        params += [kw, kw, kw]
+
+    if min_members:
+        sql += " AND member_count >= ?"
+        params.append(int(min_members))
+
+    if privacy:
+        sql += " AND privacy=?"
+        params.append(privacy)
+
+    if allow_page_join:
+        sql += " AND allow_page_join=?"
+        params.append(allow_page_join)
+
+    if allow_page_post:
+        sql += " AND allow_page_post=?"
+        params.append(allow_page_post)
+
+    if status:
+        sql += " AND status=?"
+        params.append(status)
+
+    sql += " ORDER BY member_count DESC, id DESC LIMIT ?"
+    params.append(int(limit or 1000))
+
+    conn = sqlite3.connect(DB)
+    c = conn.cursor()
+    c.execute(sql, params)
+    rows = c.fetchall()
+    conn.close()
+    return rows
+
+
+def create_group_uid_batches(keyword="", uid_per_file=50, min_members=0, privacy="", allow_page_join="", allow_page_post=""):
+    ensure_group_finder_tables()
+
+    rows = get_group_finder_results(
+        keyword=keyword,
+        min_members=min_members,
+        privacy=privacy,
+        allow_page_join=allow_page_join,
+        allow_page_post=allow_page_post,
+        status="found",
+        limit=10000
+    )
+
+    if not rows:
+        return False, "Khong co UID Group phu hop de chia tep.", None
+
+    uid_per_file = int(uid_per_file or 50)
+    if uid_per_file < 1:
+        uid_per_file = 50
+
+    conn = sqlite3.connect(DB)
+    c = conn.cursor()
+    now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    batch_name = f"group_batch_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}"
+    c.execute('''
+    INSERT INTO group_uid_batches(batch_name,keyword,total_uid,uid_per_file,status,created_at)
+    VALUES(?,?,?,?,?,?)
+    ''', (batch_name, keyword, len(rows), uid_per_file, "created", now))
+    batch_id = c.lastrowid
+
+    for r in rows:
+        group_uid = r[2]
+        group_name = r[3]
+        group_url = r[4]
+        kw = r[1]
+        c.execute('''
+        INSERT INTO group_join_queue(batch_id,group_uid,group_name,group_url,keyword,status,note,created_at)
+        VALUES(?,?,?,?,?,?,?,?)
+        ''', (batch_id, group_uid, group_name, group_url, kw, "pending_review", "Cho admin duyet tham gia nhom", now))
+
+    conn.commit()
+    conn.close()
+
+    return True, f"Da tao batch {batch_name} voi {len(rows)} UID. Moi tep {uid_per_file} UID.", batch_id
+
+
+def get_group_join_queue(batch_id="", status="", keyword="", limit=1000):
+    ensure_group_finder_tables()
+
+    sql = '''
+    SELECT id,batch_id,group_uid,group_name,group_url,keyword,status,note,created_at
+    FROM group_join_queue
+    WHERE 1=1
+    '''
+    params = []
+
+    if batch_id:
+        sql += " AND batch_id=?"
+        params.append(int(batch_id))
+
+    if status:
+        sql += " AND status=?"
+        params.append(status)
+
+    if keyword:
+        sql += " AND (keyword LIKE ? OR group_name LIKE ? OR group_uid LIKE ?)"
+        kw = f"%{keyword}%"
+        params += [kw, kw, kw]
+
+    sql += " ORDER BY id DESC LIMIT ?"
+    params.append(int(limit or 1000))
+
+    conn = sqlite3.connect(DB)
+    c = conn.cursor()
+    c.execute(sql, params)
+    rows = c.fetchall()
+    conn.close()
+    return rows
+
+
+def update_group_join_status(row_id, status, note=""):
+    ensure_group_finder_tables()
+
+    conn = sqlite3.connect(DB)
+    c = conn.cursor()
+    c.execute("UPDATE group_join_queue SET status=?, note=? WHERE id=?", (status, note, int(row_id)))
+    conn.commit()
+    conn.close()
+    return True, "Da cap nhat trang thai hang cho."
+
+
+@app.route("/api/group-finder/import", methods=["POST"])
+def api_group_finder_import():
+    data = request.get_json(silent=True) or request.form
+    keyword = (data.get("keyword") or "").strip()
+    raw_text = data.get("raw_text") or ""
+    ok, msg = import_group_uid_bulk(keyword, raw_text)
+    return jsonify({"ok": ok, "message": msg})
+
+
+@app.route("/api/group-finder/save", methods=["POST"])
+def api_group_finder_save():
+    data = request.get_json(silent=True) or request.form
+    ok, msg = save_group_finder_item(
+        keyword=(data.get("keyword") or "").strip(),
+        group_uid=(data.get("group_uid") or "").strip(),
+        group_name=(data.get("group_name") or "").strip(),
+        group_url=(data.get("group_url") or "").strip(),
+        privacy=(data.get("privacy") or "").strip(),
+        member_count=data.get("member_count") or 0,
+        recent_activity=(data.get("recent_activity") or "").strip(),
+        allow_page_join=(data.get("allow_page_join") or "unknown").strip(),
+        allow_page_post=(data.get("allow_page_post") or "unknown").strip(),
+        note=(data.get("note") or "").strip()
+    )
+    return jsonify({"ok": ok, "message": msg})
+
+
+@app.route("/api/group-finder/list")
+def api_group_finder_list():
+    rows = get_group_finder_results(
+        keyword=(request.args.get("keyword") or "").strip(),
+        min_members=int(request.args.get("min_members") or 0),
+        privacy=(request.args.get("privacy") or "").strip(),
+        allow_page_join=(request.args.get("allow_page_join") or "").strip(),
+        allow_page_post=(request.args.get("allow_page_post") or "").strip(),
+        status=(request.args.get("status") or "").strip(),
+        limit=int(request.args.get("limit") or 1000)
+    )
+
+    items = []
+    for r in rows:
+        items.append({
+            "id": r[0],
+            "keyword": r[1],
+            "group_uid": r[2],
+            "group_name": r[3],
+            "group_url": r[4],
+            "privacy": r[5],
+            "member_count": r[6],
+            "recent_activity": r[7],
+            "allow_page_join": r[8],
+            "allow_page_post": r[9],
+            "status": r[10],
+            "note": r[11],
+            "created_at": r[12],
+        })
+
+    return jsonify({"ok": True, "items": items})
+
+
+@app.route("/api/group-finder/create-batch", methods=["POST"])
+def api_group_finder_create_batch():
+    data = request.get_json(silent=True) or request.form
+
+    ok, msg, batch_id = create_group_uid_batches(
+        keyword=(data.get("keyword") or "").strip(),
+        uid_per_file=int(data.get("uid_per_file") or 50),
+        min_members=int(data.get("min_members") or 0),
+        privacy=(data.get("privacy") or "").strip(),
+        allow_page_join=(data.get("allow_page_join") or "").strip(),
+        allow_page_post=(data.get("allow_page_post") or "").strip()
+    )
+
+    return jsonify({"ok": ok, "message": msg, "batch_id": batch_id})
+
+
+@app.route("/api/group-join-queue/list")
+def api_group_join_queue_list():
+    rows = get_group_join_queue(
+        batch_id=(request.args.get("batch_id") or "").strip(),
+        status=(request.args.get("status") or "").strip(),
+        keyword=(request.args.get("keyword") or "").strip(),
+        limit=int(request.args.get("limit") or 1000)
+    )
+
+    items = []
+    for r in rows:
+        items.append({
+            "id": r[0],
+            "batch_id": r[1],
+            "group_uid": r[2],
+            "group_name": r[3],
+            "group_url": r[4],
+            "keyword": r[5],
+            "status": r[6],
+            "note": r[7],
+            "created_at": r[8],
+        })
+
+    return jsonify({"ok": True, "items": items})
+
+
+@app.route("/api/group-join-queue/status", methods=["POST"])
+def api_group_join_queue_status():
+    data = request.get_json(silent=True) or request.form
+    ok, msg = update_group_join_status(
+        row_id=data.get("id"),
+        status=(data.get("status") or "approved").strip(),
+        note=(data.get("note") or "").strip()
+    )
+    return jsonify({"ok": ok, "message": msg})
+
+
+@app.route("/api/group-finder/export")
+def api_group_finder_export():
+    rows = get_group_finder_results(
+        keyword=(request.args.get("keyword") or "").strip(),
+        min_members=int(request.args.get("min_members") or 0),
+        privacy=(request.args.get("privacy") or "").strip(),
+        allow_page_join=(request.args.get("allow_page_join") or "").strip(),
+        allow_page_post=(request.args.get("allow_page_post") or "").strip(),
+        status=(request.args.get("status") or "").strip(),
+        limit=10000
+    )
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["Keyword", "UID Group", "Ten Group", "Link", "Quyen rieng tu", "Thanh vien", "Hoat dong gan day", "Cho Page tham gia", "Cho Page dang", "Trang thai"])
+    for r in rows:
+        writer.writerow([r[1], r[2], r[3], r[4], r[5], r[6], r[7], r[8], r[9], r[10]])
+
+    mem = io.BytesIO()
+    mem.write(output.getvalue().encode("utf-8-sig"))
+    mem.seek(0)
+    return send_file(mem, mimetype="text/csv", as_attachment=True, download_name="group_finder_results.csv")
+
+
+@app.route("/api/group-join-queue/export")
+def api_group_join_queue_export():
+    rows = get_group_join_queue(
+        batch_id=(request.args.get("batch_id") or "").strip(),
+        status=(request.args.get("status") or "").strip(),
+        keyword=(request.args.get("keyword") or "").strip(),
+        limit=10000
+    )
+
+    uid_per_file = int(request.args.get("uid_per_file") or 50)
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["Batch ID", "UID Group", "Ten Group", "Link", "Keyword", "Trang thai", "Ghi chu"])
+    for r in rows:
+        writer.writerow([r[1], r[2], r[3], r[4], r[5], r[6], r[7]])
+
+    mem = io.BytesIO()
+    mem.write(output.getvalue().encode("utf-8-sig"))
+    mem.seek(0)
+    return send_file(mem, mimetype="text/csv", as_attachment=True, download_name=f"group_join_queue_{uid_per_file}_uid.csv")
+
+
+# =========================================================
+# HTML - DAN VAO FACEBOOK CENTER / QUAN LY GROUP
+# =========================================================
+
+GROUP_FINDER_HTML = '''
+<section class="module-section" id="group_finder_uid_tool">
+  <div class="pro-card">
+    <div class="section-title">
+      <h2>Tim Group theo tu khoa & chia tep UID</h2>
+      <p>Nhap hoac luu UID Group theo tu khoa, loc Group phu hop, chia UID thanh tung tep va dua vao hang cho duyet tham gia.</p>
+    </div>
+
+    <div class="warning-box">
+      Ban an toan: he thong chi ho tro loc, chia tep va tao hang cho duyet. Khong tu dong tham gia hang loat, khong spam, khong ne he thong Facebook.
+    </div>
+
+    <div class="grid-2">
+      <div class="form-card">
+        <h3>Nhap danh sach UID Group</h3>
+        <input id="gf_keyword" placeholder="Tu khoa, vi du: my pham, spa, me bim">
+        <textarea id="gf_raw_text" rows="8" placeholder="Moi dong 1 group: UID hoac UID|Ten Group hoac UID|Ten Group|Link Group"></textarea>
+        <button onclick="importGroupFinderUid()">Nhap UID Group</button>
+      </div>
+
+      <div class="form-card">
+        <h3>Them 1 Group chi tiet</h3>
+        <input id="gf_one_keyword" placeholder="Tu khoa">
+        <input id="gf_one_uid" placeholder="UID Group">
+        <input id="gf_one_name" placeholder="Ten Group">
+        <input id="gf_one_url" placeholder="Link Group">
+        <select id="gf_one_privacy">
+          <option value="">Quyen rieng tu</option>
+          <option value="public">Cong khai</option>
+          <option value="private">Rieng tu</option>
+        </select>
+        <input id="gf_one_members" type="number" placeholder="So thanh vien">
+        <select id="gf_one_join">
+          <option value="unknown">Chua kiem tra Page tham gia</option>
+          <option value="yes">Cho Page tham gia</option>
+          <option value="no">Khong cho Page tham gia</option>
+        </select>
+        <select id="gf_one_post">
+          <option value="unknown">Chua kiem tra Page dang bai</option>
+          <option value="yes">Cho Page dang bai</option>
+          <option value="no">Khong cho Page dang bai</option>
+        </select>
+        <button onclick="saveOneGroupFinderUid()">Luu Group</button>
+      </div>
+    </div>
+
+    <div class="form-card">
+      <h3>Loc & chia tep UID</h3>
+      <div class="grid-4">
+        <input id="gf_filter_keyword" placeholder="Tu khoa">
+        <input id="gf_filter_min_members" type="number" placeholder="Thanh vien toi thieu">
+        <select id="gf_filter_privacy">
+          <option value="">Tat ca loai Group</option>
+          <option value="public">Cong khai</option>
+          <option value="private">Rieng tu</option>
+        </select>
+        <select id="gf_filter_join">
+          <option value="">Tat ca quyen tham gia</option>
+          <option value="yes">Cho Page tham gia</option>
+          <option value="no">Khong cho Page tham gia</option>
+          <option value="unknown">Chua kiem tra</option>
+        </select>
+      </div>
+
+      <div class="grid-4">
+        <select id="gf_filter_post">
+          <option value="">Tat ca quyen dang</option>
+          <option value="yes">Cho Page dang</option>
+          <option value="no">Khong cho Page dang</option>
+          <option value="unknown">Chua kiem tra</option>
+        </select>
+        <input id="gf_uid_per_file" type="number" value="50" placeholder="Moi tep bao nhieu UID">
+        <button onclick="loadGroupFinderList()">Loc Group</button>
+        <button onclick="createGroupUidBatch()">Chia tep & tao hang cho</button>
+      </div>
+
+      <button onclick="exportGroupFinderResults()">Xuat danh sach Group CSV</button>
+      <button onclick="loadGroupJoinQueue()">Xem hang cho tham gia</button>
+      <button onclick="exportGroupJoinQueue()">Xuat hang cho CSV</button>
+    </div>
+
+    <div class="table-wrap">
+      <h3>Danh sach Group da loc</h3>
+      <table class="pro-table">
+        <thead>
+          <tr>
+            <th>UID Group</th>
+            <th>Ten Group</th>
+            <th>Tu khoa</th>
+            <th>Thanh vien</th>
+            <th>Quyen</th>
+            <th>Trang thai</th>
+          </tr>
+        </thead>
+        <tbody id="groupFinderTable">
+          <tr><td colspan="6">Chua co du lieu.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="table-wrap">
+      <h3>Hang cho duyet tham gia Group</h3>
+      <table class="pro-table">
+        <thead>
+          <tr>
+            <th>Batch</th>
+            <th>UID Group</th>
+            <th>Ten Group</th>
+            <th>Tu khoa</th>
+            <th>Trang thai</th>
+            <th>Thao tac</th>
+          </tr>
+        </thead>
+        <tbody id="groupJoinQueueTable">
+          <tr><td colspan="6">Chua co hang cho.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+'''
+
+
+# =========================================================
+# JS - DAN TRUOC </script>
+# =========================================================
+
+GROUP_FINDER_JS = '''
+async function importGroupFinderUid(){
+  const payload = {
+    keyword: document.getElementById("gf_keyword").value.trim(),
+    raw_text: document.getElementById("gf_raw_text").value
+  };
+  if(!payload.raw_text.trim()){
+    alert("Vui long nhap danh sach UID Group.");
+    return;
+  }
+
+  const res = await fetch("/api/group-finder/import", {
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify(payload)
+  });
+  const data = await res.json();
+  alert(data.message || "Da nhap UID.");
+  loadGroupFinderList();
+}
+
+async function saveOneGroupFinderUid(){
+  const payload = {
+    keyword: document.getElementById("gf_one_keyword").value.trim(),
+    group_uid: document.getElementById("gf_one_uid").value.trim(),
+    group_name: document.getElementById("gf_one_name").value.trim(),
+    group_url: document.getElementById("gf_one_url").value.trim(),
+    privacy: document.getElementById("gf_one_privacy").value,
+    member_count: document.getElementById("gf_one_members").value || 0,
+    allow_page_join: document.getElementById("gf_one_join").value,
+    allow_page_post: document.getElementById("gf_one_post").value
+  };
+
+  if(!payload.group_uid){
+    alert("Vui long nhap UID Group.");
+    return;
+  }
+
+  const res = await fetch("/api/group-finder/save", {
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify(payload)
+  });
+  const data = await res.json();
+  alert(data.message || "Da luu Group.");
+  loadGroupFinderList();
+}
+
+function groupFinderQuery(){
+  const keyword = document.getElementById("gf_filter_keyword").value.trim();
+  const minMembers = document.getElementById("gf_filter_min_members").value || 0;
+  const privacy = document.getElementById("gf_filter_privacy").value;
+  const allowJoin = document.getElementById("gf_filter_join").value;
+  const allowPost = document.getElementById("gf_filter_post").value;
+
+  return `keyword=${encodeURIComponent(keyword)}&min_members=${encodeURIComponent(minMembers)}&privacy=${encodeURIComponent(privacy)}&allow_page_join=${encodeURIComponent(allowJoin)}&allow_page_post=${encodeURIComponent(allowPost)}`;
+}
+
+async function loadGroupFinderList(){
+  const res = await fetch(`/api/group-finder/list?${groupFinderQuery()}&status=found&limit=1000`);
+  const data = await res.json();
+  const tbody = document.getElementById("groupFinderTable");
+
+  if(!data.ok || !data.items || !data.items.length){
+    tbody.innerHTML = `<tr><td colspan="6">Khong co Group phu hop.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = data.items.map(item => `
+    <tr>
+      <td><b>${escapeHtmlGF(item.group_uid || "")}</b><br>${item.group_url ? `<a href="${escapeAttrGF(item.group_url)}" target="_blank">Mo Group</a>` : ""}</td>
+      <td>${escapeHtmlGF(item.group_name || "")}</td>
+      <td>${escapeHtmlGF(item.keyword || "")}</td>
+      <td>${item.member_count || 0}</td>
+      <td>
+        Tham gia: ${escapeHtmlGF(item.allow_page_join || "unknown")}<br>
+        Dang bai: ${escapeHtmlGF(item.allow_page_post || "unknown")}
+      </td>
+      <td>${escapeHtmlGF(item.status || "found")}</td>
+    </tr>
+  `).join("");
+}
+
+async function createGroupUidBatch(){
+  const payload = {
+    keyword: document.getElementById("gf_filter_keyword").value.trim(),
+    min_members: document.getElementById("gf_filter_min_members").value || 0,
+    privacy: document.getElementById("gf_filter_privacy").value,
+    allow_page_join: document.getElementById("gf_filter_join").value,
+    allow_page_post: document.getElementById("gf_filter_post").value,
+    uid_per_file: document.getElementById("gf_uid_per_file").value || 50
+  };
+
+  const res = await fetch("/api/group-finder/create-batch", {
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify(payload)
+  });
+  const data = await res.json();
+  alert(data.message || "Da tao batch.");
+  loadGroupJoinQueue();
+}
+
+async function loadGroupJoinQueue(){
+  const keyword = document.getElementById("gf_filter_keyword").value.trim();
+  const res = await fetch(`/api/group-join-queue/list?keyword=${encodeURIComponent(keyword)}&limit=1000`);
+  const data = await res.json();
+  const tbody = document.getElementById("groupJoinQueueTable");
+
+  if(!data.ok || !data.items || !data.items.length){
+    tbody.innerHTML = `<tr><td colspan="6">Chua co hang cho.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = data.items.map(item => `
+    <tr>
+      <td>${item.batch_id || ""}</td>
+      <td><b>${escapeHtmlGF(item.group_uid || "")}</b><br>${item.group_url ? `<a href="${escapeAttrGF(item.group_url)}" target="_blank">Mo Group</a>` : ""}</td>
+      <td>${escapeHtmlGF(item.group_name || "")}</td>
+      <td>${escapeHtmlGF(item.keyword || "")}</td>
+      <td>${escapeHtmlGF(item.status || "pending_review")}</td>
+      <td>
+        <button onclick="updateJoinQueueStatus(${item.id}, 'approved')">Duyet</button>
+        <button onclick="updateJoinQueueStatus(${item.id}, 'joined')">Da tham gia</button>
+        <button onclick="updateJoinQueueStatus(${item.id}, 'rejected')">Tu choi</button>
+      </td>
+    </tr>
+  `).join("");
+}
+
+async function updateJoinQueueStatus(id, status){
+  const note = status === "approved" ? "Admin da duyet, cho thao tac tham gia thu cong." :
+               status === "joined" ? "Da tham gia nhom thanh cong." :
+               "Khong tham gia nhom nay.";
+
+  const res = await fetch("/api/group-join-queue/status", {
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({id:id, status:status, note:note})
+  });
+  const data = await res.json();
+  alert(data.message || "Da cap nhat.");
+  loadGroupJoinQueue();
+}
+
+function exportGroupFinderResults(){
+  window.location.href = `/api/group-finder/export?${groupFinderQuery()}&status=found`;
+}
+
+function exportGroupJoinQueue(){
+  const keyword = document.getElementById("gf_filter_keyword").value.trim();
+  const uidPerFile = document.getElementById("gf_uid_per_file").value || 50;
+  window.location.href = `/api/group-join-queue/export?keyword=${encodeURIComponent(keyword)}&uid_per_file=${encodeURIComponent(uidPerFile)}`;
+}
+
+function escapeHtmlGF(str){
+  return String(str || "").replace(/[&<>"']/g, s => ({
+    "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;"
+  }[s]));
+}
+function escapeAttrGF(str){ return escapeHtmlGF(str).replace(/"/g, "&quot;"); }
+
+document.addEventListener("DOMContentLoaded", function(){
+  if(document.getElementById("groupFinderTable")) loadGroupFinderList();
+  if(document.getElementById("groupJoinQueueTable")) loadGroupJoinQueue();
+});
+'''
+
