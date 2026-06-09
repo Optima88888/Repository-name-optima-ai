@@ -670,6 +670,51 @@ def get_premium_status_by_device(device_id):
     return {"active": True, "status": "approved", "plan_key": plan_key, "plan": plan_name, "premium_start": start, "premium_end": end, "approved_at": approved_at, "message": "Premium đang hoạt động"}
 
 
+def current_device_id():
+    """Lấy ID thiết bị từ form/query/cookie để backend nhận biết Premium."""
+    try:
+        return (
+            request.form.get("device_id")
+            or request.args.get("device_id")
+            or request.cookies.get("mkt_device_id")
+            or ""
+        ).strip()
+    except Exception:
+        return ""
+
+
+def current_premium_status():
+    did = current_device_id()
+    if not did:
+        return {"active": False, "status": "missing", "message": "Thiếu ID thiết bị"}
+    return get_premium_status_by_device(did)
+
+
+def is_current_premium_active():
+    return bool(current_premium_status().get("active"))
+
+
+def get_effective_access_status():
+    """Trạng thái quyền dùng sau khi gộp trial + Premium đã duyệt."""
+    premium = current_premium_status()
+    if premium.get("active"):
+        return {
+            "package_name": "premium",
+            "status": "active",
+            "days": 999,
+            "hours": 0,
+            "percent": 100,
+            "is_trial": False,
+            "is_expired": False,
+            "label": "Premium: 👑 GÓI NHÀ BÁN HÀNG CHUYÊN NGHIỆP",
+            "note": "Đã mở toàn bộ tính năng Premium cho thiết bị này.",
+            "allowed_features": ["ALL"],
+            "locked_features": [],
+            "premium": premium,
+        }
+    return None
+
+
 def get_premium_requests(limit=80):
     ensure_premium_tables()
     conn = sqlite3.connect(DB)
@@ -1048,6 +1093,10 @@ def spin_content_local(content):
     return text + "\n\n" + random.choice(endings)
 
 def post_to_facebook(page, content, image_path=""):
+    if not page.get("token"):
+        return {"error": {"message": "Thiếu Page Token. Vui lòng vào Token Fanpage để thêm token.", "code": "MISSING_TOKEN"}}
+    if not page.get("id"):
+        return {"error": {"message": "Thiếu Page ID. Vui lòng kiểm tra lại Fanpage.", "code": "MISSING_PAGE_ID"}}
     if image_path and os.path.exists(image_path):
         ext = os.path.splitext(image_path)[1].lower()
         if ext in [".mp4", ".mov", ".m4v"]:
@@ -1511,6 +1560,10 @@ def get_free_status(username=None):
     Gói dùng thử chỉ mở: Quản lý Fanpage, Quản lý Group, AI Comment.
     Các tính năng còn lại sẽ chuyển sang popup Premium.
     """
+    premium_access = get_effective_access_status()
+    if premium_access:
+        return premium_access
+
     username = username or get_trial_identity()
     now = datetime.datetime.now()
 
@@ -1913,6 +1966,10 @@ body{
   border:1px solid rgba(255,255,255,.12);
   border-radius:28px;
   box-shadow:0 20px 55px rgba(30,27,75,.25);
+  overflow-y:auto;
+  overflow-x:hidden;
+  overscroll-behavior:contain;
+  scrollbar-width:thin;
 }
 .logo{
   font-size:25px;
@@ -3857,6 +3914,27 @@ body{
 @media(max-width:700px){.analytics-kpi-grid{grid-template-columns:1fr}}
 
 </style>
+
+/* Premium active status: blue 3D seller badge */
+.premium-status-text{
+  display:inline-block;
+  font-weight:900;
+}
+body.premium-active .premium-status-text{
+  color:#1D4ED8;
+  padding:4px 8px;
+  border-radius:999px;
+  background:linear-gradient(135deg,#DBEAFE,#EFF6FF 45%,#C7D2FE);
+  border:1px solid rgba(37,99,235,.25);
+  text-shadow:0 1px 0 #FFFFFF, 0 2px 0 rgba(37,99,235,.18), 0 8px 18px rgba(37,99,235,.28);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.95), 0 8px 20px rgba(37,99,235,.22);
+  letter-spacing:.2px;
+}
+body.premium-active .device-status-card{
+  border-color:rgba(37,99,235,.45)!important;
+  background:linear-gradient(135deg,rgba(219,234,254,.95),rgba(255,255,255,.96))!important;
+}
+
 <script>
 function copyText(id){
   const el=document.getElementById(id);
@@ -3968,11 +4046,13 @@ async function checkPremiumStatus(){
     const res = await fetch("/premium_status?device_id=" + encodeURIComponent(id));
     const data = await res.json();
     MKT_PREMIUM_ACTIVE = !!data.active;
-    const label = data.active ? ("Premium: " + (data.plan || "đã kích hoạt")) : "Dùng thử / chờ duyệt";
+    const label = data.active ? "Premium: 👑 GÓI NHÀ BÁN HÀNG CHUYÊN NGHIỆP" : "Dùng thử / chờ duyệt";
     document.querySelectorAll(".premium-status-text").forEach(function(el){el.innerText=label;});
     if(data.active){
       document.body.classList.add("premium-active");
       document.querySelectorAll(".premium-unlock-note").forEach(function(el){el.innerText="Đã mở khóa Premium cho thiết bị này.";});
+    }else{
+      document.body.classList.remove("premium-active");
     }
   }catch(e){
     document.querySelectorAll(".premium-status-text").forEach(function(el){el.innerText="Dùng thử / chờ duyệt";});
@@ -3982,6 +4062,21 @@ async function checkPremiumStatus(){
 document.addEventListener("DOMContentLoaded", function(){
   getOrCreateDeviceId();
   checkPremiumStatus();
+
+  // Gắn device_id vào mọi form để backend nhận biết tài khoản đã Premium.
+  document.querySelectorAll("form").forEach(function(form){
+    if(!form.querySelector("input[name='device_id']")){
+      const hidden=document.createElement("input");
+      hidden.type="hidden";
+      hidden.name="device_id";
+      hidden.value=getOrCreateDeviceId();
+      form.appendChild(hidden);
+    }
+    form.addEventListener("submit", function(){
+      const h=form.querySelector("input[name='device_id']");
+      if(h){h.value=getOrCreateDeviceId();}
+    });
+  });
 });
 
 function scrollToPaymentConfirm(){
@@ -4021,6 +4116,7 @@ async function submitPremiumRequest(){
     });
     const data = await res.json();
     if(statusBox) statusBox.innerText = data.message || "Đã gửi yêu cầu.";
+    setTimeout(checkPremiumStatus, 800);
   }catch(e){
     if(statusBox) statusBox.innerText="Chưa gửi được yêu cầu. Vui lòng thử lại hoặc liên hệ Zalo.";
   }
@@ -5815,6 +5911,16 @@ def post():
         return render(message="Nội dung trống.", ok=False)
     if not pages:
         return render(content=content, message="Chưa chọn Fanpage.", ok=False)
+
+    if action == "now":
+        token_errors = []
+        for page in pages:
+            token_status = check_single_page_token(page)
+            if token_status["status"] != "SỐNG":
+                token_errors.append(f"{page.get('name')}: {token_status['detail']}")
+        if token_errors:
+            return render(content=content, message="Token/Page chưa đủ quyền nên chưa đăng được:\n" + "\n".join(token_errors) + "\n\nCách xử lý: vào Token Fanpage kiểm tra token, đảm bảo Page Token còn sống và có quyền pages_manage_posts.", ok=False)
+
     messages = []
     content_score = score_content(content)
     for i, page in enumerate(pages):
