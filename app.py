@@ -4479,11 +4479,6 @@ function openModule(moduleId){
     "analytics_center": "Analytics Center"
   };
 
-  if(!trialAllowed.includes(moduleId) && premiumLocked[moduleId]){
-    openLockedFeature(premiumLocked[moduleId], "Gói 1 tháng / 3 tháng / 6 tháng / 1 năm / Nhà bán hàng chuyên nghiệp");
-    return false;
-  }
-
   document.querySelectorAll(".module-section").forEach(function(el){
     el.classList.remove("active-module");
   });
@@ -4604,7 +4599,7 @@ function getOrCreateDeviceId(){
   const payDevice=document.getElementById("payDeviceId"); if(payDevice) payDevice.value=id;
   return id;
 }
-window.addEventListener("DOMContentLoaded", getOrCreateDeviceId);
+window.addEventListener("DOMContentLoaded", function(){ getOrCreateDeviceId(); setTimeout(getOrCreateDeviceId,500); });
 
 function refreshPaymentContent(){
   if(window.currentPremiumPlanKey) openPayment(window.currentPremiumPlanKey);
@@ -4644,8 +4639,8 @@ function openPayment(planKey){
   document.getElementById("payPlanDesc").innerText=plan.desc;
   document.getElementById("payQr").src=qrUrl;
   document.getElementById("payContent").innerText=addInfo;
-  document.getElementById("payBenefits").innerHTML=plan.benefits.map(x=>"<div>✓ "+x+"</div>").join("");
-  document.getElementById("payLocked").innerHTML=plan.locked.length ? plan.locked.map(x=>"<div>🔒 "+x+"</div>").join("") : "<div>✓ Không khóa tính năng</div>";
+  document.getElementById("payBenefits").innerHTML=plan.benefits.map(x=>"<div>"+x+"</div>").join("");
+  document.getElementById("payLocked").innerHTML=plan.locked.length ? plan.locked.map(x=>"<div>🔒 "+x+"</div>").join("") : "<div>Không khóa tính năng</div>";
   modal.style.display="flex";
 }
 function closePayment(){
@@ -4739,6 +4734,27 @@ function closeLockedFeature(){
 
 </style>
 
+
+<style id="chat-device-menu-fix">
+/* Bản sửa: chỉ dọn icon menu, tăng ưu tiên chat, hiển thị ID thiết bị rõ ràng */
+.v2-nav-ico{display:none!important;width:0!important;min-width:0!important;margin:0!important;padding:0!important;overflow:hidden!important}
+.v2-nav-link{cursor:pointer!important;pointer-events:auto!important}
+.activity-card span{font-size:0!important}
+.activity-card span::before{font-size:16px!important}
+.activity-card:nth-of-type(1) span::before{content:"Tổng bài"}
+.activity-card:nth-of-type(2) span::before{content:"Đã đăng"}
+.activity-card:nth-of-type(3) span::before{content:"Chờ đăng"}
+.activity-card:nth-of-type(4) span::before{content:"Lead CRM"}
+.activity-card:nth-of-type(5) span::before{content:"Chiến dịch"}
+#sidebarDeviceId{display:inline-block!important;color:#fff!important;font-weight:900!important;font-size:14px!important;letter-spacing:.4px;margin:4px 0}
+.floating-bot{z-index:2147483000!important;pointer-events:auto!important}
+.bot-bubble,.bot-panel,.bot-actions button,.bot-input button{pointer-events:auto!important}
+.bot-panel{z-index:2147483001!important}
+.bot-body{min-height:210px!important}
+.bot-actions{grid-template-columns:1fr 1fr!important}
+.bot-actions button{font-size:13px!important;line-height:1.25!important}
+.bot-title::before{content:"🤖 ";}
+</style>
 </head>
 <body>
 
@@ -4771,8 +4787,13 @@ function closeLockedFeature(){
     </div>
     <div class="bot-body" id="floatingBotBody">
       <div class="bot-msg ai">
-        <b>Bot hỗ trợ đang trực tuyến</b>
-        <span class="typing-dots" style="vertical-align:middle"><span></span><span></span><span></span></span>
+        <b>Bot hỗ trợ:</b><br><br>
+        Dạ mình đang cần hỗ trợ vấn đề gì ạ?<br><br>
+        • Nâng cấp Premium<br>
+        • Kích hoạt tài khoản<br>
+        • Thanh toán<br>
+        • Hướng dẫn sử dụng<br>
+        • Báo lỗi hệ thống
       </div>
     </div>
     <div class="bot-actions">
@@ -4798,7 +4819,7 @@ function closeLockedFeature(){
   <div class="subtitle">V12 DeviceID Premium Admin</div>
   <div class="v2-side-card" style="margin-top:12px;background:linear-gradient(135deg,#111827,#1e293b);border:1px solid rgba(250,204,21,.45)">
     <b>🖥 ID thiết bị</b><br>
-    <span id="sidebarDeviceId">Đang tạo...</span><br>
+    <span id="sidebarDeviceId">{{ device_id }}</span><br>
     <small id="sidebarPremiumStatus">Trạng thái: {{ free_status.label }}</small>
   </div>
   {% if renewal_notice %}
@@ -5585,11 +5606,11 @@ Tạo: {{ c[4] }}</div>
   <p class="small">Trung tâm phân tích tổng hợp Fanpage, Group, bài đăng, chiến dịch và CRM để theo dõi hiệu suất bán hàng.</p>
 
   <div class="analytics-kpi-grid">
-    <div class="analytics-kpi"><span>📌 Tổng bài</span><b>{{ analytics.summary.total_posts }}</b><small>Toàn bộ bài đã tạo</small></div>
-    <div class="analytics-kpi"><span>✅ Đã đăng</span><b>{{ analytics.summary.posted }}</b><small>Tỷ lệ đăng: {{ analytics.summary.conversion_rate }}%</small></div>
-    <div class="analytics-kpi"><span>⏰ Chờ đăng</span><b>{{ analytics.summary.scheduled }}</b><small>Bài đang lên lịch</small></div>
+    <div class="analytics-kpi"><span>Tổng bài</span><b>{{ analytics.summary.total_posts }}</b><small>Toàn bộ bài đã tạo</small></div>
+    <div class="analytics-kpi"><span>Đã đăng</span><b>{{ analytics.summary.posted }}</b><small>Tỷ lệ đăng: {{ analytics.summary.conversion_rate }}%</small></div>
+    <div class="analytics-kpi"><span>Chờ đăng</span><b>{{ analytics.summary.scheduled }}</b><small>Bài đang lên lịch</small></div>
     <div class="analytics-kpi"><span>⚠️ Lỗi đăng</span><b>{{ analytics.summary.errors }}</b><small>Tỷ lệ lỗi: {{ analytics.summary.error_rate }}%</small></div>
-    <div class="analytics-kpi"><span>👥 Lead CRM</span><b>{{ analytics.summary.crm_total + analytics.summary.pipeline_total }}</b><small>Tổng khách hàng ghi nhận</small></div>
+    <div class="analytics-kpi"><span>Lead CRM</span><b>{{ analytics.summary.crm_total + analytics.summary.pipeline_total }}</b><small>Tổng khách hàng ghi nhận</small></div>
     <div class="analytics-kpi"><span>💰 Pipeline</span><b>{{ "{:,}".format(analytics.summary.total_value).replace(",", ".") }}đ</b><small>Giá trị cơ hội bán hàng</small></div>
     <div class="analytics-kpi"><span>👥 Group</span><b>{{ analytics.summary.groups_total }}</b><small>{{ analytics.summary.group_scheduled }} lịch đăng Group</small></div>
     <div class="analytics-kpi"><span>🤖 AI xử lý</span><b>{{ analytics.summary.comments_total + analytics.summary.messenger_total }}</b><small>Comment + Messenger</small></div>
@@ -6032,25 +6053,25 @@ Thời gian tạo: {{ h[9] }}
 </main>
 
 <aside class="rightbar">
-  <h2>🔥 Hoạt động hôm nay</h2>
+  <h2>Hoạt động hôm nay</h2>
   <div class="activity-card">
-    <span>📌 Tổng bài</span><b>{{ s.total }}</b>
+    <span>Tổng bài</span><b>{{ s.total }}</b>
   </div>
   <div class="activity-card">
-    <span>✅ Đã đăng</span><b>{{ s.posted }}</b>
+    <span>Đã đăng</span><b>{{ s.posted }}</b>
   </div>
   <div class="activity-card">
-    <span>⏰ Chờ đăng</span><b>{{ s.scheduled }}</b>
+    <span>Chờ đăng</span><b>{{ s.scheduled }}</b>
   </div>
   <div class="activity-card">
-    <span>👥 Lead CRM</span><b>{{ s.crm }}</b>
+    <span>Lead CRM</span><b>{{ s.crm }}</b>
   </div>
   <div class="activity-card">
-    <span>📊 Chiến dịch</span><b>{{ s.campaigns }}</b>
+    <span>Chiến dịch</span><b>{{ s.campaigns }}</b>
   </div>
 
   <div class="{{ 'free-status-card free-expired' if free_status.is_expired else 'free-status-card' }}">
-    <h3>🎁 Gói dùng thử 3 ngày</h3>
+    <h3>Gói dùng thử 3 ngày</h3>
     {% if free_status.is_expired %}
       <b>Trạng thái:</b> Đã hết dùng thử<br>
       Vui lòng nâng cấp Premium để tiếp tục sử dụng các công cụ.
@@ -6059,17 +6080,17 @@ Thời gian tạo: {{ h[9] }}
       <div class="free-progress"><span style="width:{{ free_status.percent }}%"></span></div>
       <div class="trial-box">
         <b>Được sử dụng:</b><br>
-        ✓ Quản lý Fanpage<br>
-        ✓ Quản lý Group<br>
-        ✓ AI Comment
+        Quản lý Fanpage<br>
+        Quản lý Group<br>
+        AI Comment
       </div>
       <div class="trial-box locked-list">
         <b>Chưa mở khóa:</b><br>
-        🔒 AI Messenger<br>
-        🔒 CRM Kanban<br>
-        🔒 AI Marketing Director<br>
-        🔒 AI Video • AI Image<br>
-        🔒 AI Giọng Nói • AI Livestream
+        AI Messenger<br>
+        CRM Kanban<br>
+        AI Marketing Director<br>
+        AI Video • AI Image<br>
+        AI Giọng Nói • AI Livestream
       </div>
       <button onclick="scrollToPricing()">Xem chi tiết gói</button>
       <button onclick="openPayment('monthly')">Nâng cấp Premium</button>
@@ -6213,6 +6234,51 @@ let draggedKanbanCard=null;
 function dragKanban(ev){ draggedKanbanCard=ev.target; }
 function dropKanban(ev){ ev.preventDefault(); const col=ev.currentTarget; if(draggedKanbanCard){ col.appendChild(draggedKanbanCard); draggedKanbanCard=null; } }
 </script>
+
+<script id="chat-device-menu-fix-js">
+(function(){
+  function ensureDeviceId(){
+    var id = localStorage.getItem("mkt_device_id");
+    if(!id || id === "Đang tạo..."){
+      id = "MKT-" + Math.random().toString(36).slice(2,8).toUpperCase() + Date.now().toString().slice(-4);
+      localStorage.setItem("mkt_device_id", id);
+    }
+    document.cookie = "mkt_device_id=" + encodeURIComponent(id) + "; path=/; max-age=" + (60*60*24*365*5);
+    var side = document.getElementById("sidebarDeviceId");
+    if(side) side.textContent = id;
+    var pay = document.getElementById("payDeviceId");
+    if(pay) pay.value = id;
+    return id;
+  }
+  window.ensureDeviceId = ensureDeviceId;
+  document.addEventListener("DOMContentLoaded", function(){
+    ensureDeviceId();
+    setTimeout(ensureDeviceId, 300);
+    setTimeout(ensureDeviceId, 1200);
+
+    var bubble = document.querySelector(".bot-bubble");
+    if(bubble){
+      bubble.addEventListener("click", function(e){
+        e.preventDefault();
+        var panel = document.getElementById("floatingBotPanel");
+        if(panel){
+          panel.style.display = (panel.style.display === "block") ? "none" : "block";
+          if(panel.style.display === "block" && typeof appendBotGreeting === "function") appendBotGreeting();
+        }
+      }, true);
+    }
+
+    document.querySelectorAll(".v2-nav-link[href^='#']").forEach(function(a){
+      a.addEventListener("click", function(e){
+        var id = (a.getAttribute("href") || "").replace("#", "");
+        if(!id) return;
+        e.preventDefault();
+        if(typeof openModule === "function") openModule(id);
+      }, true);
+    });
+  });
+})();
+</script>
 </body>
 </html>
 """
@@ -6230,7 +6296,7 @@ def render(content="", message="", ok=True, selected_industry="spa", analysis=""
         industry_labels=INDUSTRY_LABELS, selected_industry=selected_industry,
         library_items=current_library(selected_industry)[:10], locked_count=max(0, 500 - len(current_library(selected_industry)[:10])),
         score=score, warnings=warnings, token_warning=token_warning,
-        analysis=analysis, plan=plan, v3=v3_ceo_summary(), pipeline_rows=get_pipeline_leads(), customer_tasks=get_customer_tasks(), notifications=get_notifications(), fb_groups=get_fb_groups(), group_schedules=get_group_schedules(), comment_leads=get_comment_leads(), messenger_scripts=get_messenger_scripts(), success_assets=get_success_assets(), group_finder_results=get_group_finder_results(), group_finder_stats=get_group_finder_stats(), group_join_queue=get_group_join_queue(), group_uid_files=get_group_uid_files(), group_post_results=get_group_post_results(), group_post_queue=get_group_post_queue(), page_comment_queue=get_page_comment_queue(), page_comment_logs=get_page_comment_logs(), page_comment_stats=get_page_comment_stats(), page_token_rows=get_page_token_rows(), page_group_memberships=get_page_group_memberships(), renewal_notice=get_renewal_notice()
+        analysis=analysis, plan=plan, v3=v3_ceo_summary(), pipeline_rows=get_pipeline_leads(), customer_tasks=get_customer_tasks(), notifications=get_notifications(), fb_groups=get_fb_groups(), group_schedules=get_group_schedules(), comment_leads=get_comment_leads(), messenger_scripts=get_messenger_scripts(), success_assets=get_success_assets(), group_finder_results=get_group_finder_results(), group_finder_stats=get_group_finder_stats(), group_join_queue=get_group_join_queue(), group_uid_files=get_group_uid_files(), group_post_results=get_group_post_results(), group_post_queue=get_group_post_queue(), page_comment_queue=get_page_comment_queue(), page_comment_logs=get_page_comment_logs(), page_comment_stats=get_page_comment_stats(), page_token_rows=get_page_token_rows(), page_group_memberships=get_page_group_memberships(), renewal_notice=get_renewal_notice(), device_id=get_device_id()
     )
 
 @app.route("/")
@@ -6722,11 +6788,77 @@ def premium_request():
 ADMIN_HTML = """
 <!doctype html><html lang="vi"><head><meta charset="utf-8"><title>Web Admin Premium</title>
 <style>body{font-family:system-ui;background:#f8fafc;margin:0;padding:24px;color:#111827}.wrap{max-width:1180px;margin:auto}h1{margin-top:0}.card{background:white;border:1px solid #e5e7eb;border-radius:18px;padding:18px;box-shadow:0 10px 30px rgba(15,23,42,.08)}table{width:100%;border-collapse:collapse}th,td{border-bottom:1px solid #e5e7eb;padding:10px;text-align:left;font-size:13px}th{background:#f1f5f9}.badge{display:inline-block;padding:4px 8px;border-radius:999px;background:#fef3c7;color:#92400e;font-weight:700}.ok{background:#dcfce7;color:#166534}.danger{background:#fee2e2;color:#991b1b}button{border:0;border-radius:10px;padding:9px 12px;font-weight:700;cursor:pointer}.approve{background:#16a34a;color:white}.reject{background:#ef4444;color:white}.top{display:flex;gap:12px;align-items:center;justify-content:space-between;margin-bottom:16px}a{color:#2563eb;text-decoration:none}</style>
+
+<style id="chat-device-menu-fix">
+/* Bản sửa: chỉ dọn icon menu, tăng ưu tiên chat, hiển thị ID thiết bị rõ ràng */
+.v2-nav-ico{display:none!important;width:0!important;min-width:0!important;margin:0!important;padding:0!important;overflow:hidden!important}
+.v2-nav-link{cursor:pointer!important;pointer-events:auto!important}
+.activity-card span{font-size:0!important}
+.activity-card span::before{font-size:16px!important}
+.activity-card:nth-of-type(1) span::before{content:"Tổng bài"}
+.activity-card:nth-of-type(2) span::before{content:"Đã đăng"}
+.activity-card:nth-of-type(3) span::before{content:"Chờ đăng"}
+.activity-card:nth-of-type(4) span::before{content:"Lead CRM"}
+.activity-card:nth-of-type(5) span::before{content:"Chiến dịch"}
+#sidebarDeviceId{display:inline-block!important;color:#fff!important;font-weight:900!important;font-size:14px!important;letter-spacing:.4px;margin:4px 0}
+.floating-bot{z-index:2147483000!important;pointer-events:auto!important}
+.bot-bubble,.bot-panel,.bot-actions button,.bot-input button{pointer-events:auto!important}
+.bot-panel{z-index:2147483001!important}
+.bot-body{min-height:210px!important}
+.bot-actions{grid-template-columns:1fr 1fr!important}
+.bot-actions button{font-size:13px!important;line-height:1.25!important}
+.bot-title::before{content:"🤖 ";}
+</style>
 </head><body><div class="wrap"><div class="top"><div><h1>Web Admin - Duyệt Premium</h1><p>Danh sách yêu cầu nâng cấp theo ID thiết bị, SĐT và Gmail.</p></div><a href="/">← Về app khách</a></div><div class="card"><table><thead><tr><th>ID</th><th>ID thiết bị</th><th>SĐT</th><th>Gmail</th><th>Gói</th><th>Số tiền</th><th>Nội dung CK</th><th>Trạng thái</th><th>Ngày tạo</th><th>Thao tác</th></tr></thead><tbody>
 {% for r in rows %}
 <tr><td>{{r[0]}}</td><td><b>{{r[1]}}</b></td><td>{{r[2]}}</td><td>{{r[3]}}</td><td>{{r[5]}}</td><td>{{"{:,.0f}".format(r[6]).replace(",", ".")}}đ</td><td>{{r[7]}}</td><td><span class="badge {% if r[8]=='Đã duyệt' %}ok{% elif r[8]=='Từ chối' %}danger{% endif %}">{{r[8]}}</span></td><td>{{r[10]}}</td><td>{% if r[8]=='Chờ duyệt' %}<form method="post" action="/admin/premium_action" style="display:inline"><input type="hidden" name="request_id" value="{{r[0]}}"><input type="hidden" name="status" value="Đã duyệt"><button class="approve">Kích hoạt</button></form> <form method="post" action="/admin/premium_action" style="display:inline"><input type="hidden" name="request_id" value="{{r[0]}}"><input type="hidden" name="status" value="Từ chối"><button class="reject">Từ chối</button></form>{% else %}{{r[11] or ''}}{% endif %}</td></tr>
 {% endfor %}
-</tbody></table></div></div></body></html>
+</tbody></table></div></div>
+<script id="chat-device-menu-fix-js">
+(function(){
+  function ensureDeviceId(){
+    var id = localStorage.getItem("mkt_device_id");
+    if(!id || id === "Đang tạo..."){
+      id = "MKT-" + Math.random().toString(36).slice(2,8).toUpperCase() + Date.now().toString().slice(-4);
+      localStorage.setItem("mkt_device_id", id);
+    }
+    document.cookie = "mkt_device_id=" + encodeURIComponent(id) + "; path=/; max-age=" + (60*60*24*365*5);
+    var side = document.getElementById("sidebarDeviceId");
+    if(side) side.textContent = id;
+    var pay = document.getElementById("payDeviceId");
+    if(pay) pay.value = id;
+    return id;
+  }
+  window.ensureDeviceId = ensureDeviceId;
+  document.addEventListener("DOMContentLoaded", function(){
+    ensureDeviceId();
+    setTimeout(ensureDeviceId, 300);
+    setTimeout(ensureDeviceId, 1200);
+
+    var bubble = document.querySelector(".bot-bubble");
+    if(bubble){
+      bubble.addEventListener("click", function(e){
+        e.preventDefault();
+        var panel = document.getElementById("floatingBotPanel");
+        if(panel){
+          panel.style.display = (panel.style.display === "block") ? "none" : "block";
+          if(panel.style.display === "block" && typeof appendBotGreeting === "function") appendBotGreeting();
+        }
+      }, true);
+    }
+
+    document.querySelectorAll(".v2-nav-link[href^='#']").forEach(function(a){
+      a.addEventListener("click", function(e){
+        var id = (a.getAttribute("href") || "").replace("#", "");
+        if(!id) return;
+        e.preventDefault();
+        if(typeof openModule === "function") openModule(id);
+      }, true);
+    });
+  });
+})();
+</script>
+</body></html>
 """
 
 @app.route("/admin")
