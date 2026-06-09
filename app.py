@@ -4378,6 +4378,11 @@ function closeFloatingBot(){
   if(panel) panel.style.display="none";
 }
 let botGreeted=false;
+function escapeBotText(value){
+  return String(value || "").replace(/[&<>"]/g,function(ch){
+    return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[ch];
+  });
+}
 function appendBotGreeting(){
   if(botGreeted) return;
   botGreeted=true;
@@ -4385,40 +4390,46 @@ function appendBotGreeting(){
   if(!body) return;
   body.innerHTML = `
     <div class="bot-msg ai">
-      <b>Bot hỗ trợ</b><br><br>
-      Dạ mình đang cần hỗ trợ vấn đề gì?<br><br>
+      <b>Bot hỗ trợ:</b><br><br>
+      Dạ mình đang cần hỗ trợ vấn đề gì ạ?<br><br>
       • Nâng cấp Premium<br>
       • Kích hoạt tài khoản<br>
       • Thanh toán<br>
       • Hướng dẫn sử dụng<br>
       • Báo lỗi hệ thống
-    </div>
-    <div class="support-mini-box"><b>Zalo hỗ trợ:</b><br>036 338 2629</div>
-    <div class="support-mini-box"><b>Gmail hỗ trợ:</b><br>support@gptmini.pro</div>
-    <div class="bot-msg ai">
-      Nếu đã thanh toán, vui lòng gửi <b>ID thiết bị</b>, <b>ảnh thanh toán</b> và <b>gói đã đăng ký</b> để được ưu tiên kích hoạt nhanh.
     </div>`;
   body.scrollTop=body.scrollHeight;
+}
+function getBotReply(text){
+  const lower=String(text || "").toLowerCase();
+  let reply="Dạ mình đang cần hỗ trợ vấn đề gì ạ?<br><br>• Nâng cấp Premium<br>• Kích hoạt tài khoản<br>• Thanh toán<br>• Hướng dẫn sử dụng<br>• Báo lỗi hệ thống";
+  if(lower.includes("premium") || lower.includes("giá") || lower.includes("gói") || lower.includes("nâng cấp")){
+    reply="Dạ hiện hệ thống có các gói:<br><br>• 1 tháng: <b>159K</b><br>• 3 tháng: <b>359K</b><br>• 6 tháng: <b>559K</b><br>• 1 năm: <b>859K</b><br>• Nhà bán hàng chuyên nghiệp: <b>1.959K</b><br><br>Anh/chị muốn em tư vấn gói phù hợp không ạ?";
+  }else if(lower.includes("thanh toán") || lower.includes("chuyển khoản") || lower.includes("qr")){
+    reply="Dạ sau khi chuyển khoản thành công, anh/chị vui lòng gửi:<br><br>• ID thiết bị<br>• Ảnh thanh toán<br>• Gói đã đăng ký<br><br>Nếu sau 5 phút chưa được kích hoạt, vui lòng liên hệ Zalo <b>036 338 2629</b> hoặc Gmail <b>support@gptmini.pro</b>.";
+  }else if(lower.includes("kích hoạt") || lower.includes("duyệt")){
+    reply="Dạ để em hỗ trợ kích hoạt nhanh, anh/chị gửi giúp em:<br><br>• ID thiết bị<br>• Số điện thoại<br>• Gmail đăng ký<br>• Ảnh thanh toán<br>• Gói đã đăng ký";
+  }else if(lower.includes("zalo") || lower.includes("liên hệ") || lower.includes("hỗ trợ")){
+    reply="Dạ anh/chị có thể liên hệ hỗ trợ qua:<br><br><b>Zalo:</b> 036 338 2629<br><b>Gmail:</b> support@gptmini.pro<br><br>Nếu đã thanh toán, vui lòng gửi ID thiết bị, ảnh thanh toán và gói đã đăng ký để được ưu tiên kích hoạt nhanh ạ.";
+  }else if(lower.includes("lỗi") || lower.includes("không dùng") || lower.includes("không được") || lower.includes("báo lỗi")){
+    reply="Dạ anh/chị vui lòng mô tả lỗi đang gặp hoặc gửi ảnh màn hình giúp em ạ.<br><br>Nếu cần hỗ trợ nhanh, anh/chị liên hệ Zalo <b>036 338 2629</b>.";
+  }else if(lower.includes("tính năng") || lower.includes("hướng dẫn") || lower.includes("sử dụng")){
+    reply="Dạ tool hỗ trợ quản lý Fanpage, quản lý Group, đăng bài, AI Comment, AI Messenger, CRM Kanban và Marketing Director.<br><br>Anh/chị đang muốn dùng chức năng nào để em hướng dẫn đúng phần đó ạ?";
+  }
+  return reply;
 }
 function botQuick(text){
   const body=document.getElementById("floatingBotBody");
   if(!body) return;
-  body.innerHTML += `<div class="bot-msg"><b>Bạn:</b> ${text}</div>`;
-  let reply="Dạ mình đang cần hỗ trợ vấn đề gì? Anh/chị có thể chọn: Nâng cấp Premium, Thanh toán, Kích hoạt tài khoản, Hướng dẫn sử dụng hoặc Báo lỗi hệ thống.";
-  const lower=text.toLowerCase();
-  if(lower.includes("premium") || lower.includes("giá") || lower.includes("gói") || lower.includes("nâng cấp")){
-    reply="Dạ hiện hệ thống có các gói:<br><br>1 tháng: <b>159K</b><br>3 tháng: <b>359K</b><br>6 tháng: <b>559K</b><br>1 năm: <b>859K</b><br>Nhà bán hàng chuyên nghiệp: <b>1.959K</b><br><br>Anh/chị muốn em tư vấn gói phù hợp không ạ?<br><br><b>Zalo:</b> 036 338 2629<br><b>Gmail:</b> support@gptmini.pro";
-  }else if(lower.includes("thanh toán") || lower.includes("chuyển khoản") || lower.includes("qr")){
-    reply="Dạ sau khi chuyển khoản vui lòng gửi:<br><br>• ID thiết bị<br>• Ảnh thanh toán<br>• Gói đã đăng ký<br><br>Nếu sau 5 phút chưa kích hoạt, vui lòng liên hệ Zalo <b>036 338 2629</b>.";
-  }else if(lower.includes("kích hoạt") || lower.includes("duyệt")){
-    reply="Dạ anh/chị gửi giúp em ID thiết bị, số điện thoại, Gmail và ảnh thanh toán. Hệ thống sẽ kiểm tra và kích hoạt Premium nhanh nhất.";
-  }else if(lower.includes("lỗi") || lower.includes("không dùng") || lower.includes("không được")){
-    reply="Dạ anh/chị vui lòng mô tả lỗi đang gặp hoặc gửi ảnh màn hình. Bộ phận kỹ thuật sẽ kiểm tra và hỗ trợ ngay. Zalo hỗ trợ: <b>036 338 2629</b>.";
-  }else if(lower.includes("tính năng") || lower.includes("hướng dẫn")){
-    reply="Dạ tool hỗ trợ đăng bài Facebook, quản lý Page/Group, AI Comment, AI Messenger, CRM Kanban, Marketing Director, bảng giá Premium và duyệt kích hoạt theo ID thiết bị.";
-  }
-  body.innerHTML += `<div class="bot-msg ai"><b>Bot hỗ trợ:</b><br>${reply}</div>`;
+  body.innerHTML += `<div class="bot-msg"><b>Bạn:</b> ${escapeBotText(text)}</div>`;
+  body.innerHTML += `<div class="bot-msg ai bot-typing" id="botTypingNow"><b>Bot hỗ trợ:</b><br>Đang nhập<span class="typing-dots" style="vertical-align:middle"><span></span><span></span><span></span></span></div>`;
   body.scrollTop=body.scrollHeight;
+  const reply=getBotReply(text);
+  setTimeout(function(){
+    const typing=document.getElementById("botTypingNow");
+    if(typing){ typing.outerHTML = `<div class="bot-msg ai"><b>Bot hỗ trợ:</b><br>${reply}</div>`; }
+    body.scrollTop=body.scrollHeight;
+  }, 900 + Math.floor(Math.random()*700));
 }
 function sendBotInput(){
   const input=document.getElementById("botInputText");
@@ -4768,10 +4779,10 @@ function closeLockedFeature(){
       <button onclick="botQuick('Nâng cấp Premium')">Nâng cấp Premium</button>
       <button class="light" onclick="botQuick('Hướng dẫn thanh toán')">Hướng dẫn thanh toán</button>
       <button class="light" onclick="botQuick('Kích hoạt tài khoản')">Kích hoạt tài khoản</button>
-      <a href="https://zalo.me/0363382629" target="_blank">Liên hệ Zalo 036 338 2629</a>
+      <button class="light" onclick="botQuick('Liên hệ hỗ trợ')">Liên hệ hỗ trợ</button>
     </div>
     <div class="bot-input">
-      <input id="botInputText" placeholder="Nhập câu hỏi nhanh..." onkeydown="if(event.key==='Enter')sendBotInput()">
+      <input id="botInputText" placeholder="Nhập câu hỏi cần hỗ trợ..." onkeydown="if(event.key==='Enter')sendBotInput()">
       <button onclick="sendBotInput()">Gửi</button>
     </div>
   </div>
