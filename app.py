@@ -4598,7 +4598,7 @@ function closeLockedFeature(){
   <a class="v2-nav-link" href="#premium" onclick="openModule('premium')"><span class="v2-nav-ico">💎</span><span class="v2-nav-text">Bảng giá Premium</span><span class="v2-nav-tag">VIP</span></a>
   <a class="v2-nav-link" href="#premium" onclick="openModule('premium')"><span class="v2-nav-ico">💳</span><span class="v2-nav-text">Gửi xác nhận thanh toán</span></a>
   <a class="v2-nav-link" href="#premium" onclick="openModule('premium')"><span class="v2-nav-ico">✅</span><span class="v2-nav-text">Trạng thái kích hoạt</span></a>
-  <a class="v2-nav-link" href="/install" target="_blank"><span class="v2-nav-ico">📲</span><span class="v2-nav-text">Cài đặt App</span><span class="v2-nav-tag">QR</span></a>
+  <a class="v2-nav-link" href="/install" target="_blank"><span class="v2-nav-ico">🚀</span><span class="v2-nav-text">Thêm vào màn hình</span><span class="v2-nav-tag">APP</span></a>
 
   <div class="v2-nav-title">⚙️ TÀI KHOẢN</div>
   <a class="v2-nav-link" href="#premium" onclick="openModule('premium')"><span class="v2-nav-ico">🖥️</span><span class="v2-nav-text">ID thiết bị</span></a>
@@ -4618,10 +4618,9 @@ function closeLockedFeature(){
   <h1>Mkt Automation Pro V5 Seller AI Suite</h1>
 
 <div class="app-install-banner">
-  <b>📲 App Mini đã sẵn sàng</b><br>
-  Bấm nút bên dưới để cài Mkt Automation Pro vào điện thoại/máy tính và mở như phần mềm riêng.
-  <button onclick="showSmartInstall()">📲 Cài đặt ứng dụng</button>
-  <a href="/install" target="_blank" style="display:inline-block;margin-top:8px;font-size:13px;font-weight:900;color:#4C1D95;text-decoration:underline">Mở trang cài đặt nhanh / QR</a>
+  <b>🚀 App Mini đã sẵn sàng</b><br>
+  Bấm nút bên dưới để thêm Mkt Automation Pro vào màn hình chính và mở như phần mềm riêng.
+  <button onclick="showSmartInstall()">🚀 THÊM VÀO MÀN HÌNH CHÍNH</button>
   <div id="installStatus" style="margin-top:8px;font-size:13px;color:#4C1D95;font-weight:800"></div>
 </div>
 
@@ -6743,7 +6742,7 @@ def admin_premium_page():
           <div class='menu-title'>Premium Center</div><a href='#premium'>👑 Yêu cầu kích hoạt</a><a href='#customers'>💎 Khách Premium</a><a href='#expiring'>⏳ Hết hạn sắp tới</a><a href='#payments'>💳 Doanh thu & Thanh toán</a>
           <div class='menu-title'>Chat Center</div><a href='#chat'>💬 Chat khách hàng <span class='badge badge-warn'>{chat_new_count}</span></a>
           <div class='menu-title'>Facebook Center</div><a href='#errors'>📣 Lỗi đăng Fanpage</a><a href='#tokens'>🔑 Token Fanpage</a>
-          <div class='menu-title'>Cài đặt App</div><a href='#install_app'>📲 QR cài nhanh</a><a href='/install' target='_blank'>🚀 Mở trang cài đặt</a>
+          <div class='menu-title'>Cài đặt App</div><a href='#install_app'>🚀 Thêm vào màn hình</a><a href='/install' target='_blank'>📲 Mở trang cài đặt</a>
           <div class='menu-title'>System</div><a href='/admin?password={esc(password)}'>🔄 Tải lại Admin</a>
         </aside>
         <main class='main'>
@@ -6757,28 +6756,23 @@ def admin_premium_page():
           </div>
 
 
-          <h2 id='install_app'>📲 QR Cài đặt ứng dụng</h2>
+          <h2 id='install_app'>🚀 Thêm ứng dụng vào màn hình chính</h2>
           <div class='grid2'>
             <div class='panel'>
-              <h3>📱 Cài Mkt Automation Pro trên điện thoại</h3>
-              <div style='display:grid;grid-template-columns:170px 1fr;gap:18px;align-items:center'>
-                <div style='background:white;padding:12px;border-radius:18px;text-align:center'>
-                  <img src='/install_qr' alt='QR cài đặt Mkt Automation Pro' style='width:145px;height:145px'>
-                </div>
-                <div style='line-height:1.8;color:#cbd5e1'>
-                  <b style='color:#fbbf24'>Quét QR bằng điện thoại</b><br>
-                  Mở camera Zalo/iPhone/Android → quét mã → mở trang cài đặt nhanh.<br>
-                  <small>Android sẽ hiện nút cài trực tiếp nếu trình duyệt hỗ trợ. iPhone sẽ hiện hướng dẫn Thêm vào Màn hình chính.</small><br>
-                  <a class='btn primary' href='/install' target='_blank' style='display:inline-block;margin-top:10px'>Mở trang cài đặt</a>
-                </div>
+              <h3>📱 Cài Mkt Automation Pro nhanh cho khách</h3>
+              <div style='line-height:1.9;color:#cbd5e1'>
+                <b style='color:#86efac'>Không dùng QR nữa.</b><br>
+                Khách chỉ cần bấm nút bên dưới. Hệ thống tự nhận diện Android, iPhone hoặc máy tính và hiện đúng hướng dẫn cài đặt.
+                <br><br>
+                <a class='btn primary' href='/install' target='_blank' style='display:inline-block;margin-top:10px'>🚀 Mở trang thêm vào màn hình chính</a>
               </div>
             </div>
             <div class='panel'>
-              <h3>⚡ Kịch bản hỗ trợ khách</h3>
+              <h3>⚡ Cách hoạt động</h3>
               <div class='mini-grid'>
-                <div class='mini-card'><span>Android</span><b>1 chạm</b><span>Bấm Cài đặt ngay trên Chrome/Edge.</span></div>
-                <div class='mini-card'><span>iPhone</span><b>3 bước</b><span>Safari → Chia sẻ → Thêm vào màn hình chính.</span></div>
-                <div class='mini-card'><span>Máy tính</span><b>PWA</b><span>Cài như phần mềm riêng trên Chrome/Edge.</span></div>
+                <div class='mini-card'><span>Android</span><b>Popup cài</b><span>Chrome/Edge hỗ trợ sẽ hiện nút Cài đặt.</span></div>
+                <div class='mini-card'><span>iPhone</span><b>Safari</b><span>Hiện hướng dẫn Chia sẻ → Thêm vào Màn hình chính.</span></div>
+                <div class='mini-card'><span>Máy tính</span><b>App riêng</b><span>Cài như phần mềm riêng trên Chrome/Edge.</span></div>
               </div>
             </div>
           </div>
@@ -6828,109 +6822,110 @@ def admin_reply_support_route():
 
 
 
-@app.get('/install_qr')
-def install_qr():
-    """QR cài đặt nhanh trỏ về trang /install."""
-    try:
-        import qrcode
-        install_url = request.host_url.rstrip('/') + '/install'
-        qr = qrcode.QRCode(version=1, box_size=8, border=2)
-        qr.add_data(install_url)
-        qr.make(fit=True)
-        img = qr.make_image(fill_color='#0f172a', back_color='white').convert('RGB')
-        bio = io.BytesIO()
-        img.save(bio, 'PNG')
-        bio.seek(0)
-        return send_file(bio, mimetype='image/png', download_name='mkt-automation-pro-install-qr.png')
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-
 @app.get('/install')
 def install_page():
-    """Trang cài đặt PWA thông minh: Android/desktop gọi prompt, iPhone hướng dẫn thêm màn hình chính."""
+    """Trang cài đặt PWA thông minh không dùng QR: Android gọi prompt, iPhone hướng dẫn thêm màn hình chính."""
     app_url = request.host_url.rstrip('/')
     return f"""
 <!doctype html>
 <html lang='vi'>
 <head>
   <meta charset='utf-8'>
-  <meta name='viewport' content='width=device-width, initial-scale=1'>
-  <title>Cài đặt Mkt Automation Pro</title>
+  <meta name='viewport' content='width=device-width, initial-scale=1, viewport-fit=cover'>
+  <meta name='theme-color' content='#0F172A'>
+  <meta name='apple-mobile-web-app-capable' content='yes'>
+  <meta name='apple-mobile-web-app-status-bar-style' content='black-translucent'>
+  <meta name='apple-mobile-web-app-title' content='Mkt Pro'>
+  <title>Thêm Mkt Automation Pro vào màn hình</title>
   <link rel='manifest' href='/manifest.json'>
+  <link rel='apple-touch-icon' href='/pwa-icon-192.png'>
   <link rel='preconnect' href='https://fonts.googleapis.com'>
   <link rel='preconnect' href='https://fonts.gstatic.com' crossorigin>
-  <link href='https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700;800;900&family=Manrope:wght@500;600;700;800&display=swap' rel='stylesheet'>
+  <link href='https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700;800;900&family=Manrope:wght@500;600;700;800;900&display=swap' rel='stylesheet'>
   <style>
-    *{{box-sizing:border-box}} body{{margin:0;min-height:100vh;font-family:'Manrope','Inter',system-ui;background:radial-gradient(circle at top,#1e3a8a 0,#0f172a 42%,#020617 100%);color:#e5e7eb;display:flex;align-items:center;justify-content:center;padding:22px}}
-    .wrap{{width:min(980px,100%);display:grid;grid-template-columns:1.1fr .9fr;gap:22px;align-items:stretch}}
-    .hero,.qrbox{{background:rgba(15,23,42,.74);border:1px solid rgba(148,163,184,.22);box-shadow:0 30px 90px rgba(0,0,0,.35);backdrop-filter:blur(20px);border-radius:30px;padding:28px}}
-    .badge{{display:inline-flex;gap:8px;align-items:center;background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.32);color:#86efac;border-radius:999px;padding:8px 12px;font-weight:900;font-size:13px}}
-    h1{{font-size:clamp(34px,5vw,58px);line-height:1.03;margin:18px 0 12px;font-weight:900;letter-spacing:-2px;background:linear-gradient(90deg,#38bdf8,#818cf8,#c084fc,#facc15);-webkit-background-clip:text;-webkit-text-fill-color:transparent}}
-    .lead{{color:#cbd5e1;font-size:17px;line-height:1.8;margin-bottom:18px}}
-    .benefits{{display:grid;gap:10px;margin:20px 0}} .benefits div{{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.09);border-radius:16px;padding:12px 14px;font-weight:800;color:#f8fafc}}
-    .btn{{width:100%;border:0;border-radius:18px;padding:16px 18px;font-size:17px;font-weight:900;cursor:pointer;background:linear-gradient(135deg,#22c55e,#16a34a);color:white;box-shadow:0 18px 40px rgba(34,197,94,.25)}}
+    *{{box-sizing:border-box}}
+    body{{margin:0;min-height:100vh;font-family:'Manrope','Inter',system-ui;background:radial-gradient(circle at top,#1e3a8a 0,#0f172a 42%,#020617 100%);color:#e5e7eb;display:flex;align-items:center;justify-content:center;padding:18px}}
+    .wrap{{width:min(720px,100%);background:rgba(15,23,42,.78);border:1px solid rgba(148,163,184,.24);box-shadow:0 32px 90px rgba(0,0,0,.42);backdrop-filter:blur(22px);border-radius:32px;padding:28px;position:relative;overflow:hidden}}
+    .wrap:before{{content:'';position:absolute;inset:-120px auto auto -80px;width:260px;height:260px;background:rgba(59,130,246,.28);filter:blur(45px);border-radius:999px}}
+    .badge{{display:inline-flex;gap:8px;align-items:center;background:rgba(34,197,94,.13);border:1px solid rgba(34,197,94,.36);color:#86efac;border-radius:999px;padding:8px 12px;font-weight:900;font-size:13px;position:relative}}
+    h1{{font-size:clamp(34px,8vw,58px);line-height:1.03;margin:18px 0 12px;font-weight:900;letter-spacing:-2px;background:linear-gradient(90deg,#38bdf8,#818cf8,#c084fc,#facc15);-webkit-background-clip:text;-webkit-text-fill-color:transparent;position:relative}}
+    .lead{{color:#cbd5e1;font-size:17px;line-height:1.8;margin-bottom:18px;position:relative}}
+    .benefits{{display:grid;gap:10px;margin:20px 0;position:relative}}
+    .benefits div{{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.09);border-radius:16px;padding:12px 14px;font-weight:800;color:#f8fafc}}
+    .btn{{width:100%;border:0;border-radius:20px;padding:17px 18px;font-size:17px;font-weight:900;cursor:pointer;background:linear-gradient(135deg,#22c55e,#16a34a);color:white;box-shadow:0 18px 42px rgba(34,197,94,.28);position:relative}}
     .btn.secondary{{background:linear-gradient(135deg,#2563eb,#7c3aed);margin-top:10px}}
-    .btn:disabled{{opacity:.6;cursor:not-allowed}} .status{{margin-top:12px;line-height:1.6;color:#bfdbfe;font-weight:800}}
-    .steps{{display:none;margin-top:18px;background:#020617;border:1px solid #334155;border-radius:20px;padding:16px;line-height:1.9;color:#dbeafe}}
-    .steps.show{{display:block}} .steps b{{color:#facc15}}
-    .qrbox{{text-align:center}} .qrbox img{{width:220px;height:220px;background:white;border-radius:22px;padding:12px;margin:12px auto;display:block}} .url{{word-break:break-all;background:#020617;border:1px solid #334155;border-radius:14px;padding:10px;color:#93c5fd;font-weight:800}}
-    .tiny{{font-size:13px;color:#94a3b8;line-height:1.7;margin-top:10px}}
-    @media(max-width:820px){{.wrap{{grid-template-columns:1fr}}.qrbox img{{width:190px;height:190px}}}}
+    .status{{margin-top:14px;line-height:1.65;color:#bfdbfe;font-weight:800;min-height:22px}}
+    .steps{{display:none;margin-top:18px;background:#020617;border:1px solid #334155;border-radius:22px;padding:18px;line-height:1.9;color:#dbeafe}}
+    .steps.show{{display:block}}
+    .steps b{{color:#facc15}}
+    .tip{{font-size:13px;color:#94a3b8;line-height:1.7;margin-top:16px;text-align:center}}
+    .device-pill{{display:inline-flex;background:rgba(59,130,246,.15);border:1px solid rgba(96,165,250,.28);color:#bfdbfe;border-radius:999px;padding:8px 12px;font-size:13px;font-weight:900;margin:4px 4px 14px 0}}
   </style>
 </head>
 <body>
-  <div class='wrap'>
-    <section class='hero'>
-      <div class='badge'>🟢 App Mini sẵn sàng</div>
-      <h1>Cài đặt Mkt Automation Pro</h1>
-      <div class='lead'>Thêm ứng dụng vào màn hình điện thoại để mở nhanh như app riêng, không cần tìm lại trình duyệt.</div>
-      <div class='benefits'>
-        <div>✔ Dùng như app trên điện thoại</div>
-        <div>✔ Không cần mở trình duyệt mỗi lần sử dụng</div>
-        <div>✔ Truy cập chỉ 1 chạm từ màn hình chính</div>
-        <div>✔ Phù hợp khách dùng Premium hằng ngày</div>
-      </div>
-      <button id='installBtn' class='btn' onclick='installApp()'>📲 Cài đặt ngay</button>
-      <button class='btn secondary' onclick='showManualGuide()'>📘 Xem hướng dẫn thủ công</button>
-      <div id='installStatus' class='status'></div>
-      <div id='iosSteps' class='steps'>
-        <b>📱 Cài trên iPhone/iPad</b><br>
-        1. Mở trang này bằng Safari.<br>
-        2. Bấm nút Chia sẻ ở dưới màn hình.<br>
-        3. Chọn “Thêm vào Màn hình chính”.<br>
-        4. Bấm “Thêm”.
-      </div>
-      <div id='androidSteps' class='steps'>
-        <b>🤖 Cài trên Android</b><br>
-        1. Mở bằng Chrome hoặc Edge.<br>
-        2. Bấm “Cài đặt ngay”.<br>
-        3. Xác nhận “Cài đặt” / “Thêm vào màn hình chính”.
-      </div>
-    </section>
-    <aside class='qrbox'>
-      <h2>📲 QR cài nhanh</h2>
-      <img src='/install_qr' alt='QR cài đặt nhanh'>
-      <div class='url'>{app_url}/install</div>
-      <div class='tiny'>Dùng QR này trong Admin, Zalo, Facebook hoặc gửi cho khách để họ mở đúng trang cài đặt trên điện thoại.</div>
-      <button class='btn secondary' onclick='copyLink()'>Sao chép link cài đặt</button>
-    </aside>
-  </div>
+  <main class='wrap'>
+    <div class='badge'>🟢 App Mini sẵn sàng</div>
+    <h1>Thêm vào màn hình chính</h1>
+    <div class='lead'>Mkt Automation Pro sẽ mở như một ứng dụng riêng trên điện thoại, truy cập nhanh chỉ 1 chạm.</div>
+    <div id='deviceHint' class='device-pill'>Đang nhận diện thiết bị...</div>
+    <div class='benefits'>
+      <div>✔ Mở như app trên điện thoại</div>
+      <div>✔ Không cần tìm lại trình duyệt</div>
+      <div>✔ Truy cập nhanh từ màn hình chính</div>
+      <div>✔ Phù hợp khách dùng Premium mỗi ngày</div>
+    </div>
+    <button id='installBtn' class='btn' onclick='installApp()'>🚀 THÊM VÀO MÀN HÌNH CHÍNH</button>
+    <button class='btn secondary' onclick='showManualGuide()'>📘 Xem hướng dẫn cài đặt</button>
+    <div id='installStatus' class='status'></div>
+    <div id='iosSteps' class='steps'>
+      <b>📱 iPhone/iPad</b><br>
+      1. Mở trang này bằng Safari.<br>
+      2. Bấm nút Chia sẻ ở dưới màn hình.<br>
+      3. Chọn “Thêm vào Màn hình chính”.<br>
+      4. Bấm “Thêm”.
+    </div>
+    <div id='androidSteps' class='steps'>
+      <b>🤖 Android Chrome/Edge</b><br>
+      1. Bấm nút “THÊM VÀO MÀN HÌNH CHÍNH”.<br>
+      2. Nếu popup hiện ra, chọn “Cài đặt”.<br>
+      3. Nếu chưa hiện, bấm menu ⋮ của Chrome → “Thêm vào màn hình chính”.
+    </div>
+    <div id='desktopSteps' class='steps'>
+      <b>💻 Máy tính Chrome/Edge</b><br>
+      1. Bấm nút cài đặt trên thanh địa chỉ nếu có.<br>
+      2. Hoặc bấm menu ⋮ → Cài đặt Mkt Automation Pro.<br>
+      3. Sau khi cài, app sẽ mở như phần mềm riêng.
+    </div>
+    <div class='tip'>Nếu trình duyệt chưa hiện popup cài, nguyên nhân thường là chưa mở bằng Chrome/Edge Android hoặc iPhone chưa mở bằng Safari.</div>
+  </main>
 <script>
 let deferredPrompt=null;
 const statusEl=document.getElementById('installStatus');
-window.addEventListener('beforeinstallprompt', function(e){{
-  e.preventDefault(); deferredPrompt=e;
-  statusEl.innerText='Thiết bị này hỗ trợ cài đặt tự động. Bấm Cài đặt ngay.';
-}});
+const deviceHint=document.getElementById('deviceHint');
+const installBtn=document.getElementById('installBtn');
 function isStandalone(){{ return (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone; }}
 function isIOS(){{ return /iphone|ipad|ipod/i.test(navigator.userAgent); }}
+function isAndroid(){{ return /android/i.test(navigator.userAgent); }}
+function isDesktop(){{ return !isIOS() && !isAndroid(); }}
+function setDeviceText(){{
+  if(isStandalone()){{ deviceHint.innerText='✅ Ứng dụng đã được cài'; installBtn.innerText='✅ ĐÃ CÀI ĐẶT'; statusEl.innerText='Anh/chị có thể mở app từ màn hình chính.'; return; }}
+  if(isIOS()) deviceHint.innerText='📱 Đã phát hiện iPhone/iPad';
+  else if(isAndroid()) deviceHint.innerText='🤖 Đã phát hiện Android';
+  else deviceHint.innerText='💻 Đã phát hiện máy tính';
+}}
+window.addEventListener('beforeinstallprompt', function(e){{
+  e.preventDefault();
+  deferredPrompt=e;
+  statusEl.innerText='Thiết bị này hỗ trợ cài đặt tự động. Bấm nút xanh để cài.';
+  installBtn.innerText='🚀 CÀI ĐẶT NGAY';
+}});
+function hideSteps(){{ ['iosSteps','androidSteps','desktopSteps'].forEach(id=>document.getElementById(id).classList.remove('show')); }}
 function installApp(){{
   if(isStandalone()){{ statusEl.innerText='Ứng dụng đã được cài trên thiết bị này.'; return; }}
   if(deferredPrompt){{
     deferredPrompt.prompt();
     deferredPrompt.userChoice.then(function(choice){{
-      statusEl.innerText = choice.outcome === 'accepted' ? 'Đang cài đặt ứng dụng...' : 'Anh/chị có thể cài lại bất cứ lúc nào.';
+      statusEl.innerText = choice.outcome === 'accepted' ? 'Đang cài đặt ứng dụng...' : 'Anh/chị có thể bấm cài lại bất cứ lúc nào.';
       deferredPrompt=null;
     }});
     return;
@@ -6938,14 +6933,15 @@ function installApp(){{
   showManualGuide();
 }}
 function showManualGuide(){{
-  document.getElementById('iosSteps').classList.toggle('show', isIOS());
-  document.getElementById('androidSteps').classList.toggle('show', !isIOS());
-  statusEl.innerText = isIOS() ? 'iPhone cần thêm vào màn hình chính bằng Safari.' : 'Nếu chưa thấy popup, dùng menu ⋮ của Chrome/Edge để cài ứng dụng.';
+  hideSteps();
+  if(isIOS()){{ document.getElementById('iosSteps').classList.add('show'); statusEl.innerText='iPhone cần thêm vào màn hình chính bằng Safari.'; }}
+  else if(isAndroid()){{ document.getElementById('androidSteps').classList.add('show'); statusEl.innerText='Nếu chưa thấy popup, dùng menu ⋮ của Chrome/Edge để thêm vào màn hình chính.'; }}
+  else {{ document.getElementById('desktopSteps').classList.add('show'); statusEl.innerText='Máy tính có thể cài app bằng Chrome/Edge nếu trình duyệt hỗ trợ.'; }}
 }}
-function copyLink(){{ navigator.clipboard && navigator.clipboard.writeText('{app_url}/install'); statusEl.innerText='Đã sao chép link cài đặt.'; }}
-window.addEventListener('appinstalled', function(){{ statusEl.innerText='Đã cài đặt Mkt Automation Pro thành công.'; }});
-if('serviceWorker' in navigator){{ window.addEventListener('load', function(){{ navigator.serviceWorker.register('/service-worker.js').catch(function(){{}}); }}); }}
-setTimeout(function(){{ if(!deferredPrompt && !isStandalone()) showManualGuide(); }}, 1200);
+window.addEventListener('appinstalled', function(){{ statusEl.innerText='Đã cài đặt Mkt Automation Pro thành công.'; installBtn.innerText='✅ ĐÃ CÀI ĐẶT'; }});
+if('serviceWorker' in navigator){{ window.addEventListener('load', function(){{ navigator.serviceWorker.register('/service-worker.js').catch(function(err){{ statusEl.innerText='Service Worker chưa sẵn sàng. Vui lòng tải lại trang.'; }}); }}); }}
+setDeviceText();
+setTimeout(function(){{ if(!deferredPrompt && !isStandalone()) showManualGuide(); }}, 1400);
 </script>
 </body>
 </html>
@@ -6960,9 +6956,12 @@ def pwa_manifest():
         "start_url": "/",
         "scope": "/",
         "display": "standalone",
+        "display_override": ["standalone", "minimal-ui"],
         "background_color": "#0F172A",
         "theme_color": "#0F172A",
         "orientation": "portrait",
+        "categories": ["business", "productivity", "utilities"],
+        "prefer_related_applications": False,
         "icons": [
             {"src": "/pwa-icon-192.png", "sizes": "192x192", "type": "image/png"},
             {"src": "/pwa-icon-512.png", "sizes": "512x512", "type": "image/png"}
@@ -6972,17 +6971,24 @@ def pwa_manifest():
 @app.get("/service-worker.js")
 def pwa_service_worker():
     js = """
-const CACHE_NAME = 'mkt-automation-pro-v1';
-const ASSETS = ['/', '/manifest.json', '/pwa-icon-192.png', '/pwa-icon-512.png'];
+const CACHE_NAME = 'mkt-automation-pro-v2';
+const ASSETS = ['/', '/install', '/manifest.json', '/pwa-icon-192.png', '/pwa-icon-512.png'];
 self.addEventListener('install', event => {
-  event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(ASSETS)));
+  event.waitUntil(caches.open(CACHE_NAME).then(cache => Promise.allSettled(ASSETS.map(url => cache.add(url)))));
   self.skipWaiting();
 });
 self.addEventListener('activate', event => {
-  event.waitUntil(self.clients.claim());
+  event.waitUntil(
+    caches.keys().then(keys => Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))).then(() => self.clients.claim())
+  );
 });
 self.addEventListener('fetch', event => {
-  event.respondWith(fetch(event.request).catch(() => caches.match(event.request)));
+  if (event.request.method !== 'GET') return;
+  event.respondWith(fetch(event.request).then(response => {
+    const copy = response.clone();
+    caches.open(CACHE_NAME).then(cache => cache.put(event.request, copy)).catch(() => {});
+    return response;
+  }).catch(() => caches.match(event.request)));
 });
 """
     return app.response_class(js, mimetype="application/javascript")
