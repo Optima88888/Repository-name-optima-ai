@@ -6484,94 +6484,104 @@ function dropKanban(ev){ ev.preventDefault(); const col=ev.currentTarget; if(dra
 
 
 
-<!-- REAL FINAL FIX: menu PRO lock + chat buttons stable -->
-<style id="real-final-menu-chat-pro-css">
-  .v2-nav-ico,.v2-nav-link .v2-nav-tag{display:none!important}
-  .v2-nav-link{position:relative!important;cursor:pointer!important;pointer-events:auto!important;padding-right:116px!important;user-select:none!important}
-  .v2-nav-link.pro-feature::after{
-    content:"PRO";position:absolute;right:14px;top:50%;transform:translateY(-50%);
-    font-size:12px;font-weight:1000;letter-spacing:.8px;color:#ecfdf5;
-    padding:6px 13px;border-radius:999px;background:linear-gradient(135deg,#16a34a,#22c55e,#86efac);
-    box-shadow:inset 0 0 10px rgba(255,255,255,.55),0 0 13px rgba(34,197,94,.95),0 0 28px rgba(34,197,94,.55);
-    animation:proGreenGlow 1.05s infinite alternate;
-  }
-  .v2-nav-link.premium-locked::after{
-    content:"PREMIUM"!important;position:absolute;right:12px;top:50%;transform:translateY(-50%);
-    font-size:11px;font-weight:1000;letter-spacing:.6px;color:#fff;
-    padding:6px 10px;border-radius:999px;background:linear-gradient(135deg,#f59e0b,#fb923c,#ef4444);
-    box-shadow:0 0 14px rgba(245,158,11,.95),0 0 26px rgba(239,68,68,.5);
-    animation:proGreenGlow 1.05s infinite alternate;
-  }
-  .v2-nav-link.premium-locked{opacity:.96;border-color:rgba(251,191,36,.65)!important}
-  @keyframes proGreenGlow{from{filter:brightness(1)}to{filter:brightness(1.35)}}
-
-  .floating-bot{position:fixed!important;right:24px!important;bottom:24px!important;z-index:2147483000!important;pointer-events:none!important}
-  .bot-bubble{pointer-events:auto!important;z-index:2147483002!important;cursor:pointer!important}
-  .bot-panel{pointer-events:auto!important;position:absolute!important;right:0!important;bottom:92px!important;width:min(430px,calc(100vw - 30px))!important;height:min(640px,calc(100vh - 130px))!important;display:none!important;flex-direction:column!important;overflow:hidden!important;background:#fff!important;border-radius:24px!important;box-shadow:0 24px 80px rgba(15,23,42,.35)!important;z-index:2147483001!important}
-  .bot-panel.bot-open{display:flex!important}
-  .bot-head{flex:0 0 auto!important}.bot-body{flex:1 1 auto!important;min-height:0!important;overflow-y:auto!important;padding:18px!important;background:#f8fafc!important}.bot-actions{flex:0 0 auto!important;display:grid!important;grid-template-columns:1fr 1fr!important;gap:10px!important;padding:12px 18px!important;background:#fff!important;border-top:1px solid #eef2ff!important}.bot-actions button{min-height:56px!important;white-space:normal!important;cursor:pointer!important;pointer-events:auto!important}.bot-input{flex:0 0 auto!important;display:flex!important;gap:10px!important;padding:12px 18px 18px!important;background:#fff!important}.bot-input input{flex:1!important;min-width:0!important}.bot-input button{flex:0 0 62px!important;cursor:pointer!important;pointer-events:auto!important}.bot-msg{max-width:100%!important;box-sizing:border-box!important;word-break:break-word!important;overflow-wrap:anywhere!important;margin:0 0 10px!important}
+<style id="REAL_LAST_FIX_20260610">
+/* REAL LAST FIX: PRO badge xanh, chat/menu/price click ổn định */
+.v2-nav-ico,.v2-nav-tag{display:none!important}
+.v2-nav-link{position:relative!important;cursor:pointer!important;pointer-events:auto!important;padding-right:96px!important;user-select:none!important}
+.v2-nav-link.real-pro::after{
+  content:"PRO";position:absolute;right:14px;top:14px;z-index:5;
+  font-size:12px;font-weight:1000;letter-spacing:.9px;color:#ECFDF5;
+  padding:6px 13px;border-radius:999px;
+  background:linear-gradient(135deg,#15803D,#22C55E,#86EFAC);
+  box-shadow:inset 0 0 10px rgba(255,255,255,.5),0 0 14px rgba(34,197,94,.95),0 0 30px rgba(34,197,94,.50);
+  animation:realProGlow 1.05s infinite alternate;
+}
+.v2-nav-link.real-premium-lock::after{
+  content:"PREMIUM";position:absolute;right:10px;top:14px;z-index:5;
+  font-size:11px;font-weight:1000;letter-spacing:.5px;color:white;
+  padding:6px 10px;border-radius:999px;
+  background:linear-gradient(135deg,#F59E0B,#FB923C,#EF4444);
+  box-shadow:0 0 16px rgba(245,158,11,.95),0 0 30px rgba(239,68,68,.50);
+  animation:realProGlow 1.05s infinite alternate;
+}
+@keyframes realProGlow{from{filter:brightness(1);transform:scale(1)}to{filter:brightness(1.35);transform:scale(1.04)}}
+.floating-bot{position:fixed!important;right:24px!important;bottom:24px!important;z-index:2147483600!important;pointer-events:none!important}
+.bot-bubble{pointer-events:auto!important;z-index:2147483602!important;cursor:pointer!important}
+.bot-panel{pointer-events:auto!important;position:absolute!important;right:0!important;bottom:92px!important;width:min(430px,calc(100vw - 30px))!important;height:min(650px,calc(100vh - 120px))!important;max-height:calc(100vh - 120px)!important;overflow:hidden!important;background:#fff!important;border-radius:24px!important;display:none!important;flex-direction:column!important;z-index:2147483601!important}
+.bot-panel.real-open{display:flex!important}
+.bot-head{flex:0 0 auto!important}.bot-body{flex:1 1 auto!important;min-height:0!important;overflow-y:auto!important;padding:18px!important;background:#F8FAFC!important}.bot-actions{flex:0 0 auto!important;display:grid!important;grid-template-columns:1fr 1fr!important;gap:10px!important;padding:12px 18px!important;background:#fff!important;border-top:1px solid #EEF2FF!important}.bot-actions button{min-height:58px!important;margin:0!important;white-space:normal!important;line-height:1.2!important;cursor:pointer!important;pointer-events:auto!important}.bot-input{flex:0 0 auto!important;display:flex!important;gap:10px!important;padding:12px 18px 18px!important;background:#fff!important}.bot-input input{min-width:0!important;flex:1!important}.bot-input button{flex:0 0 64px!important;cursor:pointer!important;pointer-events:auto!important}.bot-msg{max-width:100%!important;box-sizing:border-box!important;word-break:break-word!important;overflow-wrap:anywhere!important}.price-card,.premium-plan,.plan-button,.premium-btn{cursor:pointer!important;pointer-events:auto!important}#liveMemberCount{display:inline-block;min-width:32px;transition:transform .25s ease,color .25s ease}#liveMemberCount.bump{transform:scale(1.18);color:#16A34A!important}
 </style>
-<script id="real-final-menu-chat-pro-js">
+<script id="REAL_LAST_FIX_20260610_JS">
 (function(){
-  'use strict';
   var IS_PREMIUM = {{ 'true' if is_device_premium else 'false' }};
   var TRIAL_EXPIRED = {{ 'true' if free_status.is_expired else 'false' }};
-  var CORE_PRO = {facebook_center:1,page_center_total:1,post:1,fanpage_manager:1};
-  var TRIAL_UNLOCKED = {dashboard:1,group_suite:1,comment_manager:1};
+  var CORE_PRO = {facebook_center:1,page_center_total:1,post:1,fanpage_manager:1,group_suite:1,comment_manager:1};
   var PREMIUM_ONLY = {messenger_ai:1,crm_sales:1,marketing_director:1,ai_studio:1,creative_center:1,analytics:1,analytics_center:1,automation_center:1};
-  var ALIAS = {post:'page_center_total',page_center:'page_center_total',page_comment_pro:'page_center_total',page_comment_queue:'page_center_total',group_marketing:'group_suite'};
-  function norm(id){return ALIAS[id]||id||'dashboard';}
-  function nameOf(id){id=norm(id);return {facebook_center:'Facebook Center',page_center_total:'Page Center Tổng',fanpage_manager:'Quản lý Fanpage',group_suite:'Group Center Tổng',comment_manager:'AI Comment',messenger_ai:'AI Messenger',crm_sales:'CRM Kanban',marketing_director:'AI Marketing Director',ai_studio:'AI Studio',creative_center:'Image / Video / Voice',analytics:'Analytics Center',automation_center:'Cài đặt Automation'}[id]||'Tính năng Premium';}
-  function isLocked(id){id=norm(id); if(IS_PREMIUM) return false; if(PREMIUM_ONLY[id]) return true; if(TRIAL_EXPIRED && (CORE_PRO[id]||TRIAL_UNLOCKED[id])) return true; return false;}
-  function goPremium(feature){
-    if(typeof window.openLockedFeature==='function') window.openLockedFeature(feature||'Tính năng Premium');
-    else if(typeof window.openPremiumPopup==='function') window.openPremiumPopup();
-    var p=document.getElementById('premium')||document.getElementById('pricing');
-    if(p){try{p.style.display='block';p.classList.add('active-module');p.scrollIntoView({behavior:'smooth',block:'start'});}catch(e){location.hash='premium';}}
-    return false;
-  }
+  var ALIAS = {post:'page_center_total',page_center:'page_center_total',group_marketing:'group_suite',group_finder:'group_suite',group_uid_splitter:'group_suite',group_join_queue:'group_suite',group_post_filter:'group_suite',page_comment_pro:'page_center_total',page_comment_queue:'page_center_total'};
+  function norm(id){return ALIAS[id]||id;}
+  function locked(id){id=norm(id); if(IS_PREMIUM) return false; if(PREMIUM_ONLY[id]) return true; if(TRIAL_EXPIRED && CORE_PRO[id]) return true; return false;}
+  function fname(id){id=norm(id); var m={facebook_center:'Facebook Center',page_center_total:'Page Center Tổng',fanpage_manager:'Quản lý Fanpage',group_suite:'Group Center Tổng',comment_manager:'AI Comment',messenger_ai:'AI Messenger',crm_sales:'CRM Kanban',marketing_director:'AI Marketing Director',ai_studio:'AI Studio',creative_center:'Image / Video / Voice',analytics:'Analytics Center',automation_center:'Cài đặt Automation'}; return m[id]||'Tính năng Premium';}
   window.openModule=function(id){
-    id=norm(id);
-    if(isLocked(id)) return goPremium(nameOf(id));
+    id=norm(id||'dashboard');
+    if(locked(id)){
+      if(typeof openLockedFeature==='function') openLockedFeature(fname(id));
+      var premium=document.getElementById('premium'); if(premium) setTimeout(function(){premium.scrollIntoView({behavior:'smooth',block:'start'});},180);
+      return false;
+    }
     document.querySelectorAll('.module-section').forEach(function(el){el.classList.remove('active-module');});
     var target=document.getElementById(id)||document.getElementById('dashboard');
-    if(target){target.classList.add('active-module');setTimeout(function(){try{target.scrollIntoView({behavior:'smooth',block:'start'});}catch(e){}},20);}
+    if(target){target.classList.add('active-module'); setTimeout(function(){target.scrollIntoView({behavior:'smooth',block:'start'});},30);}
     document.querySelectorAll('.v2-nav-link').forEach(function(a){a.classList.remove('active');});
-    document.querySelectorAll('.v2-nav-link[href="#'+id+'"],.v2-nav-link[href="#post"]').forEach(function(a){ if(norm((a.getAttribute('href')||'').slice(1))===id) a.classList.add('active'); });
+    var active=document.querySelector('.v2-nav-link[href="#'+id+'"]'); if(active) active.classList.add('active');
     return false;
   };
   function markMenu(){
     document.querySelectorAll('.v2-nav-link').forEach(function(a){
-      var id=(a.getAttribute('href')||'').replace('#',''); var nid=norm(id);
+      var raw=(a.getAttribute('href')||'').replace('#',''); var id=norm(raw);
       a.querySelectorAll('.v2-nav-ico,.v2-nav-tag').forEach(function(x){x.remove();});
-      a.classList.remove('pro-feature','premium-locked');
-      if(CORE_PRO[nid] && !isLocked(nid)) a.classList.add('pro-feature');
-      if(isLocked(nid)) a.classList.add('premium-locked');
+      a.classList.remove('real-pro','real-premium-lock','pro-feature','premium-locked');
+      if(locked(raw)) a.classList.add('real-premium-lock'); else if(CORE_PRO[id]) a.classList.add('real-pro');
     });
   }
-  function esc(t){return String(t||'').replace(/[&<>]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c];});}
-  function body(){return document.getElementById('floatingBotBody');}
-  window.appendBotGreeting=function(){var b=body(); if(!b) return; if(b.dataset.greeted==='1') return; b.dataset.greeted='1'; b.innerHTML='<div class="bot-msg ai"><b>Bot hỗ trợ:</b><br><br>Dạ mình đang cần hỗ trợ vấn đề gì ạ?<br><br>• Nâng cấp Premium<br>• Kích hoạt tài khoản<br>• Thanh toán<br>• Hướng dẫn sử dụng<br>• Báo lỗi hệ thống</div>'; b.scrollTop=b.scrollHeight;};
-  function replyFor(t){var x=String(t||'').toLowerCase(); if(x.includes('premium')||x.includes('nâng cấp')||x.includes('giá')||x.includes('gói')) return 'Dạ hiện hệ thống có các gói:<br><br>• 1 tháng: <b>159K</b><br>• 3 tháng: <b>359K</b><br>• 6 tháng: <b>559K</b><br>• 1 năm: <b>859K</b><br>• Nhà bán hàng chuyên nghiệp: <b>1.959K</b><br><br>Sau khi thanh toán, anh/chị gửi ID thiết bị để admin duyệt mở khóa ạ.'; if(x.includes('thanh toán')||x.includes('qr')||x.includes('chuyển khoản')) return 'Dạ sau khi chuyển khoản vui lòng gửi:<br><br>• ID thiết bị<br>• Ảnh thanh toán<br>• Gói đã đăng ký<br><br>Nếu sau 5 phút chưa kích hoạt, vui lòng liên hệ Zalo <b>036 338 2629</b>.'; if(x.includes('kích hoạt')||x.includes('duyệt')) return 'Dạ anh/chị gửi giúp em ID thiết bị, số điện thoại, Gmail và ảnh thanh toán. Admin duyệt xong thiết bị sẽ tự mở chức năng ạ.'; if(x.includes('zalo')||x.includes('liên hệ')||x.includes('hỗ trợ')) return 'Zalo hỗ trợ: <b>036 338 2629</b><br>Gmail hỗ trợ: <b>support@gptmini.pro</b>'; if(x.includes('lỗi')) return 'Dạ anh/chị mô tả lỗi hoặc gửi ảnh màn hình giúp em kiểm tra nhanh ạ.'; return 'Dạ em đã nhận tin nhắn. Anh/chị cần hỗ trợ nâng cấp, kích hoạt, thanh toán hay báo lỗi hệ thống ạ?';}
-  function addUser(t){var b=body(); if(!b) return; b.insertAdjacentHTML('beforeend','<div class="bot-msg"><b>Bạn:</b> '+esc(t)+'</div>'); b.scrollTop=b.scrollHeight;}
-  function addBot(html){var b=body(); if(!b) return; b.insertAdjacentHTML('beforeend','<div class="bot-msg ai"><b>Bot hỗ trợ:</b><br>'+html+'</div>'); b.scrollTop=b.scrollHeight;}
-  function sendAdmin(t){try{var did=(window.getOrCreateDeviceId?window.getOrCreateDeviceId():(localStorage.getItem('mkt_device_id')||'')); fetch('/support_send',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({device_id:did,sender:'user',message:t})});}catch(e){}}
-  window.botQuick=function(t){addUser(t); setTimeout(function(){addBot(replyFor(t));},350); sendAdmin(t); return false;};
-  window.sendBotInput=function(){var i=document.getElementById('botInputText'); if(!i||!i.value.trim()) return false; var t=i.value.trim(); i.value=''; return window.botQuick(t);};
-  window.toggleFloatingBot=function(){var p=document.getElementById('floatingBotPanel'); if(!p) return false; var open=!p.classList.contains('bot-open'); p.classList.toggle('bot-open',open); p.style.display=open?'flex':'none'; if(open) window.appendBotGreeting(); return false;};
-  window.closeFloatingBot=function(){var p=document.getElementById('floatingBotPanel'); if(p){p.classList.remove('bot-open');p.style.display='none';} return false;};
-  document.addEventListener('click',function(e){
-    var menu=e.target.closest&&e.target.closest('.v2-nav-link[href^="#"]'); if(menu){e.preventDefault();e.stopPropagation();return window.openModule((menu.getAttribute('href')||'').replace('#',''));}
-    var b=e.target.closest&&e.target.closest('.bot-bubble'); if(b){e.preventDefault();e.stopPropagation();return window.toggleFloatingBot();}
-    var c=e.target.closest&&e.target.closest('.bot-close'); if(c){e.preventDefault();e.stopPropagation();return window.closeFloatingBot();}
-    var q=e.target.closest&&e.target.closest('.bot-actions button'); if(q){e.preventDefault();e.stopPropagation();return window.botQuick(q.textContent.trim());}
-    var s=e.target.closest&&e.target.closest('.bot-input button'); if(s){e.preventDefault();e.stopPropagation();return window.sendBotInput();}
-  },true);
-  document.addEventListener('keydown',function(e){if(e.key==='Enter' && e.target && e.target.id==='botInputText'){e.preventDefault();window.sendBotInput();}},true);
-  document.addEventListener('DOMContentLoaded',function(){markMenu(); var p=document.getElementById('floatingBotPanel'); if(p){p.style.display='none';p.classList.remove('bot-open');} document.querySelectorAll('.v2-nav-link,.bot-bubble,.bot-close,.bot-actions button,.bot-input button').forEach(function(el){el.style.pointerEvents='auto';});});
-  setTimeout(markMenu,500);
+  function openBot(open){
+    var p=document.getElementById('floatingBotPanel'); if(!p) return false;
+    if(open===undefined) open=!p.classList.contains('real-open');
+    p.classList.toggle('real-open',!!open); p.style.display=open?'flex':'none';
+    if(open && typeof appendBotGreeting==='function') appendBotGreeting();
+    setTimeout(function(){var b=document.getElementById('floatingBotBody'); if(b) b.scrollTop=b.scrollHeight;},60);
+    return false;
+  }
+  window.toggleFloatingBot=function(){return openBot();};
+  window.closeFloatingBot=function(){return openBot(false);};
+  function planKeyFromText(text){text=(text||'').toLowerCase(); if(text.includes('1.959')||text.includes('1959')||text.includes('nhà bán')||text.includes('chuyên nghiệp')||text.includes('trọn đời')||text.includes('vĩnh')) return 'lifetime'; if(text.includes('859')||text.includes('1 năm')) return 'yearly'; if(text.includes('559')||text.includes('6 tháng')) return 'halfyear'; if(text.includes('359')||text.includes('3 tháng')) return 'quarterly'; if(text.includes('159')||text.includes('1 tháng')) return 'monthly'; return 'yearly';}
+  function openPlanFrom(el){var card=el.closest('.premium-plan,.price-card')||el; var key=planKeyFromText(card.innerText||el.innerText||''); if(typeof openPayment==='function') openPayment(key); else if(typeof scrollToPricing==='function') scrollToPricing(); return false;}
+  function animateCount(){
+    var el=document.getElementById('liveMemberCount'); if(!el) return;
+    var n=parseInt((el.textContent||localStorage.getItem('mkt_live_count')||'231').replace(/\D/g,''),10)||231;
+    var step=Math.floor(Math.random()*3)+1; n+=step; if(n>999) n=231+Math.floor(Math.random()*20);
+    el.textContent=String(n); localStorage.setItem('mkt_live_count',String(n));
+    el.classList.add('bump'); setTimeout(function(){el.classList.remove('bump');},260);
+  }
+  function boot(){
+    markMenu();
+    var saved=localStorage.getItem('mkt_live_count'); var el=document.getElementById('liveMemberCount'); if(el && saved) el.textContent=saved;
+    setInterval(animateCount,1400);
+    document.addEventListener('click',function(e){
+      var bubble=e.target.closest('.bot-bubble'); if(bubble){e.preventDefault();e.stopPropagation();return openBot();}
+      var close=e.target.closest('.bot-close'); if(close){e.preventDefault();e.stopPropagation();return openBot(false);}
+      var quick=e.target.closest('.bot-actions button'); if(quick){e.preventDefault();e.stopPropagation(); if(typeof botQuick==='function') botQuick((quick.innerText||'').trim()); return false;}
+      var send=e.target.closest('.bot-input button'); if(send){e.preventDefault();e.stopPropagation(); if(typeof sendBotInput==='function') sendBotInput(); return false;}
+      var nav=e.target.closest('.v2-nav-link[href^="#"]'); if(nav){e.preventDefault();e.stopPropagation();return window.openModule((nav.getAttribute('href')||'').replace('#',''));}
+      var priceBtn=e.target.closest('button,.plan-button,.premium-btn'); if(priceBtn && ((priceBtn.innerText||'').includes('Xem chi tiết gói') || priceBtn.closest('.premium-plan,.price-card'))){e.preventDefault();e.stopPropagation();return openPlanFrom(priceBtn);}
+      var card=e.target.closest('.premium-plan,.price-card'); if(card){e.preventDefault();e.stopPropagation();return openPlanFrom(card);}
+    },true);
+    var input=document.getElementById('botInputText'); if(input){input.addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault(); if(typeof sendBotInput==='function') sendBotInput();}},true);}
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',boot); else boot();
+  setTimeout(markMenu,700); setTimeout(markMenu,1800);
 })();
 </script>
+
 </body>
 </html>
 """
