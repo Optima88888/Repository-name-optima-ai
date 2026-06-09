@@ -16,9 +16,9 @@ import io
 import shutil
 
 try:
-import openpyxl
+    import openpyxl
 except Exception:
-openpyxl = None
+    openpyxl = None
 
 load_dotenv()
 
