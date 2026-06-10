@@ -8132,7 +8132,7 @@ ADMIN_HTML = """
   window.submitPremiumRequest=function(){
     var phone=(q('#payPhone')&&q('#payPhone').value.trim())||'';
     var email=(q('#payEmail')&&q('#payEmail').value.trim())||'';
-    if(!phone || !email){ window.showPaymentNotice('Vui lòng nhập số điện thoại và Gmail để admin đối chiếu nhanh.'); return false; }
+    if(!phone || !email){ window.showPaymentNotice('Vui lòng nhập Số Điện Thoại và Gmail để được duyệt nâng cấp tự động lên gói Premium sau khi thanh toán xong.'); return false; }
     if(typeof oldSubmit==='function'){
       try{
         var r=oldSubmit();
@@ -8147,7 +8147,7 @@ ADMIN_HTML = """
     var note=q('#mktPlanNote');
     if(note){
       var p=plan(window.currentPremiumPlanKey||keyFromText((q('#mktPlanOverlay')||document.body).innerText));
-      note.innerHTML='ID thiết bị: <b>'+deviceId()+'</b><br><span style="color:#64748b">Bấm nâng cấp để nhập số điện thoại, Gmail và nhận nội dung chuyển khoản tự động.</span>';
+      note.innerHTML='ID thiết bị: <b>'+deviceId()+'</b><br>
     }
     var mini=q('.mktPlanMini'); if(mini) mini.textContent='Bấm nâng cấp gói này để nhập số điện thoại, Gmail và xem nội dung chuyển khoản tự động.';
     var pay=q('#mktPlanPay'); if(pay){pay.onclick=function(e){e.preventDefault(); e.stopPropagation(); var ov=q('#mktPlanOverlay'); if(ov) ov.style.display='none'; return window.openPayment(window.currentPremiumPlanKey||keyFromText((ov||document.body).innerText));};}
