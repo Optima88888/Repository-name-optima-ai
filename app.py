@@ -9156,6 +9156,187 @@ ADMIN_HTML = """
   setTimeout(function(){deviceId(); startPolling();},800);
 })();
 </script>
+
+
+<!-- FINAL PATCH V120: mobile install UX + support bot hard fix -->
+<style id="mkt-v120-mobile-install-bot-fix">
+  .mkt-install-old,.app-install-banner,#installAppBtn{display:none!important;}
+  .mkt-mobile-actions{
+    position:fixed!important;
+    left:10px!important;
+    bottom:calc(14px + env(safe-area-inset-bottom,0px))!important;
+    z-index:2147482500!important;
+    display:none!important;
+    align-items:center!important;
+    gap:8px!important;
+    pointer-events:auto!important;
+  }
+  .mkt-mobile-actions button,.mkt-mobile-actions a{
+    border:0!important;
+    cursor:pointer!important;
+    min-height:42px!important;
+    border-radius:999px!important;
+    padding:8px 13px!important;
+    font-weight:900!important;
+    font-size:13px!important;
+    line-height:1.05!important;
+    color:#fff!important;
+    text-decoration:none!important;
+    display:inline-flex!important;
+    align-items:center!important;
+    gap:7px!important;
+    box-shadow:0 12px 30px rgba(15,23,42,.28)!important;
+    animation:mktSoftMove 2.35s ease-in-out infinite!important;
+  }
+  .mkt-mobile-actions .mkt-download-btn{
+    background:linear-gradient(135deg,#04befe,#7c3aed)!important;
+  }
+  .mkt-mobile-actions .mkt-ctv-btn{
+    background:linear-gradient(135deg,#16a34a,#84cc16)!important;
+    animation-delay:.22s!important;
+  }
+  .mkt-mobile-actions small{display:block!important;font-size:10px!important;font-weight:800!important;opacity:.94!important;margin-top:1px!important;}
+  @keyframes mktSoftMove{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+  .mkt-install-sheet{
+    position:fixed!important;inset:0!important;z-index:2147483600!important;
+    background:rgba(2,6,23,.58)!important;display:none!important;align-items:flex-end!important;
+    backdrop-filter:blur(5px)!important;
+  }
+  .mkt-install-sheet.open{display:flex!important;}
+  .mkt-install-box{
+    width:100%!important;background:#fff!important;color:#111827!important;
+    border-radius:24px 24px 0 0!important;padding:18px 18px calc(18px + env(safe-area-inset-bottom,0px))!important;
+    box-shadow:0 -18px 50px rgba(0,0,0,.32)!important;
+  }
+  .mkt-install-title{font-size:20px!important;font-weight:1000!important;margin-bottom:8px!important;color:#111827!important;}
+  .mkt-install-text{font-size:14px!important;line-height:1.45!important;color:#475569!important;margin-bottom:14px!important;}
+  .mkt-install-steps{background:#f8fafc!important;border:1px solid #e5e7eb!important;border-radius:16px!important;padding:12px!important;margin:12px 0!important;font-size:13px!important;line-height:1.55!important;color:#334155!important;}
+  .mkt-install-actions{display:flex!important;gap:10px!important;}
+  .mkt-install-actions button{flex:1!important;border:0!important;border-radius:14px!important;padding:13px 10px!important;font-weight:900!important;}
+  .mkt-install-primary{background:linear-gradient(135deg,#2563eb,#7c3aed)!important;color:#fff!important;}
+  .mkt-install-secondary{background:#eef2ff!important;color:#312e81!important;}
+
+  .floating-bot{z-index:2147483400!important;pointer-events:auto!important;}
+  .bot-bubble{pointer-events:auto!important;touch-action:manipulation!important;position:relative!important;z-index:2147483402!important;}
+  .bot-panel{z-index:2147483403!important;pointer-events:auto!important;}
+  .bot-panel.mkt-bot-open{display:block!important;}
+  body.mkt-support-open .bot-panel{display:block!important;}
+  @media(max-width:820px){
+    .mkt-mobile-actions{display:flex!important;}
+    .floating-bot{right:14px!important;bottom:calc(76px + env(safe-area-inset-bottom,0px))!important;}
+    .bot-bubble{width:62px!important;height:62px!important;font-size:28px!important;}
+    .bot-panel{
+      position:fixed!important;left:10px!important;right:10px!important;bottom:calc(86px + env(safe-area-inset-bottom,0px))!important;
+      width:auto!important;max-width:none!important;border-radius:22px!important;overflow:hidden!important;
+      max-height:72vh!important;
+    }
+    .bot-body{max-height:38vh!important;}
+  }
+</style>
+<div class="mkt-mobile-actions" id="mktMobileActions">
+  <button type="button" class="mkt-download-btn" data-mkt-install-app><span>📱</span><span>GPT MKT<small>Tải xuống</small></span></button>
+  <button type="button" class="mkt-ctv-btn" data-mkt-open-ctv><span>💰</span><span>CTV</span></button>
+</div>
+<div class="mkt-install-sheet" id="mktInstallSheet" aria-hidden="true">
+  <div class="mkt-install-box">
+    <div class="mkt-install-title">Cài GPT MKT Pro vào điện thoại</div>
+    <div class="mkt-install-text" id="mktInstallText">Đang chuẩn bị cài đặt...</div>
+    <div class="mkt-install-steps" id="mktInstallSteps"></div>
+    <div class="mkt-install-actions">
+      <button type="button" class="mkt-install-primary" id="mktInstallPrimary">Cài ngay</button>
+      <button type="button" class="mkt-install-secondary" id="mktInstallClose">Đóng</button>
+    </div>
+  </div>
+</div>
+<script id="mkt-v120-mobile-install-bot-fix-js">
+(function(){
+  'use strict';
+  var deferredPrompt=null;
+  var lastSupportId=Number(localStorage.getItem('mkt_support_last_id')||0);
+  function $(id){return document.getElementById(id)}
+  function isIOS(){return /iphone|ipad|ipod/i.test(navigator.userAgent)}
+  function isAndroid(){return /android/i.test(navigator.userAgent)}
+  function escapeHtml(s){return String(s||'').replace(/[&<>"']/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]})}
+  function deviceId(){
+    var v='';
+    try{v=localStorage.getItem('mkt_device_id')||'';}catch(e){}
+    if(!v){
+      var el=$('sidebarDeviceId')||document.querySelector('[id*=DeviceId],.device-id-row span');
+      v=el?String(el.textContent||'').trim():'';
+    }
+    if(!v){v='MKT-'+Math.random().toString(36).slice(2,10).toUpperCase();try{localStorage.setItem('mkt_device_id',v)}catch(e){}}
+    return String(v).trim().toUpperCase();
+  }
+  function panel(){return $('floatingBotPanel')||document.querySelector('.bot-panel')}
+  function bodyBox(){return $('floatingBotBody')||document.querySelector('.bot-body')}
+  function scrollBot(){var b=bodyBox(); if(b) b.scrollTop=b.scrollHeight;}
+  function appendMsg(sender,msg){
+    var b=bodyBox(); if(!b) return;
+    var cls=sender==='admin'||sender==='ai'?'bot-msg ai':'bot-msg';
+    var name=sender==='admin'?'Admin hỗ trợ':(sender==='ai'?'Bot hỗ trợ':'Bạn');
+    b.insertAdjacentHTML('beforeend','<div class="'+cls+'"><b>'+name+':</b><br>'+escapeHtml(msg).replace(/\n/g,'<br>')+'</div>');
+    scrollBot();
+  }
+  window.openFloatingBot=function(){var p=panel(); if(!p) return; p.classList.add('mkt-bot-open'); p.style.display='block'; document.body.classList.add('mkt-support-open'); setTimeout(scrollBot,60); pollSupport();};
+  window.closeFloatingBot=function(){var p=panel(); if(!p) return; p.classList.remove('mkt-bot-open'); p.style.display='none'; document.body.classList.remove('mkt-support-open');};
+  window.toggleFloatingBot=function(){var p=panel(); if(!p) return; if(p.classList.contains('mkt-bot-open')||p.style.display==='block'){window.closeFloatingBot();}else{window.openFloatingBot();}};
+  window.sendBotInput=function(){
+    var input=$('botInputText'); if(!input||!input.value.trim()) return;
+    var text=input.value.trim(); input.value=''; appendMsg('user',text);
+    fetch('/support_send',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({device_id:deviceId(),sender:'user',message:text})}).catch(function(){});
+    setTimeout(function(){appendMsg('ai','Tin nhắn đã được chuyển về Web Admin. Admin sẽ phản hồi trực tiếp trong khung chat này.');},450);
+    startPoll();
+  };
+  window.botQuick=function(text){var input=$('botInputText'); if(input){input.value=text;} window.sendBotInput();};
+  function pollSupport(){
+    fetch('/support_poll?device_id='+encodeURIComponent(deviceId())+'&after_id='+encodeURIComponent(lastSupportId),{cache:'no-store'})
+      .then(function(r){return r.json()}).then(function(data){
+        if(!data||!data.messages) return;
+        data.messages.forEach(function(m){
+          if(Number(m.id)>lastSupportId) lastSupportId=Number(m.id);
+          if(String(m.sender).toLowerCase()==='admin'){appendMsg('admin',m.message);}
+        });
+        try{localStorage.setItem('mkt_support_last_id',String(lastSupportId));}catch(e){}
+      }).catch(function(){});
+  }
+  var pollTimer=null; function startPoll(){if(pollTimer) return; pollTimer=setInterval(pollSupport,3500); pollSupport();}
+  window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();deferredPrompt=e;document.documentElement.classList.add('mkt-can-install');});
+  window.addEventListener('appinstalled',function(){deferredPrompt=null;var a=$('mktMobileActions'); if(a) a.style.display='none';});
+  function showInstallGuide(){
+    var sheet=$('mktInstallSheet'), text=$('mktInstallText'), steps=$('mktInstallSteps'), primary=$('mktInstallPrimary');
+    if(!sheet||!text||!steps||!primary) return;
+    if(deferredPrompt && isAndroid()){
+      text.innerHTML='Bấm <b>Cài ngay</b> để thêm GPT MKT Pro ra màn hình điện thoại.';
+      steps.innerHTML='Sau khi cài, icon GPT MKT Pro sẽ hiện ngoài màn hình và mở như app riêng.';
+      primary.textContent='Cài ngay';
+      primary.onclick=function(){sheet.classList.remove('open');deferredPrompt.prompt();deferredPrompt.userChoice.finally(function(){deferredPrompt=null;});};
+    }else if(isIOS()){
+      text.innerHTML='iPhone không cho website tự cài 1 chạm. Làm nhanh theo 3 bước sau:';
+      steps.innerHTML='1. Bấm nút <b>Chia sẻ</b> trên thanh Safari<br>2. Chọn <b>Thêm vào màn hình chính</b><br>3. Bấm <b>Thêm</b>';
+      primary.textContent='Đã hiểu'; primary.onclick=function(){sheet.classList.remove('open')};
+    }else{
+      text.innerHTML='Nếu chưa hiện popup cài đặt, trình duyệt đang chặn lời mời cài app.';
+      steps.innerHTML='Trên Chrome Android: bấm menu <b>⋮</b> góc phải → <b>Thêm vào màn hình chính</b> hoặc <b>Cài đặt ứng dụng</b>.';
+      primary.textContent='Đã hiểu'; primary.onclick=function(){sheet.classList.remove('open')};
+    }
+    sheet.classList.add('open');
+  }
+  document.addEventListener('click',function(e){
+    var b=e.target.closest('.bot-bubble,[data-open-support-bot]');
+    if(b){e.preventDefault();e.stopPropagation(); if(e.stopImmediatePropagation)e.stopImmediatePropagation(); window.toggleFloatingBot(); return false;}
+    var c=e.target.closest('.bot-close');
+    if(c){e.preventDefault();e.stopPropagation(); window.closeFloatingBot(); return false;}
+    var install=e.target.closest('[data-mkt-install-app],.mkt-download-btn');
+    if(install){e.preventDefault();e.stopPropagation(); showInstallGuide(); return false;}
+    var ctv=e.target.closest('[data-mkt-open-ctv],.mkt-ctv-btn');
+    if(ctv){e.preventDefault();e.stopPropagation(); if(window.openModule){window.openModule('affiliate')} else {location.hash='affiliate';} return false;}
+    if(e.target.closest('#mktInstallClose')){e.preventDefault();$('mktInstallSheet').classList.remove('open');return false;}
+  },true);
+  document.addEventListener('DOMContentLoaded',function(){startPoll();});
+  setTimeout(function(){startPoll();},900);
+})();
+</script>
+
 </body></html>
 """
 
