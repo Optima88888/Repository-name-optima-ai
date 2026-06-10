@@ -7634,210 +7634,6 @@ function dropKanban(ev){ ev.preventDefault(); const col=ev.currentTarget; if(dra
 })();
 </script>
 
-
-
-<!-- SAAS LEFT MENU FINAL 2026: compact sidebar + dot Pro/Premium -->
-<style id="saas-left-menu-final-2026">
-/* Thu gọn menu trái theo kiểu SaaS cao cấp */
-.sidebar{
-  background:linear-gradient(180deg,#071126 0%,#0B1020 48%,#0A1020 100%)!important;
-  border-right:1px solid rgba(148,163,184,.16)!important;
-  box-shadow:inset -1px 0 0 rgba(255,255,255,.03)!important;
-}
-.v2-nav-title{
-  margin:16px 0 7px!important;
-  padding:0 8px!important;
-  font-size:10.5px!important;
-  line-height:1!important;
-  letter-spacing:.13em!important;
-  font-weight:900!important;
-  color:#8EA4FF!important;
-  opacity:.95!important;
-}
-.v2-nav-link{
-  min-height:46px!important;
-  height:auto!important;
-  display:flex!important;
-  align-items:center!important;
-  justify-content:space-between!important;
-  gap:10px!important;
-  margin:5px 0!important;
-  padding:10px 12px!important;
-  padding-right:12px!important;
-  border-radius:14px!important;
-  color:#F8FAFC!important;
-  text-decoration:none!important;
-  background:linear-gradient(135deg,rgba(255,255,255,.060),rgba(255,255,255,.030))!important;
-  border:1px solid rgba(148,163,184,.13)!important;
-  box-shadow:none!important;
-  position:relative!important;
-  overflow:hidden!important;
-  transition:transform .18s ease, background .18s ease, border-color .18s ease, box-shadow .18s ease!important;
-}
-.v2-nav-link::before{
-  content:""!important;
-  position:absolute!important;
-  left:0!important;top:9px!important;bottom:9px!important;
-  width:2px!important;
-  border-radius:999px!important;
-  background:transparent!important;
-  opacity:0!important;
-}
-.v2-nav-link:hover,
-.v2-nav-link.active{
-  transform:translateX(4px)!important;
-  background:linear-gradient(135deg,rgba(37,99,235,.18),rgba(124,58,237,.12))!important;
-  border-color:rgba(129,140,248,.32)!important;
-  box-shadow:0 10px 26px rgba(2,6,23,.22)!important;
-}
-.v2-nav-link:hover::before,
-.v2-nav-link.active::before{
-  opacity:1!important;
-  background:linear-gradient(180deg,#38BDF8,#8B5CF6)!important;
-}
-.v2-nav-text{
-  flex:1 1 auto!important;
-  min-width:0!important;
-  font-size:14px!important;
-  line-height:1.22!important;
-  font-weight:850!important;
-  letter-spacing:-.015em!important;
-  color:#F8FAFC!important;
-}
-.v2-nav-ico,
-.v2-nav-tag{display:none!important;width:0!important;min-width:0!important;margin:0!important;padding:0!important;overflow:hidden!important}
-/* Xóa toàn bộ badge nút cũ, thay bằng chấm + chữ nhỏ */
-.v2-nav-link.real-pro::after,
-.v2-nav-link.menu-pro::after,
-.v2-nav-link.pro-feature::after,
-.v2-nav-link.premium-locked::after,
-.v2-nav-link.real-premium-lock::after,
-.v2-nav-link.menu-locked::after{
-  position:static!important;
-  transform:none!important;
-  animation:none!important;
-  filter:none!important;
-  box-shadow:none!important;
-  background:transparent!important;
-  border:0!important;
-  padding:0!important;
-  min-width:auto!important;
-  height:auto!important;
-  display:inline-flex!important;
-  align-items:center!important;
-  justify-content:flex-end!important;
-  gap:6px!important;
-  font-size:11px!important;
-  line-height:1!important;
-  font-weight:850!important;
-  letter-spacing:-.01em!important;
-  white-space:nowrap!important;
-  color:#DDE7FF!important;
-  z-index:5!important;
-}
-.v2-nav-link.real-pro::after,
-.v2-nav-link.menu-pro::after,
-.v2-nav-link.pro-feature::after{
-  content:"● Pro"!important;
-  color:#E8FFF4!important;
-  text-shadow:none!important;
-}
-.v2-nav-link.premium-locked::after,
-.v2-nav-link.real-premium-lock::after,
-.v2-nav-link.menu-locked::after{
-  content:"● Premium"!important;
-  color:#FFF4CF!important;
-  text-shadow:none!important;
-}
-/* tô màu riêng cho dấu chấm qua gradient text */
-.v2-nav-link.real-pro::after,
-.v2-nav-link.menu-pro::after,
-.v2-nav-link.pro-feature::after{
-  background:linear-gradient(90deg,#34D399 0 19%,#E8FFF4 20% 100%)!important;
-  -webkit-background-clip:text!important;
-  background-clip:text!important;
-  -webkit-text-fill-color:transparent!important;
-}
-.v2-nav-link.premium-locked::after,
-.v2-nav-link.real-premium-lock::after,
-.v2-nav-link.menu-locked::after{
-  background:linear-gradient(90deg,#FACC15 0 19%,#FFF4CF 20% 100%)!important;
-  -webkit-background-clip:text!important;
-  background-clip:text!important;
-  -webkit-text-fill-color:transparent!important;
-}
-.v2-nav-link.real-pro,
-.v2-nav-link.menu-pro,
-.v2-nav-link.pro-feature{
-  border-color:rgba(52,211,153,.18)!important;
-}
-.v2-nav-link.premium-locked,
-.v2-nav-link.real-premium-lock,
-.v2-nav-link.menu-locked{
-  border-color:rgba(250,204,21,.18)!important;
-  background:linear-gradient(135deg,rgba(255,255,255,.055),rgba(250,204,21,.035))!important;
-  opacity:1!important;
-}
-/* Card cài app điện thoại */
-.mkt-install-sidebar-card{
-  margin:10px 0 14px!important;
-  padding:12px!important;
-  border-radius:16px!important;
-  background:linear-gradient(135deg,rgba(37,99,235,.22),rgba(124,58,237,.16))!important;
-  border:1px solid rgba(96,165,250,.28)!important;
-  color:#F8FAFC!important;
-  cursor:pointer!important;
-  box-shadow:0 12px 30px rgba(37,99,235,.10)!important;
-}
-.mkt-install-sidebar-card b{display:block;font-size:13.5px;line-height:1.15;margin-bottom:4px;color:white!important}
-.mkt-install-sidebar-card span{display:block;font-size:11px;color:#C7D2FE!important;font-weight:750!important}
-.mkt-install-sidebar-card:hover{transform:translateY(-1px)!important;border-color:rgba(96,165,250,.45)!important}
-/* Ẩn bớt card thiết bị quá nổi nếu có, cho menu gọn hơn */
-.device-premium-card{border-radius:16px!important;padding:12px!important;margin-bottom:10px!important}
-.device-premium-card b{font-size:13px!important}
-#sidebarDeviceId{font-size:12px!important;letter-spacing:.25px!important}
-@media(max-width:920px){
-  .v2-nav-link{min-height:44px!important;padding:10px 12px!important}
-  .v2-nav-text{font-size:13.5px!important}
-}
-</style>
-<script id="saas-left-menu-final-2026-js">
-(function(){
-  function norm(id){
-    var alias={post:'page_center_total',page_center:'page_center_total',group_marketing:'group_suite',group_finder:'group_suite',group_uid_splitter:'group_suite',group_join_queue:'group_suite',group_post_filter:'group_suite',page_comment_pro:'page_center_total',page_comment_queue:'page_center_total'};
-    return alias[id]||id;
-  }
-  function markMenuSaas(){
-    var core={facebook_center:1,page_center_total:1,post:1,fanpage_manager:1,group_suite:1,comment_manager:1};
-    var premium={messenger_ai:1,crm_sales:1,marketing_director:1,ai_studio:1,creative_center:1,analytics:1,analytics_center:1,automation_center:1};
-    document.querySelectorAll('.v2-nav-link').forEach(function(a){
-      var raw=(a.getAttribute('href')||'').replace('#','');
-      var id=norm(raw);
-      a.querySelectorAll('.v2-nav-ico,.v2-nav-tag').forEach(function(x){x.remove();});
-      a.classList.remove('real-pro','menu-pro','pro-feature','premium-locked','real-premium-lock','menu-locked');
-      if(core[id]) a.classList.add('real-pro');
-      if(premium[id]) a.classList.add('real-premium-lock');
-    });
-  }
-  function addInstallCard(){
-    var side=document.querySelector('.sidebar'); if(!side || document.getElementById('mktInstallSidebarCard')) return;
-    var firstTitle=side.querySelector('.v2-nav-title');
-    var card=document.createElement('div');
-    card.id='mktInstallSidebarCard';
-    card.className='mkt-install-sidebar-card';
-    card.innerHTML='<b>📲 Cài đặt App</b><span>Thêm GPT MKT Pro vào màn hình điện thoại</span>';
-    card.onclick=function(){
-      if(window.deferredPrompt){ window.deferredPrompt.prompt(); return false; }
-      alert('Trên Android: Chrome → Menu → Thêm vào màn hình chính. Trên iPhone: Chia sẻ → Thêm vào màn hình chính.');
-      return false;
-    };
-    if(firstTitle) side.insertBefore(card, firstTitle); else side.insertBefore(card, side.firstChild);
-  }
-  function boot(){markMenuSaas();addInstallCard();}
-  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',boot); else boot();
-  setTimeout(boot,500); setTimeout(boot,1500); setTimeout(boot,3000);
-})();
-</script>
 </body>
 </html>
 """
@@ -10768,6 +10564,219 @@ ADMIN_HTML = """
     box-shadow:0 6px 16px rgba(37,99,235,.25)!important;
   }
 </style>
+
+
+
+<!-- FINAL OVERRIDE 20260610: SaaS left menu dot Pro/Premium + remove browser alert lock -->
+<style id="mkt-final-saas-sidebar-dot-override">
+  body .v2-sidebar,
+  body .sidebar,
+  body aside{
+    background:linear-gradient(180deg,#070b18 0%,#0b1024 52%,#0a0b18 100%)!important;
+    border-right:1px solid rgba(148,163,184,.16)!important;
+  }
+
+  body .v2-nav-link,
+  body .sidebar a.v2-nav-link{
+    min-height:52px!important;
+    height:auto!important;
+    padding:10px 14px!important;
+    margin:0 0 8px 0!important;
+    border-radius:14px!important;
+    display:flex!important;
+    align-items:center!important;
+    justify-content:space-between!important;
+    gap:12px!important;
+    background:linear-gradient(135deg,rgba(15,23,42,.82),rgba(30,41,59,.52))!important;
+    border:1px solid rgba(148,163,184,.12)!important;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.045),0 8px 22px rgba(0,0,0,.20)!important;
+    transform:none!important;
+    overflow:hidden!important;
+    cursor:pointer!important;
+    pointer-events:auto!important;
+  }
+
+  body .v2-nav-link:hover,
+  body .sidebar a.v2-nav-link:hover{
+    transform:translateX(3px)!important;
+    background:linear-gradient(135deg,rgba(37,99,235,.20),rgba(124,58,237,.13))!important;
+    border-color:rgba(96,165,250,.24)!important;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 12px 28px rgba(0,0,0,.28)!important;
+  }
+
+  body .v2-nav-link.active,
+  body .sidebar a.v2-nav-link.active{
+    background:linear-gradient(135deg,rgba(37,99,235,.34),rgba(124,58,237,.25))!important;
+    border-color:rgba(129,140,248,.38)!important;
+  }
+
+  body .v2-nav-link .v2-nav-ico{display:none!important;width:0!important;min-width:0!important;margin:0!important;padding:0!important;}
+  body .v2-nav-link .v2-nav-text{
+    flex:1 1 auto!important;
+    min-width:0!important;
+    color:#f8fafc!important;
+    font-size:14.5px!important;
+    line-height:1.24!important;
+    font-weight:800!important;
+    letter-spacing:-.02em!important;
+    text-shadow:none!important;
+  }
+
+  body .v2-nav-link .v2-nav-tag,
+  body .v2-nav-link .mkt-pro-mini{display:none!important;}
+
+  body .v2-nav-link::before,
+  body .v2-nav-link::after,
+  body .v2-nav-link.pro-feature::after,
+  body .v2-nav-link.premium-locked::after,
+  body .v2-nav-link.real-pro::after,
+  body .v2-nav-link.real-premium-lock::after,
+  body .v2-nav-link.mkt-menu-pro::after,
+  body .v2-nav-link.mkt-menu-premium::after{
+    display:none!important;
+    content:""!important;
+    opacity:0!important;
+    visibility:hidden!important;
+    width:0!important;
+    height:0!important;
+    padding:0!important;
+    margin:0!important;
+    box-shadow:none!important;
+    background:none!important;
+    animation:none!important;
+    filter:none!important;
+  }
+
+  body .mkt-level-badge{
+    flex:0 0 auto!important;
+    display:inline-flex!important;
+    align-items:center!important;
+    gap:6px!important;
+    height:20px!important;
+    padding:0 3px!important;
+    border-radius:999px!important;
+    background:transparent!important;
+    border:none!important;
+    box-shadow:none!important;
+    color:#dbeafe!important;
+    font-size:11.5px!important;
+    line-height:20px!important;
+    font-weight:800!important;
+    letter-spacing:-.01em!important;
+    text-transform:none!important;
+    text-shadow:none!important;
+    white-space:nowrap!important;
+  }
+
+  body .mkt-level-badge::before{
+    content:""!important;
+    display:inline-block!important;
+    width:8px!important;
+    height:8px!important;
+    border-radius:999px!important;
+    background:#22c55e!important;
+    box-shadow:0 0 0 3px rgba(34,197,94,.10),0 0 10px rgba(34,197,94,.45)!important;
+  }
+  body .mkt-level-badge.premium::before{
+    background:#facc15!important;
+    box-shadow:0 0 0 3px rgba(250,204,21,.10),0 0 10px rgba(250,204,21,.42)!important;
+  }
+
+  body .mkt-level-badge.pro{color:#d1fae5!important;}
+  body .mkt-level-badge.premium{color:#fef3c7!important;}
+
+  body .v2-sidebar-title,
+  body .sidebar-title{
+    font-size:11px!important;
+    letter-spacing:.13em!important;
+    color:#a5b4fc!important;
+    margin:16px 6px 8px!important;
+    opacity:.88!important;
+  }
+
+  body .app-install-banner,
+  body #installAppBtn,
+  body #pwaInstallBtn{
+    box-shadow:none!important;
+    filter:none!important;
+  }
+</style>
+
+<script id="mkt-final-saas-sidebar-dot-no-alert-js">
+(function(){
+  var IS_PREMIUM = {{ 'true' if is_device_premium else 'false' }};
+  var TRIAL_EXPIRED = {{ 'true' if free_status.is_expired else 'false' }};
+  var CORE_PRO = {
+    facebook_center:1,page_center_total:1,post:1,fanpage_manager:1,group_suite:1,comment_manager:1
+  };
+  var PREMIUM_ONLY = {
+    messenger_ai:1,crm_sales:1,marketing_director:1,ai_studio:1,creative_center:1,analytics:1,analytics_center:1,automation_center:1
+  };
+  var ALIAS = {
+    page_center:'page_center_total',page_comment_pro:'page_center_total',page_comment_queue:'page_center_total',
+    group_marketing:'group_suite',group_finder:'group_suite',group_uid_splitter:'group_suite',group_join_queue:'group_suite',group_post_filter:'group_suite'
+  };
+  function norm(id){return ALIAS[id] || id || 'dashboard';}
+  function isPremium(id){id=norm(id); return !!PREMIUM_ONLY[id];}
+  function isPro(id){id=norm(id); return !!CORE_PRO[id];}
+  function isLocked(id){id=norm(id); if(IS_PREMIUM) return false; if(PREMIUM_ONLY[id]) return true; if(TRIAL_EXPIRED && CORE_PRO[id]) return true; return false;}
+  function labelName(id){id=norm(id); var m={messenger_ai:'AI Messenger',crm_sales:'CRM Kanban',marketing_director:'AI Marketing Director',ai_studio:'AI Studio',creative_center:'Image / Video / Voice',analytics:'Analytics Center',automation_center:'Cài đặt Automation',facebook_center:'Facebook Center',page_center_total:'Page Center Tổng',fanpage_manager:'Quản lý Fanpage',group_suite:'Group Center Tổng',comment_manager:'AI Comment'}; return m[id] || 'Tính năng';}
+
+  function pricingTarget(){
+    return document.querySelector('#premium') || document.querySelector('.premium-pricing-compact') || document.querySelector('.price-card') || document.querySelector('.pricing-card');
+  }
+  function showUpgrade(id){
+    var t = pricingTarget();
+    if(t){
+      try{t.closest('.module-section,.section,.page-section,.content-section').style.display='block';}catch(e){}
+      setTimeout(function(){t.scrollIntoView({behavior:'smooth',block:'start'});},30);
+    }
+    if(typeof window.showPaymentNotice==='function'){
+      window.showPaymentNotice(labelName(id)+' cần nâng cấp Pro/Premium. Chọn gói phù hợp ở bảng giá để kích hoạt theo ID thiết bị.');
+    }
+    return false;
+  }
+
+  window.openLockedFeature = function(name){ return showUpgrade(name || 'premium'); };
+
+  window.openModule = function(id){
+    id = norm(id);
+    if(isLocked(id)) return showUpgrade(id);
+    document.querySelectorAll('.module-section').forEach(function(el){el.classList.remove('active-module');});
+    var target=document.getElementById(id)||document.getElementById('dashboard');
+    if(target){target.classList.add('active-module'); setTimeout(function(){target.scrollIntoView({behavior:'smooth',block:'start'});},30);}
+    document.querySelectorAll('.v2-nav-link').forEach(function(a){a.classList.remove('active');});
+    var active=document.querySelector('.v2-nav-link[href="#'+id+'"]'); if(active) active.classList.add('active');
+    return false;
+  };
+
+  function decorateMenu(){
+    document.querySelectorAll('.v2-nav-link').forEach(function(a){
+      var raw=(a.getAttribute('href')||'').replace('#','');
+      var id=norm(raw);
+      a.querySelectorAll('.v2-nav-ico,.v2-nav-tag,.mkt-pro-mini,.mkt-level-badge').forEach(function(x){x.remove();});
+      a.classList.remove('premium-locked','real-premium-lock','pro-feature','real-pro','mkt-menu-pro','mkt-menu-premium');
+      if(isPremium(id)){
+        var p=document.createElement('span'); p.className='mkt-level-badge premium'; p.textContent='Premium'; a.appendChild(p);
+      }else if(isPro(id)){
+        var g=document.createElement('span'); g.className='mkt-level-badge pro'; g.textContent='Pro'; a.appendChild(g);
+      }
+    });
+  }
+
+  document.addEventListener('click',function(e){
+    var a=e.target.closest && e.target.closest('.v2-nav-link[href^="#"]');
+    if(!a) return;
+    var id=(a.getAttribute('href')||'').replace('#','');
+    if(!id) return;
+    e.preventDefault(); e.stopPropagation(); if(e.stopImmediatePropagation) e.stopImmediatePropagation();
+    return window.openModule(id);
+  },true);
+
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',decorateMenu); else decorateMenu();
+  setTimeout(decorateMenu,300); setTimeout(decorateMenu,1000); setTimeout(decorateMenu,2200);
+})();
+</script>
 
 </body></html>
 """
