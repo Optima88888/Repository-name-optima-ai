@@ -9600,6 +9600,152 @@ ADMIN_HTML = """
 })();
 </script>
 
+
+
+<!-- GPT MKT FINAL MOBILE INSTALL + SUPPORT CHAT OVERRIDE 20260610 -->
+<style id="gpt-mkt-final-mobile-chat-css">
+  /* Ẩn các nút cài app cũ để tránh chồng click */
+  #mktTopDownloadBar,#mktMobileInstallQuick,#mktPhoneInstallFloat,#mktPhoneInstallEntry,#mktMobileInstallMenu,
+  #mktInstallPanel,.app-install-card,.app-install-banner,.v2-install-box,.mkt-mobile-install-menu{
+    display:none!important;visibility:hidden!important;pointer-events:none!important;
+  }
+  .gptmkt-left-dock-final{
+    position:fixed!important;left:12px!important;bottom:calc(18px + env(safe-area-inset-bottom,0px))!important;
+    z-index:2147483646!important;display:flex!important;flex-direction:column!important;gap:10px!important;
+    font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif!important;pointer-events:auto!important;
+  }
+  .gptmkt-install-btn-final{
+    border:0!important;border-radius:999px!important;padding:11px 14px!important;min-width:128px!important;
+    display:inline-flex!important;align-items:center!important;justify-content:center!important;gap:8px!important;
+    color:#fff!important;background:linear-gradient(135deg,#0ea5e9,#2563eb,#7c3aed)!important;
+    box-shadow:0 16px 38px rgba(37,99,235,.38),inset 0 1px 0 rgba(255,255,255,.22)!important;
+    font-size:14px!important;font-weight:1000!important;line-height:1.1!important;cursor:pointer!important;
+    animation:gptMktSoftMoveFinal 3.8s ease-in-out infinite!important;touch-action:manipulation!important;
+  }
+  .gptmkt-install-btn-final small{display:block!important;font-size:11px!important;font-weight:900!important;opacity:.92!important;margin-top:2px!important}
+  .gptmkt-install-dot-final{width:10px!important;height:10px!important;border-radius:999px!important;background:#22c55e!important;box-shadow:0 0 0 6px rgba(34,197,94,.16),0 0 16px rgba(34,197,94,.82)!important;flex:0 0 auto!important;}
+  @keyframes gptMktSoftMoveFinal{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+
+  .gptmkt-chat-btn-final{
+    position:fixed!important;right:14px!important;bottom:calc(18px + env(safe-area-inset-bottom,0px))!important;
+    z-index:2147483647!important;width:68px!important;height:68px!important;border-radius:999px!important;border:0!important;
+    color:#fff!important;background:linear-gradient(135deg,#111827,#2563eb,#7c3aed)!important;
+    box-shadow:0 18px 44px rgba(37,99,235,.42)!important;display:flex!important;align-items:center!important;justify-content:center!important;
+    font-size:30px!important;cursor:pointer!important;pointer-events:auto!important;touch-action:manipulation!important;animation:gptMktBotBreathFinal 2.4s ease-in-out infinite!important;
+  }
+  .gptmkt-chat-btn-final:after{content:"";position:absolute;right:4px;bottom:5px;width:17px;height:17px;border-radius:50%;background:#22c55e;border:3px solid #fff;box-shadow:0 0 0 5px rgba(34,197,94,.18),0 0 14px rgba(34,197,94,.8)}
+  @keyframes gptMktBotBreathFinal{0%,100%{transform:scale(1)}50%{transform:scale(1.055)}}
+
+  .floating-bot{z-index:2147483645!important;pointer-events:none!important;}
+  .floating-bot .bot-bubble{display:none!important;}
+  #floatingBotPanel,.bot-panel{
+    z-index:2147483647!important;pointer-events:auto!important;visibility:visible!important;opacity:1!important;
+  }
+  #floatingBotPanel.gptmkt-chat-open-final,.bot-panel.gptmkt-chat-open-final{
+    display:block!important;position:fixed!important;right:14px!important;bottom:calc(96px + env(safe-area-inset-bottom,0px))!important;
+    width:360px!important;max-width:calc(100vw - 28px)!important;max-height:76vh!important;border-radius:24px!important;
+    box-shadow:0 26px 72px rgba(15,23,42,.32)!important;overflow:hidden!important;
+  }
+  .bot-input input,.bot-input button,.bot-actions button,.bot-close{pointer-events:auto!important;}
+  .bot-body{max-height:42vh!important;overflow:auto!important;}
+
+  .gptmkt-install-sheet-final{position:fixed!important;inset:0!important;z-index:2147483647!important;display:none!important;align-items:flex-end!important;justify-content:center!important;background:rgba(2,6,23,.64)!important;backdrop-filter:blur(8px)!important;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif!important;}
+  .gptmkt-install-sheet-final.open{display:flex!important;}
+  .gptmkt-install-box-final{width:min(440px,100vw)!important;background:#fff!important;color:#0f172a!important;border-radius:26px 26px 0 0!important;padding:20px 18px calc(18px + env(safe-area-inset-bottom,0px))!important;box-shadow:0 -24px 70px rgba(15,23,42,.42)!important;}
+  .gptmkt-install-box-final h3{margin:0 0 8px!important;font-size:20px!important;font-weight:1000!important;color:#0f172a!important;}
+  .gptmkt-install-box-final p{margin:8px 0!important;font-size:14px!important;line-height:1.55!important;color:#334155!important;font-weight:760!important;}
+  .gptmkt-install-steps-final{background:#f8fafc!important;border:1px solid #e2e8f0!important;border-radius:16px!important;padding:12px!important;margin:12px 0 14px!important;font-size:13px!important;line-height:1.55!important;color:#334155!important;}
+  .gptmkt-install-actions-final{display:flex!important;gap:10px!important;}
+  .gptmkt-install-actions-final button{flex:1!important;border:0!important;border-radius:15px!important;padding:13px 12px!important;font-weight:1000!important;cursor:pointer!important;}
+  #gptMktInstallGoFinal{background:linear-gradient(135deg,#2563eb,#7c3aed)!important;color:#fff!important;}
+  #gptMktInstallCloseFinal{background:#eef2ff!important;color:#312e81!important;}
+
+  @media(max-width:820px){
+    #floatingBotPanel.gptmkt-chat-open-final,.bot-panel.gptmkt-chat-open-final{left:10px!important;right:10px!important;width:auto!important;bottom:calc(92px + env(safe-area-inset-bottom,0px))!important;}
+    .gptmkt-install-btn-final{min-width:116px!important;padding:10px 12px!important;font-size:13px!important;}
+  }
+</style>
+<script id="gpt-mkt-final-mobile-chat-js">
+(function(){
+  'use strict';
+  if(window.__gptMktFinalMobileChatReady) return;
+  window.__gptMktFinalMobileChatReady=true;
+
+  var deferredPrompt=null;
+  var lastSupportId=Number(localStorage.getItem('mkt_support_last_id')||0);
+  var pollTimer=null;
+  function q(s,r){return (r||document).querySelector(s)}
+  function byId(id){return document.getElementById(id)}
+  function esc(v){return String(v||'').replace(/[&<>"']/g,function(ch){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]})}
+  function ios(){return /iphone|ipad|ipod/i.test(navigator.userAgent)}
+  function android(){return /android/i.test(navigator.userAgent)}
+  function standalone(){return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone===true}
+  function deviceId(){
+    var id='';try{id=localStorage.getItem('mkt_device_id')||''}catch(e){}
+    if(!id || id==='Đang tạo...' || id.length<8){id='MKT-'+Math.random().toString(36).slice(2,8).toUpperCase()+Date.now().toString().slice(-6);try{localStorage.setItem('mkt_device_id',id)}catch(e){}}
+    try{document.cookie='mkt_device_id='+encodeURIComponent(id)+'; path=/; max-age='+(60*60*24*365*5)+'; SameSite=Lax'}catch(e){}
+    return String(id).toUpperCase();
+  }
+  window.ensureDeviceId=deviceId;
+
+  function ensureDock(){
+    if(!byId('gptMktLeftDockFinal')){
+      var dock=document.createElement('div');dock.id='gptMktLeftDockFinal';dock.className='gptmkt-left-dock-final';
+      dock.innerHTML='<button type="button" id="gptMktInstallFinal" class="gptmkt-install-btn-final" aria-label="Tải GPT MKT"><span class="gptmkt-install-dot-final"></span><span>GPT MKT<small>Tải xuống</small></span></button>';
+      document.body.appendChild(dock);
+    }
+    if(!byId('gptMktChatFinal')){
+      var chat=document.createElement('button');chat.type='button';chat.id='gptMktChatFinal';chat.className='gptmkt-chat-btn-final';chat.setAttribute('aria-label','Mở GPT MKT Support');chat.innerHTML='🤖';document.body.appendChild(chat);
+    }
+    if(!byId('gptMktInstallSheetFinal')){
+      var sheet=document.createElement('div');sheet.id='gptMktInstallSheetFinal';sheet.className='gptmkt-install-sheet-final';
+      sheet.innerHTML='<div class="gptmkt-install-box-final"><h3>📱 Cài GPT MKT vào điện thoại</h3><p id="gptMktInstallIntroFinal">Đưa app ra màn hình chính để khách mở nhanh như ứng dụng.</p><div class="gptmkt-install-steps-final" id="gptMktInstallStepsFinal"></div><div class="gptmkt-install-actions-final"><button type="button" id="gptMktInstallGoFinal">Cài ngay</button><button type="button" id="gptMktInstallCloseFinal">Đóng</button></div></div>';
+      document.body.appendChild(sheet);
+    }
+  }
+
+  function panel(){return byId('floatingBotPanel') || q('.bot-panel')}
+  function bodyBox(){return byId('floatingBotBody') || q('.bot-body')}
+  function inputBox(){return byId('botInputText') || q('.bot-input input')}
+  function scrollBot(){var b=bodyBox(); if(b) b.scrollTop=b.scrollHeight}
+  function appendMsg(role,msg,id){
+    var b=bodyBox(); if(!b) return;
+    if(id && b.querySelector('[data-support-id="'+id+'"]')) return;
+    var div=document.createElement('div'); div.className=(role==='user')?'bot-msg':'bot-msg ai';
+    if(id) div.setAttribute('data-support-id',String(id));
+    var name=role==='admin'?'Admin hỗ trợ':(role==='user'?'Bạn':'Bot hỗ trợ');
+    div.innerHTML='<b>'+name+':</b><br>'+esc(msg).replace(/\n/g,'<br>'); b.appendChild(div); scrollBot();
+  }
+  function greet(){
+    var b=bodyBox(); if(!b || b.dataset.gptMktGreeted==='1') return; b.dataset.gptMktGreeted='1';
+    if(!b.innerHTML.trim()) appendMsg('ai','Xin chào 👋\nEm là GPT MKT Support. Anh/chị cần hỗ trợ tải app, kích hoạt Premium, thanh toán hay lỗi kỹ thuật ạ?');
+  }
+  function openChat(){var p=panel(); if(!p) return; p.classList.add('gptmkt-chat-open-final'); p.style.display='block'; p.style.opacity='1'; p.style.visibility='visible'; greet(); startPoll(); setTimeout(scrollBot,80)}
+  function closeChat(){var p=panel(); if(!p) return; p.classList.remove('gptmkt-chat-open-final'); p.style.display='none'}
+  function toggleChat(){var p=panel(); if(p && (p.classList.contains('gptmkt-chat-open-final') || p.style.display==='block')) closeChat(); else openChat()}
+  window.openFloatingBot=openChat; window.closeFloatingBot=closeChat; window.toggleFloatingBot=toggleChat;
+
+  async function saveSupport(text){try{var r=await fetch('/support_send',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({device_id:deviceId(),sender:'user',message:text})});var d=await r.json().catch(function(){return{}});if(d.id){lastSupportId=Math.max(lastSupportId,Number(d.id)||0);localStorage.setItem('mkt_support_last_id',String(lastSupportId));}}catch(e){}}
+  async function poll(){try{var r=await fetch('/support_poll?device_id='+encodeURIComponent(deviceId())+'&after_id='+encodeURIComponent(lastSupportId),{cache:'no-store'});var d=await r.json().catch(function(){return{messages:[]}});(d.messages||[]).forEach(function(m){var mid=Number(m.id)||0;if(mid<=lastSupportId)return;lastSupportId=mid;localStorage.setItem('mkt_support_last_id',String(lastSupportId));if(String(m.sender||'').toLowerCase()==='admin'){appendMsg('admin',m.message,mid);openChat();}})}catch(e){}}
+  function startPoll(){if(pollTimer) return; poll(); pollTimer=setInterval(poll,3500)}
+  function localReply(text){var low=String(text||'').toLowerCase();if(low.indexOf('tải')>=0||low.indexOf('cài')>=0)return 'Anh/chị bấm nút GPT MKT bên trái để cài ra màn hình chính. Android có thể cài trực tiếp, iPhone làm theo hướng dẫn Chia sẻ → Thêm vào màn hình chính.'; if(low.indexOf('thanh toán')>=0||low.indexOf('qr')>=0)return 'Sau khi thanh toán, anh/chị gửi ID thiết bị + ảnh thanh toán + gói đăng ký. Nếu 5 phút chưa kích hoạt, liên hệ Zalo 036 338 2629.'; if(low.indexOf('premium')>=0||low.indexOf('gói')>=0)return 'Các gói hiện có: 1 tháng 159K, 3 tháng 359K, 6 tháng 559K, 1 năm 859K, Nhà bán hàng chuyên nghiệp 1.959K.'; return 'Em đã nhận tin nhắn. Admin sẽ phản hồi trực tiếp trong khung chat này ạ.'}
+  window.sendBotInput=function(){var input=inputBox(); if(!input || !input.value.trim()) return; var text=input.value.trim(); input.value=''; openChat(); appendMsg('user',text); saveSupport(text); setTimeout(function(){appendMsg('ai',localReply(text))},350)};
+  window.botQuick=function(text){openChat(); var input=inputBox(); if(input){input.value=String(text||'')} window.sendBotInput()};
+
+  function setGuide(){var intro=byId('gptMktInstallIntroFinal'),steps=byId('gptMktInstallStepsFinal'),go=byId('gptMktInstallGoFinal'); if(ios()){if(intro)intro.textContent='iPhone cần thêm app thủ công bằng nút Chia sẻ của Safari.'; if(steps)steps.innerHTML='1. Mở bằng <b>Safari</b>.<br>2. Bấm nút <b>Chia sẻ</b>.<br>3. Chọn <b>Thêm vào màn hình chính</b> → <b>Thêm</b>.'; if(go)go.textContent='Đã hiểu';}else if(deferredPrompt && android()){if(intro)intro.textContent='Bấm Cài ngay để đưa GPT MKT ra màn hình chính.'; if(steps)steps.innerHTML='Sau khi cài, khách mở như app riêng, thao tác nhanh hơn trên điện thoại.'; if(go)go.textContent='Cài ngay';}else{if(intro)intro.textContent='Trình duyệt chưa bật popup cài tự động.'; if(steps)steps.innerHTML='Android Chrome: bấm menu <b>⋮</b> → <b>Thêm vào màn hình chính</b> hoặc <b>Cài đặt ứng dụng</b>.<br>iPhone Safari: <b>Chia sẻ</b> → <b>Thêm vào màn hình chính</b>.'; if(go)go.textContent='Đã hiểu';}}
+  async function install(){if(standalone())return; if(deferredPrompt && android()){var dp=deferredPrompt; deferredPrompt=null; try{dp.prompt(); await dp.userChoice}catch(e){} return;} setGuide(); var s=byId('gptMktInstallSheetFinal'); if(s)s.classList.add('open')}
+
+  window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();deferredPrompt=e;window.__gptMktDeferredPrompt=e});
+  document.addEventListener('click',function(e){var btn=e.target.closest('#gptMktInstallFinal'); if(btn){e.preventDefault();e.stopPropagation(); if(e.stopImmediatePropagation)e.stopImmediatePropagation(); install();}},true);
+  document.addEventListener('click',function(e){var btn=e.target.closest('#gptMktChatFinal,.bot-bubble,[data-open-support-bot]'); if(btn){e.preventDefault();e.stopPropagation(); if(e.stopImmediatePropagation)e.stopImmediatePropagation(); toggleChat();}},true);
+  document.addEventListener('click',function(e){if(e.target.closest('.bot-close')){e.preventDefault();e.stopPropagation();closeChat()} if(e.target.closest('#gptMktInstallCloseFinal')){var s=byId('gptMktInstallSheetFinal'); if(s)s.classList.remove('open')} if(e.target.closest('#gptMktInstallGoFinal')){if(deferredPrompt && android()){var dp=deferredPrompt; deferredPrompt=null; try{dp.prompt();dp.userChoice}catch(_e){}} var sh=byId('gptMktInstallSheetFinal'); if(sh)sh.classList.remove('open')}},true);
+  document.addEventListener('keydown',function(e){if(e.key==='Enter' && e.target && (e.target.id==='botInputText' || e.target.closest('.bot-input'))){e.preventDefault();window.sendBotInput()}},true);
+
+  function boot(){ensureDock();deviceId();startPoll(); if(standalone()){var d=byId('gptMktLeftDockFinal'); if(d)d.style.display='none'} if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js').catch(function(){})}}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot(); setTimeout(boot,600);
+})();
+</script>
+
 </body></html>
 """
 
