@@ -1625,6 +1625,7 @@ def normalize_package_key(package_key):
 
 
 def create_premium_request(device_id, phone, email, package_key):
+    ensure_affiliate_tables()
     package_key = normalize_package_key(package_key)
     plan = PREMIUM_PACKAGES.get(package_key, PREMIUM_PACKAGES["monthly"])
     device_id = (device_id or get_device_id()).strip().upper()
@@ -1646,8 +1647,14 @@ def create_premium_request(device_id, phone, email, package_key):
         VALUES(?,?,?,?,?,?,?,?,?,?,?)
     """, (device_id, phone, email, package_key, plan['name'], int(plan.get('amount',0)), payment_note, 'Chờ duyệt', '', now, ''))
     req_id = c.lastrowid
+    affiliate_code = current_affiliate_code()
+    if affiliate_code:
+        try:
+            c.execute("UPDATE premium_upgrade_requests SET affiliate_code=? WHERE id=?", (affiliate_code, req_id))
+        except Exception:
+            pass
     c.execute("""INSERT INTO notifications(title,detail,level,status,created_at) VALUES(?,?,?,?,?)""",
-              ("Yêu cầu nâng cấp Premium mới", f"{device_id} - {phone} - {email} - {plan['name']}", "warning", "new", now))
+              ("Yêu cầu nâng cấp Premium mới", f"{device_id} - {phone} - {email} - {plan['name']}" + (f" - CTV: {affiliate_code}" if affiliate_code else ""), "warning", "new", now))
     conn.commit(); conn.close()
     return {"id": req_id, "device_id": device_id, "payment_note": payment_note, "package_name": plan['name'], "amount": int(plan.get('amount',0))}
 
@@ -1698,6 +1705,11 @@ def approve_premium_request(request_id, status='Đã duyệt', admin_note=''):
         c.execute("""INSERT INTO notifications(title,detail,level,status,created_at) VALUES(?,?,?,?,?)""",
                   ("Đã kích hoạt Premium", f"{device_id} - {package_name} - hạn đến {end_dt.strftime('%Y-%m-%d')}", "success", "new", now))
     c.execute("UPDATE premium_upgrade_requests SET status=?, admin_note=?, approved_at=? WHERE id=?", (status, admin_note, now, request_id))
+    if status == 'Đã duyệt':
+        try:
+            create_affiliate_commission_for_request(c, request_id)
+        except Exception as _affiliate_err:
+            print('Affiliate commission error:', _affiliate_err)
     conn.commit(); conn.close(); return True
 
 
@@ -2333,7 +2345,7 @@ Chia nhóm: Facebook Ads, TikTok Ads, Seeding, Chốt sale, Content Viral.
 """
     return f"Tạo nội dung marketing chuyên nghiệp cho: {topic}. {extra}"
 
-HTML = """
+HTML = r"""
 <!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -7063,7 +7075,16 @@ def render(content="", message="", ok=True, selected_industry="spa", analysis=""
 @app.route("/")
 def home():
     selected_industry = request.args.get("industry", "spa")
-    return render(selected_industry=selected_industry)
+    ref_code = current_affiliate_code()
+    if ref_code:
+        record_affiliate_click(ref_code)
+    resp = app.make_response(render(selected_industry=selected_industry))
+    if ref_code:
+        try:
+            resp.set_cookie('affiliate_code', ref_code, max_age=60*60*24*90)
+        except Exception:
+            pass
+    return resp
 
 @app.route("/generate", methods=["POST"])
 def generate():
@@ -8257,6 +8278,111 @@ ADMIN_HTML = """
 })();
 </script>
 
+
+
+<!-- CTV AFFILIATE CENTER V1 -->
+<style id="affiliate-center-v1-style">
+#affiliateCenterSection,#affiliateAdminSection{display:none;background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:22px;padding:18px;margin:18px 0;box-shadow:0 20px 60px rgba(15,23,42,.08)}
+.aff-hero{display:grid;grid-template-columns:1.2fr .8fr;gap:14px;align-items:stretch}
+.aff-card{background:linear-gradient(135deg,#f8fafc,#eef2ff);border:1px solid #dbeafe;border-radius:18px;padding:16px}
+.aff-title{font-size:22px;font-weight:900;color:#0f172a;margin:0 0 6px}.aff-sub{color:#64748b;font-size:14px;line-height:1.5}
+.aff-link-box{display:flex;gap:8px;align-items:center;margin-top:12px}.aff-link-box input{flex:1;border:1px solid #cbd5e1;border-radius:12px;padding:11px;font-weight:700;color:#0f172a;background:white}.aff-btn{border:0;border-radius:12px;padding:11px 14px;font-weight:900;cursor:pointer;background:linear-gradient(135deg,#16a34a,#22c55e);color:white;box-shadow:0 10px 28px rgba(22,163,74,.25)}.aff-btn.dark{background:linear-gradient(135deg,#0f172a,#334155)}.aff-btn.gold{background:linear-gradient(135deg,#f59e0b,#facc15);color:#111827}.aff-btn.light{background:#fff;color:#0f172a;border:1px solid #cbd5e1;box-shadow:none}
+.aff-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:14px 0}.aff-stat{background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:12px}.aff-stat b{display:block;font-size:20px;color:#0f172a}.aff-stat span{font-size:12px;color:#64748b}
+.aff-form{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:12px}.aff-form input,.aff-form select{border:1px solid #cbd5e1;border-radius:12px;padding:11px;background:#fff;color:#0f172a}.aff-table{width:100%;border-collapse:collapse;margin-top:12px;font-size:13px}.aff-table th,.aff-table td{border-bottom:1px solid #e2e8f0;padding:9px;text-align:left}.aff-table th{color:#475569;background:#f8fafc}.aff-pill{display:inline-block;padding:4px 8px;border-radius:999px;background:#dcfce7;color:#166534;font-weight:900;font-size:12px}.aff-tabs{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}.aff-toast{position:fixed;right:22px;bottom:120px;background:#0f172a;color:white;padding:12px 14px;border-radius:14px;z-index:99999;box-shadow:0 12px 40px rgba(0,0,0,.25);display:none}
+@media(max-width:900px){.aff-hero,.aff-form{grid-template-columns:1fr}.aff-stats{grid-template-columns:repeat(2,1fr)}}
+</style>
+<div id="affiliateCenterSection" class="app-module-section">
+  <div class="aff-hero">
+    <div class="aff-card">
+      <h2 class="aff-title">CTV Hoa Hồng</h2>
+      <div class="aff-sub">Đăng ký CTV, nhận link giới thiệu riêng. Khi khách đăng ký và nâng cấp Premium thành công, hệ thống tự ghi nhận hoa hồng theo ID thiết bị và mã CTV.</div>
+      <div class="aff-form">
+        <input id="affName" placeholder="Tên CTV">
+        <input id="affPhone" placeholder="Số điện thoại">
+        <input id="affEmail" placeholder="Gmail">
+      </div>
+      <div style="margin-top:10px"><button class="aff-btn" onclick="affiliateSaveProfile()">Tạo / cập nhật tài khoản CTV</button></div>
+      <div class="aff-link-box"><input id="affRefLink" readonly placeholder="Link giới thiệu sẽ hiện tại đây"><button class="aff-btn dark" onclick="affiliateCopyLink()">Sao chép</button></div>
+      <div class="aff-sub" style="margin-top:8px">Mã CTV: <b id="affCode">---</b> • Cấp bậc: <b id="affLevel">---</b> • Hoa hồng: <b id="affPercent">---</b>%</div>
+    </div>
+    <div class="aff-card">
+      <h3 style="margin-top:0">Rút hoa hồng</h3>
+      <div class="aff-sub">Số dư khả dụng: <b id="affBalance">0đ</b></div>
+      <div class="aff-form" style="grid-template-columns:1fr">
+        <input id="wdAmount" placeholder="Số tiền muốn rút">
+        <input id="wdBank" placeholder="Ngân hàng">
+        <input id="wdNumber" placeholder="Số tài khoản">
+        <input id="wdName" placeholder="Chủ tài khoản">
+      </div>
+      <button class="aff-btn gold" style="margin-top:10px" onclick="affiliateWithdraw()">Gửi yêu cầu rút tiền</button>
+    </div>
+  </div>
+  <div class="aff-stats">
+    <div class="aff-stat"><b id="affClicks">0</b><span>Tổng click</span></div>
+    <div class="aff-stat"><b id="affRefs">0</b><span>Khách đăng ký</span></div>
+    <div class="aff-stat"><b id="affPremium">0</b><span>Khách Premium</span></div>
+    <div class="aff-stat"><b id="affCommission">0đ</b><span>Hoa hồng</span></div>
+  </div>
+  <h3>Khách đã giới thiệu</h3>
+  <div style="overflow:auto"><table class="aff-table" id="affRecent"><thead><tr><th>Thiết bị</th><th>SĐT</th><th>Gmail</th><th>Gói</th><th>Doanh thu</th><th>Hoa hồng</th><th>Trạng thái</th></tr></thead><tbody></tbody></table></div>
+</div>
+
+<div id="affiliateAdminSection" class="app-module-section">
+  <h2 class="aff-title">Quản Lý CTV</h2>
+  <div class="aff-sub">Admin chỉnh phần trăm hoa hồng theo cấp bậc, xem CTV, doanh thu, hoa hồng và duyệt yêu cầu rút tiền.</div>
+  <div class="aff-tabs">
+    <input id="setNormal" placeholder="CTV thường %" value="20">
+    <input id="setSilver" placeholder="CTV Bạc %" value="25">
+    <input id="setGold" placeholder="CTV Vàng %" value="30">
+    <input id="setDiamond" placeholder="CTV Kim Cương %" value="35">
+    <button class="aff-btn" onclick="affiliateSaveSettings()">Lưu hoa hồng</button>
+  </div>
+  <h3>Danh sách CTV</h3>
+  <div style="overflow:auto"><table class="aff-table" id="affAdminUsers"><thead><tr><th>CTV</th><th>SĐT</th><th>Gmail</th><th>Mã</th><th>Cấp</th><th>%</th><th>Đơn</th><th>Doanh thu</th><th>Hoa hồng</th></tr></thead><tbody></tbody></table></div>
+  <h3>Yêu cầu rút tiền</h3>
+  <div style="overflow:auto"><table class="aff-table" id="affWithdrawals"><thead><tr><th>ID</th><th>Mã CTV</th><th>Số tiền</th><th>Ngân hàng</th><th>STK</th><th>Chủ TK</th><th>Trạng thái</th><th>Thao tác</th></tr></thead><tbody></tbody></table></div>
+</div>
+<div id="affToast" class="aff-toast"></div>
+<script id="affiliate-center-v1-js">
+(function(){
+  function q(s){return document.querySelector(s)}; function qa(s){return Array.from(document.querySelectorAll(s))};
+  function money(n){n=parseInt(n||0,10)||0; return n.toLocaleString('vi-VN')+'đ'}
+  function toast(t){var el=q('#affToast'); if(!el){alert(t);return} el.textContent=t; el.style.display='block'; setTimeout(function(){el.style.display='none'},2200)}
+  function hideAllMain(){qa('main section,.module-section,.app-module-section').forEach(function(el){el.style.display='none'});}
+  var oldOpen=window.openModule;
+  window.openModule=function(name){
+    if(name==='affiliate_center'){hideAllMain(); var s=q('#affiliateCenterSection'); if(s){s.style.display='block'; affiliateLoadMe(); window.scrollTo({top:0,behavior:'smooth'});} return false;}
+    if(name==='affiliate_admin'){hideAllMain(); var a=q('#affiliateAdminSection'); if(a){a.style.display='block'; affiliateLoadAdmin(); window.scrollTo({top:0,behavior:'smooth'});} return false;}
+    if(typeof oldOpen==='function') return oldOpen(name); return true;
+  };
+  function addMenus(){
+    var nav=q('.nav'); if(!nav || q('[data-aff-menu="1"]')) return;
+    var sysTitle=Array.from(nav.querySelectorAll('.v2-nav-title')).find(function(x){return /HỆ THỐNG/i.test(x.textContent||'')});
+    var html='<a data-aff-menu="1" class="v2-nav-link" href="#affiliate_center" onclick="return openModule(\'affiliate_center\')"><span class="v2-nav-ico"></span><span class="v2-nav-text">CTV Hoa Hồng</span><span class="v2-nav-tag" style="background:#dcfce7;color:#166534">CTV</span></a>'+
+             '<a data-aff-menu="1" class="v2-nav-link" href="#affiliate_admin" onclick="return openModule(\'affiliate_admin\')"><span class="v2-nav-ico"></span><span class="v2-nav-text">Quản Lý CTV</span><span class="v2-nav-tag" style="background:#fef3c7;color:#92400e">Admin</span></a>';
+    if(sysTitle) sysTitle.insertAdjacentHTML('afterend',html); else nav.insertAdjacentHTML('beforeend',html);
+  }
+  window.affiliateLoadMe=function(){fetch('/api/affiliate/me').then(r=>r.json()).then(function(d){
+    if(!d.ok) return; var s=d.summary||{};
+    q('#affName').value=d.full_name||''; q('#affPhone').value=d.phone||''; q('#affEmail').value=d.email||'';
+    q('#affRefLink').value=d.ref_link||''; q('#affCode').textContent=d.affiliate_code||'---'; q('#affLevel').textContent=d.level_name||'---'; q('#affPercent').textContent=d.commission_percent||20;
+    q('#affClicks').textContent=s.clicks||0; q('#affRefs').textContent=s.referrals||0; q('#affPremium').textContent=s.premium||0; q('#affCommission').textContent=money(s.commission||0); q('#affBalance').textContent=money(s.balance||0);
+    var tb=q('#affRecent tbody'); if(tb){tb.innerHTML=(s.recent||[]).map(function(r){return '<tr><td>'+ (r[0]||'') +'</td><td>'+ (r[1]||'') +'</td><td>'+ (r[2]||'') +'</td><td>'+ (r[3]||'') +'</td><td>'+ money(r[4]) +'</td><td>'+ money(r[5]) +'</td><td><span class="aff-pill">'+ (r[6]||'') +'</span></td></tr>'}).join('') || '<tr><td colspan="7">Chưa có khách giới thiệu.</td></tr>';}
+  }).catch(function(){toast('Không tải được dữ liệu CTV')})}
+  window.affiliateSaveProfile=function(){fetch('/api/affiliate/me',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({full_name:q('#affName').value,phone:q('#affPhone').value,email:q('#affEmail').value})}).then(r=>r.json()).then(function(d){toast(d.ok?'Đã cập nhật CTV':'Có lỗi xảy ra'); affiliateLoadMe();})}
+  window.affiliateCopyLink=function(){var inp=q('#affRefLink'); if(!inp)return; inp.select(); navigator.clipboard&&navigator.clipboard.writeText(inp.value); toast('Đã sao chép link CTV')}
+  window.affiliateWithdraw=function(){fetch('/api/affiliate/withdraw',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({amount:q('#wdAmount').value,bank_name:q('#wdBank').value,bank_number:q('#wdNumber').value,account_name:q('#wdName').value})}).then(r=>r.json()).then(function(d){toast(d.message||'Đã gửi yêu cầu'); affiliateLoadMe();})}
+  window.affiliateLoadAdmin=function(){fetch('/api/admin/affiliate').then(r=>r.json()).then(function(d){
+    var tb=q('#affAdminUsers tbody'); if(tb){tb.innerHTML=(d.users||[]).map(function(u){return '<tr><td>'+ (u[2]||u[1]||'') +'</td><td>'+ (u[3]||'') +'</td><td>'+ (u[4]||'') +'</td><td><b>'+ (u[5]||'') +'</b></td><td>'+ (u[6]||'') +'</td><td>'+ (u[7]||0) +'%</td><td>'+ (u[10]||0) +'</td><td>'+ money(u[11]) +'</td><td>'+ money(u[12]) +'</td></tr>'}).join('') || '<tr><td colspan="9">Chưa có CTV.</td></tr>';}
+    (d.settings||[]).forEach(function(s){if(s[1]==='CTV thường')q('#setNormal').value=s[3]; if(s[1]==='CTV Bạc')q('#setSilver').value=s[3]; if(s[1]==='CTV Vàng')q('#setGold').value=s[3]; if(s[1]==='CTV Kim Cương')q('#setDiamond').value=s[3];});
+    var wb=q('#affWithdrawals tbody'); if(wb){wb.innerHTML=(d.withdrawals||[]).map(function(w){return '<tr><td>'+w[0]+'</td><td>'+w[1]+'</td><td>'+money(w[2])+'</td><td>'+w[3]+'</td><td>'+w[4]+'</td><td>'+w[5]+'</td><td><span class="aff-pill">'+w[6]+'</span></td><td><button class="aff-btn light" onclick="affiliateWithdrawAction('+w[0]+',\'Đã thanh toán\')">Đã thanh toán</button> <button class="aff-btn light" onclick="affiliateWithdrawAction('+w[0]+',\'Từ chối\')">Từ chối</button></td></tr>'}).join('') || '<tr><td colspan="8">Chưa có yêu cầu rút tiền.</td></tr>';}
+  })}
+  window.affiliateSaveSettings=function(){fetch('/api/admin/affiliate/settings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({normal:q('#setNormal').value,silver:q('#setSilver').value,gold:q('#setGold').value,diamond:q('#setDiamond').value})}).then(r=>r.json()).then(function(d){toast(d.message||'Đã lưu'); affiliateLoadAdmin();})}
+  window.affiliateWithdrawAction=function(id,status){fetch('/api/admin/affiliate/withdraw/'+id,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:status})}).then(r=>r.json()).then(function(){toast('Đã cập nhật rút tiền'); affiliateLoadAdmin();})}
+  function init(){addMenus(); var url=new URL(location.href); if(url.searchParams.get('ref')){try{document.cookie='affiliate_code='+url.searchParams.get('ref').toUpperCase()+';path=/;max-age='+(60*60*24*90)}catch(e){}}}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init(); setTimeout(init,500); setTimeout(init,1500);
+})();
+</script>
 </body></html>
 """
 
@@ -8471,6 +8597,342 @@ def pwa_icon_512():
     import base64
     png = base64.b64decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=")
     return app.response_class(png, mimetype="image/png")
+
+
+# =========================
+# CTV / AFFILIATE CENTER V1
+# =========================
+def ensure_affiliate_tables():
+    conn = db(); c = conn.cursor()
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS affiliate_users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            device_id TEXT UNIQUE,
+            full_name TEXT,
+            phone TEXT,
+            email TEXT,
+            affiliate_code TEXT UNIQUE,
+            custom_slug TEXT UNIQUE,
+            level_name TEXT DEFAULT 'CTV thường',
+            commission_percent REAL DEFAULT 20,
+            status TEXT DEFAULT 'active',
+            created_at TEXT,
+            updated_at TEXT
+        )
+    """)
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS affiliate_clicks (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            affiliate_code TEXT,
+            visitor_device_id TEXT,
+            ip TEXT,
+            user_agent TEXT,
+            created_at TEXT
+        )
+    """)
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS affiliate_referrals (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            affiliate_code TEXT,
+            customer_device_id TEXT,
+            customer_phone TEXT,
+            customer_email TEXT,
+            package_key TEXT,
+            package_name TEXT,
+            amount INTEGER DEFAULT 0,
+            commission_percent REAL DEFAULT 20,
+            commission_amount INTEGER DEFAULT 0,
+            status TEXT DEFAULT 'Chờ duyệt',
+            premium_request_id INTEGER,
+            created_at TEXT,
+            approved_at TEXT
+        )
+    """)
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS affiliate_withdrawals (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            affiliate_code TEXT,
+            amount INTEGER DEFAULT 0,
+            bank_name TEXT,
+            bank_number TEXT,
+            account_name TEXT,
+            status TEXT DEFAULT 'Chờ duyệt',
+            admin_note TEXT,
+            created_at TEXT,
+            paid_at TEXT
+        )
+    """)
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS affiliate_settings (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            level_name TEXT UNIQUE,
+            min_orders INTEGER DEFAULT 0,
+            commission_percent REAL DEFAULT 20,
+            note TEXT,
+            updated_at TEXT
+        )
+    """)
+    now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    defaults = [
+        ('CTV thường', 0, 20, '0-10 đơn'),
+        ('CTV Bạc', 11, 25, '11-30 đơn'),
+        ('CTV Vàng', 31, 30, '31-70 đơn'),
+        ('CTV Kim Cương', 71, 35, '71+ đơn'),
+    ]
+    for name, min_orders, pct, note in defaults:
+        c.execute("""
+            INSERT OR IGNORE INTO affiliate_settings(level_name,min_orders,commission_percent,note,updated_at)
+            VALUES(?,?,?,?,?)
+        """, (name, min_orders, pct, note, now))
+    try:
+        c.execute("ALTER TABLE premium_upgrade_requests ADD COLUMN affiliate_code TEXT")
+    except Exception:
+        pass
+    conn.commit(); conn.close()
+
+
+def current_affiliate_code():
+    ref = (request.args.get('ref') or request.cookies.get('affiliate_code') or '').strip().upper()
+    ref = ref.replace(' ', '').replace('_', '-')
+    if ref and not ref.startswith('CTV-') and ref.startswith('CTV'):
+        ref = 'CTV-' + ref[3:]
+    return ref[:40]
+
+
+def generate_affiliate_code():
+    ensure_affiliate_tables()
+    conn = db(); c = conn.cursor()
+    while True:
+        code = 'CTV-' + ''.join(random.choice('0123456789') for _ in range(6))
+        c.execute('SELECT id FROM affiliate_users WHERE affiliate_code=?', (code,))
+        if not c.fetchone():
+            conn.close(); return code
+
+
+def get_or_create_affiliate(device_id=None, full_name='', phone='', email=''):
+    ensure_affiliate_tables()
+    device_id = (device_id or get_device_id()).strip().upper()
+    now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    conn = db(); c = conn.cursor()
+    c.execute('SELECT id,device_id,full_name,phone,email,affiliate_code,custom_slug,level_name,commission_percent,status FROM affiliate_users WHERE device_id=?', (device_id,))
+    row = c.fetchone()
+    if row:
+        if full_name or phone or email:
+            c.execute("""
+                UPDATE affiliate_users SET
+                    full_name=COALESCE(NULLIF(?,''),full_name),
+                    phone=COALESCE(NULLIF(?,''),phone),
+                    email=COALESCE(NULLIF(?,''),email),
+                    updated_at=?
+                WHERE device_id=?
+            """, (full_name.strip(), phone.strip(), email.strip(), now, device_id))
+            conn.commit()
+        c.execute('SELECT id,device_id,full_name,phone,email,affiliate_code,custom_slug,level_name,commission_percent,status FROM affiliate_users WHERE device_id=?', (device_id,))
+        row = c.fetchone(); conn.close(); return row
+    code = generate_affiliate_code()
+    slug = code.lower().replace('-', '')
+    c.execute("""
+        INSERT INTO affiliate_users(device_id,full_name,phone,email,affiliate_code,custom_slug,level_name,commission_percent,status,created_at,updated_at)
+        VALUES(?,?,?,?,?,?,?,?,?,?,?)
+    """, (device_id, full_name.strip(), phone.strip(), email.strip(), code, slug, 'CTV thường', 20, 'active', now, now))
+    conn.commit()
+    c.execute('SELECT id,device_id,full_name,phone,email,affiliate_code,custom_slug,level_name,commission_percent,status FROM affiliate_users WHERE device_id=?', (device_id,))
+    row = c.fetchone(); conn.close(); return row
+
+
+def affiliate_summary(affiliate_code):
+    ensure_affiliate_tables()
+    affiliate_code = (affiliate_code or '').strip().upper()
+    conn = db(); c = conn.cursor()
+    def one(sql, params=()):
+        c.execute(sql, params); r = c.fetchone(); return r[0] if r and r[0] is not None else 0
+    clicks = one('SELECT COUNT(*) FROM affiliate_clicks WHERE affiliate_code=?', (affiliate_code,))
+    referrals = one('SELECT COUNT(*) FROM affiliate_referrals WHERE affiliate_code=?', (affiliate_code,))
+    premium = one("SELECT COUNT(*) FROM affiliate_referrals WHERE affiliate_code=? AND status IN ('Đã duyệt','Đã thanh toán')", (affiliate_code,))
+    revenue = one("SELECT COALESCE(SUM(amount),0) FROM affiliate_referrals WHERE affiliate_code=? AND status IN ('Đã duyệt','Đã thanh toán')", (affiliate_code,))
+    commission = one("SELECT COALESCE(SUM(commission_amount),0) FROM affiliate_referrals WHERE affiliate_code=? AND status IN ('Đã duyệt','Đã thanh toán')", (affiliate_code,))
+    paid = one("SELECT COALESCE(SUM(amount),0) FROM affiliate_withdrawals WHERE affiliate_code=? AND status='Đã thanh toán'", (affiliate_code,))
+    pending_withdraw = one("SELECT COALESCE(SUM(amount),0) FROM affiliate_withdrawals WHERE affiliate_code=? AND status='Chờ duyệt'", (affiliate_code,))
+    c.execute("""SELECT customer_device_id,customer_phone,customer_email,package_name,amount,commission_amount,status,created_at
+                 FROM affiliate_referrals WHERE affiliate_code=? ORDER BY id DESC LIMIT 20""", (affiliate_code,))
+    recent = c.fetchall()
+    c.execute("SELECT amount,bank_name,bank_number,account_name,status,created_at,paid_at FROM affiliate_withdrawals WHERE affiliate_code=? ORDER BY id DESC LIMIT 20", (affiliate_code,))
+    withdrawals = c.fetchall()
+    conn.close()
+    return {
+        'clicks': clicks, 'referrals': referrals, 'premium': premium, 'revenue': revenue,
+        'commission': commission, 'paid': paid, 'balance': max(0, int(commission or 0) - int(paid or 0) - int(pending_withdraw or 0)),
+        'pending_withdraw': pending_withdraw, 'recent': recent, 'withdrawals': withdrawals
+    }
+
+
+def record_affiliate_click(affiliate_code):
+    ensure_affiliate_tables()
+    affiliate_code = (affiliate_code or '').strip().upper()
+    if not affiliate_code:
+        return
+    now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    conn = db(); c = conn.cursor()
+    c.execute('SELECT id FROM affiliate_users WHERE affiliate_code=? AND status="active"', (affiliate_code,))
+    if c.fetchone():
+        c.execute("""INSERT INTO affiliate_clicks(affiliate_code,visitor_device_id,ip,user_agent,created_at)
+                     VALUES(?,?,?,?,?)""", (affiliate_code, get_device_id(), request.remote_addr or '', request.headers.get('User-Agent','')[:250], now))
+        conn.commit()
+    conn.close()
+
+
+def create_affiliate_commission_for_request(cursor, request_id):
+    try:
+        cursor.execute("SELECT device_id,phone,email,package_key,package_name,amount,affiliate_code,status FROM premium_upgrade_requests WHERE id=?", (request_id,))
+    except Exception:
+        return False
+    row = cursor.fetchone()
+    if not row:
+        return False
+    device_id, phone, email, package_key, package_name, amount, affiliate_code, req_status = row
+    affiliate_code = (affiliate_code or '').strip().upper()
+    if not affiliate_code:
+        return False
+    cursor.execute('SELECT commission_percent FROM affiliate_users WHERE affiliate_code=? AND status="active"', (affiliate_code,))
+    ar = cursor.fetchone()
+    if not ar:
+        return False
+    pct = float(ar[0] or 20)
+    amount = int(amount or 0)
+    commission = int(round(amount * pct / 100))
+    now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    cursor.execute('SELECT id FROM affiliate_referrals WHERE premium_request_id=?', (request_id,))
+    if cursor.fetchone():
+        return False
+    cursor.execute("""
+        INSERT INTO affiliate_referrals(affiliate_code,customer_device_id,customer_phone,customer_email,package_key,package_name,amount,commission_percent,commission_amount,status,premium_request_id,created_at,approved_at)
+        VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)
+    """, (affiliate_code, device_id, phone, email, package_key, package_name, amount, pct, commission, 'Đã duyệt', request_id, now, now))
+    cursor.execute("""INSERT INTO notifications(title,detail,level,status,created_at) VALUES(?,?,?,?,?)""",
+                   ('Hoa hồng CTV mới', f'{affiliate_code} nhận {commission:,}đ từ {package_name}'.replace(',', '.'), 'success', 'new', now))
+    return True
+
+
+@app.route('/api/affiliate/me', methods=['GET', 'POST'])
+def api_affiliate_me():
+    ensure_affiliate_tables()
+    if request.method == 'POST':
+        data = request.get_json(silent=True) or request.form
+        row = get_or_create_affiliate(full_name=data.get('full_name',''), phone=data.get('phone',''), email=data.get('email',''))
+    else:
+        row = get_or_create_affiliate()
+    _, device_id, full_name, phone, email, code, slug, level, pct, status = row
+    base = request.host_url.rstrip('/')
+    summary = affiliate_summary(code)
+    return jsonify({
+        'ok': True,
+        'device_id': device_id,
+        'full_name': full_name or '',
+        'phone': phone or '',
+        'email': email or '',
+        'affiliate_code': code,
+        'custom_slug': slug or '',
+        'level_name': level or 'CTV thường',
+        'commission_percent': pct or 20,
+        'status': status or 'active',
+        'ref_link': f'{base}/?ref={code}',
+        'pretty_link': f'{base}/ctv/{slug or code.lower().replace("-","")}',
+        'summary': summary
+    })
+
+
+@app.route('/api/affiliate/withdraw', methods=['POST'])
+def api_affiliate_withdraw():
+    ensure_affiliate_tables()
+    data = request.get_json(silent=True) or request.form
+    row = get_or_create_affiliate()
+    code = row[5]
+    summary = affiliate_summary(code)
+    amount = int(str(data.get('amount','0')).replace('.','').replace(',','') or 0)
+    if amount <= 0 or amount > int(summary.get('balance',0)):
+        return jsonify({'ok': False, 'message': 'Số tiền rút không hợp lệ hoặc vượt số dư khả dụng.'}), 400
+    bank = (data.get('bank_name','') or '').strip()
+    number = (data.get('bank_number','') or '').strip()
+    account = (data.get('account_name','') or '').strip()
+    if not bank or not number or not account:
+        return jsonify({'ok': False, 'message': 'Vui lòng nhập đủ ngân hàng, số tài khoản và chủ tài khoản.'}), 400
+    now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    conn = db(); c = conn.cursor()
+    c.execute("""INSERT INTO affiliate_withdrawals(affiliate_code,amount,bank_name,bank_number,account_name,status,admin_note,created_at,paid_at)
+                 VALUES(?,?,?,?,?,?,?,?,?)""", (code, amount, bank, number, account, 'Chờ duyệt', '', now, ''))
+    c.execute("""INSERT INTO notifications(title,detail,level,status,created_at) VALUES(?,?,?,?,?)""",
+              ('CTV yêu cầu rút hoa hồng', f'{code} yêu cầu rút {amount:,}đ'.replace(',', '.'), 'warning', 'new', now))
+    conn.commit(); conn.close()
+    return jsonify({'ok': True, 'message': 'Đã gửi yêu cầu rút hoa hồng về web admin.'})
+
+
+@app.route('/api/admin/affiliate')
+def api_admin_affiliate():
+    ensure_affiliate_tables()
+    conn = db(); c = conn.cursor()
+    c.execute("""SELECT u.id,u.device_id,u.full_name,u.phone,u.email,u.affiliate_code,u.level_name,u.commission_percent,u.status,u.created_at,
+                        COALESCE(COUNT(r.id),0) AS orders,
+                        COALESCE(SUM(CASE WHEN r.status IN ('Đã duyệt','Đã thanh toán') THEN r.amount ELSE 0 END),0) AS revenue,
+                        COALESCE(SUM(CASE WHEN r.status IN ('Đã duyệt','Đã thanh toán') THEN r.commission_amount ELSE 0 END),0) AS commission
+                 FROM affiliate_users u
+                 LEFT JOIN affiliate_referrals r ON r.affiliate_code=u.affiliate_code
+                 GROUP BY u.id ORDER BY u.id DESC LIMIT 200""")
+    users = c.fetchall()
+    c.execute('SELECT id,level_name,min_orders,commission_percent,note,updated_at FROM affiliate_settings ORDER BY min_orders ASC')
+    settings = c.fetchall()
+    c.execute("SELECT id,affiliate_code,amount,bank_name,bank_number,account_name,status,created_at,paid_at FROM affiliate_withdrawals ORDER BY id DESC LIMIT 100")
+    withdrawals = c.fetchall()
+    conn.close()
+    return jsonify({'ok': True, 'users': users, 'settings': settings, 'withdrawals': withdrawals})
+
+
+@app.route('/api/admin/affiliate/settings', methods=['POST'])
+def api_admin_affiliate_settings():
+    ensure_affiliate_tables()
+    data = request.get_json(silent=True) or request.form
+    now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    conn = db(); c = conn.cursor()
+    for key, default in [('normal',20),('silver',25),('gold',30),('diamond',35)]:
+        pct = data.get(key)
+        if pct is None: continue
+        try: pct = float(pct)
+        except Exception: pct = default
+        name = {'normal':'CTV thường','silver':'CTV Bạc','gold':'CTV Vàng','diamond':'CTV Kim Cương'}[key]
+        c.execute('UPDATE affiliate_settings SET commission_percent=?, updated_at=? WHERE level_name=?', (pct, now, name))
+    conn.commit(); conn.close()
+    return jsonify({'ok': True, 'message': 'Đã cập nhật phần trăm hoa hồng.'})
+
+
+@app.route('/api/admin/affiliate/withdraw/<int:withdraw_id>', methods=['POST'])
+def api_admin_affiliate_withdraw_action(withdraw_id):
+    ensure_affiliate_tables()
+    data = request.get_json(silent=True) or request.form
+    status = data.get('status','Đã thanh toán')
+    if status not in ['Đã thanh toán','Từ chối','Chờ duyệt']:
+        status = 'Đã thanh toán'
+    now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S') if status == 'Đã thanh toán' else ''
+    conn = db(); c = conn.cursor()
+    c.execute('UPDATE affiliate_withdrawals SET status=?, paid_at=? WHERE id=?', (status, now, withdraw_id))
+    conn.commit(); conn.close()
+    return jsonify({'ok': True})
+
+
+@app.route('/ctv/<slug>')
+def affiliate_pretty_link(slug):
+    ensure_affiliate_tables()
+    slug = (slug or '').strip().lower()
+    conn = db(); c = conn.cursor()
+    c.execute('SELECT affiliate_code FROM affiliate_users WHERE lower(custom_slug)=? OR lower(replace(affiliate_code,"-",""))=? LIMIT 1', (slug, slug))
+    row = c.fetchone(); conn.close()
+    code = row[0] if row else ''
+    resp = home()
+    if code:
+        record_affiliate_click(code)
+        try:
+            resp.set_cookie('affiliate_code', code, max_age=60*60*24*90)
+        except Exception:
+            pass
+    return resp
 
 
 if __name__ == "__main__":
