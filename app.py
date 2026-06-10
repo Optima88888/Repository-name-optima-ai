@@ -4867,41 +4867,31 @@ function closeLockedFeature(){
   </div>
   {% endif %}
 
-<div class="nav mkt-saas-nav">
-<div class="v2-nav-title">MENU CHÍNH</div>
-  <a class="v2-nav-link" href="#dashboard" data-module="dashboard"><span class="v2-nav-text">Dashboard CEO</span></a>
+<div class="nav mkt-saas-nav mkt-clean-nav">
+  <div class="v2-nav-title">MENU CHÍNH</div>
+  <a class="v2-nav-link" href="#dashboard" data-module="dashboard"><span class="v2-nav-text">Dashboard</span></a>
 
   <div class="v2-nav-title">FACEBOOK CENTER</div>
-  <a class="v2-nav-link mkt-menu-pro" href="#facebook_center" data-module="facebook_center"><span class="v2-nav-text">Facebook Center</span><span class="mkt-dot-status pro"><i></i><b>Pro</b></span></a>
-  <a class="v2-nav-link mkt-menu-pro" href="#page_center_total" data-module="page_center_total"><span class="v2-nav-text">Page Center Tổng</span><span class="mkt-dot-status pro"><i></i><b>Pro</b></span></a>
-  <a class="v2-nav-link mkt-menu-pro" href="#post" data-module="page_center_total"><span class="v2-nav-text">Đăng bài Facebook</span><span class="mkt-dot-status pro"><i></i><b>Pro</b></span></a>
-  <a class="v2-nav-link mkt-menu-pro" href="#fanpage_manager" data-module="fanpage_manager"><span class="v2-nav-text">Quản lý Fanpage</span><span class="mkt-dot-status pro"><i></i><b>Pro</b></span></a>
-  <a class="v2-nav-link mkt-menu-pro" href="#group_suite" data-module="group_suite"><span class="v2-nav-text">Group Center Tổng</span><span class="mkt-dot-status pro"><i></i><b>Pro</b></span></a>
+  <a class="v2-nav-link mkt-menu-pro" href="#post" data-module="post"><span class="v2-nav-text">Đăng bài Facebook</span><span class="mkt-dot-tag pro"><i></i><span>Pro</span></span></a>
+  <a class="v2-nav-link mkt-menu-pro" href="#fanpage_manager" data-module="fanpage_manager"><span class="v2-nav-text">Quản lý Fanpage</span><span class="mkt-dot-tag pro"><i></i><span>Pro</span></span></a>
+  <a class="v2-nav-link mkt-menu-pro" href="#group_suite" data-module="group_suite"><span class="v2-nav-text">Group Center</span><span class="mkt-dot-tag pro"><i></i><span>Pro</span></span></a>
+  <a class="v2-nav-link mkt-menu-pro" href="#page_center_total" data-module="page_center_total"><span class="v2-nav-text">Token Fanpage</span><span class="mkt-dot-tag pro"><i></i><span>Pro</span></span></a>
 
   <div class="v2-nav-title">SELLER AI</div>
-  <a class="v2-nav-link mkt-menu-pro" href="#comment_manager" data-module="comment_manager"><span class="v2-nav-text">AI Comment</span><span class="mkt-dot-status pro"><i></i><b>Pro</b></span></a>
-  <a class="v2-nav-link mkt-menu-premium" href="#messenger_ai" data-module="messenger_ai"><span class="v2-nav-text">AI Messenger</span><span class="mkt-dot-status premium"><i></i><b>Premium</b></span></a>
-  <a class="v2-nav-link mkt-menu-premium" href="#crm_sales" data-module="crm_sales"><span class="v2-nav-text">CRM Kanban</span><span class="mkt-dot-status premium"><i></i><b>Premium</b></span></a>
-  <a class="v2-nav-link mkt-menu-premium" href="#marketing_director" data-module="marketing_director"><span class="v2-nav-text">AI Marketing Director</span><span class="mkt-dot-status premium"><i></i><b>Premium</b></span></a>
+  <a class="v2-nav-link mkt-menu-pro" href="#comment_manager" data-module="comment_manager"><span class="v2-nav-text">AI Comment</span><span class="mkt-dot-tag pro"><i></i><span>Pro</span></span></a>
+  <a class="v2-nav-link mkt-menu-premium" href="#messenger_ai" data-module="messenger_ai"><span class="v2-nav-text">AI Messenger</span><span class="mkt-dot-tag premium"><i></i><span>Premium</span></span></a>
+  <a class="v2-nav-link mkt-menu-premium" href="#crm_sales" data-module="crm_sales"><span class="v2-nav-text">CRM Kanban</span><span class="mkt-dot-tag premium"><i></i><span>Premium</span></span></a>
+  <a class="v2-nav-link mkt-menu-premium" href="#marketing_director" data-module="marketing_director"><span class="v2-nav-text">Marketing AI</span><span class="mkt-dot-tag premium"><i></i><span>Premium</span></span></a>
 
   <div class="v2-nav-title">AI STUDIO</div>
-  <a class="v2-nav-link mkt-menu-premium" href="#ai_studio" data-module="ai_studio"><span class="v2-nav-text">AI Studio</span><span class="mkt-dot-status premium"><i></i><b>Premium</b></span></a>
-  <a class="v2-nav-link mkt-menu-premium" href="#creative_center" data-module="creative_center"><span class="v2-nav-text">Image / Video / Voice</span><span class="mkt-dot-status premium"><i></i><b>Premium</b></span></a>
-
-  <div class="v2-nav-title">AI BUSINESS</div>
-  <a class="v2-nav-link mkt-menu-premium" href="#ai_studio" data-module="ai_studio"><span class="v2-nav-text">AI Facebook</span><span class="mkt-dot-status premium"><i></i><b>Premium</b></span></a>
-  <a class="v2-nav-link mkt-menu-premium" href="#marketing_director" data-module="marketing_director"><span class="v2-nav-text">AI Kinh Doanh</span><span class="mkt-dot-status premium"><i></i><b>Premium</b></span></a>
+  <a class="v2-nav-link mkt-menu-premium" href="#creative_center" data-module="creative_center"><span class="v2-nav-text">AI Image / Video</span><span class="mkt-dot-tag premium"><i></i><span>Premium</span></span></a>
+  <a class="v2-nav-link mkt-menu-premium" href="#ai_studio" data-module="ai_studio"><span class="v2-nav-text">AI Studio</span><span class="mkt-dot-tag premium"><i></i><span>Premium</span></span></a>
 
   <div class="v2-nav-title">HỆ THỐNG</div>
-  <a class="v2-nav-link mkt-menu-premium" href="#premium" data-module="premium"><span class="v2-nav-text">Premium</span><span class="mkt-dot-status premium"><i></i><b>Premium</b></span></a>
-  <a class="v2-nav-link" href="#analytics" data-module="analytics"><span class="v2-nav-text">Analytics Center</span></a>
-  <a class="v2-nav-link" href="#automation_center" data-module="automation_center"><span class="v2-nav-text">Cài đặt Automation</span></a>
-  <a data-aff-menu="1" class="v2-nav-link" href="#affiliate_center" data-module="affiliate_center"><span class="v2-nav-text">CTV Hoa Hồng</span></a>
-
-  <div class="v2-side-card">
-    🚀 Mkt Automation Pro V5<br>
-    Fanpage • Group • Comment • Messenger • CRM • Marketing Director.
-  </div>
+  <a class="v2-nav-link" href="#analytics" data-module="analytics"><span class="v2-nav-text">Analytics</span></a>
+  <a class="v2-nav-link" href="#automation_center" data-module="automation_center"><span class="v2-nav-text">Automation</span></a>
+  <a data-aff-menu="1" class="v2-nav-link mkt-menu-pro" href="#affiliate_center" data-module="affiliate_center"><span class="v2-nav-text">CTV Hoa Hồng</span><span class="mkt-dot-tag pro"><i></i><span>Pro</span></span></a>
+  <a class="v2-nav-link mkt-menu-premium" href="#premium" data-module="premium"><span class="v2-nav-text">Bảng giá Premium</span><span class="mkt-dot-tag premium"><i></i><span>Premium</span></span></a>
 </div>
 </aside>
 
@@ -4909,12 +4899,6 @@ function closeLockedFeature(){
 
 <section class="top-hero" id="dashboard">
   <h1>Mkt Automation Pro V5 Seller AI Suite</h1>
-
-<div class="app-install-banner">
-  <b>📲 App Mini đã sẵn sàng</b><br>
-  Mở trên điện thoại rồi bấm “Thêm vào màn hình chính” để dùng như phần mềm.
-  <button onclick="showInstallGuide()">Hướng dẫn cài vào điện thoại</button>
-</div>
 
 <div class="app-quick-grid">
   <div class="app-quick-card" onclick="return openModule('post')">
@@ -7193,192 +7177,67 @@ function dropKanban(ev){ ev.preventDefault(); const col=ev.currentTarget; if(dra
 })();
 </script>
 
-<!-- ROOT CLEAN 20260610: single sidebar controller + PWA installer -->
-<style id="mkt-root-clean-sidebar-pwa">
-  body .sidebar{background:linear-gradient(180deg,#070b18 0%,#0b1024 58%,#0d0820 100%)!important;border-right:1px solid rgba(148,163,184,.16)!important;width:292px!important;box-shadow:12px 0 40px rgba(2,6,23,.20)!important;}
-  body .logo{font-size:22px!important;line-height:1.08!important;font-weight:1000!important;letter-spacing:-.04em!important;color:#fff!important;margin-bottom:12px!important;text-shadow:0 10px 26px rgba(37,99,235,.28)!important;}
-  body .v2-nav-title{margin:18px 18px 8px!important;font-size:10px!important;line-height:1!important;letter-spacing:.15em!important;color:#93a4ff!important;font-weight:1000!important;opacity:.86!important;}
-  body .v2-nav-link{position:relative!important;min-height:48px!important;height:48px!important;margin:6px 12px!important;padding:0 92px 0 16px!important;border-radius:14px!important;border:1px solid rgba(148,163,184,.13)!important;background:linear-gradient(135deg,rgba(15,23,42,.90),rgba(17,24,39,.62))!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.045),0 8px 22px rgba(0,0,0,.14)!important;color:#f8fafc!important;cursor:pointer!important;pointer-events:auto!important;display:flex!important;align-items:center!important;justify-content:flex-start!important;gap:0!important;overflow:hidden!important;transform:none!important;transition:transform .18s ease,border-color .18s ease,background .18s ease,box-shadow .18s ease!important;text-decoration:none!important;}
-  body .v2-nav-link:hover{transform:translateX(4px)!important;border-color:rgba(96,165,250,.30)!important;background:linear-gradient(135deg,rgba(37,99,235,.20),rgba(124,58,237,.14),rgba(15,23,42,.78))!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.07),0 12px 28px rgba(0,0,0,.22)!important;}
-  body .v2-nav-link.active{border-color:rgba(99,102,241,.46)!important;background:linear-gradient(135deg,rgba(37,99,235,.30),rgba(124,58,237,.24))!important;}
-  body .v2-nav-ico,body .v2-nav-tag{display:none!important;visibility:hidden!important;width:0!important;min-width:0!important;height:0!important;margin:0!important;padding:0!important;opacity:0!important;}
-  body .v2-nav-text{display:block!important;min-width:0!important;overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important;font-size:14px!important;line-height:1!important;font-weight:850!important;letter-spacing:-.01em!important;color:#f8fafc!important;text-shadow:none!important;}
-  body .v2-nav-link::before,body .v2-nav-link::after,body .v2-nav-link.real-pro::after,body .v2-nav-link.real-premium-lock::after,body .v2-nav-link.pro-feature::after,body .v2-nav-link.premium-locked::after,body .v2-nav-link.menu-pro::after,body .v2-nav-link.menu-locked::after{content:""!important;display:none!important;visibility:hidden!important;opacity:0!important;width:0!important;height:0!important;background:transparent!important;box-shadow:none!important;animation:none!important;}
-  body .mkt-dot-status{position:absolute!important;right:13px!important;top:50%!important;transform:translateY(-50%)!important;display:inline-flex!important;align-items:center!important;gap:5px!important;height:18px!important;z-index:10!important;pointer-events:none!important;white-space:nowrap!important;background:transparent!important;border:0!important;box-shadow:none!important;padding:0!important;}
-  body .mkt-dot-status i{display:block!important;width:7px!important;height:7px!important;border-radius:999px!important;flex:0 0 7px!important;}
-  body .mkt-dot-status b{display:block!important;font-size:10.5px!important;line-height:1!important;font-weight:900!important;letter-spacing:-.01em!important;text-transform:none!important;color:#dbeafe!important;}
-  body .mkt-dot-status.pro i{background:#22c55e!important;box-shadow:0 0 9px rgba(34,197,94,.55)!important;}
-  body .mkt-dot-status.pro b{color:#bbf7d0!important;}
-  body .mkt-dot-status.premium i{background:#facc15!important;box-shadow:0 0 9px rgba(250,204,21,.50)!important;}
-  body .mkt-dot-status.premium b{color:#fef3c7!important;}
-  body .app-install-card{margin:12px 12px 18px!important;padding:14px!important;border-radius:18px!important;border:1px solid rgba(96,165,250,.22)!important;background:linear-gradient(135deg,rgba(37,99,235,.16),rgba(124,58,237,.12),rgba(15,23,42,.72))!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 12px 26px rgba(0,0,0,.18)!important;color:#fff!important;display:grid!important;grid-template-columns:34px 1fr!important;gap:10px!important;align-items:center!important;}
-  body .app-install-icon{width:34px;height:34px;border-radius:12px;background:linear-gradient(135deg,#2563eb,#7c3aed);display:flex;align-items:center;justify-content:center;box-shadow:0 10px 20px rgba(37,99,235,.28)}
-  body .app-install-text b{display:block;font-size:14px;font-weight:1000;color:#fff;line-height:1.1} body .app-install-text small{display:block;margin-top:3px;font-size:11px;line-height:1.35;color:#b6c4ff;font-weight:700}
-  body .app-install-card button{grid-column:1/-1;margin-top:4px;border:0;border-radius:999px;padding:10px 14px;font-size:13px;font-weight:1000;color:#fff;background:linear-gradient(135deg,#2563eb,#7c3aed);box-shadow:0 10px 20px rgba(37,99,235,.25);cursor:pointer!important;}
-  body.mkt-installed-mode .app-install-card{display:none!important;}
+
+<!-- CLEAN SAAS SIDEBAR + MOBILE PWA INSTALL 20260610 -->
+<style id="mkt-clean-saas-sidebar-mobile-pwa">
+  /* Dọn sạch badge/card cũ */
+  .app-install-card,.app-install-banner,.v2-install-box,#mktInstallFloat,#mktInstallPanel{display:none!important;visibility:hidden!important;height:0!important;margin:0!important;padding:0!important;overflow:hidden!important;pointer-events:none!important;}
+  .v2-side-card{display:none!important;}
+  .sidebar{width:292px!important;background:linear-gradient(180deg,#070b18 0%,#0b1024 60%,#0c0920 100%)!important;border-right:1px solid rgba(148,163,184,.16)!important;box-shadow:12px 0 38px rgba(2,6,23,.20)!important;}
+  .logo{font-size:23px!important;line-height:1.08!important;font-weight:1000!important;letter-spacing:-.045em!important;color:#fff!important;margin:0 18px 14px!important;text-shadow:0 10px 24px rgba(37,99,235,.24)!important;}
+  .logo:after{content:""!important;display:block!important;width:84px!important;height:4px!important;margin-top:13px!important;border-radius:999px!important;background:linear-gradient(90deg,#2563eb,#7c3aed)!important;}
+  .mkt-clean-nav{padding:8px 14px 24px!important;}
+  .v2-nav-title{margin:18px 0 7px!important;padding:0 4px!important;font-size:10.5px!important;line-height:1!important;font-weight:1000!important;letter-spacing:.12em!important;text-transform:uppercase!important;color:#9fb0ff!important;opacity:.95!important;}
+  .mkt-clean-nav .v2-nav-title:nth-of-type(2)::before{content:'📣 ';letter-spacing:0;text-transform:none;}
+  .mkt-clean-nav .v2-nav-title:nth-of-type(3)::before{content:'🤖 ';letter-spacing:0;text-transform:none;}
+  .mkt-clean-nav .v2-nav-title:nth-of-type(4)::before{content:'🎨 ';letter-spacing:0;text-transform:none;}
+  .mkt-clean-nav .v2-nav-title:nth-of-type(5)::before{content:'⚙️ ';letter-spacing:0;text-transform:none;}
+  .v2-nav-link{position:relative!important;display:flex!important;align-items:center!important;gap:8px!important;min-height:38px!important;height:auto!important;margin:2px 0!important;padding:8px 8px 8px 13px!important;border-radius:11px!important;background:transparent!important;border:1px solid transparent!important;box-shadow:none!important;color:#e8ecff!important;text-decoration:none!important;cursor:pointer!important;pointer-events:auto!important;user-select:none!important;overflow:visible!important;transform:none!important;transition:background .16s ease,border-color .16s ease,transform .16s ease!important;}
+  .v2-nav-link::before{content:'├'!important;display:inline-block!important;width:10px!important;margin-right:1px!important;color:rgba(165,180,252,.40)!important;font-size:13px!important;font-weight:900!important;background:transparent!important;box-shadow:none!important;position:static!important;opacity:1!important;}
+  .v2-nav-link:hover{background:rgba(99,102,241,.12)!important;border-color:rgba(129,140,248,.16)!important;transform:translateX(2px)!important;box-shadow:none!important;}
+  .v2-nav-link.active{background:linear-gradient(135deg,rgba(37,99,235,.20),rgba(124,58,237,.14))!important;border-color:rgba(129,140,248,.24)!important;}
+  .v2-nav-text{flex:1 1 auto!important;min-width:0!important;font-size:14px!important;line-height:1.15!important;font-weight:850!important;white-space:normal!important;overflow:visible!important;text-overflow:clip!important;color:inherit!important;text-shadow:none!important;}
+  .v2-nav-ico,.v2-nav-tag,.mkt-pro-mini{display:none!important;visibility:hidden!important;width:0!important;height:0!important;margin:0!important;padding:0!important;opacity:0!important;}
+  .v2-nav-link::after,.v2-nav-link.menu-pro::after,.v2-nav-link.pro-feature::after,.v2-nav-link.real-pro::after,.v2-nav-link.premium-locked::after,.v2-nav-link.real-premium-lock::after,.v2-nav-link.menu-locked::after{content:none!important;display:none!important;}
+  .mkt-dot-tag{display:inline-flex!important;align-items:center!important;gap:5px!important;margin-left:auto!important;font-size:11px!important;font-weight:950!important;letter-spacing:-.01em!important;white-space:nowrap!important;line-height:1!important;background:transparent!important;border:0!important;padding:0!important;box-shadow:none!important;}
+  .mkt-dot-tag i{display:block!important;width:8px!important;height:8px!important;border-radius:999px!important;box-shadow:0 0 8px currentColor!important;background:currentColor!important;flex:0 0 8px!important;}
+  .mkt-dot-tag.pro{color:#22c55e!important}.mkt-dot-tag.pro span{color:#bbf7d0!important}.mkt-dot-tag.premium{color:#facc15!important}.mkt-dot-tag.premium span{color:#fef3c7!important;}
+  .mkt-mobile-install-menu{display:none!important;}
+  .mkt-install-sheet-backdrop{position:fixed!important;inset:0!important;z-index:2147483400!important;display:none!important;align-items:flex-end!important;justify-content:center!important;background:rgba(2,6,23,.60)!important;backdrop-filter:blur(8px)!important;}
+  .mkt-install-sheet-backdrop.show{display:flex!important;}
+  .mkt-install-sheet{width:min(430px,100vw)!important;background:#fff!important;color:#111827!important;border-radius:24px 24px 0 0!important;padding:20px 18px 18px!important;box-shadow:0 -24px 70px rgba(15,23,42,.42)!important;border:1px solid rgba(15,23,42,.08)!important;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif!important;}
+  .mkt-install-sheet h3{margin:0 0 8px!important;font-size:20px!important;line-height:1.15!important;font-weight:1000!important;color:#0f172a!important;}
+  .mkt-install-sheet p{margin:8px 0!important;font-size:14px!important;line-height:1.5!important;color:#334155!important;font-weight:700!important;}
+  .mkt-install-actions{display:flex!important;gap:10px!important;margin-top:14px!important}.mkt-install-actions button{flex:1!important;border:0!important;border-radius:999px!important;padding:13px 14px!important;font-size:14px!important;font-weight:1000!important;cursor:pointer!important}.mkt-install-now{color:#fff!important;background:linear-gradient(135deg,#2563eb,#7c3aed)!important}.mkt-install-close{color:#334155!important;background:#e5e7eb!important;}
+  @media(max-width:768px){.mkt-mobile-install-menu{display:flex!important;align-items:center!important;gap:10px!important;margin:10px 12px 14px!important;padding:12px 13px!important;border-radius:17px!important;border:1px solid rgba(96,165,250,.28)!important;color:#fff!important;background:linear-gradient(135deg,rgba(37,99,235,.28),rgba(124,58,237,.18),rgba(15,23,42,.76))!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 12px 28px rgba(2,6,23,.20)!important;cursor:pointer!important}.mkt-mobile-install-menu .mkt-install-phone-icon{width:36px!important;height:36px!important;border-radius:13px!important;display:flex!important;align-items:center!important;justify-content:center!important;background:linear-gradient(135deg,#2563eb,#7c3aed)!important;box-shadow:0 10px 22px rgba(37,99,235,.30)!important;font-size:18px!important;flex:0 0 36px!important}.mkt-mobile-install-menu b{display:block!important;font-size:14px!important;line-height:1.05!important;font-weight:1000!important;color:#fff!important}.mkt-mobile-install-menu small{display:block!important;margin-top:4px!important;font-size:11px!important;line-height:1.25!important;font-weight:800!important;color:#bfdbfe!important}body.mkt-app-installed .mkt-mobile-install-menu{display:none!important;}}
 </style>
-<script id="mkt-root-clean-sidebar-pwa-js">
+<script id="mkt-clean-saas-sidebar-mobile-pwa-js">
 (function(){
   'use strict';
-  var deferredPrompt=null;
-  var ALIAS={post:'page_center_total',page_center:'page_center_total',group_marketing:'group_suite',group_finder:'group_suite',group_uid_splitter:'group_suite',group_join_queue:'group_suite',group_post_filter:'group_suite'};
-  function norm(id){id=(id||'').replace('#','');return ALIAS[id]||id||'dashboard';}
-  function qa(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s));}
-  function visibleSection(id){
-    id=norm(id);
-    qa('.module-section').forEach(function(el){el.classList.remove('active-module');el.style.display='none';});
-    var target=document.getElementById(id)||document.getElementById('dashboard');
-    if(target){target.classList.add('active-module');target.style.display='block';setTimeout(function(){try{target.scrollIntoView({behavior:'smooth',block:'start'});}catch(e){}},20);}
-    qa('.v2-nav-link').forEach(function(a){a.classList.remove('active');});
-    var active=document.querySelector('.v2-nav-link[data-module="'+id+'"],.v2-nav-link[href="#'+id+'"]');if(active)active.classList.add('active');
-    return false;
-  }
-  window.openModule=visibleSection;
-  function menuId(a){return norm(a.getAttribute('data-module')||(a.getAttribute('href')||'').replace('#',''));}
-  document.addEventListener('click',function(e){
-    var install=e.target.closest&&e.target.closest('[data-install-app],#installAppBtn,.app-install-card button');
-    if(install){e.preventDefault();e.stopPropagation();if(e.stopImmediatePropagation)e.stopImmediatePropagation();return window.showInstallGuide();}
-    var a=e.target.closest&&e.target.closest('.v2-nav-link');
-    if(a){e.preventDefault();e.stopPropagation();if(e.stopImmediatePropagation)e.stopImmediatePropagation();return visibleSection(menuId(a));}
-  },true);
-  window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();deferredPrompt=e;qa('[data-install-app],#installAppBtn').forEach(function(b){b.textContent='Cài đặt ứng dụng';});});
-  window.addEventListener('appinstalled',function(){document.body.classList.add('mkt-installed-mode');deferredPrompt=null;});
-  function standalone(){return window.matchMedia('(display-mode: standalone)').matches||window.navigator.standalone===true;}
-  window.showInstallGuide=async function(){
-    if(standalone()){document.body.classList.add('mkt-installed-mode');return false;}
-    if(deferredPrompt){deferredPrompt.prompt();try{await deferredPrompt.userChoice;}catch(e){}deferredPrompt=null;return false;}
-    var card=document.querySelector('.app-install-card');
-    if(card){var old=card.querySelector('.mkt-install-note');if(old)old.remove();var note=document.createElement('div');note.className='mkt-install-note';note.style.cssText='grid-column:1/-1;margin-top:8px;font-size:12px;line-height:1.45;color:#dbeafe;font-weight:800';note.innerHTML='Android Chrome: bấm menu 3 chấm → <b>Thêm vào màn hình chính</b> hoặc <b>Cài đặt ứng dụng</b>.<br>iPhone Safari: bấm Chia sẻ → <b>Thêm vào màn hình chính</b>.<br>Lưu ý: cần chạy bằng domain HTTPS, không dùng file://.';card.appendChild(note);}return false;
-  };
-  if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('/service-worker.js',{scope:'/'}).catch(function(err){console.log('PWA SW lỗi:',err);});});}
-  function init(){if(standalone())document.body.classList.add('mkt-installed-mode');qa('.v2-nav-link').forEach(function(a){a.removeAttribute('onclick');a.style.pointerEvents='auto';a.style.cursor='pointer';});visibleSection((location.hash||'#dashboard').replace('#','')||'dashboard');}
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
+  var deferredPrompt=window.__mktDeferredPrompt||null;
+  var isIOS=/iphone|ipad|ipod/i.test(navigator.userAgent||'');
+  var isAndroid=/android/i.test(navigator.userAgent||'');
+  var isMobile=isIOS||isAndroid||(window.matchMedia&&window.matchMedia('(max-width:768px)').matches);
+  var ALIAS={facebook_center:'facebook_center',page_center:'page_center_total',group_marketing:'group_suite',group_finder:'group_suite',group_uid_splitter:'group_suite',group_join_queue:'group_suite',group_post_filter:'group_suite'};
+  function qs(s,r){return (r||document).querySelector(s)}
+  function qsa(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s))}
+  function norm(id){id=String(id||'').replace(/^#/,'').trim();return ALIAS[id]||id||'dashboard'}
+  function standalone(){return window.matchMedia('(display-mode: standalone)').matches||window.navigator.standalone===true}
+  function showSection(id){id=norm(id);qsa('#dashboard,.module-section').forEach(function(el){el.classList.remove('active-module');el.style.display='none'});var el=qs('#'+CSS.escape(id))||qs('#dashboard');if(el){el.style.display='block';el.classList.add('active-module')}qsa('.v2-nav-link').forEach(function(a){a.classList.toggle('active',norm(a.getAttribute('data-module')||a.getAttribute('href'))===id)});if(location.hash!=='#'+id){try{history.replaceState(null,'','#'+id)}catch(e){location.hash=id}}return false}
+  window.openModule=showSection;
+  window.visibleSection=showSection;
+  document.addEventListener('click',function(e){var a=e.target.closest&&e.target.closest('.v2-nav-link[href^="#"],.app-quick-card[onclick],.module-card[onclick]');if(!a||a.classList.contains('app-quick-card')||a.classList.contains('module-card'))return;var id=a.getAttribute('data-module')||a.getAttribute('href');e.preventDefault();e.stopPropagation();if(e.stopImmediatePropagation)e.stopImmediatePropagation();return showSection(id)},true);
+  function ensureSheet(){var old=qs('#mktInstallSheetBackdrop');if(old)return old;var wrap=document.createElement('div');wrap.id='mktInstallSheetBackdrop';wrap.className='mkt-install-sheet-backdrop';wrap.innerHTML='<div class="mkt-install-sheet" role="dialog" aria-modal="true"><h3>📱 Cài GPT MKT Pro vào điện thoại</h3><p id="mktInstallGuideText"></p><div class="mkt-install-actions"><button type="button" class="mkt-install-now" id="mktInstallNowBtn">Cài ngay</button><button type="button" class="mkt-install-close" id="mktInstallCloseBtn">Đóng</button></div></div>';document.body.appendChild(wrap);qs('#mktInstallCloseBtn',wrap).addEventListener('click',function(){wrap.classList.remove('show')});wrap.addEventListener('click',function(e){if(e.target===wrap)wrap.classList.remove('show')});qs('#mktInstallNowBtn',wrap).addEventListener('click',runInstall);return wrap}
+  function guideText(){if(deferredPrompt)return 'Bấm <b>Cài ngay</b>, sau đó chọn <b>Cài đặt</b> để đưa GPT MKT Pro ra màn hình chính.'; if(isIOS)return '<b>iPhone Safari:</b><br>1. Bấm nút <b>Chia sẻ</b> ở thanh dưới.<br>2. Chọn <b>Thêm vào màn hình chính</b>.<br>3. Bấm <b>Thêm</b>.'; if(isAndroid)return '<b>Android Chrome:</b><br>Nếu chưa hiện popup cài đặt, bấm menu <b>⋮</b> góc phải trình duyệt → chọn <b>Cài đặt ứng dụng</b> hoặc <b>Thêm vào màn hình chính</b>.'; return 'Mở website trên điện thoại bằng Chrome Android hoặc Safari iPhone để cài vào màn hình chính.'}
+  function openGuide(){var w=ensureSheet();qs('#mktInstallGuideText',w).innerHTML=guideText();qs('#mktInstallNowBtn',w).textContent=deferredPrompt?'Cài ngay':'Đã hiểu';w.classList.add('show')}
+  async function runInstall(e){if(e){e.preventDefault();e.stopPropagation()}if(standalone()){document.body.classList.add('mkt-app-installed');return false}if(deferredPrompt){try{deferredPrompt.prompt();await deferredPrompt.userChoice}catch(_e){}deferredPrompt=null;window.__mktDeferredPrompt=null;var w=qs('#mktInstallSheetBackdrop');if(w)w.classList.remove('show');return false}openGuide();return false}
+  function buildMobileInstall(){if(!isMobile||standalone()){document.body.classList.add('mkt-app-installed');return}if(qs('#mktMobileInstallMenu'))return;var sidebar=qs('.sidebar')||qs('aside')||qs('nav');if(!sidebar)return;var item=document.createElement('button');item.type='button';item.id='mktMobileInstallMenu';item.className='mkt-mobile-install-menu';item.innerHTML='<span class="mkt-install-phone-icon">📱</span><span><b>Cài ứng dụng</b><small>Bấm để thêm vào màn hình điện thoại</small></span>';var nav=qs('.mkt-clean-nav',sidebar)||qs('.nav',sidebar);if(nav)nav.insertBefore(item,nav.firstChild);else sidebar.appendChild(item);item.addEventListener('click',runInstall,true)}
+  window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();deferredPrompt=e;window.__mktDeferredPrompt=e;var t=qs('#mktMobileInstallMenu small');if(t)t.textContent='Bấm để cài nhanh trên Android'});
+  window.addEventListener('appinstalled',function(){deferredPrompt=null;window.__mktDeferredPrompt=null;document.body.classList.add('mkt-app-installed')});
+  function boot(){qsa('.v2-nav-link').forEach(function(a){a.removeAttribute('onclick');a.style.pointerEvents='auto';a.style.cursor='pointer'});buildMobileInstall();showSection((location.hash||'#dashboard').replace('#','')||'dashboard');if('serviceWorker' in navigator){navigator.serviceWorker.register('/service-worker.js',{scope:'/'}).catch(function(err){console.log('Service worker lỗi:',err)})}}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();setTimeout(boot,600);setTimeout(boot,1800);window.mktOpenInstallGuide=openGuide;
 })();
 </script>
-
-
-
-<!-- FINAL CLEAN SIDEBAR + PWA GUIDE 20260610 -->
-<style id="mkt-final-clean-sidebar-pwa">
-  /* Bỏ hoàn toàn card cài app cũ trong sidebar */
-  .app-install-card,.v2-install-box,.app-install-banner{display:none!important;visibility:hidden!important;height:0!important;margin:0!important;padding:0!important;overflow:hidden!important}
-
-  /* Sidebar kiểu SaaS: không dùng card lớn */
-  .nav{padding:8px 14px 22px!important}
-  .v2-nav-title{
-    margin:18px 0 7px!important;padding:0 4px!important;font-size:10.5px!important;line-height:1!important;
-    font-weight:1000!important;letter-spacing:.11em!important;text-transform:uppercase!important;color:#9fb0ff!important;
-  }
-  .v2-nav-title:nth-of-type(2)::before{content:'📣 ';letter-spacing:0;text-transform:none}
-  .v2-nav-title:nth-of-type(3)::before{content:'🤖 ';letter-spacing:0;text-transform:none}
-  .v2-nav-title:nth-of-type(4)::before{content:'🎨 ';letter-spacing:0;text-transform:none}
-  .v2-nav-title:nth-of-type(5)::before{content:'🚀 ';letter-spacing:0;text-transform:none}
-  .v2-nav-title:nth-of-type(6)::before{content:'⚙️ ';letter-spacing:0;text-transform:none}
-
-  .v2-nav-link{
-    position:relative!important;display:flex!important;align-items:center!important;gap:9px!important;min-height:38px!important;
-    margin:2px 0!important;padding:8px 8px 8px 14px!important;border-radius:11px!important;
-    background:transparent!important;border:1px solid transparent!important;box-shadow:none!important;transform:none!important;
-    color:#e8ecff!important;text-decoration:none!important;cursor:pointer!important;pointer-events:auto!important;user-select:none!important;
-  }
-  .v2-nav-link::before{content:'├';display:inline-block;width:10px;margin-right:1px;color:rgba(165,180,252,.38);font-weight:800;font-size:13px;line-height:1}
-  .v2-nav-link:hover{background:rgba(99,102,241,.12)!important;border-color:rgba(129,140,248,.16)!important;transform:translateX(2px)!important;box-shadow:none!important}
-  .v2-nav-link.active{background:linear-gradient(135deg,rgba(37,99,235,.20),rgba(124,58,237,.14))!important;border-color:rgba(129,140,248,.24)!important}
-  .v2-nav-ico,.v2-nav-link .v2-nav-ico{display:none!important;width:0!important;min-width:0!important;height:0!important;margin:0!important;padding:0!important;overflow:hidden!important;background:none!important}
-  .v2-nav-text{flex:1!important;min-width:0!important;font-size:14px!important;line-height:1.15!important;font-weight:850!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;color:inherit!important}
-  .v2-nav-tag{display:none!important}
-  .v2-nav-link::after,.v2-nav-link.menu-pro::after,.v2-nav-link.pro-feature::after,.v2-nav-link.real-pro::after,.v2-nav-link.premium-locked::after,.v2-nav-link.real-premium-lock::after{content:none!important;display:none!important}
-  .v2-nav-link .mkt-dot-tag{display:inline-flex!important;align-items:center!important;gap:5px!important;margin-left:auto!important;font-size:11px!important;font-weight:950!important;letter-spacing:-.01em!important;white-space:nowrap!important;line-height:1!important;color:#dbeafe!important}
-  .v2-nav-link .mkt-dot-tag i{display:block!important;width:8px!important;height:8px!important;border-radius:999px!important;box-shadow:0 0 8px currentColor!important;background:currentColor!important}
-  .v2-nav-link .mkt-dot-tag.pro{color:#22c55e!important}
-  .v2-nav-link .mkt-dot-tag.pro span{color:#bbf7d0!important}
-  .v2-nav-link .mkt-dot-tag.premium{color:#facc15!important}
-  .v2-nav-link .mkt-dot-tag.premium span{color:#fef3c7!important}
-  .v2-side-card{display:none!important}
-
-  /* Nút cài app nhỏ, không chiếm menu */
-  #mktInstallFloat{
-    position:fixed!important;right:18px!important;bottom:82px!important;z-index:2147482500!important;
-    display:inline-flex!important;align-items:center!important;gap:8px!important;border:1px solid rgba(147,197,253,.45)!important;
-    border-radius:999px!important;padding:10px 14px!important;color:#fff!important;font-size:13px!important;font-weight:1000!important;
-    background:linear-gradient(135deg,#2563eb,#7c3aed)!important;box-shadow:0 14px 34px rgba(37,99,235,.32)!important;cursor:pointer!important;
-  }
-  #mktInstallPanel{position:fixed!important;right:18px!important;bottom:132px!important;width:min(330px,calc(100vw - 36px))!important;z-index:2147482501!important;display:none!important;background:#fff!important;color:#111827!important;border-radius:20px!important;padding:18px!important;box-shadow:0 24px 70px rgba(15,23,42,.35)!important;border:1px solid rgba(15,23,42,.08)!important}
-  #mktInstallPanel.show{display:block!important}
-  #mktInstallPanel h3{margin:0 0 8px!important;font-size:18px!important;color:#111827!important}
-  #mktInstallPanel p{margin:7px 0!important;font-size:13px!important;line-height:1.45!important;color:#334155!important;font-weight:700!important}
-  #mktInstallPanel button{width:100%!important;margin-top:12px!important;border:0!important;border-radius:999px!important;padding:12px!important;color:#fff!important;font-weight:1000!important;background:linear-gradient(135deg,#2563eb,#7c3aed)!important;cursor:pointer!important}
-</style>
-<script id="mkt-final-clean-sidebar-pwa-js">
-(function(){
-  'use strict';
-  var deferredPrompt=null;
-  function qsa(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s));}
-  function norm(s){return String(s||'').replace(/^#/,'').trim();}
-  function label(a,type){
-    a.classList.remove('menu-pro','pro-feature','real-pro','premium-locked','real-premium-lock','menu-locked');
-    qsa('.mkt-dot-tag',a).forEach(function(x){x.remove();});
-    if(!type)return;
-    var b=document.createElement('span'); b.className='mkt-dot-tag '+type;
-    b.innerHTML='<i></i><span>'+(type==='pro'?'Pro':'Premium')+'</span>';
-    a.appendChild(b);
-  }
-  function cleanText(a){
-    var t=a.querySelector('.v2-nav-text'); if(!t)return;
-    var map={
-      facebook_center:'Facebook Center', page_center_total:'Page Center', post:'Đăng bài Facebook', fanpage_manager:'Quản lý Fanpage', group_suite:'Group Center',
-      comment_manager:'AI Comment', messenger_ai:'AI Messenger', crm_sales:'CRM Kanban', marketing_director:'Marketing AI', ai_studio:'AI Studio', creative_center:'Image / Video / Voice',
-      dashboard:'Dashboard', premium:'Bảng giá Premium', analytics:'Analytics', automation_center:'Automation', affiliate_center:'CTV Hoa Hồng'
-    };
-    var id=norm(a.getAttribute('href'));
-    if(map[id]) t.textContent=map[id];
-  }
-  function markMenu(){
-    qsa('.v2-nav-link[href^="#"]').forEach(function(a){
-      a.removeAttribute('onclick'); a.style.pointerEvents='auto'; a.style.cursor='pointer';
-      qsa('.v2-nav-ico,.v2-nav-tag',a).forEach(function(x){x.remove();});
-      cleanText(a);
-      var id=norm(a.getAttribute('href'));
-      if(['facebook_center','page_center_total','post','fanpage_manager','group_suite','comment_manager','affiliate_center'].indexOf(id)>-1) label(a,'pro');
-      else if(['messenger_ai','crm_sales','marketing_director','ai_studio','creative_center','premium','analytics','automation_center'].indexOf(id)>-1) label(a,'premium');
-      else label(a,'');
-    });
-  }
-  function visibleSection(id){
-    id=norm(id)||'dashboard';
-    if(typeof window.openModule==='function') return window.openModule(id);
-    qsa('.module-section,.section,.content-section').forEach(function(s){s.style.display='none';});
-    var el=document.getElementById(id); if(el) el.style.display='block';
-    qsa('.v2-nav-link').forEach(function(a){a.classList.toggle('active',norm(a.getAttribute('href'))===id);});
-    location.hash=id; return false;
-  }
-  function buildInstall(){
-    if(document.getElementById('mktInstallFloat'))return;
-    var btn=document.createElement('button'); btn.id='mktInstallFloat'; btn.type='button'; btn.innerHTML='📱 Cài app';
-    var panel=document.createElement('div'); panel.id='mktInstallPanel'; panel.innerHTML='<h3>Cài GPT MKT Pro</h3><p><b>Android Chrome:</b> bấm Cài ngay hoặc menu 3 chấm → Cài đặt ứng dụng / Thêm vào màn hình chính.</p><p><b>iPhone Safari:</b> bấm Chia sẻ → Thêm vào màn hình chính.</p><p>Web phải mở bằng HTTPS: gptmini.pro</p><button type="button" id="mktDoInstall">Cài ngay</button>';
-    document.body.appendChild(btn); document.body.appendChild(panel);
-    btn.addEventListener('click',function(e){e.preventDefault(); panel.classList.toggle('show');});
-    panel.querySelector('#mktDoInstall').addEventListener('click',async function(e){
-      e.preventDefault();
-      if(deferredPrompt){deferredPrompt.prompt(); try{await deferredPrompt.userChoice;}catch(_e){} deferredPrompt=null; panel.classList.remove('show');}
-      else {panel.classList.add('show');}
-    });
-  }
-  window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();deferredPrompt=e;});
-  window.addEventListener('appinstalled',function(){deferredPrompt=null; var b=document.getElementById('mktInstallFloat'); if(b)b.style.display='none';});
-  function boot(){markMenu();buildInstall();}
-  document.addEventListener('click',function(e){
-    var a=e.target.closest&&e.target.closest('.v2-nav-link[href^="#"]');
-    if(!a)return;
-    e.preventDefault(); e.stopPropagation(); if(e.stopImmediatePropagation)e.stopImmediatePropagation();
-    markMenu(); return visibleSection(a.getAttribute('href'));
-  },true);
-  if('serviceWorker' in navigator){navigator.serviceWorker.register('/service-worker.js').catch(function(){});}
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();
-  setTimeout(boot,500); setTimeout(boot,1500); setTimeout(boot,3000);
-})();
-</script>
-
 </body>
 </html>
 """
