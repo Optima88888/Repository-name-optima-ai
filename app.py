@@ -5866,36 +5866,61 @@ Thời gian tạo: {{ h[9] }}
 
 <section class="panel pricing-visible" id="pricing">
   <style>
-    .premium-pricing-compact{padding:24px;background:linear-gradient(180deg,#f8fafc,#ffffff);border-radius:26px;border:1px solid #e5e7eb;box-shadow:0 18px 45px rgba(15,23,42,.06)}
-    .pricing-compact-head{text-align:center;margin-bottom:18px}
-    .pricing-compact-head .mini{display:inline-flex;align-items:center;justify-content:center;padding:6px 12px;border-radius:999px;background:#eef2ff;color:#3730a3;font-weight:900;font-size:12px;letter-spacing:.04em}
-    .pricing-compact-head h2{margin:10px 0 6px;font-size:28px;line-height:1.15;color:#0f172a}
+    .premium-pricing-compact{position:relative;padding:28px;background:radial-gradient(circle at top left,rgba(37,99,235,.12),transparent 32%),linear-gradient(135deg,#f8fafc,#ffffff 46%,#fff7ed);border-radius:30px;border:1px solid rgba(226,232,240,.95);box-shadow:0 24px 70px rgba(15,23,42,.10);overflow:hidden}
+    .premium-pricing-compact:before{content:"";position:absolute;inset:-2px;background:linear-gradient(120deg,rgba(59,130,246,.12),transparent,rgba(245,158,11,.14));pointer-events:none}
+    .pricing-compact-head{position:relative;text-align:center;margin-bottom:20px;z-index:1}
+    .pricing-compact-head .mini{display:inline-flex;align-items:center;justify-content:center;padding:7px 13px;border-radius:999px;background:linear-gradient(135deg,#eef2ff,#fff7ed);color:#1e3a8a;font-weight:1000;font-size:12px;letter-spacing:.08em;border:1px solid rgba(99,102,241,.18)}
+    .pricing-compact-head h2{margin:10px 0 6px;font-size:30px;line-height:1.15;color:#0f172a;letter-spacing:-.04em}
     .pricing-compact-head p{margin:0;color:#64748b;font-size:14px}
-    .pricing-grid-5{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:14px;align-items:stretch}
-    .compact-price-card{position:relative;background:#fff;border:1px solid #e5e7eb;border-radius:20px;padding:18px 14px;text-align:center;box-shadow:0 12px 26px rgba(15,23,42,.06);transition:.18s ease;overflow:hidden}
-    .compact-price-card:hover{transform:translateY(-4px);box-shadow:0 18px 38px rgba(15,23,42,.10)}
-    .compact-price-card .tag{display:inline-flex;padding:5px 10px;border-radius:999px;background:#f1f5f9;color:#334155;font-size:12px;font-weight:900;margin-bottom:8px}
-    .compact-price-card h3{margin:2px 0 8px;font-size:19px;color:#111827}
-    .compact-price-card .price{font-size:24px;font-weight:1000;color:#2563eb;margin-bottom:6px;letter-spacing:-.03em}
-    .compact-price-card .sub{min-height:36px;margin:0 0 14px;color:#64748b;font-size:13px;line-height:1.35}
-    .compact-price-card button{width:100%;border:0;border-radius:13px;padding:12px 10px;background:#111827;color:#fff;font-weight:900;cursor:pointer;box-shadow:0 10px 22px rgba(17,24,39,.16)}
-    .compact-price-card.popular{border:2px solid #f59e0b;transform:translateY(-3px)}
+    .pricing-grid-5{position:relative;z-index:1;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:14px;align-items:stretch}
+    .compact-price-card{position:relative;background:rgba(255,255,255,.92);backdrop-filter:blur(12px);border:1px solid rgba(226,232,240,.96);border-radius:22px;padding:18px 14px;text-align:center;box-shadow:0 14px 34px rgba(15,23,42,.08);transition:.2s ease;overflow:hidden}
+    .compact-price-card:after{content:"";position:absolute;left:14px;right:14px;top:0;height:3px;border-radius:999px;background:linear-gradient(90deg,#2563eb,#f59e0b);opacity:.45}
+    .compact-price-card:hover{transform:translateY(-5px);box-shadow:0 22px 46px rgba(15,23,42,.14);border-color:rgba(37,99,235,.22)}
+    .compact-price-card .tag{display:inline-flex;padding:5px 10px;border-radius:999px;background:#f1f5f9;color:#334155;font-size:12px;font-weight:1000;margin-bottom:8px}
+    .compact-price-card h3{margin:2px 0 8px;font-size:19px;color:#111827;letter-spacing:-.02em}
+    .compact-price-card .price{font-size:25px;font-weight:1000;color:#2563eb;margin-bottom:6px;letter-spacing:-.04em}
+    .compact-price-card .sub{min-height:38px;margin:0 0 14px;color:#64748b;font-size:13px;line-height:1.35}
+    .plan-actions{display:grid;grid-template-columns:1fr;gap:8px;margin-top:auto}
+    .compact-price-card button{width:100%;border:0;border-radius:13px;padding:11px 10px;font-weight:1000;cursor:pointer;transition:.18s ease}
+    .compact-price-card .btn-upgrade{background:linear-gradient(135deg,#111827,#1e293b);color:#fff;box-shadow:0 12px 24px rgba(17,24,39,.18)}
+    .compact-price-card .btn-benefit{background:#f8fafc;color:#334155;border:1px solid #e2e8f0;box-shadow:none;font-size:12px;padding:9px 10px}
+    .compact-price-card .btn-benefit:hover{background:#eef2ff;color:#1d4ed8;border-color:#bfdbfe}
+    .compact-price-card.popular{border:2px solid #f59e0b;transform:translateY(-3px);box-shadow:0 22px 48px rgba(245,158,11,.18)}
     .compact-price-card.popular:before{content:"Phổ biến";position:absolute;top:10px;right:-30px;background:#f59e0b;color:#111827;font-size:11px;font-weight:1000;padding:5px 32px;transform:rotate(35deg)}
-    .compact-price-card.pro{background:linear-gradient(180deg,#0f172a,#111827);border-color:#334155;color:#fff}
+    .compact-price-card.pro{background:linear-gradient(180deg,#0f172a,#111827 72%,#172554);border-color:#334155;color:#fff;box-shadow:0 24px 55px rgba(15,23,42,.28)}
+    .compact-price-card.pro:after{background:linear-gradient(90deg,#facc15,#38bdf8);opacity:.85}
     .compact-price-card.pro h3,.compact-price-card.pro .sub{color:#fff}
-    .compact-price-card.pro .price{color:#facc15}
-    .compact-price-card.pro .tag{background:rgba(250,204,21,.16);color:#facc15}
-    .compact-price-card.pro button{background:#facc15;color:#111827}
-    .premium-short-note{margin-top:14px;padding:12px 14px;border-radius:16px;background:#f8fafc;border:1px dashed #cbd5e1;color:#475569;font-size:13px;text-align:center}
+    .compact-price-card.pro .price{color:#facc15;text-shadow:0 2px 16px rgba(250,204,21,.25)}
+    .compact-price-card.pro .tag{background:rgba(250,204,21,.16);color:#facc15;border:1px solid rgba(250,204,21,.20)}
+    .compact-price-card.pro .btn-upgrade{background:linear-gradient(135deg,#facc15,#f59e0b);color:#111827;box-shadow:0 12px 28px rgba(250,204,21,.20)}
+    .compact-price-card.pro .btn-benefit{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.14);color:#e5e7eb}
+    .premium-short-note{position:relative;z-index:1;margin-top:14px;padding:12px 14px;border-radius:16px;background:rgba(255,255,255,.78);border:1px dashed #cbd5e1;color:#475569;font-size:13px;text-align:center}
+    .benefit-modal{position:fixed;inset:0;z-index:99999;display:none;align-items:center;justify-content:center;background:rgba(15,23,42,.62);backdrop-filter:blur(8px);padding:18px}
+    .benefit-modal.show{display:flex}
+    .benefit-box{width:min(760px,96vw);max-height:90vh;overflow:auto;background:linear-gradient(180deg,#ffffff,#f8fafc);border-radius:26px;border:1px solid rgba(226,232,240,.95);box-shadow:0 35px 90px rgba(15,23,42,.35);padding:22px;position:relative}
+    .benefit-close{position:absolute;top:14px;right:14px;width:36px;height:36px;border:0;border-radius:999px;background:#f1f5f9;color:#0f172a;font-size:22px;font-weight:900;cursor:pointer}
+    .benefit-top{padding-right:42px;margin-bottom:14px}
+    .benefit-label{display:inline-flex;padding:6px 11px;border-radius:999px;background:#eef2ff;color:#1d4ed8;font-size:12px;font-weight:1000;margin-bottom:8px}
+    .benefit-title{margin:0;font-size:28px;color:#0f172a;letter-spacing:-.04em}
+    .benefit-price{margin:7px 0 0;font-size:24px;font-weight:1000;color:#2563eb}
+    .benefit-desc{margin:8px 0 0;color:#64748b;line-height:1.5}
+    .benefit-grid{display:grid;grid-template-columns:1.1fr .9fr .9fr;gap:12px;margin-top:16px}
+    .benefit-panel{background:#fff;border:1px solid #e5e7eb;border-radius:18px;padding:14px;box-shadow:0 10px 24px rgba(15,23,42,.05)}
+    .benefit-panel h4{margin:0 0 10px;color:#111827;font-size:15px}
+    .benefit-panel ul{margin:0;padding-left:18px;color:#475569;font-size:13px;line-height:1.7}
+    .benefit-actions{display:flex;gap:10px;margin-top:16px}
+    .benefit-actions button{border:0;border-radius:14px;padding:12px 16px;font-weight:1000;cursor:pointer}
+    .benefit-pay{background:#111827;color:#fff;flex:1}
+    .benefit-cancel{background:#f1f5f9;color:#334155}
     @media(max-width:1200px){.pricing-grid-5{grid-template-columns:repeat(3,1fr)}}
-    @media(max-width:760px){.premium-pricing-compact{padding:18px}.pricing-grid-5{grid-template-columns:1fr}.compact-price-card.popular{transform:none}}
+    @media(max-width:760px){.premium-pricing-compact{padding:18px}.pricing-grid-5{grid-template-columns:1fr}.compact-price-card.popular{transform:none}.benefit-grid{grid-template-columns:1fr}.benefit-actions{flex-direction:column}}
   </style>
 
   <div class="premium-pricing-compact">
     <div class="pricing-compact-head">
-      <span class="mini">PREMIUM</span>
+      <span class="mini">PREMIUM SAAS</span>
       <h2>Bảng Giá Premium</h2>
-      <p>Chọn gói phù hợp để mở khóa công cụ AI Marketing.</p>
+      <p>Chọn gói phù hợp để mở khóa công cụ AI Marketing, CRM và Automation bán hàng.</p>
     </div>
 
     <div class="pricing-grid-5">
@@ -5904,7 +5929,10 @@ Thời gian tạo: {{ h[9] }}
         <h3>Gói 1 Tháng</h3>
         <div class="price">159.000đ</div>
         <p class="sub">Dùng ngắn hạn, phù hợp người mới bắt đầu.</p>
-        <button type="button" data-plan="monthly">Nâng cấp</button>
+        <div class="plan-actions">
+          <button type="button" class="btn-upgrade" data-plan="monthly">Nâng cấp</button>
+          <button type="button" class="btn-benefit" data-benefit="monthly">Xem quyền lợi</button>
+        </div>
       </div>
 
       <div class="compact-price-card" data-plan="quarterly">
@@ -5912,7 +5940,10 @@ Thời gian tạo: {{ h[9] }}
         <h3>Gói 3 Tháng</h3>
         <div class="price">359.000đ</div>
         <p class="sub">Ổn định hơn cho shop nhỏ và cá nhân bán hàng.</p>
-        <button type="button" data-plan="quarterly">Nâng cấp</button>
+        <div class="plan-actions">
+          <button type="button" class="btn-upgrade" data-plan="quarterly">Nâng cấp</button>
+          <button type="button" class="btn-benefit" data-benefit="quarterly">Xem quyền lợi</button>
+        </div>
       </div>
 
       <div class="compact-price-card" data-plan="halfyear">
@@ -5920,7 +5951,10 @@ Thời gian tạo: {{ h[9] }}
         <h3>Gói 6 Tháng</h3>
         <div class="price">559.000đ</div>
         <p class="sub">Mở thêm CRM, Sales Bot và quản lý khách hàng.</p>
-        <button type="button" data-plan="halfyear">Nâng cấp</button>
+        <div class="plan-actions">
+          <button type="button" class="btn-upgrade" data-plan="halfyear">Nâng cấp</button>
+          <button type="button" class="btn-benefit" data-benefit="halfyear">Xem quyền lợi</button>
+        </div>
       </div>
 
       <div class="compact-price-card popular" data-plan="yearly">
@@ -5928,7 +5962,10 @@ Thời gian tạo: {{ h[9] }}
         <h3>Gói 1 Năm</h3>
         <div class="price">859.000đ</div>
         <p class="sub">Gói phổ biến, chi phí thấp cho sử dụng dài hạn.</p>
-        <button type="button" data-plan="yearly">Nâng cấp</button>
+        <div class="plan-actions">
+          <button type="button" class="btn-upgrade" data-plan="yearly">Nâng cấp</button>
+          <button type="button" class="btn-benefit" data-benefit="yearly">Xem quyền lợi</button>
+        </div>
       </div>
 
       <div class="compact-price-card pro" data-plan="sellerpro">
@@ -5936,11 +5973,35 @@ Thời gian tạo: {{ h[9] }}
         <h3>Seller Pro</h3>
         <div class="price">1.959.000đ</div>
         <p class="sub">Toàn bộ công cụ hiện tại, tương lai và ưu tiên hỗ trợ.</p>
-        <button type="button" data-plan="sellerpro">Nâng cấp</button>
+        <div class="plan-actions">
+          <button type="button" class="btn-upgrade" data-plan="sellerpro">Nâng cấp</button>
+          <button type="button" class="btn-benefit" data-benefit="sellerpro">Xem quyền lợi</button>
+        </div>
       </div>
     </div>
 
-    <div class="premium-short-note">Sau khi thanh toán, nếu 5 phút chưa kích hoạt, vui lòng gửi ảnh giao dịch qua Zalo 036 338 2629.</div>
+    <div class="premium-short-note">Nút “Xem quyền lợi” chỉ mở mô tả gói. Nút “Nâng cấp” mới mở thanh toán, giúp tránh nhảy sai giá.</div>
+  </div>
+
+  <div class="benefit-modal" id="planBenefitModal" aria-hidden="true">
+    <div class="benefit-box">
+      <button type="button" class="benefit-close" id="planBenefitClose">×</button>
+      <div class="benefit-top">
+        <span class="benefit-label" id="benefitLabel">PREMIUM</span>
+        <h3 class="benefit-title" id="benefitTitle">Gói Premium</h3>
+        <div class="benefit-price" id="benefitPrice">159.000đ</div>
+        <p class="benefit-desc" id="benefitDesc"></p>
+      </div>
+      <div class="benefit-grid">
+        <div class="benefit-panel"><h4>Tính năng mở khóa</h4><ul id="benefitFeatures"></ul></div>
+        <div class="benefit-panel"><h4>Phù hợp với</h4><ul id="benefitFit"></ul></div>
+        <div class="benefit-panel"><h4>Giá trị nhận được</h4><ul id="benefitValue"></ul></div>
+      </div>
+      <div class="benefit-actions">
+        <button type="button" class="benefit-pay" id="benefitUpgradeBtn">Nâng cấp gói này</button>
+        <button type="button" class="benefit-cancel" id="benefitCancelBtn">Đóng</button>
+      </div>
+    </div>
   </div>
 </section>
 
@@ -7405,6 +7466,46 @@ function dropKanban(ev){ ev.preventDefault(); const col=ev.currentTarget; if(dra
 })();
 </script>
 
+
+
+
+<script id="mkt-premium-benefit-modal-v1">
+(function(){
+  'use strict';
+  var PLAN_BENEFITS={
+    monthly:{label:'CƠ BẢN',title:'Gói 1 tháng',price:'159.000đ',desc:'Phù hợp người mới bắt đầu muốn trải nghiệm Premium ngắn hạn và dùng các công cụ cốt lõi.',features:['AI Content Studio','Tạo content bán hàng nhanh','Đăng Fanpage cơ bản','Quản lý Fanpage','Quản lý Group','AI Comment','Token Manager cơ bản'],fit:['Chủ shop mới','Cá nhân kinh doanh online','Người mới làm nội dung','Người cần test hệ thống trước'],value:['Tiết kiệm thời gian viết bài mỗi ngày','Có nền tảng quản lý Fanpage/Group','Tạo nội dung đều hơn','Chi phí thấp để bắt đầu']},
+    quarterly:{label:'TIẾT KIỆM',title:'Gói 3 tháng',price:'359.000đ',desc:'Tối ưu hơn gói tháng, phù hợp shop nhỏ cần dùng ổn định và có thêm công cụ chăm sóc khách.',features:['Toàn bộ gói 1 tháng','AI Messenger','CRM Kanban cơ bản','Kịch bản inbox','Lịch đăng nâng cao','Báo cáo cơ bản','Ưu tiên hỗ trợ'],fit:['Shop nhỏ đang bán hàng','Người cần chăm sóc khách đều','Người chạy nội dung thường xuyên','CTV bán dịch vụ'],value:['Quy trình bán hàng rõ hơn','Giảm thời gian trả lời khách','Có kịch bản inbox sẵn','Tiết kiệm hơn so với mua từng tháng']},
+    halfyear:{label:'TĂNG TRƯỞNG',title:'Gói 6 tháng',price:'559.000đ',desc:'Phù hợp shop cần CRM, Sales Bot và quy trình gom khách để chăm sóc lâu dài.',features:['Toàn bộ gói 3 tháng','CRM Pro','AI Sales Bot','Comment Manager','Auto Tag khách hàng','Quản lý khách hàng','Chuyển khách sang CRM'],fit:['Shop có nhiều inbox/comment','Người cần gom khách về CRM','Đội sale nhỏ','Người muốn tối ưu chăm sóc khách'],value:['Không bỏ sót khách tiềm năng','Phân loại khách rõ ràng hơn','Chăm sóc khách có hệ thống','Tăng hiệu quả tư vấn và chốt đơn']},
+    yearly:{label:'PHỔ BIẾN NHẤT',title:'Gói 1 năm',price:'859.000đ',desc:'Gói phổ biến nhất cho nhà bán hàng muốn dùng đầy đủ công cụ AI Marketing trong 1 năm.',features:['Toàn bộ gói 6 tháng','AI Marketing Director','AI Ads Chuyên Gia','Kho Content Premium','Automation Marketing','Export báo cáo','Ưu tiên xử lý'],fit:['Shop bán hàng lâu dài','Người chạy quảng cáo','Agency nhỏ / CTV','Người cần hệ thống marketing đầy đủ'],value:['Chi phí thấp theo ngày','Có trợ lý AI định hướng marketing','Tối ưu nội dung và quảng cáo','Tiết kiệm chi phí thuê ngoài']},
+    sellerpro:{label:'VIP ENTERPRISE',title:'Gói nhà bán hàng chuyên nghiệp',price:'1.959.000đ',desc:'Gói cao nhất cho nhà bán hàng chuyên nghiệp, mở toàn bộ hệ thống hiện tại và các tính năng nâng cấp về sau.',features:['Toàn bộ tính năng Premium','AI Image Center','AI Video Center','AI Voice Studio','Dashboard Enterprise','Export PDF / Excel','Backup Database','Ưu tiên hỗ trợ VIP'],fit:['Nhà bán hàng chuyên nghiệp','Agency / đội marketing nhỏ','Người cần toàn bộ AI hiện tại và tương lai','Người muốn dùng lâu dài'],value:['Mở tối đa sức mạnh hệ thống','Giảm chi phí dùng nhiều công cụ rời','Quản lý dữ liệu chuyên nghiệp hơn','Được ưu tiên hỗ trợ và cập nhật']}
+  };
+  function q(s,r){return (r||document).querySelector(s)}
+  function fillList(id,arr){var el=q('#'+id); if(!el) return; el.innerHTML=(arr||[]).map(function(x){return '<li>'+x+'</li>'}).join('')}
+  function closeBenefit(){var m=q('#planBenefitModal'); if(m){m.classList.remove('show');m.setAttribute('aria-hidden','true')}}
+  window.openPlanBenefit=function(key){
+    key=PLAN_BENEFITS[key]?key:'monthly';
+    var p=PLAN_BENEFITS[key];
+    window.currentPremiumPlanKey=key; window.mktSelectedPlanKey=key;
+    var m=q('#planBenefitModal'); if(!m) return false;
+    q('#benefitLabel').textContent=p.label;
+    q('#benefitTitle').textContent=p.title;
+    q('#benefitPrice').textContent=p.price;
+    q('#benefitDesc').textContent=p.desc;
+    fillList('benefitFeatures',p.features); fillList('benefitFit',p.fit); fillList('benefitValue',p.value);
+    var pay=q('#benefitUpgradeBtn'); if(pay){pay.onclick=function(e){e.preventDefault(); closeBenefit(); if(typeof window.openPayment==='function') return window.openPayment(key); return false;};}
+    m.classList.add('show'); m.setAttribute('aria-hidden','false');
+    return false;
+  };
+  document.addEventListener('click',function(e){
+    var benefit=e.target.closest&&e.target.closest('[data-benefit]');
+    if(benefit){e.preventDefault();e.stopPropagation(); if(e.stopImmediatePropagation)e.stopImmediatePropagation(); return window.openPlanBenefit(benefit.getAttribute('data-benefit'));}
+    if(e.target&&e.target.id==='planBenefitClose'){e.preventDefault(); return closeBenefit();}
+    if(e.target&&e.target.id==='benefitCancelBtn'){e.preventDefault(); return closeBenefit();}
+    if(e.target&&e.target.id==='planBenefitModal'){return closeBenefit();}
+  },true);
+  document.addEventListener('keydown',function(e){if(e.key==='Escape') closeBenefit();});
+})();
+</script>
 
 
 <!-- V3 ULTIMATE PLAN PRICE LOCK: giữ nguyên giao diện, chỉ sửa sai gói/sai giá khi bấm nâng cấp -->
