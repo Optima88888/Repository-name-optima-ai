@@ -9636,7 +9636,7 @@ ADMIN_HTML = """
   .gptmkt-chat-btn-final:after{content:"";position:absolute;right:4px;bottom:5px;width:17px;height:17px;border-radius:50%;background:#22c55e;border:3px solid #fff;box-shadow:0 0 0 5px rgba(34,197,94,.18),0 0 14px rgba(34,197,94,.8)}
   @keyframes gptMktBotBreathFinal{0%,100%{transform:scale(1)}50%{transform:scale(1.055)}}
 
-  .floating-bot{z-index:2147483645!important;pointer-events:none!important;}
+  .floating-bot{z-index:2147483645!important;pointer-events:auto!important;}
   .floating-bot .bot-bubble{display:none!important;}
   #floatingBotPanel,.bot-panel{
     z-index:2147483647!important;pointer-events:auto!important;visibility:visible!important;opacity:1!important;
@@ -9743,6 +9743,61 @@ ADMIN_HTML = """
 
   function boot(){ensureDock();deviceId();startPoll(); if(standalone()){var d=byId('gptMktLeftDockFinal'); if(d)d.style.display='none'} if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js').catch(function(){})}}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot(); setTimeout(boot,600);
+})();
+</script>
+
+
+
+<!-- GPT MKT PRO FIX V2 20260610: stable install + support chat -->
+<style id="gpt-mkt-pro-fix-v2-css">
+  .floating-bot{z-index:2147483640!important;pointer-events:auto!important;}
+  .floating-bot .bot-bubble{display:none!important;pointer-events:none!important;}
+  #floatingBotPanel,.bot-panel{pointer-events:auto!important;visibility:hidden!important;opacity:0!important;display:none!important;transform:translateY(8px)!important;transition:opacity .18s ease,transform .18s ease!important;}
+  #floatingBotPanel.gptmkt-chat-open-final,.bot-panel.gptmkt-chat-open-final{display:block!important;visibility:visible!important;opacity:1!important;transform:translateY(0)!important;position:fixed!important;right:14px!important;bottom:calc(96px + env(safe-area-inset-bottom,0px))!important;width:370px!important;max-width:calc(100vw - 28px)!important;max-height:78vh!important;z-index:2147483647!important;border-radius:24px!important;overflow:hidden!important;box-shadow:0 28px 80px rgba(15,23,42,.34)!important;}
+  .bot-head,.bot-body,.bot-actions,.bot-input,.bot-input input,.bot-input button,.bot-actions button,.bot-close{pointer-events:auto!important;}
+  .bot-body{max-height:46vh!important;overflow:auto!important;}
+  #gptMktChatFinal,#gptMktInstallFinal{pointer-events:auto!important;user-select:none!important;-webkit-tap-highlight-color:transparent!important;}
+  #gptMktChatFinal{right:14px!important;bottom:calc(18px + env(safe-area-inset-bottom,0px))!important;}
+  #gptMktLeftDockFinal{left:12px!important;bottom:calc(18px + env(safe-area-inset-bottom,0px))!important;}
+  @media(max-width:820px){#floatingBotPanel.gptmkt-chat-open-final,.bot-panel.gptmkt-chat-open-final{left:10px!important;right:10px!important;width:auto!important;bottom:calc(92px + env(safe-area-inset-bottom,0px))!important;}}
+</style>
+<script id="gpt-mkt-pro-fix-v2-js">
+(function(){
+  'use strict';
+  var deferredPrompt = window.__gptMktDeferredPrompt || null;
+  var pollTimer = null;
+  var lastSupportId = Number(localStorage.getItem('mkt_support_last_id')||0);
+  function byId(id){return document.getElementById(id)}
+  function qs(s,r){return (r||document).querySelector(s)}
+  function esc(v){return String(v||'').replace(/[&<>\"']/g,function(ch){return {'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[ch]})}
+  function isIOS(){return /iphone|ipad|ipod/i.test(navigator.userAgent)}
+  function isAndroid(){return /android/i.test(navigator.userAgent)}
+  function isStandalone(){return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone===true}
+  function deviceId(){var id=''; try{id=localStorage.getItem('mkt_device_id')||''}catch(e){} if(!id || id==='Đang tạo...' || id==='Đang tạo.' || id.length<8){ id='MKT-'+Math.random().toString(36).slice(2,8).toUpperCase()+Date.now().toString().slice(-6); try{localStorage.setItem('mkt_device_id',id)}catch(e){} } try{document.cookie='mkt_device_id='+encodeURIComponent(id)+'; path=/; max-age='+(60*60*24*365*5)+'; SameSite=Lax'}catch(e){} var sid=byId('sidebarDeviceId'); if(sid) sid.textContent=id.toUpperCase(); return id.toUpperCase();}
+  window.ensureDeviceId=deviceId;
+  function ensureUI(){if(!byId('gptMktLeftDockFinal')){var dock=document.createElement('div');dock.id='gptMktLeftDockFinal';dock.className='gptmkt-left-dock-final';dock.innerHTML='<button type="button" id="gptMktInstallFinal" class="gptmkt-install-btn-final"><span class="gptmkt-install-dot-final"></span><span>GPT MKT<small>Tải xuống</small></span></button>';document.body.appendChild(dock)} if(!byId('gptMktChatFinal')){var chat=document.createElement('button');chat.type='button';chat.id='gptMktChatFinal';chat.className='gptmkt-chat-btn-final';chat.innerHTML='🤖';document.body.appendChild(chat)} if(!byId('gptMktInstallSheetFinal')){var sheet=document.createElement('div');sheet.id='gptMktInstallSheetFinal';sheet.className='gptmkt-install-sheet-final';sheet.innerHTML='<div class="gptmkt-install-box-final"><h3>📱 Cài GPT MKT vào điện thoại</h3><p id="gptMktInstallIntroFinal"></p><div class="gptmkt-install-steps-final" id="gptMktInstallStepsFinal"></div><div class="gptmkt-install-actions-final"><button type="button" id="gptMktInstallGoFinal">Cài ngay</button><button type="button" id="gptMktInstallCloseFinal">Đóng</button></div></div>';document.body.appendChild(sheet)}}
+  function panel(){return byId('floatingBotPanel') || qs('.bot-panel')}
+  function bodyBox(){return byId('floatingBotBody') || qs('.bot-body')}
+  function inputBox(){return byId('botInputText') || qs('.bot-input input')}
+  function scrollBot(){var b=bodyBox(); if(b)b.scrollTop=b.scrollHeight}
+  function appendMsg(role,msg,id){var b=bodyBox(); if(!b)return; if(id && b.querySelector('[data-support-id="'+id+'"]'))return; var div=document.createElement('div');div.className=(role==='user')?'bot-msg':'bot-msg ai';if(id)div.setAttribute('data-support-id',String(id));var name=role==='admin'?'Admin hỗ trợ':(role==='user'?'Bạn':'Bot hỗ trợ');div.innerHTML='<b>'+name+':</b><br>'+esc(msg).replace(/\n/g,'<br>');b.appendChild(div);scrollBot()}
+  function openChat(){var p=panel(); if(!p)return; p.classList.add('gptmkt-chat-open-final');p.style.display='block';p.style.visibility='visible';p.style.opacity='1';document.body.classList.add('mkt-support-open');startPoll();setTimeout(scrollBot,80)}
+  function closeChat(){var p=panel(); if(!p)return; p.classList.remove('gptmkt-chat-open-final');p.style.display='none';p.style.visibility='hidden';p.style.opacity='0';document.body.classList.remove('mkt-support-open')}
+  function toggleChat(){var p=panel(); if(p && p.classList.contains('gptmkt-chat-open-final')) closeChat(); else openChat()}
+  window.openFloatingBot=openChat; window.closeFloatingBot=closeChat; window.toggleFloatingBot=toggleChat;
+  function localReply(text){var low=String(text||'').toLowerCase(); if(low.indexOf('tải')>=0||low.indexOf('cài')>=0)return 'Anh/chị bấm nút GPT MKT bên trái để cài ra màn hình chính. Android có thể cài trực tiếp trên Chrome, iPhone làm theo Chia sẻ → Thêm vào màn hình chính.'; if(low.indexOf('thanh toán')>=0||low.indexOf('qr')>=0)return 'Sau khi thanh toán, anh/chị gửi ID thiết bị + ảnh thanh toán + gói đăng ký. Nếu 5 phút chưa kích hoạt, liên hệ Zalo 036 338 2629.'; return 'Em đã nhận tin nhắn. Admin sẽ phản hồi trực tiếp trong khung chat này ạ.'}
+  async function saveSupport(text){try{var r=await fetch('/support_send',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({device_id:deviceId(),sender:'user',message:text})});var d=await r.json().catch(function(){return{}});if(d.id){lastSupportId=Math.max(lastSupportId,Number(d.id)||0);localStorage.setItem('mkt_support_last_id',String(lastSupportId));}}catch(e){appendMsg('ai','Chưa gửi được về Web Admin. Vui lòng kiểm tra mạng rồi thử lại.')}}
+  async function poll(){try{var r=await fetch('/support_poll?device_id='+encodeURIComponent(deviceId())+'&after_id='+encodeURIComponent(lastSupportId),{cache:'no-store'});var d=await r.json().catch(function(){return{messages:[]}});(d.messages||[]).forEach(function(m){var mid=Number(m.id)||0;if(mid<=lastSupportId)return;lastSupportId=mid;localStorage.setItem('mkt_support_last_id',String(lastSupportId));if(String(m.sender||'').toLowerCase()==='admin'){appendMsg('admin',m.message,mid);openChat();}})}catch(e){}}
+  function startPoll(){if(pollTimer)return;poll();pollTimer=setInterval(poll,3500)}
+  window.sendBotInput=function(){var input=inputBox();if(!input||!input.value.trim())return;var text=input.value.trim();input.value='';openChat();appendMsg('user',text);saveSupport(text);setTimeout(function(){appendMsg('ai',localReply(text))},300)};
+  window.botQuick=function(text){openChat();var input=inputBox();if(input)input.value=String(text||'');window.sendBotInput()};
+  function setGuide(){var intro=byId('gptMktInstallIntroFinal'),steps=byId('gptMktInstallStepsFinal'),go=byId('gptMktInstallGoFinal'); if(isIOS()){if(intro)intro.textContent='iPhone cần mở bằng Safari và thêm thủ công.'; if(steps)steps.innerHTML='1. Mở website bằng <b>Safari</b>.<br>2. Bấm nút <b>Chia sẻ</b>.<br>3. Chọn <b>Thêm vào màn hình chính</b> → <b>Thêm</b>.'; if(go)go.textContent='Đã hiểu'} else if(deferredPrompt && isAndroid()){if(intro)intro.textContent='Bấm Cài ngay để đưa GPT MKT ra màn hình chính.'; if(steps)steps.innerHTML='Sau khi cài, khách mở như app riêng, thao tác nhanh hơn trên điện thoại.'; if(go)go.textContent='Cài ngay'} else {if(intro)intro.textContent='Trình duyệt chưa bật popup cài tự động.'; if(steps)steps.innerHTML='Android Chrome: bấm menu <b>⋮</b> → <b>Cài đặt ứng dụng</b> hoặc <b>Thêm vào màn hình chính</b>.<br>iPhone Safari: <b>Chia sẻ</b> → <b>Thêm vào màn hình chính</b>.'; if(go)go.textContent='Đã hiểu'}}
+  async function install(){if(isStandalone())return; if(deferredPrompt && isAndroid()){var dp=deferredPrompt;deferredPrompt=null;try{dp.prompt();await dp.userChoice}catch(e){}return} setGuide();var s=byId('gptMktInstallSheetFinal');if(s)s.classList.add('open')}
+  window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();deferredPrompt=e;window.__gptMktDeferredPrompt=e});
+  document.addEventListener('click',function(e){if(e.target.closest('#gptMktInstallFinal')){e.preventDefault();e.stopPropagation();install()} if(e.target.closest('#gptMktChatFinal,.bot-bubble,[data-open-support-bot]')){e.preventDefault();e.stopPropagation();toggleChat()} if(e.target.closest('.bot-close')){e.preventDefault();e.stopPropagation();closeChat()} if(e.target.closest('#gptMktInstallCloseFinal')){var s=byId('gptMktInstallSheetFinal');if(s)s.classList.remove('open')} if(e.target.closest('#gptMktInstallGoFinal')){if(deferredPrompt&&isAndroid()){var dp=deferredPrompt;deferredPrompt=null;try{dp.prompt();dp.userChoice}catch(_e){}} var sh=byId('gptMktInstallSheetFinal');if(sh)sh.classList.remove('open')}},true);
+  document.addEventListener('keydown',function(e){if(e.key==='Enter' && e.target && (e.target.id==='botInputText'||e.target.closest('.bot-input'))){e.preventDefault();window.sendBotInput()}},true);
+  function boot(){ensureUI();deviceId();startPoll(); if(isStandalone()){var d=byId('gptMktLeftDockFinal');if(d)d.style.display='none'} if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js',{scope:'/'}).catch(function(){})}}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();setTimeout(boot,500);setTimeout(boot,1500);
 })();
 </script>
 
@@ -9934,7 +9989,7 @@ def pwa_manifest():
 @app.get("/sw.js")
 def pwa_sw():
     js = """
-const CACHE_NAME = "gptmkt-v1";
+const CACHE_NAME = "gptmkt-v2";
 const urlsToCache = [
   "/",
   "/manifest.json"
@@ -9965,40 +10020,55 @@ def pwa_service_worker():
 
 @app.get("/static/icon-192.png")
 def static_icon_192():
-    if os.path.exists(os.path.join("static", "icon-192.png")):
-        return send_file(os.path.join("static", "icon-192.png"), mimetype="image/png")
-    if os.path.exists("pwa-icon-192.png"):
-        return send_file("pwa-icon-192.png", mimetype="image/png")
-    import base64
-    png = base64.b64decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=")
-    return app.response_class(png, mimetype="image/png")
+    path = os.path.join("static", "icon-192.png")
+    if os.path.exists(path):
+        return send_file(path, mimetype="image/png")
+    return _generate_pwa_icon(192)
 
 @app.get("/static/icon-512.png")
 def static_icon_512():
-    if os.path.exists(os.path.join("static", "icon-512.png")):
-        return send_file(os.path.join("static", "icon-512.png"), mimetype="image/png")
-    if os.path.exists("pwa-icon-512.png"):
-        return send_file("pwa-icon-512.png", mimetype="image/png")
-    import base64
-    png = base64.b64decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=")
-    return app.response_class(png, mimetype="image/png")
+    path = os.path.join("static", "icon-512.png")
+    if os.path.exists(path):
+        return send_file(path, mimetype="image/png")
+    return _generate_pwa_icon(512)
 
 @app.get("/pwa-icon-192.png")
 def pwa_icon_192():
     if os.path.exists("pwa-icon-192.png"):
         return send_file("pwa-icon-192.png", mimetype="image/png")
-    import base64
-    png = base64.b64decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=")
-    return app.response_class(png, mimetype="image/png")
+    return _generate_pwa_icon(192)
 
 @app.get("/pwa-icon-512.png")
 def pwa_icon_512():
     if os.path.exists("pwa-icon-512.png"):
         return send_file("pwa-icon-512.png", mimetype="image/png")
-    import base64
-    png = base64.b64decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=")
-    return app.response_class(png, mimetype="image/png")
+    return _generate_pwa_icon(512)
 
+def _generate_pwa_icon(size=192):
+    try:
+        from PIL import Image, ImageDraw, ImageFont
+        img = Image.new("RGB", (size, size), "#2563eb")
+        draw = ImageDraw.Draw(img)
+        draw.rounded_rectangle([0, 0, size, size], radius=max(18, size//7), fill="#2563eb")
+        draw.ellipse([int(size*0.08), int(size*0.06), int(size*0.92), int(size*0.90)], fill="#7c3aed")
+        draw.ellipse([int(size*0.18), int(size*0.16), int(size*0.82), int(size*0.80)], fill="#0ea5e9")
+        text = "MKT"
+        try:
+            font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", max(28, size//4))
+        except Exception:
+            font = ImageFont.load_default()
+        bbox = draw.textbbox((0,0), text, font=font)
+        x = (size - (bbox[2]-bbox[0]))/2
+        y = (size - (bbox[3]-bbox[1]))/2 - size*0.02
+        draw.text((x,y), text, fill="white", font=font)
+        buf = io.BytesIO()
+        img.save(buf, format="PNG")
+        buf.seek(0)
+        return send_file(buf, mimetype="image/png")
+    except Exception:
+        import base64
+        png = base64.b64decode("iVBORw0KGgoAAAANSUhEUgAAAMAAAADACAIAAADdvvtQAAAABmJLR0QA/wD/AP+gvaeTAAABF0lEQVR4nO3RMQ0AAAgDINc/9K3hARUhl9CyZHYAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD4Gx2jAAH8YEFPAAAAAElFTkSuQmCC")
+        return app.response_class(png, mimetype="image/png")
 
 # =========================
 # CTV / AFFILIATE CENTER V1
