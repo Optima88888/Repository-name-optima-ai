@@ -9878,132 +9878,110 @@ ADMIN_HTML = """
 </style>
 
 
-<!-- HOTFIX 20260611: Mobile unified GPT MKT download + CTV button -->
-<style id="mkt-unified-mobile-actions-css">
-  #mktMobileQuickActions,
-  #mktMobileQuickActionsRestore,
-  #mktTopDownloadBar,
-  #mobileCtvQuickBtn,
-  #mktMobileCtvQuick,
-  #mktMobileCtvQuickRestore{
-    display:none!important;
-    visibility:hidden!important;
-    opacity:0!important;
-    pointer-events:none!important;
+<!-- FINAL PATCH 20260610: Device ID under logo + mobile Download/CTV dock -->
+<style id="mkt-deviceid-mobile-ctv-final-css">
+  /* Hiển thị ID máy ngay dưới logo Marketing Automation Pro */
+  #mktDeviceUnderLogo{
+    display:flex!important;align-items:center!important;gap:7px!important;
+    margin:0 18px 14px!important;padding:9px 11px!important;border-radius:14px!important;
+    background:rgba(15,23,42,.72)!important;border:1px solid rgba(96,165,250,.24)!important;
+    color:#dbeafe!important;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif!important;
+    font-size:12px!important;font-weight:900!important;line-height:1.2!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.06)!important;
   }
-  #mktUnifiedMobileActions{display:none!important;}
+  #mktDeviceUnderLogo .mkt-device-dot{width:8px!important;height:8px!important;border-radius:999px!important;background:#22c55e!important;box-shadow:0 0 10px rgba(34,197,94,.9)!important;flex:0 0 8px!important;}
+  #mktDeviceUnderLogo b{color:#fff!important;font-weight:1000!important;letter-spacing:.01em!important;}
+
+  /* Cụm nút điện thoại gọn: GPT MKT / Tải xuống / CTV */
+  #mktMobileActionDock{display:none!important;}
   @media(max-width:768px){
-    #mktUnifiedMobileActions{
-      position:fixed!important;
-      left:10px!important;
-      top:calc(env(safe-area-inset-top,0px) + 10px)!important;
-      z-index:2147483645!important;
-      display:flex!important;
-      align-items:center!important;
-      gap:7px!important;
-      font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif!important;
-      animation:mktUnifiedFloat 2.6s ease-in-out infinite!important;
-      pointer-events:auto!important;
+    /* Ẩn các nút CTV/tải xuống nổi lẻ để không bị trùng, chỉ giữ dock này */
+    #mobileCtvQuickBtn,.affiliate-float,.floating-affiliate-btn,#mktTopDownloadBar,.mkt-mobile-install-menu{display:none!important;visibility:hidden!important;pointer-events:none!important;}
+    body{padding-bottom:88px!important;}
+    #mktMobileActionDock{
+      display:flex!important;position:fixed!important;left:10px!important;right:auto!important;bottom:calc(12px + env(safe-area-inset-bottom,0px))!important;
+      z-index:2147483200!important;gap:7px!important;align-items:center!important;justify-content:flex-start!important;
+      padding:7px!important;border-radius:22px!important;background:rgba(2,6,23,.86)!important;border:1px solid rgba(148,163,184,.24)!important;
+      box-shadow:0 18px 50px rgba(0,0,0,.38), inset 0 1px 0 rgba(255,255,255,.08)!important;backdrop-filter:blur(14px)!important;
+      max-width:calc(100vw - 92px)!important;
     }
-    body.mkt-app-installed #mktUnifiedMobileActions{display:none!important;}
-    #mktUnifiedMobileActions button{
-      border:0!important;
-      outline:0!important;
-      cursor:pointer!important;
-      min-height:42px!important;
-      border-radius:999px!important;
-      display:inline-flex!important;
-      align-items:center!important;
-      justify-content:center!important;
-      gap:7px!important;
-      color:#fff!important;
-      font-weight:1000!important;
-      letter-spacing:-.02em!important;
-      box-shadow:0 12px 26px rgba(2,6,23,.25),inset 0 1px 0 rgba(255,255,255,.22)!important;
-      -webkit-tap-highlight-color:transparent!important;
-      pointer-events:auto!important;
+    #mktMobileActionDock button{
+      min-width:64px!important;height:48px!important;border:0!important;border-radius:16px!important;padding:7px 9px!important;cursor:pointer!important;
+      display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;gap:2px!important;
+      color:#fff!important;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif!important;font-size:11px!important;font-weight:1000!important;line-height:1.05!important;
+      box-shadow:0 10px 24px rgba(2,6,23,.28)!important;white-space:nowrap!important;
     }
-    #mktUnifiedInstallBtn{
-      min-width:142px!important;
-      padding:8px 13px!important;
-      background:linear-gradient(135deg,#0284c7,#2563eb 48%,#7c3aed)!important;
-    }
-    #mktUnifiedInstallBtn .mkt-u-dot{
-      width:10px!important;height:10px!important;border-radius:50%!important;
-      background:#34d987!important;box-shadow:0 0 0 4px rgba(52,217,135,.15),0 0 12px rgba(52,217,135,.78)!important;
-      flex:0 0 10px!important;
-    }
-    #mktUnifiedInstallBtn .mkt-u-text{display:flex!important;flex-direction:column!important;align-items:flex-start!important;line-height:1.02!important;}
-    #mktUnifiedInstallBtn b{font-size:13px!important;color:#fff!important;white-space:nowrap!important;}
-    #mktUnifiedInstallBtn small{font-size:10.5px!important;color:#dbeafe!important;white-space:nowrap!important;margin-top:2px!important;font-weight:900!important;}
-    #mktUnifiedCtvBtn{
-      min-width:58px!important;
-      padding:8px 12px!important;
-      background:linear-gradient(135deg,#16a34a,#22c55e,#84cc16)!important;
-      font-size:13px!important;
-    }
-    #mktUnifiedCtvBtn:before{
-      content:""!important;width:9px!important;height:9px!important;border-radius:50%!important;
-      background:#dcfce7!important;box-shadow:0 0 10px rgba(220,252,231,.95)!important;
-      flex:0 0 9px!important;
-    }
-    #mktUnifiedMobileActions button:active{transform:scale(.96)!important;}
-    @keyframes mktUnifiedFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
-    @media(max-width:390px){
-      #mktUnifiedMobileActions{left:8px!important;gap:6px!important;}
-      #mktUnifiedInstallBtn{min-width:128px!important;padding-left:11px!important;padding-right:11px!important;}
-      #mktUnifiedInstallBtn b{font-size:12.2px!important;}
-      #mktUnifiedInstallBtn small{font-size:9.8px!important;}
-      #mktUnifiedCtvBtn{min-width:52px!important;font-size:12px!important;padding-left:10px!important;padding-right:10px!important;}
-    }
+    #mktMobileActionDock button span:first-child{font-size:17px!important;line-height:1!important;}
+    #mktMobileActionDock .mkt-dock-gpt{background:linear-gradient(135deg,#2563eb,#7c3aed)!important;}
+    #mktMobileActionDock .mkt-dock-download{background:linear-gradient(135deg,#0ea5e9,#2563eb)!important;}
+    #mktMobileActionDock .mkt-dock-ctv{background:linear-gradient(135deg,#16a34a,#22c55e)!important;}
   }
 </style>
-<script id="mkt-unified-mobile-actions-js">
+<script id="mkt-deviceid-mobile-ctv-final-js">
 (function(){
   'use strict';
   function qs(s,r){return (r||document).querySelector(s)}
-  function mobile(){return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent||'') || window.innerWidth<=768}
-  function standalone(){return (window.matchMedia&&window.matchMedia('(display-mode: standalone)').matches)||window.navigator.standalone===true}
-  function install(e){
-    if(e){e.preventDefault();e.stopPropagation();if(e.stopImmediatePropagation)e.stopImmediatePropagation();}
-    if(typeof window.showInstallGuide==='function') return window.showInstallGuide();
-    if(typeof window.mktTopInstall==='function') return window.mktTopInstall(e);
-    alert('Mở bằng Chrome Android hoặc Safari iPhone → chọn Thêm vào màn hình chính.');
-    return false;
-  }
-  function openCTV(e){
-    if(e){e.preventDefault();e.stopPropagation();if(e.stopImmediatePropagation)e.stopImmediatePropagation();}
-    try{ if(typeof window.openModule==='function'){ window.openModule('affiliate_center'); return false; } }catch(_e){}
-    try{ if(typeof window.openAffiliateCenter==='function'){ window.openAffiliateCenter(); return false; } }catch(_e){}
-    location.hash='affiliate_center';
-    var target=qs('#affiliateCenterSection')||qs('#affiliate_center')||qs('[data-module="affiliate_center"]')||qs('[id*="affiliate"]');
-    if(target) target.scrollIntoView({behavior:'smooth',block:'start'});
-    return false;
-  }
-  function build(){
-    if(!mobile() || standalone()) return;
-    var old=qs('#mktUnifiedMobileActions');
-    if(!old){
-      var box=document.createElement('div');
-      box.id='mktUnifiedMobileActions';
-      box.innerHTML='<button type="button" id="mktUnifiedInstallBtn" aria-label="Tải GPT MKT"><span class="mkt-u-dot"></span><span class="mkt-u-text"><b>GPT MKT</b><small>Tải xuống</small></span></button><button type="button" id="mktUnifiedCtvBtn" aria-label="Đăng ký CTV">CTV</button>';
-      document.body.appendChild(box);
+  function getDeviceId(){
+    var id='';
+    try{id=localStorage.getItem('mkt_device_id')||'';}catch(e){}
+    if(!id){
+      var m=document.cookie.match(/(?:^|; )mkt_device_id=([^;]+)/);
+      if(m) id=decodeURIComponent(m[1]);
     }
-    var installBtn=qs('#mktUnifiedInstallBtn');
-    var ctvBtn=qs('#mktUnifiedCtvBtn');
-    if(installBtn) installBtn.onclick=install;
-    if(ctvBtn) ctvBtn.onclick=openCTV;
+    if(!id && typeof window.getOrCreateDeviceId==='function'){
+      try{id=window.getOrCreateDeviceId()||'';}catch(e){}
+    }
+    if(!id){
+      id='MKT-'+Math.random().toString(36).slice(2,8).toUpperCase()+Date.now().toString().slice(-4);
+    }
+    try{localStorage.setItem('mkt_device_id',id);}catch(e){}
+    document.cookie='mkt_device_id='+encodeURIComponent(id)+'; path=/; max-age='+(60*60*24*365*5)+'; SameSite=Lax';
+    return id;
   }
-  document.addEventListener('click',function(e){
-    var ctv=e.target.closest&&e.target.closest('#mktUnifiedCtvBtn');
-    if(ctv) return openCTV(e);
-    var dl=e.target.closest&&e.target.closest('#mktUnifiedInstallBtn');
-    if(dl) return install(e);
-  },true);
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',build);else build();
-  setTimeout(build,500);setTimeout(build,1500);setTimeout(build,3500);
+  function ensureDeviceUnderLogo(){
+    var logo=qs('.logo');
+    if(!logo) return;
+    var box=qs('#mktDeviceUnderLogo');
+    if(!box){
+      box=document.createElement('div');
+      box.id='mktDeviceUnderLogo';
+      logo.insertAdjacentElement('afterend',box);
+    }
+    box.innerHTML='<span class="mkt-device-dot"></span><span>ID máy: <b>'+getDeviceId()+'</b></span>';
+  }
+  function openInstall(e){
+    if(e){e.preventDefault();e.stopPropagation();}
+    if(typeof window.showInstallGuide==='function') return window.showInstallGuide();
+    if(typeof window.openInstallGuide==='function') return window.openInstallGuide();
+    if(typeof window.runMktInstallPrompt==='function') return window.runMktInstallPrompt(e);
+    var btn=qs('#mktTopDownloadBar')||qs('.mkt-mobile-install-menu')||qs('[onclick*="showInstallGuide"]');
+    if(btn && btn!==e?.currentTarget){try{btn.click();return false;}catch(_e){}}
+    alert('Android: mở bằng Chrome → menu ⋮ → Cài đặt ứng dụng / Thêm vào màn hình chính.\n\niPhone: mở bằng Safari → Chia sẻ → Thêm vào Màn hình chính.');
+    return false;
+  }
+  function openCtv(e){
+    if(e){e.preventDefault();e.stopPropagation();}
+    if(typeof window.openAffiliateCenter==='function') return window.openAffiliateCenter();
+    if(typeof window.openModule==='function') return window.openModule('affiliate_center');
+    location.hash='affiliate_center';
+    return false;
+  }
+  function ensureMobileDock(){
+    var dock=qs('#mktMobileActionDock');
+    if(!dock){
+      dock=document.createElement('div');
+      dock.id='mktMobileActionDock';
+      dock.innerHTML='<button type="button" class="mkt-dock-gpt"><span>📱</span><span>GPT MKT</span></button><button type="button" class="mkt-dock-download"><span>⬇️</span><span>Tải xuống</span></button><button type="button" class="mkt-dock-ctv"><span>🤝</span><span>CTV</span></button>';
+      document.body.appendChild(dock);
+    }
+    qs('.mkt-dock-gpt',dock).onclick=function(e){e.preventDefault();window.scrollTo({top:0,behavior:'smooth'});return false;};
+    qs('.mkt-dock-download',dock).onclick=openInstall;
+    qs('.mkt-dock-ctv',dock).onclick=openCtv;
+  }
+  function boot(){ensureDeviceUnderLogo();ensureMobileDock();setTimeout(ensureDeviceUnderLogo,400);setTimeout(ensureMobileDock,400);}
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',boot); else boot();
 })();
 </script>
+<!-- /FINAL PATCH 20260610 -->
 </body></html>
 """
 
