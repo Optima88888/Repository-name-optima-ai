@@ -2353,12 +2353,12 @@ HTML = r"""
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>{{ title }}</title>
 
-<meta name="theme-color" content="#0F172A">
+<meta name="theme-color" content="#2563eb">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Mkt Automation Pro">
+<meta name="apple-mobile-web-app-title" content="GPT MKT Pro">
 <link rel="manifest" href="/manifest.json">
-<link rel="apple-touch-icon" href="/pwa-icon-192.png">
+<link rel="apple-touch-icon" href="/static/icon-192.png">
 
 <style>
 :root{
@@ -6316,7 +6316,7 @@ window.addEventListener('beforeinstallprompt', function(e){
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', function(){
-    navigator.serviceWorker.register('/service-worker.js').catch(function(err){
+    navigator.serviceWorker.register('/sw.js').catch(function(err){
       console.log('Service worker registration failed:', err);
     });
   });
@@ -6360,7 +6360,7 @@ function showInstallGuide(){
 })();
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', function(){
-    navigator.serviceWorker.register('/service-worker.js').catch(function(err){
+    navigator.serviceWorker.register('/sw.js').catch(function(err){
       console.log('Service worker failed:', err);
     });
   });
@@ -10736,40 +10736,73 @@ def api_templates():
 @app.get("/manifest.json")
 def pwa_manifest():
     return jsonify({
-        "name": "Mkt Automation Pro",
-        "short_name": "Mkt Pro",
-        "description": "Công cụ Marketing Automation Pro cài như app mini trên điện thoại",
+        "name": "GPT MKT Pro",
+        "short_name": "GPTMKT",
         "start_url": "/",
-        "scope": "/",
         "display": "standalone",
-        "display_override": ["standalone", "minimal-ui", "browser"],
-        "id": "/",
-        "background_color": "#0F172A",
-        "theme_color": "#0F172A",
-        "orientation": "portrait",
+        "background_color": "#ffffff",
+        "theme_color": "#2563eb",
         "icons": [
-            {"src": "/pwa-icon-192.png", "sizes": "192x192", "type": "image/png"},
-            {"src": "/pwa-icon-512.png", "sizes": "512x512", "type": "image/png"}
+            {"src": "/static/icon-192.png", "sizes": "192x192", "type": "image/png"},
+            {"src": "/static/icon-512.png", "sizes": "512x512", "type": "image/png"}
         ]
     })
 
-@app.get("/service-worker.js")
-def pwa_service_worker():
+@app.get("/sw.js")
+def pwa_sw():
     js = """
-const CACHE_NAME = 'mkt-automation-pro-v100';
-const ASSETS = ['/', '/manifest.json', '/pwa-icon-192.png', '/pwa-icon-512.png'];
-self.addEventListener('install', event => {
-  event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(ASSETS)));
+const CACHE_NAME = "gptmkt-v1";
+
+self.addEventListener("install", (event) => {
+  event.waitUntil(
+    caches.open(CACHE_NAME).then((cache) => {
+      return cache.addAll([
+        "/",
+        "/static/css/style.css",
+        "/static/js/app.js"
+      ]).catch(() => Promise.resolve());
+    })
+  );
   self.skipWaiting();
 });
-self.addEventListener('activate', event => {
+
+self.addEventListener("activate", (event) => {
   event.waitUntil(self.clients.claim());
 });
-self.addEventListener('fetch', event => {
-  event.respondWith(fetch(event.request).catch(() => caches.match(event.request)));
+
+self.addEventListener("fetch", (event) => {
+  event.respondWith(
+    caches.match(event.request).then((response) => {
+      return response || fetch(event.request);
+    })
+  );
 });
 """
     return app.response_class(js, mimetype="application/javascript")
+
+@app.get("/service-worker.js")
+def pwa_service_worker():
+    return pwa_sw()
+
+@app.get("/static/icon-192.png")
+def static_icon_192():
+    if os.path.exists(os.path.join("static", "icon-192.png")):
+        return send_file(os.path.join("static", "icon-192.png"), mimetype="image/png")
+    if os.path.exists("pwa-icon-192.png"):
+        return send_file("pwa-icon-192.png", mimetype="image/png")
+    import base64
+    png = base64.b64decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=")
+    return app.response_class(png, mimetype="image/png")
+
+@app.get("/static/icon-512.png")
+def static_icon_512():
+    if os.path.exists(os.path.join("static", "icon-512.png")):
+        return send_file(os.path.join("static", "icon-512.png"), mimetype="image/png")
+    if os.path.exists("pwa-icon-512.png"):
+        return send_file("pwa-icon-512.png", mimetype="image/png")
+    import base64
+    png = base64.b64decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=")
+    return app.response_class(png, mimetype="image/png")
 
 @app.get("/pwa-icon-192.png")
 def pwa_icon_192():
