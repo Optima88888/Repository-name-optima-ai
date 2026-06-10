@@ -7241,28 +7241,52 @@ function dropKanban(ev){ ev.preventDefault(); const col=ev.currentTarget; if(dra
 
 
 <!-- FINAL MOBILE APP INSTALL 20260610: phone-only download button in mobile menu + floating shortcut -->
-<style id="mkt-phone-install-final-css">
-  /* Ẩn toàn bộ nút cài app cũ trên desktop để không rối giao diện */
-  #mktInstallFloat,#mktInstallPanel,.app-install-card,.app-install-banner,.v2-install-box{display:none!important;visibility:hidden!important;pointer-events:none!important;}
-  #mktPhoneInstallEntry,#mktPhoneInstallFloat{display:none!important;}
-  #mktPhoneInstallSheet{position:fixed!important;inset:0!important;z-index:2147483600!important;display:none!important;align-items:flex-end!important;justify-content:center!important;background:rgba(2,6,23,.62)!important;backdrop-filter:blur(9px)!important;}
-  #mktPhoneInstallSheet.show{display:flex!important;}
-  .mkt-phone-install-box{width:min(440px,100vw)!important;background:#fff!important;color:#0f172a!important;border-radius:24px 24px 0 0!important;padding:20px 18px 18px!important;box-shadow:0 -24px 70px rgba(15,23,42,.42)!important;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif!important;}
-  .mkt-phone-install-box h3{margin:0 0 8px!important;font-size:20px!important;line-height:1.16!important;font-weight:1000!important;color:#0f172a!important;}
-  .mkt-phone-install-box p{margin:8px 0!important;font-size:14px!important;line-height:1.55!important;color:#334155!important;font-weight:750!important;}
-  .mkt-phone-install-actions{display:flex!important;gap:10px!important;margin-top:15px!important;}
-  .mkt-phone-install-actions button{flex:1!important;border:0!important;border-radius:999px!important;padding:13px 14px!important;font-size:14px!important;font-weight:1000!important;cursor:pointer!important;}
-  #mktPhoneInstallNow{color:#fff!important;background:linear-gradient(135deg,#2563eb,#7c3aed)!important;box-shadow:0 12px 28px rgba(37,99,235,.28)!important;}
-  #mktPhoneInstallClose{color:#334155!important;background:#e5e7eb!important;}
+
+
+<!-- MOBILE PWA TOP DOWNLOAD FINAL 20260610: top blue GPT MKT download button + mobile responsive fix -->
+<style id="mkt-mobile-top-download-final-css">
+  /* Dọn toàn bộ nút tải cũ để không còn nút nổi dưới màn hình */
+  #mktInstallFloat,#mktInstallPanel,#mktPhoneInstallFloat,#mktPhoneInstallEntry,#mktMobileInstallMenu,
+  .app-install-card,.app-install-banner,.v2-install-box,.mkt-mobile-install-menu{display:none!important;visibility:hidden!important;pointer-events:none!important;}
+
+  #mktTopDownloadBar{display:none!important;}
+  #mktTopInstallSheet{position:fixed!important;inset:0!important;z-index:2147483646!important;display:none!important;align-items:flex-end!important;justify-content:center!important;background:rgba(2,6,23,.62)!important;backdrop-filter:blur(8px)!important;}
+  #mktTopInstallSheet.show{display:flex!important;}
+  .mkt-top-install-box{width:min(430px,100vw)!important;background:#fff!important;color:#0f172a!important;border-radius:24px 24px 0 0!important;padding:20px 18px 18px!important;box-shadow:0 -24px 70px rgba(15,23,42,.42)!important;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif!important;}
+  .mkt-top-install-box h3{margin:0 0 8px!important;font-size:20px!important;line-height:1.15!important;font-weight:1000!important;color:#0f172a!important;}
+  .mkt-top-install-box p{margin:8px 0!important;font-size:14px!important;line-height:1.55!important;color:#334155!important;font-weight:760!important;}
+  .mkt-top-install-actions{display:flex!important;gap:10px!important;margin-top:15px!important;}
+  .mkt-top-install-actions button{flex:1!important;border:0!important;border-radius:999px!important;padding:13px 14px!important;font-size:14px!important;font-weight:1000!important;cursor:pointer!important;}
+  #mktTopInstallNow{color:#fff!important;background:linear-gradient(135deg,#2563eb,#7c3aed)!important;box-shadow:0 12px 28px rgba(37,99,235,.28)!important;}
+  #mktTopInstallClose{color:#334155!important;background:#e5e7eb!important;}
+
   @media(max-width:900px){
-    body:not(.mkt-app-installed) #mktPhoneInstallEntry{display:flex!important;align-items:center!important;gap:10px!important;width:calc(100% - 24px)!important;margin:10px 12px 14px!important;padding:12px 13px!important;border:1px solid rgba(96,165,250,.30)!important;border-radius:16px!important;background:linear-gradient(135deg,rgba(37,99,235,.32),rgba(124,58,237,.20),rgba(15,23,42,.78))!important;color:#fff!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 12px 28px rgba(2,6,23,.22)!important;cursor:pointer!important;text-align:left!important;}
-    #mktPhoneInstallEntry .ico{width:36px!important;height:36px!important;border-radius:13px!important;display:flex!important;align-items:center!important;justify-content:center!important;background:linear-gradient(135deg,#2563eb,#7c3aed)!important;box-shadow:0 10px 22px rgba(37,99,235,.30)!important;font-size:18px!important;flex:0 0 36px!important;}
-    #mktPhoneInstallEntry b{display:block!important;font-size:14px!important;line-height:1.05!important;font-weight:1000!important;color:#fff!important;}
-    #mktPhoneInstallEntry small{display:block!important;margin-top:4px!important;font-size:11px!important;line-height:1.25!important;font-weight:800!important;color:#bfdbfe!important;}
-    body:not(.mkt-app-installed) #mktPhoneInstallFloat{display:flex!important;position:fixed!important;left:50%!important;bottom:calc(16px + env(safe-area-inset-bottom,0px))!important;transform:translateX(-50%)!important;z-index:2147483000!important;align-items:center!important;gap:8px!important;border:0!important;border-radius:999px!important;padding:12px 17px!important;color:#fff!important;background:linear-gradient(135deg,#2563eb,#7c3aed)!important;box-shadow:0 16px 42px rgba(37,99,235,.38)!important;font-size:14px!important;font-weight:1000!important;cursor:pointer!important;}
+    html,body{width:100%!important;max-width:100%!important;overflow-x:hidden!important;}
+    body:not(.mkt-app-installed){padding-top:58px!important;}
+    body:not(.mkt-app-installed) #mktTopDownloadBar{
+      display:flex!important;position:fixed!important;left:10px!important;right:10px!important;top:calc(8px + env(safe-area-inset-top,0px))!important;z-index:2147483000!important;
+      align-items:center!important;justify-content:center!important;gap:9px!important;border:0!important;border-radius:999px!important;padding:13px 16px!important;
+      color:#fff!important;background:linear-gradient(135deg,#0ea5e9,#2563eb,#7c3aed)!important;box-shadow:0 16px 38px rgba(37,99,235,.42), inset 0 1px 0 rgba(255,255,255,.22)!important;
+      font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif!important;font-size:15px!important;font-weight:1000!important;letter-spacing:.01em!important;cursor:pointer!important;
+      visibility:visible!important;pointer-events:auto!important;
+    }
+    #mktTopDownloadBar .mkt-dl-dot{width:10px!important;height:10px!important;border-radius:999px!important;background:#34d399!important;box-shadow:0 0 0 5px rgba(52,211,153,.18),0 0 14px rgba(52,211,153,.85)!important;flex:0 0 10px!important;}
+    #mktTopDownloadBar small{font-size:12px!important;font-weight:900!important;opacity:.94!important;}
+
+    /* Sửa giao diện điện thoại: bỏ layout desktop 3 cột để nội dung không bị bóp nhỏ */
+    .layout{display:block!important;width:100%!important;max-width:100%!important;margin:0!important;padding:10px!important;}
+    .sidebar{position:relative!important;top:auto!important;width:100%!important;height:auto!important;max-height:none!important;margin:0 0 12px!important;border-radius:18px!important;padding:14px!important;}
+    .rightbar{display:none!important;}
+    .main{width:100%!important;max-width:100%!important;min-width:0!important;}
+    .panel,.top-hero,section{max-width:100%!important;}
+    .app-quick-grid{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:10px!important;}
+    .app-quick-card{min-width:0!important;padding:14px!important;border-radius:18px!important;}
+    .app-quick-card h3,.app-quick-card b{font-size:14px!important;line-height:1.2!important;}
+    .app-quick-card p{font-size:12px!important;line-height:1.35!important;}
+    .floating-bot{right:14px!important;bottom:calc(74px + env(safe-area-inset-bottom,0px))!important;}
   }
 </style>
-<script id="mkt-phone-install-final-js">
+<script id="mkt-mobile-top-download-final-js">
 (function(){
   'use strict';
   var deferredPrompt = window.__mktDeferredPrompt || null;
@@ -7272,50 +7296,47 @@ function dropKanban(ev){ ev.preventDefault(); const col=ev.currentTarget; if(dra
   function qs(s,r){return (r||document).querySelector(s)}
   function mobile(){return isIOS || isAndroid || (window.matchMedia && window.matchMedia('(max-width:900px)').matches)}
   function standalone(){return (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone === true}
+  function ensureBar(){
+    if(!mobile() || standalone()){document.body.classList.add('mkt-app-installed');return null;}
+    var old=qs('#mktTopDownloadBar'); if(old) return old;
+    var btn=document.createElement('button'); btn.type='button'; btn.id='mktTopDownloadBar';
+    btn.innerHTML='<span class="mkt-dl-dot"></span><span>GPT MKT</span><small>Tải xuống</small>';
+    btn.addEventListener('click',runInstall,true);
+    document.body.appendChild(btn);
+    return btn;
+  }
   function ensureSheet(){
-    var old=qs('#mktPhoneInstallSheet'); if(old) return old;
-    var wrap=document.createElement('div'); wrap.id='mktPhoneInstallSheet';
-    wrap.innerHTML='<div class="mkt-phone-install-box" role="dialog" aria-modal="true"><h3>📱 Cài GPT MKT Pro vào điện thoại</h3><p id="mktPhoneInstallText"></p><div class="mkt-phone-install-actions"><button type="button" id="mktPhoneInstallNow">Cài ngay</button><button type="button" id="mktPhoneInstallClose">Đóng</button></div></div>';
+    var old=qs('#mktTopInstallSheet'); if(old) return old;
+    var wrap=document.createElement('div'); wrap.id='mktTopInstallSheet';
+    wrap.innerHTML='<div class="mkt-top-install-box" role="dialog" aria-modal="true"><h3>📱 Cài GPT MKT Pro</h3><p id="mktTopInstallText"></p><div class="mkt-top-install-actions"><button type="button" id="mktTopInstallNow">Cài ngay</button><button type="button" id="mktTopInstallClose">Đóng</button></div></div>';
     document.body.appendChild(wrap);
-    qs('#mktPhoneInstallClose',wrap).addEventListener('click',function(){wrap.classList.remove('show')});
+    qs('#mktTopInstallClose',wrap).addEventListener('click',function(){wrap.classList.remove('show')});
     wrap.addEventListener('click',function(e){if(e.target===wrap)wrap.classList.remove('show')});
-    qs('#mktPhoneInstallNow',wrap).addEventListener('click',runInstall);
+    qs('#mktTopInstallNow',wrap).addEventListener('click',runInstall);
     return wrap;
   }
   function guide(){
-    if(deferredPrompt) return 'Bấm <b>Cài ngay</b>, sau đó chọn <b>Cài đặt</b>. Ứng dụng sẽ xuất hiện ngoài màn hình điện thoại.';
-    if(isIOS) return '<b>iPhone Safari:</b><br>1. Bấm nút <b>Chia sẻ</b> ở thanh dưới.<br>2. Chọn <b>Thêm vào màn hình chính</b>.<br>3. Bấm <b>Thêm</b> để cài app.';
-    if(isAndroid) return '<b>Android Chrome:</b><br>Nếu chưa bật popup cài đặt, bấm menu <b>⋮</b> góc phải trình duyệt → chọn <b>Cài đặt ứng dụng</b> hoặc <b>Thêm vào màn hình chính</b>.';
-    return 'Mở website bằng điện thoại: Chrome Android hoặc Safari iPhone để cài vào màn hình chính.';
+    if(deferredPrompt) return 'Bấm <b>Cài ngay</b>, sau đó chọn <b>Cài đặt</b>. Ứng dụng sẽ tự xuất hiện ngoài màn hình điện thoại.';
+    if(isIOS) return 'iPhone không cho website tự cài bằng 1 chạm. Cách nhanh nhất:<br><b>Safari → Chia sẻ → Thêm vào màn hình chính → Thêm</b>.';
+    if(isAndroid) return 'Nếu chưa bật popup cài đặt: mở bằng <b>Chrome</b> → bấm menu <b>⋮</b> → chọn <b>Cài đặt ứng dụng</b> hoặc <b>Thêm vào màn hình chính</b>.';
+    return 'Mở website trên điện thoại bằng Chrome Android hoặc Safari iPhone để cài app.';
   }
-  function openGuide(){var w=ensureSheet(); qs('#mktPhoneInstallText',w).innerHTML=guide(); qs('#mktPhoneInstallNow',w).textContent=deferredPrompt?'Cài ngay':'Đã hiểu'; w.classList.add('show')}
+  function openGuide(){var w=ensureSheet(); qs('#mktTopInstallText',w).innerHTML=guide(); qs('#mktTopInstallNow',w).textContent=deferredPrompt?'Cài ngay':'Đã hiểu'; w.classList.add('show')}
   async function runInstall(e){
-    if(e){e.preventDefault();e.stopPropagation(); if(e.stopImmediatePropagation)e.stopImmediatePropagation();}
+    if(e){e.preventDefault();e.stopPropagation();if(e.stopImmediatePropagation)e.stopImmediatePropagation();}
     if(standalone()){document.body.classList.add('mkt-app-installed');return false;}
-    if(deferredPrompt){try{deferredPrompt.prompt(); await deferredPrompt.userChoice;}catch(_e){} deferredPrompt=null; window.__mktDeferredPrompt=null; var w=qs('#mktPhoneInstallSheet'); if(w)w.classList.remove('show'); return false;}
+    if(deferredPrompt){try{deferredPrompt.prompt(); await deferredPrompt.userChoice;}catch(_e){} deferredPrompt=null; window.__mktDeferredPrompt=null; var w=qs('#mktTopInstallSheet'); if(w)w.classList.remove('show'); return false;}
     openGuide(); return false;
   }
-  function makeEntry(){
-    if(!mobile() || standalone()){document.body.classList.add('mkt-app-installed');return;}
-    if(!qs('#mktPhoneInstallEntry')){
-      var sidebar=qs('.sidebar')||qs('aside')||qs('nav');
-      var entry=document.createElement('button'); entry.type='button'; entry.id='mktPhoneInstallEntry';
-      entry.innerHTML='<span class="ico">📱</span><span><b>Cài ứng dụng</b><small>Bấm để thêm vào màn hình điện thoại</small></span>';
-      entry.addEventListener('click',runInstall,true);
-      if(sidebar){var nav=qs('.mkt-clean-nav',sidebar)||qs('.nav',sidebar)||sidebar.firstElementChild; if(nav&&nav.parentNode===sidebar) sidebar.insertBefore(entry,nav); else sidebar.insertBefore(entry,sidebar.firstChild);} else document.body.appendChild(entry);
-    }
-    if(!qs('#mktPhoneInstallFloat')){
-      var btn=document.createElement('button'); btn.type='button'; btn.id='mktPhoneInstallFloat'; btn.innerHTML='📱 Cài app'; btn.addEventListener('click',runInstall,true); document.body.appendChild(btn);
-    }
-  }
-  window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();deferredPrompt=e;window.__mktDeferredPrompt=e;var sm=qs('#mktPhoneInstallEntry small'); if(sm)sm.textContent='Bấm để cài nhanh trên Android';});
+  window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();deferredPrompt=e;window.__mktDeferredPrompt=e;ensureBar();});
   window.addEventListener('appinstalled',function(){deferredPrompt=null;window.__mktDeferredPrompt=null;document.body.classList.add('mkt-app-installed')});
-  window.mktPhoneInstall=runInstall; window.mktOpenPhoneInstallGuide=openGuide;
-  function boot(){makeEntry(); if('serviceWorker' in navigator){navigator.serviceWorker.register('/service-worker.js',{scope:'/'}).catch(function(err){console.log('Service worker lỗi:',err);});}}
-  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',boot); else boot();
-  setTimeout(boot,500); setTimeout(boot,1600); if(window.MutationObserver){new MutationObserver(function(){makeEntry();}).observe(document.documentElement,{childList:true,subtree:true});}
+  window.mktTopInstall=runInstall;
+  function boot(){ensureBar(); if('serviceWorker' in navigator){navigator.serviceWorker.register('/service-worker.js',{scope:'/'}).catch(function(err){console.log('Service worker lỗi:',err);});}}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();
+  setTimeout(boot,500); setTimeout(boot,1600); setTimeout(boot,3500);
 })();
 </script>
+
 </body>
 </html>
 """
@@ -8835,127 +8856,6 @@ ADMIN_HTML = """
 
 
 <!-- MOBILE INSTALL MENU FINAL 20260610: mobile sidebar installer, one-tap Android PWA, iPhone guide -->
-<style id="mkt-mobile-install-menu-final-css">
-  /* Ẩn nút cài app nổi cũ để không chiếm giao diện */
-  #mktInstallFloat,#mktInstallPanel,.app-install-card,.app-install-banner,.v2-install-box{
-    display:none!important;visibility:hidden!important;pointer-events:none!important;
-  }
-  .mkt-mobile-install-menu{
-    display:none!important;
-  }
-  .mkt-install-sheet-backdrop{
-    position:fixed!important;inset:0!important;background:rgba(2,6,23,.58)!important;
-    z-index:2147483400!important;display:none!important;align-items:flex-end!important;justify-content:center!important;
-    backdrop-filter:blur(8px)!important;
-  }
-  .mkt-install-sheet-backdrop.show{display:flex!important;}
-  .mkt-install-sheet{
-    width:min(430px,100vw)!important;background:#fff!important;color:#111827!important;border-radius:24px 24px 0 0!important;
-    padding:20px 18px 18px!important;box-shadow:0 -24px 70px rgba(15,23,42,.42)!important;border:1px solid rgba(15,23,42,.08)!important;
-    font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif!important;
-  }
-  .mkt-install-sheet h3{margin:0 0 8px!important;font-size:20px!important;line-height:1.15!important;font-weight:1000!important;color:#0f172a!important;}
-  .mkt-install-sheet p{margin:8px 0!important;font-size:14px!important;line-height:1.5!important;color:#334155!important;font-weight:700!important;}
-  .mkt-install-sheet .mkt-install-actions{display:flex!important;gap:10px!important;margin-top:14px!important;}
-  .mkt-install-sheet button{flex:1!important;border:0!important;border-radius:999px!important;padding:13px 14px!important;font-size:14px!important;font-weight:1000!important;cursor:pointer!important;}
-  .mkt-install-now{color:#fff!important;background:linear-gradient(135deg,#2563eb,#7c3aed)!important;box-shadow:0 12px 28px rgba(37,99,235,.28)!important;}
-  .mkt-install-close{color:#334155!important;background:#e5e7eb!important;}
-  @media (max-width: 768px){
-    .mkt-mobile-install-menu{
-      display:flex!important;align-items:center!important;gap:10px!important;margin:10px 12px 14px!important;padding:12px 13px!important;
-      border-radius:17px!important;border:1px solid rgba(96,165,250,.28)!important;color:#fff!important;text-decoration:none!important;
-      background:linear-gradient(135deg,rgba(37,99,235,.28),rgba(124,58,237,.18),rgba(15,23,42,.76))!important;
-      box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 12px 28px rgba(2,6,23,.20)!important;cursor:pointer!important;
-    }
-    .mkt-mobile-install-menu .mkt-install-phone-icon{
-      width:36px!important;height:36px!important;border-radius:13px!important;display:flex!important;align-items:center!important;justify-content:center!important;
-      background:linear-gradient(135deg,#2563eb,#7c3aed)!important;box-shadow:0 10px 22px rgba(37,99,235,.30)!important;font-size:18px!important;flex:0 0 36px!important;
-    }
-    .mkt-mobile-install-menu b{display:block!important;font-size:14px!important;line-height:1.05!important;font-weight:1000!important;color:#fff!important;}
-    .mkt-mobile-install-menu small{display:block!important;margin-top:4px!important;font-size:11px!important;line-height:1.25!important;font-weight:800!important;color:#bfdbfe!important;}
-    body.mkt-app-installed .mkt-mobile-install-menu{display:none!important;}
-  }
-</style>
-<script id="mkt-mobile-install-menu-final-js">
-(function(){
-  'use strict';
-  var deferredPrompt = window.__mktDeferredPrompt || null;
-  var isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent||'');
-  var isAndroid = /android/i.test(navigator.userAgent||'');
-  var isMobile = isIOS || isAndroid || (window.matchMedia && window.matchMedia('(max-width: 768px)').matches);
-  function standalone(){
-    return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
-  }
-  function qs(s,r){return (r||document).querySelector(s)}
-  function qsa(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s))}
-  function ensureSheet(){
-    var old=qs('#mktInstallSheetBackdrop');
-    if(old)return old;
-    var wrap=document.createElement('div');
-    wrap.id='mktInstallSheetBackdrop';
-    wrap.className='mkt-install-sheet-backdrop';
-    wrap.innerHTML='<div class="mkt-install-sheet" role="dialog" aria-modal="true">'+
-      '<h3>📱 Cài GPT MKT Pro vào điện thoại</h3>'+
-      '<p id="mktInstallGuideText">Bấm <b>Cài ngay</b> để thêm ứng dụng ra màn hình điện thoại.</p>'+
-      '<div class="mkt-install-actions"><button type="button" class="mkt-install-now" id="mktInstallNowBtn">Cài ngay</button><button type="button" class="mkt-install-close" id="mktInstallCloseBtn">Đóng</button></div>'+
-      '</div>';
-    document.body.appendChild(wrap);
-    qs('#mktInstallCloseBtn',wrap).addEventListener('click',function(){wrap.classList.remove('show')});
-    wrap.addEventListener('click',function(e){if(e.target===wrap)wrap.classList.remove('show')});
-    qs('#mktInstallNowBtn',wrap).addEventListener('click',runInstall);
-    return wrap;
-  }
-  function guideText(){
-    if(deferredPrompt){return 'Bấm <b>Cài ngay</b>, sau đó chọn <b>Cài đặt</b> để đưa GPT MKT Pro ra màn hình chính.';}
-    if(isIOS){return '<b>iPhone Safari:</b><br>1. Bấm nút <b>Chia sẻ</b> ở thanh dưới.<br>2. Chọn <b>Thêm vào màn hình chính</b>.<br>3. Bấm <b>Thêm</b>.';}
-    if(isAndroid){return '<b>Android Chrome:</b><br>Nếu chưa hiện popup cài đặt, bấm menu <b>⋮</b> góc phải trình duyệt → chọn <b>Cài đặt ứng dụng</b> hoặc <b>Thêm vào màn hình chính</b>.';}
-    return 'Mở website trên điện thoại bằng Chrome Android hoặc Safari iPhone để cài vào màn hình chính.';
-  }
-  function openGuide(){
-    var wrap=ensureSheet();
-    qs('#mktInstallGuideText',wrap).innerHTML=guideText();
-    var now=qs('#mktInstallNowBtn',wrap);
-    now.textContent = deferredPrompt ? 'Cài ngay' : 'Đã hiểu';
-    wrap.classList.add('show');
-  }
-  async function runInstall(e){
-    if(e){e.preventDefault();e.stopPropagation();}
-    if(standalone()){document.body.classList.add('mkt-app-installed');return;}
-    if(deferredPrompt){
-      try{deferredPrompt.prompt(); await deferredPrompt.userChoice;}catch(_e){}
-      deferredPrompt=null; window.__mktDeferredPrompt=null;
-      var sheet=qs('#mktInstallSheetBackdrop'); if(sheet)sheet.classList.remove('show');
-      return;
-    }
-    openGuide();
-  }
-  function buildMobileMenu(){
-    if(!isMobile || standalone()){document.body.classList.add('mkt-app-installed');return;}
-    if(qs('#mktMobileInstallMenu'))return;
-    var sidebar=qs('.sidebar') || qs('.v2-sidebar') || qs('aside') || qs('nav');
-    if(!sidebar)return;
-    var item=document.createElement('button');
-    item.type='button';
-    item.id='mktMobileInstallMenu';
-    item.className='mkt-mobile-install-menu';
-    item.innerHTML='<span class="mkt-install-phone-icon">📱</span><span><b>Cài ứng dụng</b><small>Bấm để thêm vào màn hình điện thoại</small></span>';
-    var logo=qs('.logo',sidebar);
-    if(logo && logo.parentNode===sidebar){logo.insertAdjacentElement('afterend',item);}else{sidebar.insertBefore(item,sidebar.firstChild);}
-    item.addEventListener('click',runInstall,true);
-  }
-  window.addEventListener('beforeinstallprompt',function(e){
-    e.preventDefault(); deferredPrompt=e; window.__mktDeferredPrompt=e;
-    var t=qs('#mktMobileInstallMenu small'); if(t)t.textContent='Bấm để cài nhanh trên Android';
-  });
-  window.addEventListener('appinstalled',function(){
-    deferredPrompt=null; window.__mktDeferredPrompt=null; document.body.classList.add('mkt-app-installed');
-  });
-  function boot(){buildMobileMenu(); if('serviceWorker' in navigator){navigator.serviceWorker.register('/service-worker.js',{scope:'/'}).catch(function(err){console.log('Service worker lỗi:',err);});}}
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();
-  setTimeout(boot,600); setTimeout(boot,1800); setTimeout(boot,3500);
-  window.mktOpenInstallGuide=openGuide;
-})();
-</script>
 
 
 
