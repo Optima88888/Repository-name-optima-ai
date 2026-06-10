@@ -7634,6 +7634,210 @@ function dropKanban(ev){ ev.preventDefault(); const col=ev.currentTarget; if(dra
 })();
 </script>
 
+
+
+<!-- SAAS LEFT MENU FINAL 2026: compact sidebar + dot Pro/Premium -->
+<style id="saas-left-menu-final-2026">
+/* Thu gọn menu trái theo kiểu SaaS cao cấp */
+.sidebar{
+  background:linear-gradient(180deg,#071126 0%,#0B1020 48%,#0A1020 100%)!important;
+  border-right:1px solid rgba(148,163,184,.16)!important;
+  box-shadow:inset -1px 0 0 rgba(255,255,255,.03)!important;
+}
+.v2-nav-title{
+  margin:16px 0 7px!important;
+  padding:0 8px!important;
+  font-size:10.5px!important;
+  line-height:1!important;
+  letter-spacing:.13em!important;
+  font-weight:900!important;
+  color:#8EA4FF!important;
+  opacity:.95!important;
+}
+.v2-nav-link{
+  min-height:46px!important;
+  height:auto!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:space-between!important;
+  gap:10px!important;
+  margin:5px 0!important;
+  padding:10px 12px!important;
+  padding-right:12px!important;
+  border-radius:14px!important;
+  color:#F8FAFC!important;
+  text-decoration:none!important;
+  background:linear-gradient(135deg,rgba(255,255,255,.060),rgba(255,255,255,.030))!important;
+  border:1px solid rgba(148,163,184,.13)!important;
+  box-shadow:none!important;
+  position:relative!important;
+  overflow:hidden!important;
+  transition:transform .18s ease, background .18s ease, border-color .18s ease, box-shadow .18s ease!important;
+}
+.v2-nav-link::before{
+  content:""!important;
+  position:absolute!important;
+  left:0!important;top:9px!important;bottom:9px!important;
+  width:2px!important;
+  border-radius:999px!important;
+  background:transparent!important;
+  opacity:0!important;
+}
+.v2-nav-link:hover,
+.v2-nav-link.active{
+  transform:translateX(4px)!important;
+  background:linear-gradient(135deg,rgba(37,99,235,.18),rgba(124,58,237,.12))!important;
+  border-color:rgba(129,140,248,.32)!important;
+  box-shadow:0 10px 26px rgba(2,6,23,.22)!important;
+}
+.v2-nav-link:hover::before,
+.v2-nav-link.active::before{
+  opacity:1!important;
+  background:linear-gradient(180deg,#38BDF8,#8B5CF6)!important;
+}
+.v2-nav-text{
+  flex:1 1 auto!important;
+  min-width:0!important;
+  font-size:14px!important;
+  line-height:1.22!important;
+  font-weight:850!important;
+  letter-spacing:-.015em!important;
+  color:#F8FAFC!important;
+}
+.v2-nav-ico,
+.v2-nav-tag{display:none!important;width:0!important;min-width:0!important;margin:0!important;padding:0!important;overflow:hidden!important}
+/* Xóa toàn bộ badge nút cũ, thay bằng chấm + chữ nhỏ */
+.v2-nav-link.real-pro::after,
+.v2-nav-link.menu-pro::after,
+.v2-nav-link.pro-feature::after,
+.v2-nav-link.premium-locked::after,
+.v2-nav-link.real-premium-lock::after,
+.v2-nav-link.menu-locked::after{
+  position:static!important;
+  transform:none!important;
+  animation:none!important;
+  filter:none!important;
+  box-shadow:none!important;
+  background:transparent!important;
+  border:0!important;
+  padding:0!important;
+  min-width:auto!important;
+  height:auto!important;
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:flex-end!important;
+  gap:6px!important;
+  font-size:11px!important;
+  line-height:1!important;
+  font-weight:850!important;
+  letter-spacing:-.01em!important;
+  white-space:nowrap!important;
+  color:#DDE7FF!important;
+  z-index:5!important;
+}
+.v2-nav-link.real-pro::after,
+.v2-nav-link.menu-pro::after,
+.v2-nav-link.pro-feature::after{
+  content:"● Pro"!important;
+  color:#E8FFF4!important;
+  text-shadow:none!important;
+}
+.v2-nav-link.premium-locked::after,
+.v2-nav-link.real-premium-lock::after,
+.v2-nav-link.menu-locked::after{
+  content:"● Premium"!important;
+  color:#FFF4CF!important;
+  text-shadow:none!important;
+}
+/* tô màu riêng cho dấu chấm qua gradient text */
+.v2-nav-link.real-pro::after,
+.v2-nav-link.menu-pro::after,
+.v2-nav-link.pro-feature::after{
+  background:linear-gradient(90deg,#34D399 0 19%,#E8FFF4 20% 100%)!important;
+  -webkit-background-clip:text!important;
+  background-clip:text!important;
+  -webkit-text-fill-color:transparent!important;
+}
+.v2-nav-link.premium-locked::after,
+.v2-nav-link.real-premium-lock::after,
+.v2-nav-link.menu-locked::after{
+  background:linear-gradient(90deg,#FACC15 0 19%,#FFF4CF 20% 100%)!important;
+  -webkit-background-clip:text!important;
+  background-clip:text!important;
+  -webkit-text-fill-color:transparent!important;
+}
+.v2-nav-link.real-pro,
+.v2-nav-link.menu-pro,
+.v2-nav-link.pro-feature{
+  border-color:rgba(52,211,153,.18)!important;
+}
+.v2-nav-link.premium-locked,
+.v2-nav-link.real-premium-lock,
+.v2-nav-link.menu-locked{
+  border-color:rgba(250,204,21,.18)!important;
+  background:linear-gradient(135deg,rgba(255,255,255,.055),rgba(250,204,21,.035))!important;
+  opacity:1!important;
+}
+/* Card cài app điện thoại */
+.mkt-install-sidebar-card{
+  margin:10px 0 14px!important;
+  padding:12px!important;
+  border-radius:16px!important;
+  background:linear-gradient(135deg,rgba(37,99,235,.22),rgba(124,58,237,.16))!important;
+  border:1px solid rgba(96,165,250,.28)!important;
+  color:#F8FAFC!important;
+  cursor:pointer!important;
+  box-shadow:0 12px 30px rgba(37,99,235,.10)!important;
+}
+.mkt-install-sidebar-card b{display:block;font-size:13.5px;line-height:1.15;margin-bottom:4px;color:white!important}
+.mkt-install-sidebar-card span{display:block;font-size:11px;color:#C7D2FE!important;font-weight:750!important}
+.mkt-install-sidebar-card:hover{transform:translateY(-1px)!important;border-color:rgba(96,165,250,.45)!important}
+/* Ẩn bớt card thiết bị quá nổi nếu có, cho menu gọn hơn */
+.device-premium-card{border-radius:16px!important;padding:12px!important;margin-bottom:10px!important}
+.device-premium-card b{font-size:13px!important}
+#sidebarDeviceId{font-size:12px!important;letter-spacing:.25px!important}
+@media(max-width:920px){
+  .v2-nav-link{min-height:44px!important;padding:10px 12px!important}
+  .v2-nav-text{font-size:13.5px!important}
+}
+</style>
+<script id="saas-left-menu-final-2026-js">
+(function(){
+  function norm(id){
+    var alias={post:'page_center_total',page_center:'page_center_total',group_marketing:'group_suite',group_finder:'group_suite',group_uid_splitter:'group_suite',group_join_queue:'group_suite',group_post_filter:'group_suite',page_comment_pro:'page_center_total',page_comment_queue:'page_center_total'};
+    return alias[id]||id;
+  }
+  function markMenuSaas(){
+    var core={facebook_center:1,page_center_total:1,post:1,fanpage_manager:1,group_suite:1,comment_manager:1};
+    var premium={messenger_ai:1,crm_sales:1,marketing_director:1,ai_studio:1,creative_center:1,analytics:1,analytics_center:1,automation_center:1};
+    document.querySelectorAll('.v2-nav-link').forEach(function(a){
+      var raw=(a.getAttribute('href')||'').replace('#','');
+      var id=norm(raw);
+      a.querySelectorAll('.v2-nav-ico,.v2-nav-tag').forEach(function(x){x.remove();});
+      a.classList.remove('real-pro','menu-pro','pro-feature','premium-locked','real-premium-lock','menu-locked');
+      if(core[id]) a.classList.add('real-pro');
+      if(premium[id]) a.classList.add('real-premium-lock');
+    });
+  }
+  function addInstallCard(){
+    var side=document.querySelector('.sidebar'); if(!side || document.getElementById('mktInstallSidebarCard')) return;
+    var firstTitle=side.querySelector('.v2-nav-title');
+    var card=document.createElement('div');
+    card.id='mktInstallSidebarCard';
+    card.className='mkt-install-sidebar-card';
+    card.innerHTML='<b>📲 Cài đặt App</b><span>Thêm GPT MKT Pro vào màn hình điện thoại</span>';
+    card.onclick=function(){
+      if(window.deferredPrompt){ window.deferredPrompt.prompt(); return false; }
+      alert('Trên Android: Chrome → Menu → Thêm vào màn hình chính. Trên iPhone: Chia sẻ → Thêm vào màn hình chính.');
+      return false;
+    };
+    if(firstTitle) side.insertBefore(card, firstTitle); else side.insertBefore(card, side.firstChild);
+  }
+  function boot(){markMenuSaas();addInstallCard();}
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',boot); else boot();
+  setTimeout(boot,500); setTimeout(boot,1500); setTimeout(boot,3000);
+})();
+</script>
 </body>
 </html>
 """
@@ -10565,182 +10769,6 @@ ADMIN_HTML = """
   }
 </style>
 
-
-
-<!-- FINAL PATCH V102: left sidebar dot Pro/Premium, no glowing pill, keep existing content/syntax -->
-<style id="mkt-v102-left-menu-dot-status">
-  /* Left menu luxury matte cards */
-  body .v2-sidebar .v2-nav-link,
-  body aside .v2-nav-link,
-  body .sidebar .v2-nav-link,
-  body [class*="sidebar"] .v2-nav-link,
-  body [class*="sidebar"] a{
-    position:relative!important;
-    min-height:72px!important;
-    padding:18px 92px 18px 20px!important;
-    margin:10px 0!important;
-    border-radius:18px!important;
-    background:
-      radial-gradient(circle at 88% 22%,rgba(59,130,246,.10),transparent 30%),
-      linear-gradient(135deg,rgba(255,255,255,.075),rgba(255,255,255,.035))!important;
-    border:1px solid rgba(148,163,184,.15)!important;
-    box-shadow:0 10px 26px rgba(2,6,23,.24),inset 0 1px 0 rgba(255,255,255,.06)!important;
-    overflow:hidden!important;
-    transform:none!important;
-  }
-  body .v2-sidebar .v2-nav-link:hover,
-  body aside .v2-nav-link:hover,
-  body .sidebar .v2-nav-link:hover,
-  body [class*="sidebar"] .v2-nav-link:hover,
-  body [class*="sidebar"] a:hover{
-    transform:translateY(-2px)!important;
-    border-color:rgba(96,165,250,.34)!important;
-    background:
-      radial-gradient(circle at 88% 22%,rgba(34,197,94,.12),transparent 28%),
-      linear-gradient(135deg,rgba(30,41,59,.96),rgba(15,23,42,.88))!important;
-    box-shadow:0 16px 34px rgba(2,6,23,.34),inset 0 1px 0 rgba(255,255,255,.08)!important;
-  }
-  body .v2-sidebar .v2-nav-link.active,
-  body aside .v2-nav-link.active,
-  body .sidebar .v2-nav-link.active,
-  body [class*="sidebar"] .v2-nav-link.active{
-    background:linear-gradient(135deg,rgba(37,99,235,.95),rgba(124,58,237,.92))!important;
-    border-color:rgba(191,219,254,.28)!important;
-  }
-  body .v2-sidebar .v2-nav-text,
-  body aside .v2-nav-text,
-  body .sidebar .v2-nav-text,
-  body [class*="sidebar"] .v2-nav-text{
-    color:#f8fafc!important;
-    font-size:20px!important;
-    line-height:1.18!important;
-    font-weight:950!important;
-    letter-spacing:-.02em!important;
-    text-shadow:0 1px 0 rgba(0,0,0,.20)!important;
-  }
-  body .v2-nav-ico{display:none!important;width:0!important;min-width:0!important;margin:0!important;padding:0!important;}
-
-  /* Remove all old PRO/PREMIUM pill effects */
-  body .v2-nav-link.pro-feature::after,
-  body .v2-nav-link.premium-locked::after,
-  body .v2-nav-link.real-premium-lock::after,
-  body .v2-nav-link.mkt-menu-pro::after,
-  body .v2-nav-link.mkt-menu-premium::after,
-  body .v2-nav-link.pro-feature::before,
-  body .v2-nav-link.premium-locked::before,
-  body .v2-nav-link.real-premium-lock::before,
-  body .v2-nav-link.mkt-menu-pro::before,
-  body .v2-nav-link.mkt-menu-premium::before{
-    content:""!important;
-    display:none!important;
-    opacity:0!important;
-    box-shadow:none!important;
-    animation:none!important;
-    filter:none!important;
-  }
-
-  /* New dot + text style */
-  body .v2-nav-link.mkt-menu-pro .v2-nav-tag,
-  body .v2-nav-link.mkt-menu-pro .mkt-pro-mini,
-  body .v2-nav-link.mkt-menu-premium .v2-nav-tag,
-  body .v2-nav-link.mkt-menu-premium .mkt-pro-mini,
-  body [class*="sidebar"] a.mkt-menu-pro .v2-nav-tag,
-  body [class*="sidebar"] a.mkt-menu-premium .v2-nav-tag{
-    position:absolute!important;
-    right:22px!important;
-    top:50%!important;
-    transform:translateY(-50%)!important;
-    display:inline-flex!important;
-    align-items:center!important;
-    justify-content:flex-start!important;
-    gap:7px!important;
-    width:auto!important;
-    min-width:0!important;
-    max-width:none!important;
-    height:auto!important;
-    padding:0!important;
-    border:0!important;
-    border-radius:0!important;
-    background:transparent!important;
-    box-shadow:none!important;
-    font-size:13px!important;
-    line-height:1!important;
-    font-weight:800!important;
-    letter-spacing:-.01em!important;
-    text-transform:none!important;
-    text-shadow:none!important;
-    white-space:nowrap!important;
-    z-index:90!important;
-    filter:none!important;
-  }
-  body .v2-nav-link.mkt-menu-pro .v2-nav-tag,
-  body .v2-nav-link.mkt-menu-pro .mkt-pro-mini,
-  body [class*="sidebar"] a.mkt-menu-pro .v2-nav-tag{color:#d8ffe8!important;}
-  body .v2-nav-link.mkt-menu-premium .v2-nav-tag,
-  body .v2-nav-link.mkt-menu-premium .mkt-pro-mini,
-  body [class*="sidebar"] a.mkt-menu-premium .v2-nav-tag{color:#fff3c4!important;}
-
-  body .v2-nav-link.mkt-menu-pro .v2-nav-tag:before,
-  body .v2-nav-link.mkt-menu-pro .mkt-pro-mini:before,
-  body [class*="sidebar"] a.mkt-menu-pro .v2-nav-tag:before{
-    content:""!important;
-    position:static!important;
-    display:inline-block!important;
-    transform:none!important;
-    width:9px!important;
-    height:9px!important;
-    border-radius:999px!important;
-    background:#34d987!important;
-    box-shadow:0 0 7px rgba(52,217,135,.75)!important;
-    flex:0 0 9px!important;
-  }
-  body .v2-nav-link.mkt-menu-premium .v2-nav-tag:before,
-  body .v2-nav-link.mkt-menu-premium .mkt-pro-mini:before,
-  body [class*="sidebar"] a.mkt-menu-premium .v2-nav-tag:before{
-    content:""!important;
-    position:static!important;
-    display:inline-block!important;
-    transform:none!important;
-    width:9px!important;
-    height:9px!important;
-    border-radius:999px!important;
-    background:#facc15!important;
-    box-shadow:0 0 7px rgba(250,204,21,.72)!important;
-    flex:0 0 9px!important;
-  }
-</style>
-<script id="mkt-v102-left-menu-dot-status-js">
-(function(){
-  'use strict';
-  function qa(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s));}
-  function cleanText(el){return String((el&&el.textContent)||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/đ/g,'d');}
-  function ensureDotLabel(a,label){
-    if(!a) return;
-    var tag=a.querySelector('.v2-nav-tag,.mkt-pro-mini,.premium-badge,.pro-badge,[class*="badge"],[class*="tag"]');
-    if(!tag){ tag=document.createElement('span'); a.appendChild(tag); }
-    tag.className='v2-nav-tag';
-    tag.textContent=label;
-  }
-  function refreshMenuDotLabels(){
-    qa('.v2-nav-link,.sidebar a,[class*="sidebar"] a,aside a').forEach(function(a){
-      var t=cleanText(a);
-      if(/ai messenger|crm kanban|marketing director|ai studio|image|video|voice|gio?ng noi|livestream|analytics|automation center/.test(t)){
-        a.classList.remove('mkt-menu-pro');
-        a.classList.add('mkt-menu-premium','premium-locked');
-        ensureDotLabel(a,'Premium');
-      }else if(/dang bai facebook|quan ly fanpage|group center|quan ly group|ai comment|token fanpage|page center/.test(t)){
-        a.classList.remove('mkt-menu-premium','premium-locked');
-        a.classList.add('mkt-menu-pro');
-        ensureDotLabel(a,'Pro');
-      }
-    });
-  }
-  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',refreshMenuDotLabels); else refreshMenuDotLabels();
-  setTimeout(refreshMenuDotLabels,200);setTimeout(refreshMenuDotLabels,900);setTimeout(refreshMenuDotLabels,1800);
-  setInterval(refreshMenuDotLabels,1200);
-  if(window.MutationObserver){new MutationObserver(refreshMenuDotLabels).observe(document.documentElement,{childList:true,subtree:true,characterData:true});}
-})();
-</script>
 </body></html>
 """
 
