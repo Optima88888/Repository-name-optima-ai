@@ -7191,9 +7191,6 @@ function dropKanban(ev){ ev.preventDefault(); const col=ev.currentTarget; if(dra
   setTimeout(init,500); setTimeout(init,1500); setInterval(cleanText,2500);
 })();
 </script>
-
-
-
 <!-- CTV FINAL VISIBILITY PATCH -->
 <style id="ctv-final-visibility-patch">
   #affiliateAdminSection{display:none!important}
@@ -7291,274 +7288,93 @@ function dropKanban(ev){ ev.preventDefault(); const col=ev.currentTarget; if(dra
 <!-- /CTV FINAL VISIBILITY PATCH -->
 
 
+  function selectedKey(){
+    return normKey(window.mktSelectedPlanKey || window.currentPremiumPlanKey || localStorage.getItem('mkt_selected_plan_key')) || 'monthly';
+  }
 
-<!-- PATCH V85: Premium Glass badges + sellerpro payment amount fix -->
-<style id="mkt-v85-glass-badges-payment-fix">
-  /* Badge cao cấp kiểu SaaS/Glass, bỏ glow neon */
-  .v2-nav-link.pro-feature::after,
-  .v2-nav-link.real-pro::after{
-    content:"PRO"!important;
-    position:absolute!important;right:14px!important;top:14px!important;z-index:20!important;
-    padding:6px 12px!important;border-radius:999px!important;
-    font-size:11px!important;font-weight:900!important;letter-spacing:.7px!important;
-    color:#BBF7D0!important;
-    background:linear-gradient(180deg,rgba(22,163,74,.22),rgba(21,128,61,.14))!important;
-    border:1px solid rgba(134,239,172,.45)!important;
-    box-shadow:inset 0 1px 0 rgba(255,255,255,.25),0 8px 22px rgba(0,0,0,.18)!important;
-    backdrop-filter:blur(12px)!important;-webkit-backdrop-filter:blur(12px)!important;
-    animation:none!important;text-shadow:none!important;
-  }
-  .v2-nav-link.pro-feature::before,
-  .v2-nav-link.real-pro::before{
-    content:""!important;position:absolute!important;right:63px!important;top:23px!important;width:7px!important;height:7px!important;border-radius:50%!important;
-    background:#22C55E!important;box-shadow:0 0 8px rgba(34,197,94,.7)!important;z-index:21!important;
-  }
-  .v2-nav-link.premium-locked::after,
-  .v2-nav-link.real-premium-lock::after{
-    content:"Premium"!important;
-    position:absolute!important;right:12px!important;top:14px!important;z-index:20!important;
-    padding:6px 11px!important;border-radius:999px!important;
-    font-size:11px!important;font-weight:900!important;letter-spacing:.35px!important;
-    color:#FDE68A!important;
-    background:linear-gradient(180deg,rgba(245,158,11,.20),rgba(146,64,14,.12))!important;
-    border:1px solid rgba(253,230,138,.45)!important;
-    box-shadow:inset 0 1px 0 rgba(255,255,255,.22),0 8px 22px rgba(0,0,0,.18)!important;
-    backdrop-filter:blur(12px)!important;-webkit-backdrop-filter:blur(12px)!important;
-    animation:none!important;text-shadow:none!important;
-  }
-  .v2-nav-link.premium-locked::before,
-  .v2-nav-link.real-premium-lock::before{
-    content:"👑"!important;position:absolute!important;right:78px!important;top:18px!important;font-size:12px!important;z-index:21!important;
-    filter:none!important;text-shadow:none!important;
-  }
-  .v2-nav-link{padding-right:112px!important;}
-</style>
-<script id="mkt-v85-sellerpro-payment-fix">
-(function(){
-  'use strict';
-  var PLANS={
-    monthly:{title:'Gói 1 tháng',price:'159.000đ',amount:'159000',code:'GOI1THANG',package:'GOI1THANG',desc:'Phù hợp người mới bắt đầu.'},
-    quarterly:{title:'Gói 3 tháng',price:'359.000đ',amount:'359000',code:'GOI3THANG',package:'GOI3THANG',desc:'Tối ưu hơn gói tháng.'},
-    halfyear:{title:'Gói 6 tháng',price:'559.000đ',amount:'559000',code:'GOI6THANG',package:'GOI6THANG',desc:'Mở CRM và Sales Bot.'},
-    yearly:{title:'Gói 1 năm',price:'859.000đ',amount:'859000',code:'GOI1NAM',package:'GOI1NAM',desc:'Gói phổ biến nhất.'},
-    sellerpro:{title:'Gói nhà bán hàng chuyên nghiệp',price:'1.959.000đ',amount:'1959000',code:'NHABANHANGPRO',package:'NHABANHANGPRO',desc:'Gói cao nhất cho nhà bán hàng chuyên nghiệp.'},
-    lifetime:{title:'Gói nhà bán hàng chuyên nghiệp',price:'1.959.000đ',amount:'1959000',code:'NHABANHANGPRO',package:'NHABANHANGPRO',desc:'Gói cao nhất cho nhà bán hàng chuyên nghiệp.'}
-  };
-  function q(s,r){return (r||document).querySelector(s)}
-  function txt(el){return String((el&&el.innerText)||'').toLowerCase()}
-  function normKey(k){
-    k=String(k||'').toLowerCase().trim();
-    if(k==='lifetime') return 'sellerpro';
-    if(PLANS[k]) return k;
-    return '';
-  }
-  function keyFromText(t){
-    t=String(t||'').toLowerCase();
-    if(t.indexOf('1.959')>-1||t.indexOf('1959')>-1||t.indexOf('nhà bán')>-1||t.indexOf('nha ban')>-1||t.indexOf('chuyên nghiệp')>-1||t.indexOf('chuyen nghiep')>-1||t.indexOf('seller')>-1||t.indexOf('trọn đời')>-1||t.indexOf('tron doi')>-1||t.indexOf('vĩnh')>-1) return 'sellerpro';
-    if(t.indexOf('859')>-1||t.indexOf('1 năm')>-1||t.indexOf('1 nam')>-1) return 'yearly';
-    if(t.indexOf('559')>-1||t.indexOf('6 tháng')>-1||t.indexOf('6 thang')>-1) return 'halfyear';
-    if(t.indexOf('359')>-1||t.indexOf('3 tháng')>-1||t.indexOf('3 thang')>-1) return 'quarterly';
-    if(t.indexOf('159')>-1||t.indexOf('1 tháng')>-1||t.indexOf('1 thang')>-1) return 'monthly';
-    return '';
-  }
-  function keyFromNode(node){
-    var card=node&&node.closest&&node.closest('.premium-plan,.v4-plan,.plan-card,.pricing-card,.mkt-plan-card,.v4-lifetime,[class*="plan"],[class*="price"]');
-    return keyFromText(txt(card)||txt(node));
-  }
-  function getDevice(){
-    var id=localStorage.getItem('mkt_device_id');
-    if(!id){var m=document.cookie.match(/(?:^|; )mkt_device_id=([^;]+)/);id=m?decodeURIComponent(m[1]):'';}
-    if(!id){id='MKT-'+Math.random().toString(36).slice(2,8).toUpperCase()+Date.now().toString().slice(-6);}
-    localStorage.setItem('mkt_device_id',id);
-    document.cookie='mkt_device_id='+encodeURIComponent(id)+'; path=/; max-age=157680000; SameSite=Lax';
-    var side=q('#sidebarDeviceId'); if(side) side.textContent=id;
-    var pay=q('#payDeviceId'); if(pay) pay.value=id;
-    return id;
-  }
-  function selectedKey(fallback){
-    return normKey(window.mktSelectedPlanKey)||normKey(window.currentPremiumPlanKey)||normKey(fallback)||keyFromText((q('#mktPlanOverlay')||{}).innerText)||'monthly';
-  }
-  function setSelected(k){
-    k=normKey(k)||'monthly';
-    window.mktSelectedPlanKey=k;
-    window.currentPremiumPlanKey=k;
-    return k;
-  }
-  function plan(k){return PLANS[normKey(k)||'monthly']||PLANS.monthly}
-  function payContent(p){
-    var phone=(q('#payPhone')&&q('#payPhone').value.trim())||'SDT';
-    var email=(q('#payEmail')&&q('#payEmail').value.trim())||'GMAIL';
-    return getDevice()+' | '+phone+' | '+email+' | '+p.code;
-  }
   window.refreshPaymentContent=function(){
     var p=plan(selectedKey());
     var content=payContent(p);
-    var pc=q('#payContent'); if(pc) pc.textContent=content;
-    var qr=q('#payQr'); if(qr) qr.src='https://img.vietqr.io/image/970405-8888363382629-compact2.png?amount='+encodeURIComponent(p.amount)+'&addInfo='+encodeURIComponent(content)+'&accountName='+encodeURIComponent('NGUYEN DANG THI XUAN');
-    var price=q('#payPlanPrice'); if(price) price.textContent=Number(p.amount).toLocaleString('vi-VN')+' VNĐ';
+
+    var pc=q('#payContent'); 
+    if(pc) pc.textContent=content;
+
+    var qr=q('#payQr'); 
+    if(qr){
+      qr.src='https://img.vietqr.io/image/970405-8888363382629-compact2.png?amount='+
+        encodeURIComponent(p.amount)+
+        '&addInfo='+encodeURIComponent(content)+
+        '&accountName='+encodeURIComponent('NGUYEN DANG THI XUAN');
+    }
+
+    var price=q('#payPlanPrice'); 
+    if(price) price.textContent=Number(p.amount).toLocaleString('vi-VN')+' VNĐ';
   };
+
   window.openPayment=function(k){
-    k=setSelected(k||selectedKey());
+    k=setKey(k || selectedKey());
     var p=plan(k);
-    var modal=q('#paymentModal'); if(!modal) return false;
-    var title=q('#payPlanTitle'); if(title) title.textContent=p.title;
-    var desc=q('#payPlanDesc'); if(desc) desc.textContent='Vui lòng nhập số điện thoại và Gmail để được duyệt nâng cấp tự động lên gói Premium sau khi thanh toán xong.';
-    var price=q('#payPlanPrice'); if(price) price.textContent=Number(p.amount).toLocaleString('vi-VN')+' VNĐ';
-    var device=q('#payDeviceId'); if(device) device.value=getDevice();
-    var locked=q('#payLocked'); if(locked) locked.innerHTML='';
-    var alert=q('#paymentModal .payment-alert'); if(alert) alert.style.display='none';
-    var z=q('#paymentModal .payment-actions a:not(.light)'); if(z){z.textContent='Zalo hỗ trợ: 036 338 2629'; z.href='https://zalo.me/0363382629'; z.target='_blank';}
-    var done=q('#paymentModal .payment-actions .light'); if(done){done.textContent='Gửi yêu cầu admin duyệt'; done.removeAttribute('href'); done.onclick=function(e){e.preventDefault();return window.submitPremiumRequest();};}
-    var primary=q('#paymentModal .primary'); if(primary){primary.textContent='Gửi yêu cầu kích hoạt'; primary.onclick=function(e){e.preventDefault();return window.submitPremiumRequest();};}
+
+    var modal=q('#paymentModal'); 
+    if(!modal) return false;
+
+    var title=q('#payPlanTitle'); 
+    if(title) title.textContent=p.title;
+
+    var desc=q('#payPlanDesc'); 
+    if(desc) desc.textContent=p.desc || 'Vui lòng nhập số điện thoại và Gmail để được duyệt nâng cấp.';
+
+    var price=q('#payPlanPrice'); 
+    if(price) price.textContent=Number(p.amount).toLocaleString('vi-VN')+' VNĐ';
+
+    var device=q('#payDeviceId'); 
+    if(device) device.value=getDevice();
+
     window.refreshPaymentContent();
     modal.style.display='flex';
-    setTimeout(function(){var ph=q('#payPhone'); if(ph) ph.focus();},120);
     return false;
   };
-  window.submitPremiumRequest=function(){
-    var k=selectedKey(); setSelected(k);
-    var phone=(q('#payPhone')&&q('#payPhone').value.trim())||'';
-    var email=(q('#payEmail')&&q('#payEmail').value.trim())||'';
-    if(!phone||!email){
-      if(typeof window.showPaymentNotice==='function') window.showPaymentNotice('Vui lòng nhập số điện thoại và Gmail để được duyệt nâng cấp tự động lên gói Premium sau khi thanh toán xong.');
-      else alert('Vui lòng nhập số điện thoại và Gmail.');
-      return false;
-    }
-    var p=plan(k);
-    window.refreshPaymentContent();
-    fetch('/premium_request',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({device_id:getDevice(),phone:phone,email:email,package_key:k})})
-      .then(function(r){return r.json();}).then(function(data){
-        if(data&&data.ok){
-          var pc=q('#payContent'); if(pc) pc.textContent=data.payment_note||payContent(p);
-          if(typeof window.showPaymentNotice==='function') window.showPaymentNotice('Đã gửi yêu cầu '+p.title+' về web admin. Số tiền: '+p.price+'.');
-        }else{
-          if(typeof window.showPaymentNotice==='function') window.showPaymentNotice((data&&data.message)||'Chưa gửi được yêu cầu, vui lòng thử lại.');
-          else alert((data&&data.message)||'Chưa gửi được yêu cầu, vui lòng thử lại.');
-        }
-      }).catch(function(){
-        if(typeof window.showPaymentNotice==='function') window.showPaymentNotice('Kết nối chậm, vui lòng thử lại hoặc gửi Zalo hỗ trợ.');
-      });
-    return false;
-  };
-  var oldDetail=window.mktOpenPlanDetail;
-  window.mktOpenPlanDetail=function(k){
-    k=normKey(k)||selectedKey(); setSelected(k);
-    var r=false;
-    if(typeof oldDetail==='function') r=oldDetail(k);
-    setTimeout(function(){
-      var p=plan(selectedKey(k));
-      var note=q('#mktPlanNote');
-      if(note){note.innerHTML='ID thiết bị: <b>'+getDevice()+'</b><br>Gói đang chọn: <b>'+p.title+'</b><br><span style="color:#64748b">Số tiền: <b>'+p.price+'</b>. Vui lòng nhập số điện thoại và Gmail để được duyệt nâng cấp tự động lên gói Premium sau khi thanh toán xong.</span>';}
-      var mini=q('.mktPlanMini'); if(mini) mini.textContent='Vui lòng nhập số điện thoại và Gmail để được duyệt nâng cấp tự động lên gói Premium sau khi thanh toán xong.';
-      var pay=q('#mktPlanPay'); if(pay){pay.onclick=function(e){e.preventDefault();e.stopPropagation();var ov=q('#mktPlanOverlay'); if(ov) ov.style.display='none'; return window.openPayment(selectedKey(k));};}
-    },80);
-    return r;
-  };
+
   document.addEventListener('click',function(e){
-    var b=e.target.closest&&e.target.closest('button,a');
+    var b=e.target.closest && e.target.closest('button,a');
     if(!b) return;
-    var text=String(b.innerText||b.textContent||'');
+
+    var text=String(b.innerText || b.textContent || '');
     var k=keyFromNode(b);
-    if(k) setSelected(k);
-    if(/xem chi tiết gói/i.test(text)){
-      setTimeout(function(){ if(k) setSelected(k); },30);
-      setTimeout(function(){ if(window.mktOpenPlanDetail && k) window.mktOpenPlanDetail(k); },80);
-    }
-    if(b.id==='mktPlanPay'||/nâng cấp|mở khóa|thanh toán|kích hoạt/i.test(text)){
-      if(k) setSelected(k);
-      if(b.id==='mktPlanPay'){
-        e.preventDefault();e.stopPropagation();if(e.stopImmediatePropagation)e.stopImmediatePropagation();
-        var ov=q('#mktPlanOverlay'); if(ov) ov.style.display='none';
-        return window.openPayment(selectedKey(k));
+
+    if(k) setKey(k);
+
+    if(/nâng cấp|thanh toán|kích hoạt|mở khóa/i.test(text)){
+      if(k){
+        e.preventDefault();
+        e.stopPropagation();
+        if(e.stopImmediatePropagation) e.stopImmediatePropagation();
+        return window.openPayment(k);
       }
     }
   },true);
-  document.addEventListener('input',function(e){if(e.target&&(/payPhone|payEmail/.test(e.target.id||''))) window.refreshPaymentContent();},true);
+
+  document.addEventListener('input',function(e){
+    if(e.target && /payPhone|payEmail/.test(e.target.id || '')){
+      window.refreshPaymentContent();
+    }
+  },true);
+
+  qa('[data-plan]').forEach(function(btn){
+    var k=normKey(btn.dataset.plan);
+    if(k){
+      btn.onclick=function(e){
+        e.preventDefault();
+        e.stopPropagation();
+        return window.openPayment(k);
+      };
+    }
+  });
+
   getDevice();
 })();
 </script>
 
-
-<!-- FINAL FIX V90: keep current UI, lock each upgrade button to its original package/price -->
-<script id="mkt-v90-stable-plan-price-fix">
-(function(){
-  'use strict';
-
-  var PLANS={
-    monthly:{title:'Gói 1 tháng',price:'159.000đ',amount:'159000',code:'GOI1THANG',package:'GOI1THANG',desc:'Phù hợp người mới bắt đầu.'},
-    quarterly:{title:'Gói 3 tháng',price:'359.000đ',amount:'359000',code:'GOI3THANG',package:'GOI3THANG',desc:'Tối ưu hơn gói tháng.'},
-    halfyear:{title:'Gói 6 tháng',price:'559.000đ',amount:'559000',code:'GOI6THANG',package:'GOI6THANG',desc:'Mở thêm CRM, Sales Bot và các công cụ nâng cao.'},
-    yearly:{title:'Gói 1 năm',price:'859.000đ',amount:'859000',code:'GOI1NAM',package:'GOI1NAM',desc:'Gói dùng ổn định trong 1 năm.'},
-    sellerpro:{title:'Gói nhà bán hàng chuyên nghiệp',price:'1.959.000đ',amount:'1959000',code:'NHABANHANGPRO',package:'NHABANHANGPRO',desc:'Gói cao nhất cho nhà bán hàng chuyên nghiệp.'}
-  };
-  PLANS.lifetime=PLANS.sellerpro;
-  PLANS.basic=PLANS.monthly;
-  PLANS.pro=PLANS.quarterly;
-  PLANS.business=PLANS.halfyear;
-
-  function q(s,r){return (r||document).querySelector(s);}
-  function qa(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s));}
-  function noAccent(s){
-    return String(s||'').toLowerCase()
-      .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
-      .replace(/đ/g,'d');
-  }
-  function normKey(k){
-    k=noAccent(k).replace(/[^a-z0-9]/g,'');
-    if(!k) return '';
-    if(k==='lifetime'||k==='sellerpro'||k==='nhabanhangpro'||k==='nhabanhangchuyennghiep') return 'sellerpro';
-    if(k==='basic'||k==='goi1thang'||k==='1thang'||k==='monthly') return 'monthly';
-    if(k==='pro'||k==='goi3thang'||k==='3thang'||k==='quarterly') return 'quarterly';
-    if(k==='business'||k==='goi6thang'||k==='6thang'||k==='halfyear') return 'halfyear';
-    if(k==='goi1nam'||k==='1nam'||k==='yearly') return 'yearly';
-    return PLANS[k] ? k : '';
-  }
-  function keyFromText(text){
-    var t=noAccent(text);
-    if(t.indexOf('1.959')>-1||t.indexOf('1959')>-1||t.indexOf('nha ban')>-1||t.indexOf('chuyen nghiep')>-1||t.indexOf('seller')>-1||t.indexOf('tron doi')>-1||t.indexOf('vinh vien')>-1) return 'sellerpro';
-    if(t.indexOf('859')>-1||t.indexOf('1 nam')>-1) return 'yearly';
-    if(t.indexOf('559')>-1||t.indexOf('6 thang')>-1) return 'halfyear';
-    if(t.indexOf('359')>-1||t.indexOf('3 thang')>-1) return 'quarterly';
-    if(t.indexOf('159')>-1||t.indexOf('1 thang')>-1) return 'monthly';
-    return '';
-  }
-  function keyFromNode(node){
-    if(!node) return '';
-    var inline=node.getAttribute&&String(node.getAttribute('onclick')||'');
-    var m=inline.match(/openPayment\(['"]([^'"]+)['"]\)/i) || inline.match(/mktOpenPlanDetail\(['"]([^'"]+)['"]\)/i);
-    if(m) return normKey(m[1]);
-    var data=(node.dataset&&(node.dataset.plan||node.dataset.package||node.dataset.key))||'';
-    var k=normKey(data); if(k) return k;
-    var card=node.closest&&node.closest('.premium-plan,.v4-plan,.price-card,.plan-card,.pricing-card,[data-plan],[data-package]');
-    if(card){
-      k=normKey((card.dataset&&(card.dataset.plan||card.dataset.package||card.dataset.key))||'');
-      if(k) return k;
-      k=keyFromText(card.innerText||card.textContent||'');
-      if(k) return k;
-    }
-    return keyFromText(node.innerText||node.textContent||'');
-  }
-  function setKey(k){
-    k=normKey(k)||'monthly';
-    window.currentPremiumPlanKey=k;
-    window.mktSelectedPlanKey=k;
-    try{localStorage.setItem('mkt_selected_plan_key',k);}catch(e){}
-    return k;
-  }
-  function getDevice(){
-    var id='';
-    try{id=localStorage.getItem('mkt_device_id')||'';}catch(e){}
-    if(!id && typeof window.getOrCreateDeviceId==='function') id=window.getOrCreateDeviceId();
-    if(!id){id='MKT-'+Math.random().toString(36).slice(2,8).toUpperCase()+Date.now().toString().slice(-4); try{localStorage.setItem('mkt_device_id',id);}catch(e){}}
-    document.cookie='mkt_device_id='+encodeURIComponent(id)+'; path=/; max-age='+(60*60*24*365*5);
-    return id;
-  }
-  function plan(k){return PLANS[normKey(k)||'monthly']||PLANS.monthly;}
-  function payContent(p){
-    var phone=(q('#payPhone')&&q('#payPhone').value.trim())||'CHUA_SDT';
-    var email=(q('#payEmail')&&q('#payEmail').value.trim())||'CHUA_GMAIL';
-    return getDevice()+' | '+phone+' | '+email+' | '+p.code;
-  }
   function fillPayment(k){
     k=setKey(k);
     var p=plan(k);
