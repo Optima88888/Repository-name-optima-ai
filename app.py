@@ -10455,6 +10455,116 @@ ADMIN_HTML = """
 })();
 </script>
 
+
+
+<!-- FINAL PATCH V101: matte luxury PRO/PREMIUM badges - giảm chói, nhỏ gọn, không đổi nội dung -->
+<style id="mkt-v101-matte-luxury-badges">
+  body .v2-nav-link.mkt-menu-pro,
+  body .v2-nav-link.mkt-menu-premium,
+  body .sidebar a.mkt-menu-pro,
+  body .sidebar a.mkt-menu-premium{
+    padding-right:82px!important;
+  }
+
+  body .v2-nav-link.mkt-menu-pro .v2-nav-tag,
+  body .v2-nav-link.mkt-menu-premium .v2-nav-tag,
+  body .v2-nav-link.mkt-menu-pro .mkt-pro-mini,
+  body .v2-nav-link.mkt-menu-premium .mkt-pro-mini,
+  body .sidebar a.mkt-menu-pro .v2-nav-tag,
+  body .sidebar a.mkt-menu-premium .v2-nav-tag{
+    position:absolute!important;
+    right:16px!important;
+    top:50%!important;
+    transform:translateY(-50%)!important;
+    display:inline-flex!important;
+    align-items:center!important;
+    justify-content:center!important;
+    height:18px!important;
+    min-width:42px!important;
+    max-width:68px!important;
+    padding:0 8px 0 14px!important;
+    border-radius:999px!important;
+    font-size:7.6px!important;
+    line-height:18px!important;
+    font-weight:900!important;
+    letter-spacing:.035em!important;
+    text-transform:uppercase!important;
+    text-shadow:none!important;
+    white-space:nowrap!important;
+    overflow:visible!important;
+    z-index:80!important;
+    filter:none!important;
+  }
+
+  body .v2-nav-link.mkt-menu-pro .v2-nav-tag,
+  body .v2-nav-link.mkt-menu-pro .mkt-pro-mini,
+  body .sidebar a.mkt-menu-pro .v2-nav-tag{
+    color:#dcfff0!important;
+    background:linear-gradient(135deg,rgba(21,128,61,.96),rgba(16,185,129,.92))!important;
+    border:1px solid rgba(134,239,172,.38)!important;
+    box-shadow:0 3px 10px rgba(0,0,0,.22),0 0 8px rgba(34,197,94,.20)!important;
+  }
+
+  body .v2-nav-link.mkt-menu-premium .v2-nav-tag,
+  body .v2-nav-link.mkt-menu-premium .mkt-pro-mini,
+  body .sidebar a.mkt-menu-premium .v2-nav-tag{
+    color:#fff7d6!important;
+    background:linear-gradient(135deg,rgba(180,83,9,.96),rgba(245,158,11,.92))!important;
+    border:1px solid rgba(253,230,138,.36)!important;
+    box-shadow:0 3px 10px rgba(0,0,0,.22),0 0 8px rgba(245,158,11,.18)!important;
+  }
+
+  body .v2-nav-link.mkt-menu-pro .v2-nav-tag:before,
+  body .v2-nav-link.mkt-menu-premium .v2-nav-tag:before,
+  body .v2-nav-link.mkt-menu-pro .mkt-pro-mini:before,
+  body .v2-nav-link.mkt-menu-premium .mkt-pro-mini:before{
+    content:""!important;
+    position:absolute!important;
+    left:6px!important;
+    top:50%!important;
+    transform:translateY(-50%)!important;
+    width:4px!important;
+    height:4px!important;
+    border-radius:50%!important;
+    background:rgba(255,255,255,.88)!important;
+    box-shadow:0 0 4px rgba(255,255,255,.36)!important;
+  }
+
+  body .v2-nav-link.mkt-menu-pro::before,
+  body .v2-nav-link.mkt-menu-premium::before,
+  body .v2-nav-link.real-premium-lock::before,
+  body .v2-nav-link.premium-locked::before,
+  body .v2-nav-link.mkt-menu-pro::after,
+  body .v2-nav-link.mkt-menu-premium::after,
+  body .v2-nav-link.real-premium-lock::after,
+  body .v2-nav-link.premium-locked::after{
+    display:none!important;
+    opacity:0!important;
+    content:""!important;
+    box-shadow:none!important;
+    filter:none!important;
+  }
+
+  body .v2-nav-link,
+  body .sidebar a{
+    overflow:hidden!important;
+  }
+
+  body .app-install-banner{
+    border:1px solid rgba(255,255,255,.14)!important;
+    background:linear-gradient(135deg,rgba(15,23,42,.96),rgba(30,41,99,.96))!important;
+    box-shadow:0 12px 30px rgba(0,0,0,.26),inset 0 1px 0 rgba(255,255,255,.08)!important;
+  }
+  body .app-install-banner button{
+    min-height:38px!important;
+    padding:10px 15px!important;
+    border-radius:999px!important;
+    color:#eff6ff!important;
+    background:linear-gradient(135deg,#2563eb,#7c3aed)!important;
+    box-shadow:0 6px 16px rgba(37,99,235,.25)!important;
+  }
+</style>
+
 </body></html>
 """
 
