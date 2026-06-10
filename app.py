@@ -7525,7 +7525,7 @@ function dropKanban(ev){ ev.preventDefault(); const col=ev.currentTarget; if(dra
   .gptmkt-chat-input-v4{padding:11px!important;background:#fff!important;border-top:1px solid #e5e7eb!important;display:flex!important;gap:8px!important;}.gptmkt-chat-input-v4 input{flex:1!important;border:1px solid #cbd5e1!important;border-radius:999px!important;padding:12px 13px!important;font-size:14px!important;outline:none!important;color:#0f172a!important;background:#fff!important;}.gptmkt-chat-input-v4 button{border:0!important;border-radius:999px!important;padding:0 16px!important;background:linear-gradient(135deg,#2563eb,#7c3aed)!important;color:#fff!important;font-weight:1000!important;cursor:pointer!important;}
   #gptMktInstallSheetV4{position:fixed!important;inset:0!important;background:rgba(15,23,42,.55)!important;z-index:2147483603!important;display:none!important;align-items:flex-end!important;justify-content:center!important;padding:16px!important;pointer-events:auto!important;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif!important;}#gptMktInstallSheetV4.open{display:flex!important;}.gptmkt-install-card-v4{width:min(430px,100%)!important;background:#fff!important;border-radius:26px 26px 18px 18px!important;padding:20px!important;color:#0f172a!important;box-shadow:0 -18px 65px rgba(15,23,42,.35)!important;}.gptmkt-install-card-v4 h3{margin:0 0 8px!important;font-size:20px!important;font-weight:1000!important;}.gptmkt-install-card-v4 p{margin:0 0 14px!important;font-size:14px!important;line-height:1.55!important;color:#334155!important;font-weight:700!important;}.gptmkt-install-card-v4 .actions{display:flex!important;gap:10px!important;margin-top:14px!important;}.gptmkt-install-card-v4 button{flex:1!important;border:0!important;border-radius:999px!important;padding:13px 12px!important;font-weight:1000!important;cursor:pointer!important;}.gptmkt-install-card-v4 .go{background:linear-gradient(135deg,#2563eb,#7c3aed)!important;color:#fff!important;}.gptmkt-install-card-v4 .close{background:#e5e7eb!important;color:#334155!important;}
   @keyframes gptMktFloatV4{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}@keyframes gptMktPulseV4{0%,100%{transform:scale(1)}50%{transform:scale(1.04)}}
-  @media(max-width:820px){#gptMktInstallDockV4{left:10px!important;bottom:calc(12px + env(safe-area-inset-bottom,0px))!important;}#gptMktChatBtnV4{right:10px!important;bottom:calc(12px + env(safe-area-inset-bottom,0px))!important;}#gptMktChatPanelV4{left:10px!important;right:10px!important;width:auto!important;height:min(560px,calc(100vh - 105px))!important;bottom:calc(84px + env(safe-area-inset-bottom,0px))!important;}}
+  @media(max-width:820px){ #gptMktInstallDockV4{left:10px!important;bottom:calc(12px + env(safe-area-inset-bottom,0px))!important;}#gptMktChatBtnV4{right:10px!important;bottom:calc(12px + env(safe-area-inset-bottom,0px))!important;}#gptMktChatPanelV4{left:10px!important;right:10px!important;width:auto!important;height:min(560px,calc(100vh - 105px))!important;bottom:calc(84px + env(safe-area-inset-bottom,0px))!important;}}
 </style>
 <script id="gpt-mkt-hard-fix-v4-js">
 (function(){
@@ -9810,7 +9810,7 @@ ADMIN_HTML = """
 
 
 
-<!-- GPT MKT PRO FIX V2 20260610: stable install + support chat -->
+<!-- GPT MKT PRO FIX V2 20260610: stable install + support chat | V5 fixed Jinja CSS marker -->
 <style id="gpt-mkt-pro-fix-v2-css">
   .floating-bot{z-index:2147483640!important;pointer-events:auto!important;}
   .floating-bot .bot-bubble{display:none!important;pointer-events:none!important;}
@@ -9821,7 +9821,7 @@ ADMIN_HTML = """
   #gptMktChatFinal,#gptMktInstallFinal{pointer-events:auto!important;user-select:none!important;-webkit-tap-highlight-color:transparent!important;}
   #gptMktChatFinal{right:14px!important;bottom:calc(18px + env(safe-area-inset-bottom,0px))!important;}
   #gptMktLeftDockFinal{left:12px!important;bottom:calc(18px + env(safe-area-inset-bottom,0px))!important;}
-  @media(max-width:820px){#floatingBotPanel.gptmkt-chat-open-final,.bot-panel.gptmkt-chat-open-final{left:10px!important;right:10px!important;width:auto!important;bottom:calc(92px + env(safe-area-inset-bottom,0px))!important;}}
+  @media(max-width:820px){ #floatingBotPanel.gptmkt-chat-open-final,.bot-panel.gptmkt-chat-open-final{left:10px!important;right:10px!important;width:auto!important;bottom:calc(92px + env(safe-area-inset-bottom,0px))!important;}}
 </style>
 <script id="gpt-mkt-pro-fix-v2-js">
 (function(){
