@@ -7873,6 +7873,303 @@ function dropKanban(ev){ ev.preventDefault(); const col=ev.currentTarget; if(dra
 })();
 </script>
 
+
+<!-- ULTIMATE SIDEBAR MENU FIX V20260610: SaaS compact + dot Pro/Premium + no old glowing badges -->
+<style id="ultimate-sidebar-dot-menu-fix-v20260610">
+  body .sidebar{
+    width:278px!important;
+    background:
+      radial-gradient(circle at 20% 0%,rgba(37,99,235,.22),transparent 32%),
+      radial-gradient(circle at 100% 30%,rgba(124,58,237,.18),transparent 35%),
+      linear-gradient(180deg,#070b18,#0f172a 58%,#111827)!important;
+    border-right:1px solid rgba(148,163,184,.16)!important;
+  }
+  body .sidebar .logo{
+    font-size:21px!important;
+    line-height:1.05!important;
+    letter-spacing:-.02em!important;
+    padding:14px 14px 12px!important;
+    margin-bottom:10px!important;
+  }
+  body .sidebar .nav{
+    padding:0 8px 18px!important;
+  }
+  body .sidebar .v2-nav-title{
+    margin:14px 8px 6px!important;
+    padding:0!important;
+    font-size:10px!important;
+    line-height:1!important;
+    letter-spacing:.13em!important;
+    color:rgba(191,219,254,.72)!important;
+    font-weight:900!important;
+  }
+  body .sidebar .v2-nav-link,
+  body .sidebar a.v2-nav-link{
+    position:relative!important;
+    display:flex!important;
+    align-items:center!important;
+    justify-content:flex-start!important;
+    gap:9px!important;
+    min-height:44px!important;
+    height:auto!important;
+    margin:3px 0!important;
+    padding:8px 10px!important;
+    padding-right:10px!important;
+    border-radius:13px!important;
+    color:rgba(248,250,252,.88)!important;
+    background:transparent!important;
+    border:1px solid transparent!important;
+    box-shadow:none!important;
+    text-decoration:none!important;
+    cursor:pointer!important;
+    pointer-events:auto!important;
+    user-select:none!important;
+    transform:none!important;
+    transition:background .18s ease,border-color .18s ease,transform .18s ease,color .18s ease!important;
+  }
+  body .sidebar .v2-nav-link:hover,
+  body .sidebar a.v2-nav-link:hover{
+    color:#ffffff!important;
+    transform:translateX(3px)!important;
+    background:linear-gradient(135deg,rgba(37,99,235,.18),rgba(124,58,237,.12))!important;
+    border-color:rgba(147,197,253,.18)!important;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.05)!important;
+  }
+  body .sidebar .v2-nav-link.active,
+  body .sidebar .v2-nav-link.active-module,
+  body .sidebar .v2-nav-link.is-active{
+    background:linear-gradient(135deg,rgba(37,99,235,.24),rgba(124,58,237,.18))!important;
+    border-color:rgba(147,197,253,.22)!important;
+  }
+  body .sidebar .v2-nav-ico{
+    display:inline-flex!important;
+    width:26px!important;
+    min-width:26px!important;
+    height:26px!important;
+    align-items:center!important;
+    justify-content:center!important;
+    margin:0!important;
+    padding:0!important;
+    border-radius:9px!important;
+    background:rgba(255,255,255,.07)!important;
+    color:#dbeafe!important;
+    font-size:14px!important;
+    line-height:26px!important;
+    overflow:hidden!important;
+  }
+  body .sidebar .v2-nav-text{
+    flex:1 1 auto!important;
+    min-width:0!important;
+    font-size:13.5px!important;
+    line-height:1.15!important;
+    font-weight:760!important;
+    letter-spacing:-.01em!important;
+    white-space:normal!important;
+    overflow:hidden!important;
+    text-overflow:ellipsis!important;
+  }
+
+  /* Hide every old PRO/PREMIUM badge coming from old CSS/JS patches */
+  body .sidebar .v2-nav-tag,
+  body .sidebar .mkt-pro-mini,
+  body .sidebar .premium-glow-badge,
+  body .sidebar .premium-badge,
+  body .sidebar .pro-badge{
+    display:none!important;
+    opacity:0!important;
+    visibility:hidden!important;
+    width:0!important;
+    max-width:0!important;
+    height:0!important;
+    padding:0!important;
+    margin:0!important;
+    overflow:hidden!important;
+  }
+  body .sidebar .v2-nav-link::before,
+  body .sidebar .v2-nav-link::after,
+  body .sidebar .v2-nav-link.menu-pro::after,
+  body .sidebar .v2-nav-link.pro-feature::after,
+  body .sidebar .v2-nav-link.premium-locked::after,
+  body .sidebar .v2-nav-link.real-pro::after,
+  body .sidebar .v2-nav-link.real-premium-lock::after,
+  body .sidebar .v2-nav-link.mkt-menu-pro::after,
+  body .sidebar .v2-nav-link.mkt-menu-premium::after{
+    content:""!important;
+    display:none!important;
+    opacity:0!important;
+    visibility:hidden!important;
+    width:0!important;
+    height:0!important;
+    padding:0!important;
+    margin:0!important;
+    background:transparent!important;
+    border:0!important;
+    box-shadow:none!important;
+    animation:none!important;
+    filter:none!important;
+  }
+
+  /* New dot status */
+  body .sidebar .mkt-dot-label{
+    margin-left:auto!important;
+    display:inline-flex!important;
+    align-items:center!important;
+    gap:5px!important;
+    flex:0 0 auto!important;
+    height:18px!important;
+    padding:0 0 0 4px!important;
+    border-radius:999px!important;
+    background:transparent!important;
+    border:0!important;
+    box-shadow:none!important;
+    font-size:10.5px!important;
+    line-height:18px!important;
+    font-weight:850!important;
+    letter-spacing:.01em!important;
+    text-transform:none!important;
+  }
+  body .sidebar .mkt-dot-label::before{
+    content:""!important;
+    display:inline-block!important;
+    width:7px!important;
+    height:7px!important;
+    min-width:7px!important;
+    border-radius:999px!important;
+  }
+  body .sidebar .mkt-dot-pro{color:#86efac!important;}
+  body .sidebar .mkt-dot-pro::before{
+    background:#22c55e!important;
+    box-shadow:0 0 7px rgba(34,197,94,.75),0 0 14px rgba(34,197,94,.35)!important;
+  }
+  body .sidebar .mkt-dot-premium{color:#fde68a!important;}
+  body .sidebar .mkt-dot-premium::before{
+    background:#f59e0b!important;
+    box-shadow:0 0 7px rgba(245,158,11,.78),0 0 14px rgba(245,158,11,.36)!important;
+  }
+
+  body .sidebar .v2-side-card{
+    margin:10px 8px!important;
+    padding:12px!important;
+    border-radius:16px!important;
+    font-size:11.5px!important;
+    line-height:1.45!important;
+    background:linear-gradient(135deg,rgba(15,23,42,.86),rgba(30,41,59,.64))!important;
+    border:1px solid rgba(148,163,184,.16)!important;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.05)!important;
+  }
+  body .sidebar .app-install-nav-card{
+    margin:8px 8px 12px!important;
+    padding:12px!important;
+    border-radius:16px!important;
+    background:linear-gradient(135deg,rgba(37,99,235,.22),rgba(14,165,233,.12))!important;
+    border:1px solid rgba(96,165,250,.26)!important;
+    color:#eff6ff!important;
+    cursor:pointer!important;
+    box-shadow:0 12px 26px rgba(15,23,42,.22)!important;
+  }
+  body .sidebar .app-install-nav-card b{
+    display:block!important;
+    font-size:13px!important;
+    margin-bottom:2px!important;
+  }
+  body .sidebar .app-install-nav-card span{
+    display:block!important;
+    font-size:11px!important;
+    opacity:.72!important;
+  }
+</style>
+<script id="ultimate-sidebar-dot-menu-fix-js-v20260610">
+(function(){
+  'use strict';
+  var premiumIds = {
+    messenger_ai:1, crm_sales:1, marketing_director:1, creative_center:1,
+    analytics:1, automation_center:1, affiliate_center:1
+  };
+  var proIds = {
+    ai_studio:1, comment_manager:1, group_suite:1, page_center_total:1,
+    facebook_center:1, fanpage_manager:1
+  };
+  function getId(a){
+    return ((a.getAttribute('href')||'').split('#')[1]||'').trim();
+  }
+  function textOf(a){
+    var t=a.querySelector('.v2-nav-text');
+    return (t?t.textContent:a.textContent||'').trim();
+  }
+  function removeOldBadges(a){
+    a.querySelectorAll('.v2-nav-tag,.mkt-pro-mini,.premium-badge,.pro-badge').forEach(function(x){x.remove();});
+    a.classList.remove('menu-pro','real-pro','real-premium-lock','mkt-menu-pro','mkt-menu-premium');
+  }
+  function ensureDot(a,type){
+    a.querySelectorAll('.mkt-dot-label').forEach(function(x){x.remove();});
+    if(!type) return;
+    var dot=document.createElement('span');
+    dot.className='mkt-dot-label '+(type==='premium'?'mkt-dot-premium':'mkt-dot-pro');
+    dot.textContent=type==='premium'?'Premium':'Pro';
+    a.appendChild(dot);
+  }
+  function classify(a){
+    var id=getId(a), label=textOf(a).toLowerCase();
+    if(id==='premium') return '';
+    if(premiumIds[id] || /messenger|crm|marketing director|analytics|automation|ctv|image|video|voice|giọng|livestream/i.test(label)) return 'premium';
+    if(proIds[id] || /ai studio|ai comment|group|fanpage|facebook center|page center/i.test(label)) return 'pro';
+    return '';
+  }
+  function addInstallCard(){
+    var nav=document.querySelector('.sidebar .nav');
+    if(!nav || nav.querySelector('.app-install-nav-card')) return;
+    var card=document.createElement('div');
+    card.className='app-install-nav-card';
+    card.innerHTML='<b>📲 Cài đặt App</b><span>Thêm GPT MKT Pro vào màn hình chính</span>';
+    card.onclick=function(e){
+      e.preventDefault();
+      if(window.deferredPrompt){
+        window.deferredPrompt.prompt();
+        window.deferredPrompt.userChoice.finally(function(){ window.deferredPrompt=null; });
+      }else if(typeof window.showInstallGuide==='function'){
+        window.showInstallGuide();
+      }else{
+        alert('Trên Android: mở Chrome → Menu → Cài đặt ứng dụng hoặc Thêm vào màn hình chính.');
+      }
+      return false;
+    };
+    nav.insertBefore(card,nav.firstChild);
+  }
+  function fixClicks(a){
+    var id=getId(a);
+    if(!id) return;
+    a.style.pointerEvents='auto';
+    a.onclick=function(e){
+      e.preventDefault();
+      e.stopPropagation();
+      if(typeof window.openModule==='function') return window.openModule(id);
+      location.hash=id;
+      return false;
+    };
+  }
+  function refresh(){
+    document.querySelectorAll('.sidebar .v2-nav-link').forEach(function(a){
+      removeOldBadges(a);
+      ensureDot(a,classify(a));
+      fixClicks(a);
+    });
+    addInstallCard();
+  }
+  window.addEventListener('beforeinstallprompt',function(e){
+    e.preventDefault();
+    window.deferredPrompt=e;
+  });
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',refresh); else refresh();
+  setTimeout(refresh,200);
+  setTimeout(refresh,900);
+  setTimeout(refresh,1800);
+  setInterval(refresh,1200);
+  if(window.MutationObserver){
+    new MutationObserver(refresh).observe(document.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:['class','style']});
+  }
+})();
+</script>
+
 </body>
 </html>
 """
@@ -10803,6 +11100,303 @@ ADMIN_HTML = """
     box-shadow:0 6px 16px rgba(37,99,235,.25)!important;
   }
 </style>
+
+
+<!-- ULTIMATE SIDEBAR MENU FIX V20260610: SaaS compact + dot Pro/Premium + no old glowing badges -->
+<style id="ultimate-sidebar-dot-menu-fix-v20260610">
+  body .sidebar{
+    width:278px!important;
+    background:
+      radial-gradient(circle at 20% 0%,rgba(37,99,235,.22),transparent 32%),
+      radial-gradient(circle at 100% 30%,rgba(124,58,237,.18),transparent 35%),
+      linear-gradient(180deg,#070b18,#0f172a 58%,#111827)!important;
+    border-right:1px solid rgba(148,163,184,.16)!important;
+  }
+  body .sidebar .logo{
+    font-size:21px!important;
+    line-height:1.05!important;
+    letter-spacing:-.02em!important;
+    padding:14px 14px 12px!important;
+    margin-bottom:10px!important;
+  }
+  body .sidebar .nav{
+    padding:0 8px 18px!important;
+  }
+  body .sidebar .v2-nav-title{
+    margin:14px 8px 6px!important;
+    padding:0!important;
+    font-size:10px!important;
+    line-height:1!important;
+    letter-spacing:.13em!important;
+    color:rgba(191,219,254,.72)!important;
+    font-weight:900!important;
+  }
+  body .sidebar .v2-nav-link,
+  body .sidebar a.v2-nav-link{
+    position:relative!important;
+    display:flex!important;
+    align-items:center!important;
+    justify-content:flex-start!important;
+    gap:9px!important;
+    min-height:44px!important;
+    height:auto!important;
+    margin:3px 0!important;
+    padding:8px 10px!important;
+    padding-right:10px!important;
+    border-radius:13px!important;
+    color:rgba(248,250,252,.88)!important;
+    background:transparent!important;
+    border:1px solid transparent!important;
+    box-shadow:none!important;
+    text-decoration:none!important;
+    cursor:pointer!important;
+    pointer-events:auto!important;
+    user-select:none!important;
+    transform:none!important;
+    transition:background .18s ease,border-color .18s ease,transform .18s ease,color .18s ease!important;
+  }
+  body .sidebar .v2-nav-link:hover,
+  body .sidebar a.v2-nav-link:hover{
+    color:#ffffff!important;
+    transform:translateX(3px)!important;
+    background:linear-gradient(135deg,rgba(37,99,235,.18),rgba(124,58,237,.12))!important;
+    border-color:rgba(147,197,253,.18)!important;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.05)!important;
+  }
+  body .sidebar .v2-nav-link.active,
+  body .sidebar .v2-nav-link.active-module,
+  body .sidebar .v2-nav-link.is-active{
+    background:linear-gradient(135deg,rgba(37,99,235,.24),rgba(124,58,237,.18))!important;
+    border-color:rgba(147,197,253,.22)!important;
+  }
+  body .sidebar .v2-nav-ico{
+    display:inline-flex!important;
+    width:26px!important;
+    min-width:26px!important;
+    height:26px!important;
+    align-items:center!important;
+    justify-content:center!important;
+    margin:0!important;
+    padding:0!important;
+    border-radius:9px!important;
+    background:rgba(255,255,255,.07)!important;
+    color:#dbeafe!important;
+    font-size:14px!important;
+    line-height:26px!important;
+    overflow:hidden!important;
+  }
+  body .sidebar .v2-nav-text{
+    flex:1 1 auto!important;
+    min-width:0!important;
+    font-size:13.5px!important;
+    line-height:1.15!important;
+    font-weight:760!important;
+    letter-spacing:-.01em!important;
+    white-space:normal!important;
+    overflow:hidden!important;
+    text-overflow:ellipsis!important;
+  }
+
+  /* Hide every old PRO/PREMIUM badge coming from old CSS/JS patches */
+  body .sidebar .v2-nav-tag,
+  body .sidebar .mkt-pro-mini,
+  body .sidebar .premium-glow-badge,
+  body .sidebar .premium-badge,
+  body .sidebar .pro-badge{
+    display:none!important;
+    opacity:0!important;
+    visibility:hidden!important;
+    width:0!important;
+    max-width:0!important;
+    height:0!important;
+    padding:0!important;
+    margin:0!important;
+    overflow:hidden!important;
+  }
+  body .sidebar .v2-nav-link::before,
+  body .sidebar .v2-nav-link::after,
+  body .sidebar .v2-nav-link.menu-pro::after,
+  body .sidebar .v2-nav-link.pro-feature::after,
+  body .sidebar .v2-nav-link.premium-locked::after,
+  body .sidebar .v2-nav-link.real-pro::after,
+  body .sidebar .v2-nav-link.real-premium-lock::after,
+  body .sidebar .v2-nav-link.mkt-menu-pro::after,
+  body .sidebar .v2-nav-link.mkt-menu-premium::after{
+    content:""!important;
+    display:none!important;
+    opacity:0!important;
+    visibility:hidden!important;
+    width:0!important;
+    height:0!important;
+    padding:0!important;
+    margin:0!important;
+    background:transparent!important;
+    border:0!important;
+    box-shadow:none!important;
+    animation:none!important;
+    filter:none!important;
+  }
+
+  /* New dot status */
+  body .sidebar .mkt-dot-label{
+    margin-left:auto!important;
+    display:inline-flex!important;
+    align-items:center!important;
+    gap:5px!important;
+    flex:0 0 auto!important;
+    height:18px!important;
+    padding:0 0 0 4px!important;
+    border-radius:999px!important;
+    background:transparent!important;
+    border:0!important;
+    box-shadow:none!important;
+    font-size:10.5px!important;
+    line-height:18px!important;
+    font-weight:850!important;
+    letter-spacing:.01em!important;
+    text-transform:none!important;
+  }
+  body .sidebar .mkt-dot-label::before{
+    content:""!important;
+    display:inline-block!important;
+    width:7px!important;
+    height:7px!important;
+    min-width:7px!important;
+    border-radius:999px!important;
+  }
+  body .sidebar .mkt-dot-pro{color:#86efac!important;}
+  body .sidebar .mkt-dot-pro::before{
+    background:#22c55e!important;
+    box-shadow:0 0 7px rgba(34,197,94,.75),0 0 14px rgba(34,197,94,.35)!important;
+  }
+  body .sidebar .mkt-dot-premium{color:#fde68a!important;}
+  body .sidebar .mkt-dot-premium::before{
+    background:#f59e0b!important;
+    box-shadow:0 0 7px rgba(245,158,11,.78),0 0 14px rgba(245,158,11,.36)!important;
+  }
+
+  body .sidebar .v2-side-card{
+    margin:10px 8px!important;
+    padding:12px!important;
+    border-radius:16px!important;
+    font-size:11.5px!important;
+    line-height:1.45!important;
+    background:linear-gradient(135deg,rgba(15,23,42,.86),rgba(30,41,59,.64))!important;
+    border:1px solid rgba(148,163,184,.16)!important;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.05)!important;
+  }
+  body .sidebar .app-install-nav-card{
+    margin:8px 8px 12px!important;
+    padding:12px!important;
+    border-radius:16px!important;
+    background:linear-gradient(135deg,rgba(37,99,235,.22),rgba(14,165,233,.12))!important;
+    border:1px solid rgba(96,165,250,.26)!important;
+    color:#eff6ff!important;
+    cursor:pointer!important;
+    box-shadow:0 12px 26px rgba(15,23,42,.22)!important;
+  }
+  body .sidebar .app-install-nav-card b{
+    display:block!important;
+    font-size:13px!important;
+    margin-bottom:2px!important;
+  }
+  body .sidebar .app-install-nav-card span{
+    display:block!important;
+    font-size:11px!important;
+    opacity:.72!important;
+  }
+</style>
+<script id="ultimate-sidebar-dot-menu-fix-js-v20260610">
+(function(){
+  'use strict';
+  var premiumIds = {
+    messenger_ai:1, crm_sales:1, marketing_director:1, creative_center:1,
+    analytics:1, automation_center:1, affiliate_center:1
+  };
+  var proIds = {
+    ai_studio:1, comment_manager:1, group_suite:1, page_center_total:1,
+    facebook_center:1, fanpage_manager:1
+  };
+  function getId(a){
+    return ((a.getAttribute('href')||'').split('#')[1]||'').trim();
+  }
+  function textOf(a){
+    var t=a.querySelector('.v2-nav-text');
+    return (t?t.textContent:a.textContent||'').trim();
+  }
+  function removeOldBadges(a){
+    a.querySelectorAll('.v2-nav-tag,.mkt-pro-mini,.premium-badge,.pro-badge').forEach(function(x){x.remove();});
+    a.classList.remove('menu-pro','real-pro','real-premium-lock','mkt-menu-pro','mkt-menu-premium');
+  }
+  function ensureDot(a,type){
+    a.querySelectorAll('.mkt-dot-label').forEach(function(x){x.remove();});
+    if(!type) return;
+    var dot=document.createElement('span');
+    dot.className='mkt-dot-label '+(type==='premium'?'mkt-dot-premium':'mkt-dot-pro');
+    dot.textContent=type==='premium'?'Premium':'Pro';
+    a.appendChild(dot);
+  }
+  function classify(a){
+    var id=getId(a), label=textOf(a).toLowerCase();
+    if(id==='premium') return '';
+    if(premiumIds[id] || /messenger|crm|marketing director|analytics|automation|ctv|image|video|voice|giọng|livestream/i.test(label)) return 'premium';
+    if(proIds[id] || /ai studio|ai comment|group|fanpage|facebook center|page center/i.test(label)) return 'pro';
+    return '';
+  }
+  function addInstallCard(){
+    var nav=document.querySelector('.sidebar .nav');
+    if(!nav || nav.querySelector('.app-install-nav-card')) return;
+    var card=document.createElement('div');
+    card.className='app-install-nav-card';
+    card.innerHTML='<b>📲 Cài đặt App</b><span>Thêm GPT MKT Pro vào màn hình chính</span>';
+    card.onclick=function(e){
+      e.preventDefault();
+      if(window.deferredPrompt){
+        window.deferredPrompt.prompt();
+        window.deferredPrompt.userChoice.finally(function(){ window.deferredPrompt=null; });
+      }else if(typeof window.showInstallGuide==='function'){
+        window.showInstallGuide();
+      }else{
+        alert('Trên Android: mở Chrome → Menu → Cài đặt ứng dụng hoặc Thêm vào màn hình chính.');
+      }
+      return false;
+    };
+    nav.insertBefore(card,nav.firstChild);
+  }
+  function fixClicks(a){
+    var id=getId(a);
+    if(!id) return;
+    a.style.pointerEvents='auto';
+    a.onclick=function(e){
+      e.preventDefault();
+      e.stopPropagation();
+      if(typeof window.openModule==='function') return window.openModule(id);
+      location.hash=id;
+      return false;
+    };
+  }
+  function refresh(){
+    document.querySelectorAll('.sidebar .v2-nav-link').forEach(function(a){
+      removeOldBadges(a);
+      ensureDot(a,classify(a));
+      fixClicks(a);
+    });
+    addInstallCard();
+  }
+  window.addEventListener('beforeinstallprompt',function(e){
+    e.preventDefault();
+    window.deferredPrompt=e;
+  });
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',refresh); else refresh();
+  setTimeout(refresh,200);
+  setTimeout(refresh,900);
+  setTimeout(refresh,1800);
+  setInterval(refresh,1200);
+  if(window.MutationObserver){
+    new MutationObserver(refresh).observe(document.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:['class','style']});
+  }
+})();
+</script>
 
 </body></html>
 """
