@@ -4880,6 +4880,8 @@ function closeLockedFeature(){
   <a class="v2-nav-link" href="#premium" onclick="return openModule('premium')"><span class="v2-nav-ico">💎</span><span class="v2-nav-text">Premium</span><span class="v2-nav-tag">VIP</span></a>
   <a class="v2-nav-link" href="#analytics" onclick="return openModule('analytics')"><span class="v2-nav-ico">📈</span><span class="v2-nav-text">Analytics Center</span></a>
   <a class="v2-nav-link" href="#automation_center" onclick="return openModule('automation_center')"><span class="v2-nav-ico">⚙️</span><span class="v2-nav-text">Cài đặt Automation</span></a>
+  <a data-aff-menu="1" class="v2-nav-link" href="#affiliate_center" onclick="return openModule('affiliate_center')"><span class="v2-nav-ico"></span><span class="v2-nav-text">CTV Hoa Hồng</span><span class="v2-nav-tag" style="background:#dcfce7;color:#166534">CTV</span></a>
+  <a data-aff-menu="1" class="v2-nav-link" href="#affiliate_admin" onclick="return openModule('affiliate_admin')"><span class="v2-nav-ico"></span><span class="v2-nav-text">Quản Lý CTV</span><span class="v2-nav-tag" style="background:#fef3c7;color:#92400e">Admin</span></a>
 
   <div class="v2-side-card">
     🚀 Mkt Automation Pro V5<br>
@@ -6068,6 +6070,112 @@ Thời gian tạo: {{ h[9] }}
     </div>
   </div>
 </div>
+
+
+
+<!-- CTV AFFILIATE CENTER V1 -->
+<style id="affiliate-center-v1-style">
+#affiliateCenterSection,#affiliateAdminSection{display:none;background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:22px;padding:18px;margin:18px 0;box-shadow:0 20px 60px rgba(15,23,42,.08)}
+.aff-hero{display:grid;grid-template-columns:1.2fr .8fr;gap:14px;align-items:stretch}
+.aff-card{background:linear-gradient(135deg,#f8fafc,#eef2ff);border:1px solid #dbeafe;border-radius:18px;padding:16px}
+.aff-title{font-size:22px;font-weight:900;color:#0f172a;margin:0 0 6px}.aff-sub{color:#64748b;font-size:14px;line-height:1.5}
+.aff-link-box{display:flex;gap:8px;align-items:center;margin-top:12px}.aff-link-box input{flex:1;border:1px solid #cbd5e1;border-radius:12px;padding:11px;font-weight:700;color:#0f172a;background:white}.aff-btn{border:0;border-radius:12px;padding:11px 14px;font-weight:900;cursor:pointer;background:linear-gradient(135deg,#16a34a,#22c55e);color:white;box-shadow:0 10px 28px rgba(22,163,74,.25)}.aff-btn.dark{background:linear-gradient(135deg,#0f172a,#334155)}.aff-btn.gold{background:linear-gradient(135deg,#f59e0b,#facc15);color:#111827}.aff-btn.light{background:#fff;color:#0f172a;border:1px solid #cbd5e1;box-shadow:none}
+.aff-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:14px 0}.aff-stat{background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:12px}.aff-stat b{display:block;font-size:20px;color:#0f172a}.aff-stat span{font-size:12px;color:#64748b}
+.aff-form{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:12px}.aff-form input,.aff-form select{border:1px solid #cbd5e1;border-radius:12px;padding:11px;background:#fff;color:#0f172a}.aff-table{width:100%;border-collapse:collapse;margin-top:12px;font-size:13px}.aff-table th,.aff-table td{border-bottom:1px solid #e2e8f0;padding:9px;text-align:left}.aff-table th{color:#475569;background:#f8fafc}.aff-pill{display:inline-block;padding:4px 8px;border-radius:999px;background:#dcfce7;color:#166534;font-weight:900;font-size:12px}.aff-tabs{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}.aff-toast{position:fixed;right:22px;bottom:120px;background:#0f172a;color:white;padding:12px 14px;border-radius:14px;z-index:99999;box-shadow:0 12px 40px rgba(0,0,0,.25);display:none}
+@media(max-width:900px){.aff-hero,.aff-form{grid-template-columns:1fr}.aff-stats{grid-template-columns:repeat(2,1fr)}}
+</style>
+<div id="affiliateCenterSection" class="app-module-section">
+  <div class="aff-hero">
+    <div class="aff-card">
+      <h2 class="aff-title">CTV Hoa Hồng</h2>
+      <div class="aff-sub">Đăng ký CTV, nhận link giới thiệu riêng. Khi khách đăng ký và nâng cấp Premium thành công, hệ thống tự ghi nhận hoa hồng theo ID thiết bị và mã CTV.</div>
+      <div class="aff-form">
+        <input id="affName" placeholder="Tên CTV">
+        <input id="affPhone" placeholder="Số điện thoại">
+        <input id="affEmail" placeholder="Gmail">
+      </div>
+      <div style="margin-top:10px"><button class="aff-btn" onclick="affiliateSaveProfile()">Tạo / cập nhật tài khoản CTV</button></div>
+      <div class="aff-link-box"><input id="affRefLink" readonly placeholder="Link giới thiệu sẽ hiện tại đây"><button class="aff-btn dark" onclick="affiliateCopyLink()">Sao chép</button></div>
+      <div class="aff-sub" style="margin-top:8px">Mã CTV: <b id="affCode">---</b> • Cấp bậc: <b id="affLevel">---</b> • Hoa hồng: <b id="affPercent">---</b>%</div>
+    </div>
+    <div class="aff-card">
+      <h3 style="margin-top:0">Rút hoa hồng</h3>
+      <div class="aff-sub">Số dư khả dụng: <b id="affBalance">0đ</b></div>
+      <div class="aff-form" style="grid-template-columns:1fr">
+        <input id="wdAmount" placeholder="Số tiền muốn rút">
+        <input id="wdBank" placeholder="Ngân hàng">
+        <input id="wdNumber" placeholder="Số tài khoản">
+        <input id="wdName" placeholder="Chủ tài khoản">
+      </div>
+      <button class="aff-btn gold" style="margin-top:10px" onclick="affiliateWithdraw()">Gửi yêu cầu rút tiền</button>
+    </div>
+  </div>
+  <div class="aff-stats">
+    <div class="aff-stat"><b id="affClicks">0</b><span>Tổng click</span></div>
+    <div class="aff-stat"><b id="affRefs">0</b><span>Khách đăng ký</span></div>
+    <div class="aff-stat"><b id="affPremium">0</b><span>Khách Premium</span></div>
+    <div class="aff-stat"><b id="affCommission">0đ</b><span>Hoa hồng</span></div>
+  </div>
+  <h3>Khách đã giới thiệu</h3>
+  <div style="overflow:auto"><table class="aff-table" id="affRecent"><thead><tr><th>Thiết bị</th><th>SĐT</th><th>Gmail</th><th>Gói</th><th>Doanh thu</th><th>Hoa hồng</th><th>Trạng thái</th></tr></thead><tbody></tbody></table></div>
+</div>
+
+<div id="affiliateAdminSection" class="app-module-section">
+  <h2 class="aff-title">Quản Lý CTV</h2>
+  <div class="aff-sub">Admin chỉnh phần trăm hoa hồng theo cấp bậc, xem CTV, doanh thu, hoa hồng và duyệt yêu cầu rút tiền.</div>
+  <div class="aff-tabs">
+    <input id="setNormal" placeholder="CTV thường %" value="20">
+    <input id="setSilver" placeholder="CTV Bạc %" value="25">
+    <input id="setGold" placeholder="CTV Vàng %" value="30">
+    <input id="setDiamond" placeholder="CTV Kim Cương %" value="35">
+    <button class="aff-btn" onclick="affiliateSaveSettings()">Lưu hoa hồng</button>
+  </div>
+  <h3>Danh sách CTV</h3>
+  <div style="overflow:auto"><table class="aff-table" id="affAdminUsers"><thead><tr><th>CTV</th><th>SĐT</th><th>Gmail</th><th>Mã</th><th>Cấp</th><th>%</th><th>Đơn</th><th>Doanh thu</th><th>Hoa hồng</th></tr></thead><tbody></tbody></table></div>
+  <h3>Yêu cầu rút tiền</h3>
+  <div style="overflow:auto"><table class="aff-table" id="affWithdrawals"><thead><tr><th>ID</th><th>Mã CTV</th><th>Số tiền</th><th>Ngân hàng</th><th>STK</th><th>Chủ TK</th><th>Trạng thái</th><th>Thao tác</th></tr></thead><tbody></tbody></table></div>
+</div>
+<div id="affToast" class="aff-toast"></div>
+<script id="affiliate-center-v1-js">
+(function(){
+  function q(s){return document.querySelector(s)}; function qa(s){return Array.from(document.querySelectorAll(s))};
+  function money(n){n=parseInt(n||0,10)||0; return n.toLocaleString('vi-VN')+'đ'}
+  function toast(t){var el=q('#affToast'); if(!el){alert(t);return} el.textContent=t; el.style.display='block'; setTimeout(function(){el.style.display='none'},2200)}
+  function hideAllMain(){qa('main section,.module-section,.app-module-section').forEach(function(el){el.style.display='none'});}
+  var oldOpen=window.openModule;
+  window.openModule=function(name){
+    if(name==='affiliate_center'){hideAllMain(); var s=q('#affiliateCenterSection'); if(s){s.style.display='block'; affiliateLoadMe(); window.scrollTo({top:0,behavior:'smooth'});} return false;}
+    if(name==='affiliate_admin'){hideAllMain(); var a=q('#affiliateAdminSection'); if(a){a.style.display='block'; affiliateLoadAdmin(); window.scrollTo({top:0,behavior:'smooth'});} return false;}
+    if(typeof oldOpen==='function') return oldOpen(name); return true;
+  };
+  function addMenus(){
+    var nav=q('.nav'); if(!nav || q('[data-aff-menu="1"]')) return;
+    var sysTitle=Array.from(nav.querySelectorAll('.v2-nav-title')).find(function(x){return /HỆ THỐNG/i.test(x.textContent||'')});
+    var html='<a data-aff-menu="1" class="v2-nav-link" href="#affiliate_center" onclick="return openModule(\'affiliate_center\')"><span class="v2-nav-ico"></span><span class="v2-nav-text">CTV Hoa Hồng</span><span class="v2-nav-tag" style="background:#dcfce7;color:#166534">CTV</span></a>'+
+             '<a data-aff-menu="1" class="v2-nav-link" href="#affiliate_admin" onclick="return openModule(\'affiliate_admin\')"><span class="v2-nav-ico"></span><span class="v2-nav-text">Quản Lý CTV</span><span class="v2-nav-tag" style="background:#fef3c7;color:#92400e">Admin</span></a>';
+    if(sysTitle) sysTitle.insertAdjacentHTML('afterend',html); else nav.insertAdjacentHTML('beforeend',html);
+  }
+  window.affiliateLoadMe=function(){fetch('/api/affiliate/me').then(r=>r.json()).then(function(d){
+    if(!d.ok) return; var s=d.summary||{};
+    q('#affName').value=d.full_name||''; q('#affPhone').value=d.phone||''; q('#affEmail').value=d.email||'';
+    q('#affRefLink').value=d.ref_link||''; q('#affCode').textContent=d.affiliate_code||'---'; q('#affLevel').textContent=d.level_name||'---'; q('#affPercent').textContent=d.commission_percent||20;
+    q('#affClicks').textContent=s.clicks||0; q('#affRefs').textContent=s.referrals||0; q('#affPremium').textContent=s.premium||0; q('#affCommission').textContent=money(s.commission||0); q('#affBalance').textContent=money(s.balance||0);
+    var tb=q('#affRecent tbody'); if(tb){tb.innerHTML=(s.recent||[]).map(function(r){return '<tr><td>'+ (r[0]||'') +'</td><td>'+ (r[1]||'') +'</td><td>'+ (r[2]||'') +'</td><td>'+ (r[3]||'') +'</td><td>'+ money(r[4]) +'</td><td>'+ money(r[5]) +'</td><td><span class="aff-pill">'+ (r[6]||'') +'</span></td></tr>'}).join('') || '<tr><td colspan="7">Chưa có khách giới thiệu.</td></tr>';}
+  }).catch(function(){toast('Không tải được dữ liệu CTV')})}
+  window.affiliateSaveProfile=function(){fetch('/api/affiliate/me',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({full_name:q('#affName').value,phone:q('#affPhone').value,email:q('#affEmail').value})}).then(r=>r.json()).then(function(d){toast(d.ok?'Đã cập nhật CTV':'Có lỗi xảy ra'); affiliateLoadMe();})}
+  window.affiliateCopyLink=function(){var inp=q('#affRefLink'); if(!inp)return; inp.select(); navigator.clipboard&&navigator.clipboard.writeText(inp.value); toast('Đã sao chép link CTV')}
+  window.affiliateWithdraw=function(){fetch('/api/affiliate/withdraw',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({amount:q('#wdAmount').value,bank_name:q('#wdBank').value,bank_number:q('#wdNumber').value,account_name:q('#wdName').value})}).then(r=>r.json()).then(function(d){toast(d.message||'Đã gửi yêu cầu'); affiliateLoadMe();})}
+  window.affiliateLoadAdmin=function(){fetch('/api/admin/affiliate').then(r=>r.json()).then(function(d){
+    var tb=q('#affAdminUsers tbody'); if(tb){tb.innerHTML=(d.users||[]).map(function(u){return '<tr><td>'+ (u[2]||u[1]||'') +'</td><td>'+ (u[3]||'') +'</td><td>'+ (u[4]||'') +'</td><td><b>'+ (u[5]||'') +'</b></td><td>'+ (u[6]||'') +'</td><td>'+ (u[7]||0) +'%</td><td>'+ (u[10]||0) +'</td><td>'+ money(u[11]) +'</td><td>'+ money(u[12]) +'</td></tr>'}).join('') || '<tr><td colspan="9">Chưa có CTV.</td></tr>';}
+    (d.settings||[]).forEach(function(s){if(s[1]==='CTV thường')q('#setNormal').value=s[3]; if(s[1]==='CTV Bạc')q('#setSilver').value=s[3]; if(s[1]==='CTV Vàng')q('#setGold').value=s[3]; if(s[1]==='CTV Kim Cương')q('#setDiamond').value=s[3];});
+    var wb=q('#affWithdrawals tbody'); if(wb){wb.innerHTML=(d.withdrawals||[]).map(function(w){return '<tr><td>'+w[0]+'</td><td>'+w[1]+'</td><td>'+money(w[2])+'</td><td>'+w[3]+'</td><td>'+w[4]+'</td><td>'+w[5]+'</td><td><span class="aff-pill">'+w[6]+'</span></td><td><button class="aff-btn light" onclick="affiliateWithdrawAction('+w[0]+',\'Đã thanh toán\')">Đã thanh toán</button> <button class="aff-btn light" onclick="affiliateWithdrawAction('+w[0]+',\'Từ chối\')">Từ chối</button></td></tr>'}).join('') || '<tr><td colspan="8">Chưa có yêu cầu rút tiền.</td></tr>';}
+  })}
+  window.affiliateSaveSettings=function(){fetch('/api/admin/affiliate/settings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({normal:q('#setNormal').value,silver:q('#setSilver').value,gold:q('#setGold').value,diamond:q('#setDiamond').value})}).then(r=>r.json()).then(function(d){toast(d.message||'Đã lưu'); affiliateLoadAdmin();})}
+  window.affiliateWithdrawAction=function(id,status){fetch('/api/admin/affiliate/withdraw/'+id,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:status})}).then(r=>r.json()).then(function(){toast('Đã cập nhật rút tiền'); affiliateLoadAdmin();})}
+  function init(){addMenus(); var url=new URL(location.href); if(url.searchParams.get('ref')){try{document.cookie='affiliate_code='+url.searchParams.get('ref').toUpperCase()+';path=/;max-age='+(60*60*24*90)}catch(e){}}}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init(); setTimeout(init,500); setTimeout(init,1500);
+})();
+</script>
 
 </main>
 
@@ -8103,7 +8211,7 @@ ADMIN_HTML = """
   }
   function keyFromText(txt){
     txt=String(txt||'').toLowerCase();
-    if(txt.indexOf('1.959')>-1||txt.indexOf('1959')>-1||txt.indexOf('nhà bán')>-1||txt.indexOf('seller')>-1) return 'sellerpro';
+    if(txt.indexOf('1.959')>-1||txt.indexOf('1.959')>-1||txt.indexOf('nhà bán')>-1||txt.indexOf('seller')>-1) return 'sellerpro';
     if(txt.indexOf('859')>-1||txt.indexOf('1 năm')>-1) return 'yearly';
     if(txt.indexOf('559')>-1||txt.indexOf('6 tháng')>-1) return 'halfyear';
     if(txt.indexOf('359')>-1||txt.indexOf('3 tháng')>-1) return 'quarterly';
@@ -8168,10 +8276,7 @@ ADMIN_HTML = """
     var note=q('#mktPlanNote');
     if(note){
       var p=plan(window.currentPremiumPlanKey||keyFromText((q('#mktPlanOverlay')||document.body).innerText));
-      note.innerHTML='ID thiết bị: <b>'+deviceId()+'</b><br><span style="color:#64748b">Vui lòng nhập số điện thoại và Gmail để được duyệt nâng cấp tự động lên gói Premium sau khi thanh toán xong.</span>';
-    }
-    var mini=q('.mktPlanMini'); if(mini) mini.textContent='Vui lòng nhập số điện thoại và Gmail để được duyệt nâng cấp tự động lên gói Premium sau khi thanh toán xong.';
-    var pay=q('#mktPlanPay'); if(pay){pay.onclick=function(e){e.preventDefault(); e.stopPropagation(); var ov=q('#mktPlanOverlay'); if(ov) ov.style.display='none'; return window.openPayment(window.currentPremiumPlanKey||keyFromText((ov||document.body).innerText));};}
+      note.innerHTML='ID thiết bị: <b>'+deviceId()+'</b><br>var pay=q('#mktPlanPay'); if(pay){pay.onclick=function(e){e.preventDefault(); e.stopPropagation(); var ov=q('#mktPlanOverlay'); if(ov) ov.style.display='none'; return window.openPayment(window.currentPremiumPlanKey||keyFromText((ov||document.body).innerText));};}
     cleanText();
   }
   var oldPlan=window.mktOpenPlanDetail;
@@ -8280,109 +8385,7 @@ ADMIN_HTML = """
 
 
 
-<!-- CTV AFFILIATE CENTER V1 -->
-<style id="affiliate-center-v1-style">
-#affiliateCenterSection,#affiliateAdminSection{display:none;background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:22px;padding:18px;margin:18px 0;box-shadow:0 20px 60px rgba(15,23,42,.08)}
-.aff-hero{display:grid;grid-template-columns:1.2fr .8fr;gap:14px;align-items:stretch}
-.aff-card{background:linear-gradient(135deg,#f8fafc,#eef2ff);border:1px solid #dbeafe;border-radius:18px;padding:16px}
-.aff-title{font-size:22px;font-weight:900;color:#0f172a;margin:0 0 6px}.aff-sub{color:#64748b;font-size:14px;line-height:1.5}
-.aff-link-box{display:flex;gap:8px;align-items:center;margin-top:12px}.aff-link-box input{flex:1;border:1px solid #cbd5e1;border-radius:12px;padding:11px;font-weight:700;color:#0f172a;background:white}.aff-btn{border:0;border-radius:12px;padding:11px 14px;font-weight:900;cursor:pointer;background:linear-gradient(135deg,#16a34a,#22c55e);color:white;box-shadow:0 10px 28px rgba(22,163,74,.25)}.aff-btn.dark{background:linear-gradient(135deg,#0f172a,#334155)}.aff-btn.gold{background:linear-gradient(135deg,#f59e0b,#facc15);color:#111827}.aff-btn.light{background:#fff;color:#0f172a;border:1px solid #cbd5e1;box-shadow:none}
-.aff-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:14px 0}.aff-stat{background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:12px}.aff-stat b{display:block;font-size:20px;color:#0f172a}.aff-stat span{font-size:12px;color:#64748b}
-.aff-form{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:12px}.aff-form input,.aff-form select{border:1px solid #cbd5e1;border-radius:12px;padding:11px;background:#fff;color:#0f172a}.aff-table{width:100%;border-collapse:collapse;margin-top:12px;font-size:13px}.aff-table th,.aff-table td{border-bottom:1px solid #e2e8f0;padding:9px;text-align:left}.aff-table th{color:#475569;background:#f8fafc}.aff-pill{display:inline-block;padding:4px 8px;border-radius:999px;background:#dcfce7;color:#166534;font-weight:900;font-size:12px}.aff-tabs{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}.aff-toast{position:fixed;right:22px;bottom:120px;background:#0f172a;color:white;padding:12px 14px;border-radius:14px;z-index:99999;box-shadow:0 12px 40px rgba(0,0,0,.25);display:none}
-@media(max-width:900px){.aff-hero,.aff-form{grid-template-columns:1fr}.aff-stats{grid-template-columns:repeat(2,1fr)}}
-</style>
-<div id="affiliateCenterSection" class="app-module-section">
-  <div class="aff-hero">
-    <div class="aff-card">
-      <h2 class="aff-title">CTV Hoa Hồng</h2>
-      <div class="aff-sub">Đăng ký CTV, nhận link giới thiệu riêng. Khi khách đăng ký và nâng cấp Premium thành công, hệ thống tự ghi nhận hoa hồng theo ID thiết bị và mã CTV.</div>
-      <div class="aff-form">
-        <input id="affName" placeholder="Tên CTV">
-        <input id="affPhone" placeholder="Số điện thoại">
-        <input id="affEmail" placeholder="Gmail">
-      </div>
-      <div style="margin-top:10px"><button class="aff-btn" onclick="affiliateSaveProfile()">Tạo / cập nhật tài khoản CTV</button></div>
-      <div class="aff-link-box"><input id="affRefLink" readonly placeholder="Link giới thiệu sẽ hiện tại đây"><button class="aff-btn dark" onclick="affiliateCopyLink()">Sao chép</button></div>
-      <div class="aff-sub" style="margin-top:8px">Mã CTV: <b id="affCode">---</b> • Cấp bậc: <b id="affLevel">---</b> • Hoa hồng: <b id="affPercent">---</b>%</div>
-    </div>
-    <div class="aff-card">
-      <h3 style="margin-top:0">Rút hoa hồng</h3>
-      <div class="aff-sub">Số dư khả dụng: <b id="affBalance">0đ</b></div>
-      <div class="aff-form" style="grid-template-columns:1fr">
-        <input id="wdAmount" placeholder="Số tiền muốn rút">
-        <input id="wdBank" placeholder="Ngân hàng">
-        <input id="wdNumber" placeholder="Số tài khoản">
-        <input id="wdName" placeholder="Chủ tài khoản">
-      </div>
-      <button class="aff-btn gold" style="margin-top:10px" onclick="affiliateWithdraw()">Gửi yêu cầu rút tiền</button>
-    </div>
-  </div>
-  <div class="aff-stats">
-    <div class="aff-stat"><b id="affClicks">0</b><span>Tổng click</span></div>
-    <div class="aff-stat"><b id="affRefs">0</b><span>Khách đăng ký</span></div>
-    <div class="aff-stat"><b id="affPremium">0</b><span>Khách Premium</span></div>
-    <div class="aff-stat"><b id="affCommission">0đ</b><span>Hoa hồng</span></div>
-  </div>
-  <h3>Khách đã giới thiệu</h3>
-  <div style="overflow:auto"><table class="aff-table" id="affRecent"><thead><tr><th>Thiết bị</th><th>SĐT</th><th>Gmail</th><th>Gói</th><th>Doanh thu</th><th>Hoa hồng</th><th>Trạng thái</th></tr></thead><tbody></tbody></table></div>
-</div>
 
-<div id="affiliateAdminSection" class="app-module-section">
-  <h2 class="aff-title">Quản Lý CTV</h2>
-  <div class="aff-sub">Admin chỉnh phần trăm hoa hồng theo cấp bậc, xem CTV, doanh thu, hoa hồng và duyệt yêu cầu rút tiền.</div>
-  <div class="aff-tabs">
-    <input id="setNormal" placeholder="CTV thường %" value="20">
-    <input id="setSilver" placeholder="CTV Bạc %" value="25">
-    <input id="setGold" placeholder="CTV Vàng %" value="30">
-    <input id="setDiamond" placeholder="CTV Kim Cương %" value="35">
-    <button class="aff-btn" onclick="affiliateSaveSettings()">Lưu hoa hồng</button>
-  </div>
-  <h3>Danh sách CTV</h3>
-  <div style="overflow:auto"><table class="aff-table" id="affAdminUsers"><thead><tr><th>CTV</th><th>SĐT</th><th>Gmail</th><th>Mã</th><th>Cấp</th><th>%</th><th>Đơn</th><th>Doanh thu</th><th>Hoa hồng</th></tr></thead><tbody></tbody></table></div>
-  <h3>Yêu cầu rút tiền</h3>
-  <div style="overflow:auto"><table class="aff-table" id="affWithdrawals"><thead><tr><th>ID</th><th>Mã CTV</th><th>Số tiền</th><th>Ngân hàng</th><th>STK</th><th>Chủ TK</th><th>Trạng thái</th><th>Thao tác</th></tr></thead><tbody></tbody></table></div>
-</div>
-<div id="affToast" class="aff-toast"></div>
-<script id="affiliate-center-v1-js">
-(function(){
-  function q(s){return document.querySelector(s)}; function qa(s){return Array.from(document.querySelectorAll(s))};
-  function money(n){n=parseInt(n||0,10)||0; return n.toLocaleString('vi-VN')+'đ'}
-  function toast(t){var el=q('#affToast'); if(!el){alert(t);return} el.textContent=t; el.style.display='block'; setTimeout(function(){el.style.display='none'},2200)}
-  function hideAllMain(){qa('main section,.module-section,.app-module-section').forEach(function(el){el.style.display='none'});}
-  var oldOpen=window.openModule;
-  window.openModule=function(name){
-    if(name==='affiliate_center'){hideAllMain(); var s=q('#affiliateCenterSection'); if(s){s.style.display='block'; affiliateLoadMe(); window.scrollTo({top:0,behavior:'smooth'});} return false;}
-    if(name==='affiliate_admin'){hideAllMain(); var a=q('#affiliateAdminSection'); if(a){a.style.display='block'; affiliateLoadAdmin(); window.scrollTo({top:0,behavior:'smooth'});} return false;}
-    if(typeof oldOpen==='function') return oldOpen(name); return true;
-  };
-  function addMenus(){
-    var nav=q('.nav'); if(!nav || q('[data-aff-menu="1"]')) return;
-    var sysTitle=Array.from(nav.querySelectorAll('.v2-nav-title')).find(function(x){return /HỆ THỐNG/i.test(x.textContent||'')});
-    var html='<a data-aff-menu="1" class="v2-nav-link" href="#affiliate_center" onclick="return openModule(\'affiliate_center\')"><span class="v2-nav-ico"></span><span class="v2-nav-text">CTV Hoa Hồng</span><span class="v2-nav-tag" style="background:#dcfce7;color:#166534">CTV</span></a>'+
-             '<a data-aff-menu="1" class="v2-nav-link" href="#affiliate_admin" onclick="return openModule(\'affiliate_admin\')"><span class="v2-nav-ico"></span><span class="v2-nav-text">Quản Lý CTV</span><span class="v2-nav-tag" style="background:#fef3c7;color:#92400e">Admin</span></a>';
-    if(sysTitle) sysTitle.insertAdjacentHTML('afterend',html); else nav.insertAdjacentHTML('beforeend',html);
-  }
-  window.affiliateLoadMe=function(){fetch('/api/affiliate/me').then(r=>r.json()).then(function(d){
-    if(!d.ok) return; var s=d.summary||{};
-    q('#affName').value=d.full_name||''; q('#affPhone').value=d.phone||''; q('#affEmail').value=d.email||'';
-    q('#affRefLink').value=d.ref_link||''; q('#affCode').textContent=d.affiliate_code||'---'; q('#affLevel').textContent=d.level_name||'---'; q('#affPercent').textContent=d.commission_percent||20;
-    q('#affClicks').textContent=s.clicks||0; q('#affRefs').textContent=s.referrals||0; q('#affPremium').textContent=s.premium||0; q('#affCommission').textContent=money(s.commission||0); q('#affBalance').textContent=money(s.balance||0);
-    var tb=q('#affRecent tbody'); if(tb){tb.innerHTML=(s.recent||[]).map(function(r){return '<tr><td>'+ (r[0]||'') +'</td><td>'+ (r[1]||'') +'</td><td>'+ (r[2]||'') +'</td><td>'+ (r[3]||'') +'</td><td>'+ money(r[4]) +'</td><td>'+ money(r[5]) +'</td><td><span class="aff-pill">'+ (r[6]||'') +'</span></td></tr>'}).join('') || '<tr><td colspan="7">Chưa có khách giới thiệu.</td></tr>';}
-  }).catch(function(){toast('Không tải được dữ liệu CTV')})}
-  window.affiliateSaveProfile=function(){fetch('/api/affiliate/me',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({full_name:q('#affName').value,phone:q('#affPhone').value,email:q('#affEmail').value})}).then(r=>r.json()).then(function(d){toast(d.ok?'Đã cập nhật CTV':'Có lỗi xảy ra'); affiliateLoadMe();})}
-  window.affiliateCopyLink=function(){var inp=q('#affRefLink'); if(!inp)return; inp.select(); navigator.clipboard&&navigator.clipboard.writeText(inp.value); toast('Đã sao chép link CTV')}
-  window.affiliateWithdraw=function(){fetch('/api/affiliate/withdraw',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({amount:q('#wdAmount').value,bank_name:q('#wdBank').value,bank_number:q('#wdNumber').value,account_name:q('#wdName').value})}).then(r=>r.json()).then(function(d){toast(d.message||'Đã gửi yêu cầu'); affiliateLoadMe();})}
-  window.affiliateLoadAdmin=function(){fetch('/api/admin/affiliate').then(r=>r.json()).then(function(d){
-    var tb=q('#affAdminUsers tbody'); if(tb){tb.innerHTML=(d.users||[]).map(function(u){return '<tr><td>'+ (u[2]||u[1]||'') +'</td><td>'+ (u[3]||'') +'</td><td>'+ (u[4]||'') +'</td><td><b>'+ (u[5]||'') +'</b></td><td>'+ (u[6]||'') +'</td><td>'+ (u[7]||0) +'%</td><td>'+ (u[10]||0) +'</td><td>'+ money(u[11]) +'</td><td>'+ money(u[12]) +'</td></tr>'}).join('') || '<tr><td colspan="9">Chưa có CTV.</td></tr>';}
-    (d.settings||[]).forEach(function(s){if(s[1]==='CTV thường')q('#setNormal').value=s[3]; if(s[1]==='CTV Bạc')q('#setSilver').value=s[3]; if(s[1]==='CTV Vàng')q('#setGold').value=s[3]; if(s[1]==='CTV Kim Cương')q('#setDiamond').value=s[3];});
-    var wb=q('#affWithdrawals tbody'); if(wb){wb.innerHTML=(d.withdrawals||[]).map(function(w){return '<tr><td>'+w[0]+'</td><td>'+w[1]+'</td><td>'+money(w[2])+'</td><td>'+w[3]+'</td><td>'+w[4]+'</td><td>'+w[5]+'</td><td><span class="aff-pill">'+w[6]+'</span></td><td><button class="aff-btn light" onclick="affiliateWithdrawAction('+w[0]+',\'Đã thanh toán\')">Đã thanh toán</button> <button class="aff-btn light" onclick="affiliateWithdrawAction('+w[0]+',\'Từ chối\')">Từ chối</button></td></tr>'}).join('') || '<tr><td colspan="8">Chưa có yêu cầu rút tiền.</td></tr>';}
-  })}
-  window.affiliateSaveSettings=function(){fetch('/api/admin/affiliate/settings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({normal:q('#setNormal').value,silver:q('#setSilver').value,gold:q('#setGold').value,diamond:q('#setDiamond').value})}).then(r=>r.json()).then(function(d){toast(d.message||'Đã lưu'); affiliateLoadAdmin();})}
-  window.affiliateWithdrawAction=function(id,status){fetch('/api/admin/affiliate/withdraw/'+id,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:status})}).then(r=>r.json()).then(function(){toast('Đã cập nhật rút tiền'); affiliateLoadAdmin();})}
-  function init(){addMenus(); var url=new URL(location.href); if(url.searchParams.get('ref')){try{document.cookie='affiliate_code='+url.searchParams.get('ref').toUpperCase()+';path=/;max-age='+(60*60*24*90)}catch(e){}}}
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init(); setTimeout(init,500); setTimeout(init,1500);
-})();
-</script>
 </body></html>
 """
 
