@@ -22,7 +22,7 @@ except Exception:
 
 load_dotenv()
 
-APP_TITLE = "Mkt Automation Pro V12 DeviceID Premium Admin"
+APP_TITLE = "Marketing Automation Pro"
 DB = "marketing_automation_pro_v11.db"
 UPLOAD_DIR = "uploads"
 REPORT_DIR = "reports"
@@ -1620,17 +1620,18 @@ def get_device_id():
 
 def normalize_package_key(package_key):
     package_key = (package_key or "monthly").strip().lower()
-    aliases = {"basic":"monthly", "pro":"quarterly", "business":"halfyear", "lifetime":"sellerpro"}
+    aliases = {"basic":"monthly", "pro":"quarterly", "business":"halfyear", "lifetime":"sellerpro", "nhabanhangpro":"sellerpro", "seller":"sellerpro", "seller_pro":"sellerpro"}
     return aliases.get(package_key, package_key if package_key in PREMIUM_PACKAGES else "monthly")
 
 
 def create_premium_request(device_id, phone, email, package_key):
+    ensure_affiliate_tables()
     package_key = normalize_package_key(package_key)
     plan = PREMIUM_PACKAGES.get(package_key, PREMIUM_PACKAGES["monthly"])
     device_id = (device_id or get_device_id()).strip().upper()
     phone = (phone or "").strip()
     email = (email or "").strip()
-    payment_note = f"{device_id} | {phone or 'CHUA_SDT'} | {email or 'CHUA_GMAIL'} | {plan['name']}"
+    payment_note = f"{device_id}"
     now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     conn = db(); c = conn.cursor()
     c.execute("""
@@ -1646,8 +1647,14 @@ def create_premium_request(device_id, phone, email, package_key):
         VALUES(?,?,?,?,?,?,?,?,?,?,?)
     """, (device_id, phone, email, package_key, plan['name'], int(plan.get('amount',0)), payment_note, 'Chờ duyệt', '', now, ''))
     req_id = c.lastrowid
+    affiliate_code = current_affiliate_code()
+    if affiliate_code:
+        try:
+            c.execute("UPDATE premium_upgrade_requests SET affiliate_code=? WHERE id=?", (affiliate_code, req_id))
+        except Exception:
+            pass
     c.execute("""INSERT INTO notifications(title,detail,level,status,created_at) VALUES(?,?,?,?,?)""",
-              ("Yêu cầu nâng cấp Premium mới", f"{device_id} - {phone} - {email} - {plan['name']}", "warning", "new", now))
+              ("Yêu cầu nâng cấp Premium mới", f"{device_id} - {phone} - {email} - {plan['name']}" + (f" - CTV: {affiliate_code}" if affiliate_code else ""), "warning", "new", now))
     conn.commit(); conn.close()
     return {"id": req_id, "device_id": device_id, "payment_note": payment_note, "package_name": plan['name'], "amount": int(plan.get('amount',0))}
 
@@ -1698,6 +1705,11 @@ def approve_premium_request(request_id, status='Đã duyệt', admin_note=''):
         c.execute("""INSERT INTO notifications(title,detail,level,status,created_at) VALUES(?,?,?,?,?)""",
                   ("Đã kích hoạt Premium", f"{device_id} - {package_name} - hạn đến {end_dt.strftime('%Y-%m-%d')}", "success", "new", now))
     c.execute("UPDATE premium_upgrade_requests SET status=?, admin_note=?, approved_at=? WHERE id=?", (status, admin_note, now, request_id))
+    if status == 'Đã duyệt':
+        try:
+            create_affiliate_commission_for_request(c, request_id)
+        except Exception as _affiliate_err:
+            print('Affiliate commission error:', _affiliate_err)
     conn.commit(); conn.close(); return True
 
 
@@ -2333,20 +2345,2037 @@ Chia nhóm: Facebook Ads, TikTok Ads, Seeding, Chốt sale, Content Viral.
 """
     return f"Tạo nội dung marketing chuyên nghiệp cho: {topic}. {extra}"
 
-HTML = """
+HTML = r"""
 <!DOCTYPE html>
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>{{ title }}</title>
-<link rel="manifest" href="/manifest.json">
+
 <meta name="theme-color" content="#2563eb">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="GPT MKT">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="GPT MKT Pro">
+<link rel="manifest" href="/manifest.json">
+<link rel="apple-touch-icon" href="/static/icon-192.png">
+
+<style>
+:root{
+  --blue:#2563EB;
+  --blue2:#3B82F6;
+  --purple:#7C3AED;
+  --purple2:#A855F7;
+  --deep:#1E1B4B;
+  --navy:#0F172A;
+  --bg:#F8FAFC;
+  --soft:#EEF2FF;
+  --card:#FFFFFF;
+  --text:#111827;
+  --muted:#64748B;
+  --border:#E5E7EB;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0;
+  font-family:Arial,sans-serif;
+  background:
+    radial-gradient(circle at top left,rgba(124,58,237,.18),transparent 32%),
+    radial-gradient(circle at top right,rgba(37,99,235,.16),transparent 30%),
+    linear-gradient(135deg,#FFFFFF,#EEF2FF 52%,#F8FAFC);
+  color:var(--text);
+}
+.layout{
+  display:grid;
+  grid-template-columns:270px 1fr 330px;
+  gap:20px;
+  max-width:1560px;
+  margin:auto;
+  padding:20px;
+}
+.sidebar{
+  position:sticky;
+  top:20px;
+  height:calc(100vh - 40px);
+  padding:22px;
+  overflow-y:auto;
+  overflow-x:hidden;
+  overscroll-behavior:contain;
+  scrollbar-width:thin;
+  background:linear-gradient(180deg,#111827,#1E1B4B);
+  border:1px solid rgba(255,255,255,.12);
+  border-radius:28px;
+  box-shadow:0 20px 55px rgba(30,27,75,.25);
+}
+.sidebar::-webkit-scrollbar{width:6px}
+.sidebar::-webkit-scrollbar-thumb{background:rgba(255,255,255,.25);border-radius:999px}
+.sidebar::-webkit-scrollbar-track{background:transparent}
+.logo{
+  font-size:25px;
+  font-weight:900;
+  color:white;
+  line-height:1.12;
+}
+.logo:after{
+  content:"";
+  display:block;
+  width:86px;
+  height:5px;
+  margin-top:12px;
+  border-radius:999px;
+  background:linear-gradient(135deg,var(--blue),var(--purple2));
+}
+.subtitle{
+  font-size:12px;
+  color:#CBD5E1;
+  margin:12px 0 18px;
+}
+.nav a{
+  display:block;
+  padding:13px 14px;
+  border-radius:16px;
+  color:#F8FAFC;
+  text-decoration:none;
+  margin:7px 0;
+  background:rgba(255,255,255,.06);
+  border:1px solid rgba(255,255,255,.08);
+}
+.nav a:hover{
+  background:linear-gradient(135deg,var(--blue),var(--purple));
+  color:white;
+  transform:translateX(3px);
+}
+.main{min-width:0}
+.panel,.rightbar{
+  background:rgba(255,255,255,.94);
+  backdrop-filter:blur(16px);
+  border:1px solid rgba(226,232,240,.9);
+  border-radius:28px;
+  box-shadow:0 18px 45px rgba(30,41,59,.10);
+}
+.panel{
+  padding:25px;
+  margin-bottom:20px;
+}
+.rightbar{
+  position:sticky;
+  top:20px;
+  height:calc(100vh - 40px);
+  padding:20px;
+  overflow:auto;
+}
+.badge{
+  display:inline-block;
+  background:linear-gradient(135deg,var(--blue),var(--purple));
+  color:white;
+  padding:10px 16px;
+  border-radius:999px;
+  font-weight:900;
+  box-shadow:0 10px 26px rgba(124,58,237,.26);
+}
+h1{
+  font-size:42px;
+  color:transparent;
+  background:linear-gradient(135deg,var(--blue),var(--purple));
+  -webkit-background-clip:text;
+  background-clip:text;
+  margin:16px 0 8px;
+  letter-spacing:-.6px;
+}
+h2{
+  margin-top:0;
+  color:var(--deep);
+}
+p{color:var(--muted)}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.grid4{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px}
+.stat{
+  background:#FFFFFF;
+  border:1px solid var(--border);
+  border-left:5px solid var(--purple);
+  border-radius:22px;
+  padding:18px;
+  box-shadow:0 12px 28px rgba(124,58,237,.08);
+}
+.stat span{color:var(--muted);font-size:14px}
+.stat b{
+  font-size:30px;
+  color:var(--purple);
+}
+textarea,select,input{
+  width:100%;
+  margin:8px 0;
+  padding:15px;
+  border:1px solid var(--border);
+  background:#FFFFFF;
+  color:var(--text);
+  border-radius:16px;
+  font-size:15px;
+  outline:none;
+}
+textarea:focus,select:focus,input:focus{
+  border-color:var(--purple);
+  box-shadow:0 0 0 4px rgba(124,58,237,.12);
+}
+button{
+  background:linear-gradient(135deg,var(--blue),var(--purple));
+  color:white;
+  border:none;
+  padding:14px 20px;
+  border-radius:16px;
+  font-weight:900;
+  cursor:pointer;
+  margin:8px 6px 8px 0;
+  box-shadow:0 12px 28px rgba(37,99,235,.20);
+}
+button:hover{
+  transform:translateY(-1px);
+  box-shadow:0 16px 32px rgba(124,58,237,.25);
+}
+.secondary{
+  background:linear-gradient(135deg,#E0E7FF,#F3E8FF);
+  color:#4C1D95;
+  border:1px solid #DDD6FE;
+  box-shadow:none;
+}
+.success{
+  color:#047857;
+  background:#ECFDF5;
+  border:1px solid #A7F3D0;
+  padding:12px;
+  border-radius:14px;
+}
+.error{
+  color:#B91C1C;
+  background:#FEF2F2;
+  border:1px solid #FCA5A5;
+  padding:12px;
+  border-radius:14px;
+}
+.page-list{
+  display:grid;
+  grid-template-columns:repeat(2,1fr);
+  gap:10px;
+  margin:10px 0;
+}
+.page-item{
+  background:#F8FAFC;
+  color:var(--text);
+  border:1px solid var(--border);
+  border-radius:18px;
+  padding:13px;
+}
+.history{
+  white-space:pre-wrap;
+  background:#F8FAFC;
+  color:var(--text);
+  border-radius:18px;
+  padding:15px;
+  margin:10px 0;
+  border:1px solid var(--border);
+}
+.small{font-size:13px;color:var(--muted)}
+.preview{
+  background:white;
+  color:#111827;
+  border-radius:22px;
+  padding:18px;
+  max-width:570px;
+  border:1px solid var(--border);
+  box-shadow:0 14px 32px rgba(30,41,59,.10);
+}
+.preview-head{display:flex;align-items:center;gap:10px}
+.avatar{
+  width:44px;
+  height:44px;
+  border-radius:50%;
+  background:linear-gradient(135deg,var(--blue),var(--purple));
+}
+.preview-name{font-weight:900}
+.preview-content{white-space:pre-wrap;margin-top:12px;line-height:1.48}
+.library-grid{
+  display:grid;
+  grid-template-columns:repeat(2,1fr);
+  gap:12px;
+}
+.template-card{
+  background:#FFFFFF;
+  color:var(--text);
+  border:1px solid var(--border);
+  border-top:4px solid var(--purple);
+  border-radius:20px;
+  padding:16px;
+  box-shadow:0 12px 26px rgba(124,58,237,.08);
+}
+.rightbar h2{
+  color:transparent;
+  background:linear-gradient(135deg,var(--blue),var(--purple));
+  -webkit-background-clip:text;
+  background-clip:text;
+}
+.rightbar hr{border:none;border-top:1px solid var(--border);margin:18px 0}
+.pricing-grid{
+  display:grid;
+  grid-template-columns:repeat(5,1fr);
+  gap:14px;
+}
+.price-card{
+  background:#FFFFFF;
+  color:#111827;
+  border:1px solid var(--border);
+  border-radius:22px;
+  padding:18px;
+  position:relative;
+  box-shadow:0 18px 38px rgba(124,58,237,.10);
+}
+.price-card h3{
+  margin:0 0 8px;
+  font-size:18px;
+  color:var(--deep);
+}
+.price{
+  font-size:22px;
+  font-weight:800;
+  line-height:1.2;
+  color:transparent;
+  background:linear-gradient(135deg,var(--blue),var(--purple));
+  -webkit-background-clip:text;
+  background-clip:text;
+}
+.price-card ul{
+  padding-left:18px;
+  line-height:1.7;
+  color:#334155;
+}
+.popular{
+  border:2px solid var(--purple);
+  transform:translateY(-6px);
+}
+.ribbon{
+  position:absolute;
+  top:-13px;
+  left:18px;
+  background:linear-gradient(135deg,var(--blue),var(--purple));
+  color:white;
+  padding:6px 12px;
+  border-radius:999px;
+  font-weight:900;
+  font-size:12px;
+}
+.premium-lock{
+  background:linear-gradient(135deg,#EEF2FF,#F5F3FF);
+  color:#1E1B4B;
+  border-radius:22px;
+  padding:20px;
+  border:1px solid #DDD6FE;
+}
+.mobilebar{display:none}
+@media(max-width:1100px){
+  .layout{grid-template-columns:230px 1fr}
+  .rightbar{display:none}
+  .grid4{grid-template-columns:repeat(2,1fr)}
+  .pricing-grid{grid-template-columns:repeat(2,1fr)}
+}
+@media(max-width:820px){
+  .layout{display:block;padding:12px}
+  .sidebar,.rightbar{display:none}
+  .grid,.grid4,.page-list,.library-grid,.pricing-grid{grid-template-columns:1fr}
+  h1{font-size:30px}
+  .panel{padding:18px;border-radius:22px}
+  button{width:100%;font-size:16px}
+  textarea{min-height:160px}
+  .popular{transform:none}
+  .mobilebar{
+    display:flex;
+    position:fixed;
+    bottom:0;
+    left:0;
+    right:0;
+    background:#FFFFFF;
+    border-top:1px solid var(--border);
+    z-index:999;
+    box-shadow:0 -8px 25px rgba(30,41,59,.10);
+  }
+  .mobilebar a{
+    flex:1;
+    text-align:center;
+    color:#1E1B4B;
+    text-decoration:none;
+    padding:10px 4px;
+    font-size:12px;
+  }
+  .mobilebar a:hover{color:var(--purple)}
+  body{padding-bottom:68px}
+}
+
+.analytics-grid{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:14px;
+}
+.analytics-box{
+  background:#F8FAFC;
+  border:1px solid var(--border);
+  border-radius:18px;
+  padding:16px;
+}
+.analytics-row{
+  display:flex;
+  justify-content:space-between;
+  gap:10px;
+  padding:8px 0;
+  border-bottom:1px solid #E5E7EB;
+}
+.premium-center{
+  background:linear-gradient(135deg,#EEF2FF,#F5F3FF);
+  border:1px solid #DDD6FE;
+  border-radius:22px;
+  padding:18px;
+}
+.token-live{color:#047857;font-weight:900}
+.token-dead{color:#B91C1C;font-weight:900}
+@media(max-width:820px){.analytics-grid{grid-template-columns:1fr}}
+
+
+.v9-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
+.v9-card{background:#fff;border:1px solid var(--border);border-radius:20px;padding:16px;box-shadow:0 12px 28px rgba(124,58,237,.08)}
+.lock-card{background:linear-gradient(135deg,#1E1B4B,#312E81);color:white;border-radius:22px;padding:20px;border:1px solid #A78BFA}
+.modal-price{display:none;position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:9999;align-items:center;justify-content:center;padding:20px}
+.modal-inner{background:white;border-radius:28px;max-width:980px;width:100%;max-height:90vh;overflow:auto;padding:22px;color:#111827}
+.close-btn{float:right;background:#F3F4F6;color:#111827;box-shadow:none}
+@media(max-width:820px){.v9-grid{grid-template-columns:1fr}}
+
+
+/* V10 Floating Support Bot + Live Trust Bar */
+.live-trust-bar{
+  position:fixed;
+  top:16px;
+  left:50%;
+  transform:translateX(-50%);
+  z-index:9998;
+  background:rgba(255,255,255,.96);
+  border:1px solid #DDD6FE;
+  box-shadow:0 14px 35px rgba(30,41,59,.14);
+  border-radius:999px;
+  padding:10px 18px;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  color:#1E1B4B;
+  font-weight:800;
+  backdrop-filter:blur(14px);
+}
+.live-dot{
+  width:10px;
+  height:10px;
+  background:#22C55E;
+  border-radius:50%;
+  box-shadow:0 0 0 6px rgba(34,197,94,.14);
+  animation:pulseLive 1.4s infinite;
+}
+@keyframes pulseLive{
+  0%{transform:scale(1);opacity:1}
+  70%{transform:scale(1.35);opacity:.65}
+  100%{transform:scale(1);opacity:1}
+}
+.floating-bot{
+  position:fixed;
+  right:22px;
+  bottom:22px;
+  z-index:9999;
+  font-family:Arial,sans-serif;
+}
+.bot-bubble{
+  width:66px;
+  height:66px;
+  border-radius:50%;
+  border:none;
+  cursor:pointer;
+  background:linear-gradient(135deg,#2563EB,#7C3AED);
+  box-shadow:0 18px 45px rgba(124,58,237,.35);
+  color:white;
+  font-size:30px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  position:relative;
+  animation:botFloat 2.2s ease-in-out infinite;
+}
+@keyframes botFloat{
+  0%,100%{transform:translateY(0)}
+  50%{transform:translateY(-6px)}
+}
+.bot-status{
+  position:absolute;
+  right:0;
+  bottom:2px;
+  width:18px;
+  height:18px;
+  border-radius:50%;
+  background:#22C55E;
+  border:3px solid white;
+}
+.bot-panel{
+  display:none;
+  position:absolute;
+  right:0;
+  bottom:82px;
+  width:340px;
+  max-width:calc(100vw - 28px);
+  background:white;
+  border:1px solid #DDD6FE;
+  border-radius:24px;
+  box-shadow:0 22px 55px rgba(30,41,59,.22);
+  overflow:hidden;
+}
+.bot-head{
+  background:linear-gradient(135deg,#2563EB,#7C3AED);
+  color:white;
+  padding:16px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+}
+.bot-title{
+  font-weight:900;
+}
+.bot-online{
+  font-size:12px;
+  opacity:.95;
+  display:flex;
+  align-items:center;
+  gap:6px;
+}
+.typing-dots{
+  display:inline-flex;
+  gap:3px;
+  margin-left:4px;
+}
+.typing-dots span{
+  width:5px;
+  height:5px;
+  border-radius:50%;
+  background:white;
+  display:block;
+  animation:typingDot 1s infinite ease-in-out;
+}
+.typing-dots span:nth-child(2){animation-delay:.15s}
+.typing-dots span:nth-child(3){animation-delay:.3s}
+@keyframes typingDot{
+  0%,80%,100%{transform:translateY(0);opacity:.55}
+  40%{transform:translateY(-4px);opacity:1}
+}
+.bot-close{
+  background:rgba(255,255,255,.18);
+  border:none;
+  color:white;
+  box-shadow:none;
+  width:32px;
+  height:32px;
+  border-radius:50%;
+  padding:0;
+  margin:0;
+}
+.bot-body{
+  padding:16px;
+  max-height:360px;
+  overflow:auto;
+  background:#F8FAFC;
+}
+.bot-msg{
+  background:white;
+  border:1px solid #E5E7EB;
+  border-radius:18px;
+  padding:12px;
+  margin-bottom:10px;
+  line-height:1.45;
+  color:#111827;
+}
+.bot-msg.ai{
+  border-left:4px solid #7C3AED;
+}
+.bot-actions{
+  display:grid;
+  grid-template-columns:1fr;
+  gap:8px;
+  padding:14px 16px 16px;
+  background:white;
+}
+.bot-actions button,.bot-actions a{
+  display:block;
+  text-align:center;
+  text-decoration:none;
+  background:linear-gradient(135deg,#2563EB,#7C3AED);
+  color:white;
+  border-radius:14px;
+  padding:12px;
+  font-weight:900;
+  border:none;
+  box-shadow:0 10px 22px rgba(37,99,235,.18);
+}
+.bot-actions .light{
+  background:#EEF2FF;
+  color:#4C1D95;
+  border:1px solid #DDD6FE;
+  box-shadow:none;
+}
+.bot-input{
+  display:flex;
+  gap:8px;
+  padding:0 16px 16px;
+  background:white;
+}
+.bot-input input{
+  flex:1;
+  margin:0;
+}
+.bot-input button{
+  margin:0;
+  padding:12px 14px;
+}
+@media(max-width:820px){
+  .live-trust-bar{
+    top:8px;
+    width:calc(100vw - 24px);
+    justify-content:center;
+    font-size:12px;
+    padding:9px 10px;
+  }
+  .floating-bot{right:14px;bottom:78px}
+  .bot-panel{width:320px}
+}
+
+
+/* V10 SaaS Center Layout */
+.top-hero{
+  padding:34px;
+  border-radius:32px;
+  background:
+    radial-gradient(circle at top left,rgba(37,99,235,.18),transparent 34%),
+    radial-gradient(circle at top right,rgba(124,58,237,.18),transparent 32%),
+    rgba(255,255,255,.96);
+  border:1px solid #DDD6FE;
+  box-shadow:0 22px 55px rgba(30,41,59,.12);
+  margin-bottom:20px;
+}
+.hero-line{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding:10px 16px;
+  background:#EEF2FF;
+  border:1px solid #DDD6FE;
+  color:#4C1D95;
+  border-radius:999px;
+  font-weight:900;
+}
+.hero-actions{
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+  margin-top:18px;
+}
+.module-hub{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:16px;
+  margin-top:18px;
+}
+.module-card{
+  background:#FFFFFF;
+  border:1px solid #E5E7EB;
+  border-radius:24px;
+  padding:20px;
+  min-height:158px;
+  cursor:pointer;
+  box-shadow:0 14px 32px rgba(30,41,59,.08);
+  transition:.18s ease;
+  position:relative;
+  overflow:hidden;
+}
+.module-card:before{
+  content:"";
+  position:absolute;
+  inset:0;
+  background:linear-gradient(135deg,rgba(37,99,235,.08),rgba(124,58,237,.08));
+  opacity:0;
+  transition:.18s ease;
+}
+.module-card:hover{
+  transform:translateY(-5px);
+  border-color:#A78BFA;
+  box-shadow:0 20px 45px rgba(124,58,237,.16);
+}
+.module-card:hover:before{opacity:1}
+.module-card .icon{
+  font-size:32px;
+  margin-bottom:10px;
+  position:relative;
+}
+.module-card h3{
+  margin:0 0 8px;
+  color:#1E1B4B;
+  position:relative;
+}
+.module-card p{
+  margin:0;
+  color:#64748B;
+  font-size:13px;
+  line-height:1.45;
+  position:relative;
+}
+.module-pill{
+  display:inline-block;
+  margin-top:12px;
+  font-size:12px;
+  font-weight:900;
+  color:#4C1D95;
+  background:#F5F3FF;
+  border:1px solid #DDD6FE;
+  border-radius:999px;
+  padding:6px 10px;
+  position:relative;
+}
+.module-section{
+  display:none;
+}
+.module-section.active-module{
+  display:block;
+}
+.section-open-note{
+  margin-bottom:14px;
+  background:#EEF2FF;
+  border:1px solid #DDD6FE;
+  border-radius:18px;
+  padding:12px 14px;
+  color:#4C1D95;
+  font-weight:800;
+}
+.price-bottom-title{
+  text-align:center;
+  margin:34px 0 18px;
+}
+.price-bottom-title h2{
+  font-size:34px;
+  margin-bottom:8px;
+  background:linear-gradient(135deg,#2563EB,#7C3AED);
+  color:transparent;
+  -webkit-background-clip:text;
+  background-clip:text;
+}
+@media(max-width:1200px){
+  .module-hub{grid-template-columns:repeat(3,1fr)}
+}
+@media(max-width:820px){
+  .module-hub{grid-template-columns:repeat(2,1fr)}
+  .top-hero{padding:22px}
+  .module-card{min-height:140px;padding:16px}
+}
+@media(max-width:520px){
+  .module-hub{grid-template-columns:1fr}
+}
+
+
+#ai-output-box{
+  border:2px solid #DDD6FE;
+  box-shadow:0 22px 50px rgba(124,58,237,.14);
+}
+#aiGeneratedContent{
+  font-size:15px;
+  line-height:1.65;
+  max-height:520px;
+  overflow:auto;
+  background:#FFFFFF;
+}
+.pricing-visible{
+  display:block !important;
+}
 
 
 
+/* Premium badge near Device ID */
+.device-id-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:6px 0 4px}
+.premium-glow-badge{display:inline-flex;align-items:center;justify-content:center;padding:5px 10px;border-radius:999px;background:linear-gradient(135deg,#16a34a,#22c55e,#86efac);color:#052e16;font-size:11px;font-weight:1000;letter-spacing:.8px;box-shadow:0 0 0 1px rgba(187,247,208,.9),0 0 18px rgba(34,197,94,.85),inset 0 0 10px rgba(255,255,255,.55);animation:premiumPulse 1.6s ease-in-out infinite}
+@keyframes premiumPulse{0%,100%{filter:brightness(1);box-shadow:0 0 0 1px rgba(187,247,208,.9),0 0 14px rgba(34,197,94,.65),inset 0 0 10px rgba(255,255,255,.45)}50%{filter:brightness(1.25);box-shadow:0 0 0 1px rgba(187,247,208,1),0 0 28px rgba(34,197,94,1),inset 0 0 14px rgba(255,255,255,.75)}}
+
+/* Premium Pricing Pro */
+.premium-pricing-pro{
+  background:
+    radial-gradient(circle at top left,rgba(37,99,235,.18),transparent 32%),
+    radial-gradient(circle at top right,rgba(124,58,237,.18),transparent 30%),
+    linear-gradient(135deg,#FFFFFF,#F8FAFC);
+  border:1px solid #DDD6FE;
+  border-radius:32px;
+  padding:30px;
+  box-shadow:0 24px 60px rgba(30,41,59,.12);
+}
+.premium-title{
+  text-align:center;
+  margin-bottom:24px;
+}
+.premium-title .mini{
+  display:inline-block;
+  background:linear-gradient(135deg,#2563EB,#7C3AED);
+  color:white;
+  padding:9px 16px;
+  border-radius:999px;
+  font-weight:900;
+  margin-bottom:10px;
+}
+.premium-title h2{
+  font-size:38px;
+  margin:6px 0;
+  color:transparent;
+  background:linear-gradient(135deg,#2563EB,#7C3AED);
+  -webkit-background-clip:text;
+  background-clip:text;
+}
+.premium-title p{
+  max-width:760px;
+  margin:8px auto 0;
+}
+.premium-grid-pro{
+  display:grid;
+  grid-template-columns:repeat(5,1fr);
+  gap:16px;
+  align-items:stretch;
+}
+.premium-plan{
+  background:white;
+  border:1px solid #E5E7EB;
+  border-radius:26px;
+  padding:20px;
+  position:relative;
+  box-shadow:0 18px 42px rgba(30,41,59,.10);
+  transition:.18s ease;
+  display:flex;
+  flex-direction:column;
+}
+.premium-plan:hover{
+  transform:translateY(-6px);
+  border-color:#A78BFA;
+  box-shadow:0 24px 55px rgba(124,58,237,.18);
+}
+.premium-plan.featured{
+  border:2px solid #7C3AED;
+  background:linear-gradient(180deg,#FFFFFF,#F5F3FF);
+}
+.plan-ribbon{
+  position:absolute;
+  top:-14px;
+  left:18px;
+  background:linear-gradient(135deg,#2563EB,#7C3AED);
+  color:white;
+  padding:7px 13px;
+  border-radius:999px;
+  font-size:12px;
+  font-weight:900;
+}
+.plan-name{
+  font-size:18px;
+  font-weight:900;
+  color:#1E1B4B;
+  margin-top:8px;
+}
+.plan-price{
+  font-size:24px;
+  font-weight:900;
+  margin:8px 0 4px;
+  color:transparent;
+  background:linear-gradient(135deg,#2563EB,#7C3AED);
+  -webkit-background-clip:text;
+  background-clip:text;
+}
+.plan-desc{
+  font-size:13px;
+  color:#64748B;
+  min-height:42px;
+}
+.benefit-title{
+  font-weight:900;
+  color:#1E1B4B;
+  margin:12px 0 8px;
+}
+.benefit-list{
+  list-style:none;
+  padding:0;
+  margin:0;
+  font-size:13px;
+  line-height:1.55;
+}
+.benefit-list li{
+  padding:5px 0;
+  border-bottom:1px dashed #EEF2FF;
+}
+.benefit-list .open:before{content:"✓ ";color:#047857;font-weight:900}
+.benefit-list .lock:before{content:"🔒 ";color:#B45309;font-weight:900}
+.plan-button{
+  margin-top:auto;
+  width:100%;
+}
+.premium-note-box{
+  margin-top:20px;
+  background:#EEF2FF;
+  border:1px solid #DDD6FE;
+  color:#4C1D95;
+  border-radius:22px;
+  padding:16px;
+  line-height:1.55;
+}
+.payment-modal{
+  display:none;
+  position:fixed;
+  inset:0;
+  background:rgba(15,23,42,.65);
+  z-index:10000;
+  align-items:center;
+  justify-content:center;
+  padding:18px;
+}
+.payment-inner{
+  width:min(980px,96vw);
+  max-height:92vh;
+  overflow:auto;
+  background:white;
+  border-radius:32px;
+  box-shadow:0 30px 85px rgba(15,23,42,.38);
+  border:1px solid #DDD6FE;
+  padding:0;
+}
+.payment-head{
+  background:
+    radial-gradient(circle at top left,rgba(255,255,255,.25),transparent 35%),
+    linear-gradient(135deg,#2563EB,#7C3AED);
+  color:white;
+  padding:24px;
+  display:flex;
+  justify-content:space-between;
+  gap:14px;
+  align-items:flex-start;
+}
+.payment-head h2{
+  color:white;
+  margin:0 0 6px;
+}
+.payment-close{
+  background:rgba(255,255,255,.18);
+  color:white;
+  box-shadow:none;
+  border:1px solid rgba(255,255,255,.25);
+  width:auto;
+  margin:0;
+}
+.payment-body{
+  display:grid;
+  grid-template-columns:330px 1fr;
+  gap:22px;
+  padding:24px;
+}
+.qr-card{
+  background:#F8FAFC;
+  border:1px solid #E5E7EB;
+  border-radius:26px;
+  padding:18px;
+  text-align:center;
+}
+.qr-card img{
+  width:250px;
+  max-width:100%;
+  border-radius:18px;
+  border:1px solid #E5E7EB;
+  background:white;
+  padding:8px;
+}
+.bank-info{
+  margin-top:12px;
+  text-align:left;
+  background:white;
+  border:1px solid #E5E7EB;
+  border-radius:18px;
+  padding:14px;
+  line-height:1.7;
+}
+.payment-detail{
+  background:white;
+  border:1px solid #E5E7EB;
+  border-radius:26px;
+  padding:18px;
+}
+.payment-detail h3{
+  margin-top:0;
+  color:#1E1B4B;
+}
+.pay-amount{
+  font-size:34px;
+  font-weight:900;
+  color:transparent;
+  background:linear-gradient(135deg,#2563EB,#7C3AED);
+  -webkit-background-clip:text;
+  background-clip:text;
+}
+.payment-benefits{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+  margin:12px 0;
+}
+.payment-benefits div{
+  background:#F8FAFC;
+  border:1px solid #E5E7EB;
+  border-radius:14px;
+  padding:10px;
+  font-size:13px;
+}
+.payment-alert{
+  margin-top:14px;
+  background:#FFF7ED;
+  border:1px solid #FDBA74;
+  color:#9A3412;
+  border-radius:18px;
+  padding:14px;
+  line-height:1.55;
+}
+.payment-actions{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  margin-top:14px;
+}
+.payment-actions a{
+  display:inline-block;
+  text-decoration:none;
+  background:linear-gradient(135deg,#2563EB,#7C3AED);
+  color:white;
+  padding:13px 16px;
+  border-radius:14px;
+  font-weight:900;
+}
+.payment-actions .light{
+  background:#EEF2FF;
+  color:#4C1D95;
+  border:1px solid #DDD6FE;
+}
+.permission-db{
+  margin-top:20px;
+  background:#0F172A;
+  color:#E5E7EB;
+  border-radius:22px;
+  padding:18px;
+  overflow:auto;
+  font-size:13px;
+}
+.permission-db code{
+  color:#A7F3D0;
+  white-space:pre-wrap;
+}
+@media(max-width:1200px){
+  .premium-grid-pro{grid-template-columns:repeat(2,1fr)}
+}
+@media(max-width:820px){
+  .premium-pricing-pro{padding:18px}
+  .premium-grid-pro{grid-template-columns:1fr}
+  .payment-body{grid-template-columns:1fr}
+  .payment-benefits{grid-template-columns:1fr}
+}
+
+
+/* Free + Premium Stable */
+.free-status-card{
+  background:linear-gradient(135deg,#EEF2FF,#F5F3FF);
+  border:1px solid #DDD6FE;
+  color:#1E1B4B;
+  border-radius:22px;
+  padding:16px;
+  margin:14px 0;
+}
+.free-progress{
+  width:100%;
+  height:12px;
+  background:#E5E7EB;
+  border-radius:999px;
+  overflow:hidden;
+  margin:10px 0;
+}
+.free-progress span{
+  display:block;
+  height:100%;
+  background:linear-gradient(135deg,#2563EB,#7C3AED);
+  border-radius:999px;
+}
+.free-expired{
+  background:#FEF2F2;
+  border-color:#FCA5A5;
+  color:#991B1B;
+}
+.premium-story{
+  margin:20px 0;
+  background:linear-gradient(135deg,#0F172A,#1E1B4B);
+  color:white;
+  border-radius:28px;
+  padding:24px;
+  box-shadow:0 22px 55px rgba(30,27,75,.20);
+}
+.premium-story h3{
+  margin-top:0;
+  color:white;
+  font-size:26px;
+}
+.premium-story p{
+  color:#E0E7FF;
+  line-height:1.65;
+}
+.why-premium{
+  margin-top:22px;
+  display:grid;
+  grid-template-columns:repeat(2,1fr);
+  gap:12px;
+}
+.why-item{
+  background:white;
+  border:1px solid #E5E7EB;
+  border-radius:18px;
+  padding:14px;
+  color:#1E1B4B;
+  box-shadow:0 12px 28px rgba(30,41,59,.06);
+  font-weight:800;
+}
+.locked-demo{
+  background:#FFF7ED;
+  border:1px solid #FDBA74;
+  color:#9A3412;
+  border-radius:18px;
+  padding:14px;
+  margin-top:12px;
+}
+.lock-modal{
+  display:none;
+  position:fixed;
+  inset:0;
+  background:rgba(15,23,42,.65);
+  z-index:10001;
+  align-items:center;
+  justify-content:center;
+  padding:18px;
+}
+.lock-inner{
+  background:white;
+  border-radius:28px;
+  max-width:560px;
+  width:100%;
+  padding:24px;
+  box-shadow:0 30px 80px rgba(15,23,42,.35);
+  border:1px solid #DDD6FE;
+}
+.lock-inner h2{
+  margin-top:0;
+  color:#1E1B4B;
+}
+@media(max-width:820px){
+  .why-premium{grid-template-columns:1fr}
+}
+
+
+/* ===== GPT MINI MENU UPGRADE - PROFESSIONAL SAAS ===== */
+.menu-upgrade-note{
+  margin-top:14px;
+  padding:14px;
+  border-radius:18px;
+  background:linear-gradient(135deg,rgba(37,99,235,.12),rgba(124,58,237,.12));
+  border:1px solid rgba(167,139,250,.45);
+  color:#E0E7FF;
+  font-size:12px;
+  line-height:1.55;
+}
+.menu-mini-group{
+  margin:10px 0;
+  border-radius:18px;
+  overflow:hidden;
+  border:1px solid rgba(255,255,255,.08);
+  background:rgba(255,255,255,.045);
+}
+.menu-mini-title{
+  padding:12px 14px;
+  color:#FFFFFF;
+  font-weight:900;
+  cursor:pointer;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+}
+.menu-mini-title small{
+  color:#CBD5E1;
+  font-weight:700;
+}
+.menu-mini-title:hover{
+  background:linear-gradient(135deg,rgba(37,99,235,.55),rgba(124,58,237,.55));
+}
+.menu-mini-items{
+  display:none;
+  padding:6px 8px 10px;
+}
+.menu-mini-group.open .menu-mini-items{
+  display:block;
+}
+.menu-mini-item{
+  display:block;
+  padding:10px 12px;
+  margin:5px 0;
+  border-radius:14px;
+  color:#E5E7EB;
+  text-decoration:none;
+  font-size:13px;
+  background:rgba(255,255,255,.05);
+  border:1px solid rgba(255,255,255,.06);
+}
+.menu-mini-item:hover{
+  color:white;
+  background:linear-gradient(135deg,#2563EB,#7C3AED);
+  transform:translateX(3px);
+}
+.clean-hero-pro{
+  padding:34px;
+  border-radius:32px;
+  background:
+    radial-gradient(circle at top left,rgba(37,99,235,.20),transparent 34%),
+    radial-gradient(circle at top right,rgba(124,58,237,.18),transparent 32%),
+    rgba(255,255,255,.97);
+  border:1px solid #DDD6FE;
+  box-shadow:0 22px 55px rgba(30,41,59,.12);
+  margin-bottom:20px;
+}
+.clean-hero-pro h1{
+  margin-top:12px;
+}
+.clean-pill-row{
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+  margin-top:18px;
+}
+.clean-pill{
+  padding:10px 14px;
+  border-radius:999px;
+  background:#EEF2FF;
+  color:#4C1D95;
+  font-weight:900;
+  border:1px solid #DDD6FE;
+  font-size:13px;
+}
+.free-status-box{
+  background:linear-gradient(135deg,#EEF2FF,#F5F3FF);
+  border:1px solid #DDD6FE;
+  color:#4C1D95;
+  border-radius:18px;
+  padding:14px;
+  font-weight:800;
+  line-height:1.55;
+}
+
+
+/* ===== SAFE CLEAN MENU + PRICING ONLY ===== */
+.safe-menu-title{
+  margin:14px 0 8px;
+  padding:0 6px;
+  font-size:11px;
+  font-weight:900;
+  letter-spacing:.08em;
+  color:#A5B4FC;
+  text-transform:uppercase;
+}
+.safe-menu-link{
+  display:flex!important;
+  align-items:center;
+  gap:10px;
+  padding:13px 14px!important;
+  border-radius:16px!important;
+  color:#F8FAFC!important;
+  text-decoration:none!important;
+  margin:7px 0!important;
+  background:rgba(255,255,255,.06)!important;
+  border:1px solid rgba(255,255,255,.08)!important;
+  transition:.18s ease!important;
+}
+.safe-menu-link:hover{
+  background:linear-gradient(135deg,#2563EB,#7C3AED)!important;
+  transform:translateX(3px)!important;
+}
+.safe-menu-link .safe-ico{
+  width:26px;
+  height:26px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  border-radius:10px;
+  background:rgba(255,255,255,.10);
+}
+.safe-menu-link .safe-text{
+  flex:1;
+  font-weight:800;
+}
+.safe-menu-link .safe-tag{
+  font-size:10px;
+  padding:4px 7px;
+  border-radius:999px;
+  color:#DDD6FE;
+  background:rgba(124,58,237,.18);
+  border:1px solid rgba(221,214,254,.18);
+}
+.safe-premium-box{
+  margin-top:14px;
+  padding:14px;
+  border-radius:18px;
+  background:linear-gradient(135deg,rgba(37,99,235,.15),rgba(124,58,237,.16));
+  border:1px solid rgba(221,214,254,.22);
+  color:#E0E7FF;
+  font-size:12px;
+  line-height:1.55;
+}
+.safe-pricing-action{
+  display:block;
+  width:100%;
+  margin-top:12px;
+  text-align:center;
+  border-radius:14px;
+  padding:12px 14px;
+  font-weight:900;
+  cursor:pointer;
+  background:linear-gradient(135deg,#2563EB,#7C3AED);
+  color:white;
+  text-decoration:none;
+  border:0;
+}
+.price-card,.premium-plan{
+  cursor:pointer;
+}
+.price-card:hover,.premium-plan:hover{
+  transform:translateY(-4px);
+  border-color:#A78BFA!important;
+}
+
+
+/* ===== MKT AUTOMATION PRO - APP MINI PWA MODE ===== */
+:root{
+  --app-dark:#0F172A;
+  --app-primary:#2563EB;
+  --app-premium:#7C3AED;
+  --app-accent:#06B6D4;
+}
+.app-shell-top{
+  position:sticky;
+  top:0;
+  z-index:9000;
+  background:rgba(15,23,42,.94);
+  backdrop-filter:blur(16px);
+  color:white;
+  border-bottom:1px solid rgba(255,255,255,.10);
+  padding:14px 16px;
+  display:none;
+}
+.app-shell-brand{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+}
+.app-shell-brand b{
+  font-size:17px;
+}
+.app-shell-status{
+  font-size:11px;
+  color:#C7D2FE;
+  margin-top:4px;
+}
+.app-quick-grid{
+  display:grid;
+  grid-template-columns:repeat(2,1fr);
+  gap:12px;
+  margin:18px 0;
+}
+.app-quick-card{
+  border:1px solid #E5E7EB;
+  border-radius:22px;
+  background:white;
+  padding:18px;
+  box-shadow:0 14px 30px rgba(15,23,42,.08);
+  cursor:pointer;
+}
+.app-quick-card:hover{
+  transform:translateY(-3px);
+  border-color:#A78BFA;
+}
+.app-quick-card .app-ico{
+  width:44px;
+  height:44px;
+  border-radius:16px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:linear-gradient(135deg,#2563EB,#7C3AED);
+  color:white;
+  font-size:22px;
+  margin-bottom:10px;
+}
+.app-quick-card b{
+  color:#0F172A;
+  display:block;
+  margin-bottom:6px;
+}
+.app-quick-card span{
+  color:#64748B;
+  font-size:12px;
+  line-height:1.45;
+}
+.app-bottom-nav{
+  display:none;
+  position:fixed;
+  left:0;
+  right:0;
+  bottom:0;
+  z-index:9998;
+  background:rgba(255,255,255,.96);
+  backdrop-filter:blur(14px);
+  border-top:1px solid #E5E7EB;
+  box-shadow:0 -10px 30px rgba(15,23,42,.12);
+}
+.app-bottom-nav a{
+  flex:1;
+  text-align:center;
+  padding:9px 3px 8px;
+  color:#475569;
+  text-decoration:none;
+  font-size:11px;
+  font-weight:800;
+}
+.app-bottom-nav a span{
+  display:block;
+  font-size:20px;
+  margin-bottom:2px;
+}
+.app-install-banner{
+  display:none;
+  background:linear-gradient(135deg,#0F172A,#312E81);
+  color:white;
+  border-radius:24px;
+  padding:18px;
+  margin:16px 0;
+  box-shadow:0 18px 45px rgba(15,23,42,.20);
+}
+.app-install-banner button{
+  margin-top:10px;
+  width:100%;
+}
+@media(max-width:820px){
+  body{
+    background:#F8FAFC!important;
+    padding-bottom:78px!important;
+  }
+  .app-shell-top{display:block}
+  .layout{
+    display:block!important;
+    padding:12px!important;
+    max-width:100%!important;
+  }
+  .sidebar,.rightbar,.live-trust-bar{
+    display:none!important;
+  }
+  .panel,.top-hero,.premium-pricing-pro{
+    border-radius:24px!important;
+    padding:18px!important;
+    margin-bottom:14px!important;
+  }
+  h1{
+    font-size:28px!important;
+    line-height:1.15!important;
+  }
+  .hero-actions{
+    display:grid!important;
+    grid-template-columns:1fr!important;
+  }
+  .module-hub,.grid4,.pricing-grid,.premium-grid-pro{
+    grid-template-columns:1fr!important;
+    gap:12px!important;
+  }
+  .app-bottom-nav{
+    display:flex!important;
+  }
+  .app-install-banner{
+    display:block!important;
+  }
+  .floating-bot{
+    bottom:88px!important;
+    right:14px!important;
+  }
+  .mobilebar{
+    display:none!important;
+  }
+}
+
+
+/* ===== MKT AUTOMATION PRO V2 - SAFE FINAL UI ===== */
+:root{
+  --v2-dark:#0F172A;
+  --v2-card:#FFFFFF;
+  --v2-blue:#2563EB;
+  --v2-purple:#7C3AED;
+  --v2-cyan:#06B6D4;
+  --v2-soft:#EEF2FF;
+  --v2-line:#E5E7EB;
+}
+.v2-desktop-shell{
+  display:block;
+}
+.v2-topbar{
+  position:sticky;
+  top:0;
+  z-index:8000;
+  display:none;
+  padding:14px 16px;
+  background:rgba(15,23,42,.95);
+  color:white;
+  backdrop-filter:blur(16px);
+  border-bottom:1px solid rgba(255,255,255,.10);
+}
+.v2-brand-row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+}
+.v2-brand-title{
+  font-size:17px;
+  font-weight:1000;
+}
+.v2-brand-sub{
+  font-size:11px;
+  color:#C7D2FE;
+  margin-top:3px;
+}
+.v2-status-pill{
+  font-size:11px;
+  font-weight:900;
+  padding:7px 10px;
+  border-radius:999px;
+  background:rgba(34,197,94,.16);
+  border:1px solid rgba(34,197,94,.24);
+  color:#BBF7D0;
+}
+.v2-nav-title{
+  margin:14px 0 8px;
+  padding:0 6px;
+  font-size:11px;
+  font-weight:900;
+  letter-spacing:.08em;
+  color:#A5B4FC;
+  text-transform:uppercase;
+}
+.v2-nav-link{
+  display:flex!important;
+  align-items:center;
+  gap:10px;
+  padding:13px 14px!important;
+  border-radius:16px!important;
+  color:#F8FAFC!important;
+  text-decoration:none!important;
+  margin:7px 0!important;
+  background:rgba(255,255,255,.06)!important;
+  border:1px solid rgba(255,255,255,.08)!important;
+  transition:.18s ease!important;
+}
+.v2-nav-link:hover{
+  background:linear-gradient(135deg,#2563EB,#7C3AED)!important;
+  transform:translateX(3px)!important;
+}
+.v2-nav-ico{
+  width:28px;
+  height:28px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  border-radius:10px;
+  background:rgba(255,255,255,.10);
+}
+.v2-nav-text{flex:1;font-weight:850}
+.v2-nav-tag{
+  font-size:10px;
+  padding:4px 7px;
+  border-radius:999px;
+  color:#DDD6FE;
+  background:rgba(124,58,237,.20);
+  border:1px solid rgba(221,214,254,.20);
+}
+.v2-side-card{
+  margin-top:14px;
+  padding:15px;
+  border-radius:20px;
+  background:linear-gradient(135deg,rgba(37,99,235,.16),rgba(124,58,237,.18));
+  border:1px solid rgba(221,214,254,.22);
+  color:#E0E7FF;
+  font-size:12px;
+  line-height:1.55;
+}
+.v2-hero{
+  background:
+    radial-gradient(circle at top left,rgba(37,99,235,.22),transparent 34%),
+    radial-gradient(circle at top right,rgba(124,58,237,.20),transparent 34%),
+    linear-gradient(135deg,#FFFFFF,#F8FAFC);
+  border:1px solid #DDD6FE;
+  border-radius:32px;
+  padding:28px;
+  margin-bottom:20px;
+  box-shadow:0 22px 55px rgba(30,41,59,.12);
+}
+.v2-hero-kicker{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding:10px 15px;
+  border-radius:999px;
+  background:#EEF2FF;
+  color:#4C1D95;
+  font-weight:1000;
+  border:1px solid #DDD6FE;
+}
+.v2-hero h1{
+  margin:14px 0 8px;
+}
+.v2-hero-desc{
+  max-width:820px;
+  color:#64748B;
+  font-size:15px;
+  line-height:1.6;
+}
+.v2-quick-grid{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:14px;
+  margin-top:20px;
+}
+.v2-quick-card{
+  background:white;
+  border:1px solid #E5E7EB;
+  border-radius:24px;
+  padding:18px;
+  box-shadow:0 14px 32px rgba(15,23,42,.08);
+  cursor:pointer;
+  transition:.18s ease;
+}
+.v2-quick-card:hover{
+  transform:translateY(-4px);
+  border-color:#A78BFA;
+  box-shadow:0 20px 45px rgba(124,58,237,.14);
+}
+.v2-quick-ico{
+  width:46px;
+  height:46px;
+  border-radius:17px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  color:white;
+  font-size:22px;
+  background:linear-gradient(135deg,#2563EB,#7C3AED);
+  margin-bottom:12px;
+}
+.v2-quick-card b{
+  display:block;
+  color:#0F172A;
+  margin-bottom:6px;
+}
+.v2-quick-card span{
+  color:#64748B;
+  font-size:12px;
+  line-height:1.45;
+}
+.v2-install-box{
+  display:none;
+  margin-top:16px;
+  border-radius:22px;
+  padding:16px;
+  color:white;
+  background:linear-gradient(135deg,#0F172A,#312E81);
+  box-shadow:0 18px 45px rgba(15,23,42,.18);
+}
+.v2-bottom-nav{
+  display:none;
+  position:fixed;
+  left:0;
+  right:0;
+  bottom:0;
+  z-index:9999;
+  background:rgba(255,255,255,.97);
+  backdrop-filter:blur(14px);
+  border-top:1px solid #E5E7EB;
+  box-shadow:0 -10px 30px rgba(15,23,42,.12);
+}
+.v2-bottom-nav a{
+  flex:1;
+  text-align:center;
+  padding:9px 3px 8px;
+  color:#475569;
+  text-decoration:none;
+  font-size:11px;
+  font-weight:900;
+}
+.v2-bottom-nav span{
+  display:block;
+  font-size:20px;
+  margin-bottom:2px;
+}
+.v2-pricing-action{
+  display:block;
+  width:100%;
+  margin-top:12px;
+  text-align:center;
+  border-radius:14px;
+  padding:12px 14px;
+  font-weight:1000;
+  cursor:pointer;
+  background:linear-gradient(135deg,#2563EB,#7C3AED);
+  color:white;
+  text-decoration:none;
+  border:0;
+}
+.price-card,.premium-plan{cursor:pointer}
+.price-card:hover,.premium-plan:hover{
+  transform:translateY(-5px);
+  border-color:#A78BFA!important;
+}
+@media(max-width:1100px){
+  .v2-quick-grid{grid-template-columns:repeat(2,1fr)}
+}
+@media(max-width:820px){
+  body{
+    background:#F8FAFC!important;
+    padding-bottom:78px!important;
+  }
+  .v2-topbar{display:block!important}
+  .layout{
+    display:block!important;
+    max-width:100%!important;
+    padding:12px!important;
+  }
+  .sidebar,.rightbar,.live-trust-bar,.mobilebar{
+    display:none!important;
+  }
+  .panel,.top-hero,.premium-pricing-pro,.v2-hero{
+    border-radius:24px!important;
+    padding:18px!important;
+    margin-bottom:14px!important;
+  }
+  h1{font-size:28px!important;line-height:1.15!important}
+  .v2-quick-grid,.module-hub,.grid4,.pricing-grid,.premium-grid-pro{
+    grid-template-columns:1fr!important;
+    gap:12px!important;
+  }
+  .v2-install-box{display:block!important}
+  .v2-bottom-nav{display:flex!important}
+  .floating-bot{
+    right:14px!important;
+    bottom:88px!important;
+  }
+}
+
+
+
+/* V3 Enterprise Add-on */
+.v3-kpi-title{margin-top:18px;background:#EEF2FF;border:1px solid #DDD6FE;color:#4C1D95;padding:12px 16px;border-radius:18px;font-weight:800}
+.v3-ceo-grid .stat small{display:block;color:#64748B;margin-top:6px;font-size:12px}
+
+.v5-seller-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px;margin:14px 0}
+.v5-tool-card{background:#fff;border:1px solid var(--border);border-radius:22px;padding:16px;box-shadow:0 12px 28px rgba(37,99,235,.08)}
+.v5-tool-card h3{margin:0 0 8px;color:#1E1B4B}.v5-tool-card ul{padding-left:18px;line-height:1.7;color:#334155}
+.v5-status-pill{display:inline-block;border-radius:999px;padding:6px 10px;font-size:12px;font-weight:900;background:#ECFDF5;color:#047857;border:1px solid #A7F3D0}
+.v5-warning-pill{display:inline-block;border-radius:999px;padding:6px 10px;font-size:12px;font-weight:900;background:#FEF3C7;color:#92400E;border:1px solid #FCD34D}
+.v5-table{width:100%;border-collapse:separate;border-spacing:0 8px}.v5-table th{text-align:left;color:#64748B;font-size:13px}.v5-table td{background:#F8FAFC;border-top:1px solid #E5E7EB;border-bottom:1px solid #E5E7EB;padding:10px}.v5-table td:first-child{border-left:1px solid #E5E7EB;border-radius:14px 0 0 14px}.v5-table td:last-child{border-right:1px solid #E5E7EB;border-radius:0 14px 14px 0}
+
+.v3-feature-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin-top:14px}
+.v3-feature-card{background:#fff;border:1px solid var(--border);border-radius:22px;padding:18px;box-shadow:0 12px 28px rgba(30,41,59,.08)}
+.v3-feature-card h3{margin:0 0 8px;color:#1E1B4B}.v3-feature-card ul{margin:8px 0 0;padding-left:18px;line-height:1.65;color:#334155}
+.v3-premium-badge{display:inline-block;background:linear-gradient(135deg,#2563EB,#7C3AED);color:white;border-radius:999px;padding:6px 10px;font-size:12px;font-weight:900;margin-bottom:8px}
+.kanban-board{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-top:14px}.kanban-col{background:#F8FAFC;border:1px solid #E5E7EB;border-radius:18px;padding:12px;min-height:180px}.kanban-col h3{font-size:15px;margin:0 0 10px;color:#1E1B4B}.kanban-card{background:white;border:1px solid #DDD6FE;border-left:4px solid #7C3AED;border-radius:14px;padding:10px;margin-bottom:10px;cursor:grab;box-shadow:0 8px 18px rgba(124,58,237,.08)}
+.v3-mini-table{width:100%;border-collapse:collapse}.v3-mini-table td,.v3-mini-table th{border-bottom:1px solid #EEF2FF;padding:10px;text-align:left}.v3-mini-table th{color:#1E1B4B}
+@media(max-width:1000px){.kanban-board{grid-template-columns:1fr 1fr}.v3-feature-grid{grid-template-columns:1fr}}
+@media(max-width:620px){.kanban-board{grid-template-columns:1fr}}
+
+
+/* ===== V4 PREMIUM CONVERSION UPGRADE ===== */
+.v4-trust-grid,.v4-pricing-stats{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:14px;
+  margin:18px 0;
+}
+.v4-trust-card,.v4-pricing-stats div{
+  background:linear-gradient(135deg,#FFFFFF,#F8FAFC);
+  border:1px solid #DDD6FE;
+  border-radius:22px;
+  padding:16px;
+  text-align:center;
+  box-shadow:0 14px 32px rgba(30,41,59,.08);
+}
+.v4-trust-card b,.v4-pricing-stats b{
+  display:block;
+  font-size:26px;
+  color:transparent;
+  background:linear-gradient(135deg,#2563EB,#7C3AED);
+  -webkit-background-clip:text;
+  background-clip:text;
+}
+.v4-trust-card span,.v4-pricing-stats span{font-size:13px;color:#64748B;font-weight:800}
+.v4-premium-hero{
+  background:radial-gradient(circle at top left,rgba(37,99,235,.12),transparent 34%),linear-gradient(135deg,#FFFFFF,#F5F3FF)!important;
+  padding:26px!important;
+}
+.v4-hero-label,.value-badge{
+  display:inline-block;
+  background:linear-gradient(135deg,#2563EB,#7C3AED);
+  color:white;
+  padding:8px 13px;
+  border-radius:999px;
+  font-weight:900;
+  font-size:12px;
+  margin-bottom:10px;
+}
+.v4-value-grid{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:12px;
+  margin:18px 0;
+}
+.v4-value-grid div{
+  background:white;
+  border:1px solid #DDD6FE;
+  border-radius:20px;
+  padding:14px;
+}
+.v4-value-grid b{display:block;color:#4C1D95;font-size:22px}
+.v4-value-grid span{font-size:13px;color:#64748B;font-weight:800}
+.v4-pricing-shell{padding:32px!important}
+.v4-premium-grid{
+  grid-template-columns:repeat(auto-fit,minmax(250px,1fr))!important;
+  align-items:stretch;
+}
+.v4-plan{
+  border-radius:28px!important;
+  padding:22px!important;
+  overflow:hidden;
+}
+.v4-plan .plan-name{font-size:17px!important}
+.v4-plan .plan-price{
+  font-size:24px!important;
+  line-height:1.15!important;
+  margin:8px 0!important;
+}
+.price-sub{
+  color:#64748B;
+  font-size:13px;
+  font-weight:900;
+  margin-bottom:12px;
+}
+.v4-yearly{
+  transform:scale(1.03);
+  border:2px solid #7C3AED!important;
+  box-shadow:0 32px 75px rgba(124,58,237,.22)!important;
+}
+.v4-lifetime{
+  border:2px solid #F59E0B!important;
+  background:linear-gradient(180deg,#FFFFFF,#FFFBEB)!important;
+  box-shadow:0 32px 75px rgba(245,158,11,.18)!important;
+}
+.v4-save-box{
+  background:linear-gradient(135deg,#EEF2FF,#F5F3FF);
+  border:1px solid #DDD6FE;
+  border-radius:16px;
+  padding:12px;
+  color:#4C1D95;
+  font-weight:900;
+  margin:12px 0;
+  font-size:13px;
+}
+.v4-save-box.gold{
+  background:linear-gradient(135deg,#FEF3C7,#FFF7ED);
+  border-color:#FCD34D;
+  color:#92400E;
+}
+.v4-value-received{
+  background:#F8FAFC;
+  border:1px solid #E5E7EB;
+  border-radius:16px;
+  padding:12px;
+  margin:12px 0;
+}
+.v4-value-received b{display:block;color:#1E1B4B;margin-bottom:4px}
+.v4-value-received span{font-size:13px;color:#64748B}
+.premium-btn{
+  background:linear-gradient(135deg,#2563EB,#7C3AED)!important;
+  border-radius:16px!important;
+  font-weight:900!important;
+  box-shadow:0 14px 30px rgba(124,58,237,.20)!important;
+}
+.v4-outsourcing-box{
+  margin-top:22px;
+  background:white;
+  border:1px solid #DDD6FE;
+  border-radius:26px;
+  padding:22px;
+  box-shadow:0 18px 42px rgba(30,41,59,.08);
+}
+.v4-outsource-grid{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:12px;
+  margin:14px 0;
+}
+.v4-outsource-grid div{
+  background:#F8FAFC;
+  border:1px solid #E5E7EB;
+  border-radius:18px;
+  padding:14px;
+}
+.v4-outsource-grid b{display:block;color:#7C3AED}
+.v4-outsource-grid span{font-size:13px;color:#64748B;font-weight:800}
+.v4-success-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+  gap:14px;
+}
+.v4-success-card{
+  background:white;
+  border:1px solid #E5E7EB;
+  border-radius:24px;
+  padding:18px;
+  box-shadow:0 16px 36px rgba(30,41,59,.08);
+}
+.success-icon{
+  width:52px;height:52px;border-radius:18px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:26px;background:#F5F3FF;border:1px solid #DDD6FE;
+  margin-bottom:12px;
+}
+.v4-proof-box{
+  margin-top:16px;
+  background:linear-gradient(135deg,#EEF2FF,#F8FAFC);
+  border:1px solid #DDD6FE;
+  border-radius:24px;
+  padding:18px;
+}
+.v4-lock-hero .benefit-list{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:8px;
+}
+.v4-gold-card{
+  border:2px solid #F59E0B!important;
+  background:linear-gradient(180deg,#FFFFFF,#FFFBEB)!important;
+}
+.rec-price{font-size:24px!important;line-height:1.15!important}
+@media(max-width:820px){
+  .v4-trust-grid,.v4-pricing-stats,.v4-value-grid,.v4-outsource-grid,.locked-recommend-grid{grid-template-columns:1fr!important}
+  .v4-yearly{transform:none}
+  .v4-lock-hero .benefit-list{grid-template-columns:1fr}
+}
+
+
+/* ===== V5 PREMIUM DARK POLISH ===== */
+body{
+  background:radial-gradient(circle at top left,rgba(124,58,237,.22),transparent 30%),radial-gradient(circle at top right,rgba(37,99,235,.18),transparent 28%),linear-gradient(135deg,#0B1020,#111827 48%,#1E293B)!important;
+}
+.panel,.rightbar,.top-hero{
+  background:rgba(15,23,42,.92)!important;
+  color:#F8FAFC!important;
+  border:1px solid rgba(148,163,184,.22)!important;
+  box-shadow:0 22px 60px rgba(0,0,0,.28)!important;
+}
+.top-hero h1,h1,.rightbar h2{
+  background:linear-gradient(135deg,#38BDF8,#8B5CF6)!important;
+  -webkit-background-clip:text!important;
+  background-clip:text!important;
+}
+.panel p,.top-hero p,.rightbar p,.small{color:#CBD5E1!important}
+.app-quick-card,.template-card,.stat,.price-card,.preview,.locked-recommend-card{
+  background:rgba(255,255,255,.96)!important;
+}
+.activity-card{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:12px;
+  padding:14px 15px;
+  margin:10px 0;
+  border-radius:18px;
+  background:linear-gradient(135deg,rgba(37,99,235,.15),rgba(124,58,237,.14));
+  border:1px solid rgba(148,163,184,.22);
+  color:#E5E7EB;
+}
+.activity-card span{font-weight:800;color:#CBD5E1}
+.activity-card b{font-size:24px;color:#38BDF8}
+.v5-focus-box{
+  margin-top:14px;
+  padding:16px;
+  border-radius:20px;
+  background:linear-gradient(135deg,rgba(56,189,248,.12),rgba(139,92,246,.16));
+  border:1px solid rgba(56,189,248,.28);
+  color:#E5E7EB;
+  line-height:1.65;
+}
+.v5-focus-box b{color:#FBBF24}
+
+/* ===== ANALYTICS CENTER V5 POLISH ===== */
+.analytics-kpi-grid{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:14px;
+  margin:18px 0 22px;
+}
+.analytics-kpi{
+  background:linear-gradient(135deg,rgba(37,99,235,.10),rgba(124,58,237,.10));
+  border:1px solid rgba(124,58,237,.22);
+  border-radius:20px;
+  padding:16px;
+  box-shadow:0 12px 28px rgba(37,99,235,.08);
+}
+.analytics-kpi span{display:block;color:#475569;font-size:13px;font-weight:800}
+.analytics-kpi b{display:block;color:#4C1D95;font-size:28px;margin:7px 0}
+.analytics-kpi small{display:block;color:#64748B;line-height:1.45}
+.analytics-section-title{
+  margin:24px 0 12px;
+  color:#1E1B4B;
+  font-size:17px;
+  font-weight:900;
+}
+.analytics-box.full{grid-column:1/-1}
+.analytics-bar{height:8px;background:#E5E7EB;border-radius:999px;overflow:hidden;margin:-2px 0 8px}
+.analytics-bar.large{height:12px;margin:2px 0 12px}
+.analytics-bar i{display:block;height:100%;background:linear-gradient(135deg,var(--blue),var(--purple));border-radius:999px;min-width:6px}
+.empty-analytics{
+  background:#F8FAFC;
+  border:1px dashed #CBD5E1;
+  border-radius:14px;
+  color:#64748B;
+  padding:14px;
+  line-height:1.55;
+}
+@media(max-width:1100px){.analytics-kpi-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:700px){.analytics-kpi-grid{grid-template-columns:1fr}}
+
+
+/* V6: Loại bỏ icon ở menu chính/sidebar/mobile để giao diện gọn hơn */
+.v2-nav-ico,.mobilebar a::first-letter{display:none!important}
+.v2-nav-link{gap:8px!important}
+.mobilebar a{font-size:12px!important;line-height:1.35!important}
+.gf-box{background:#F8FAFC;border:1px solid #E5E7EB;border-radius:22px;padding:16px;margin:12px 0}
+.gf-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.gf-grid-3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.gf-stat{background:white;border:1px solid #E5E7EB;border-radius:18px;padding:14px;box-shadow:0 8px 24px rgba(15,23,42,.06)}
+.gf-stat b{font-size:24px;display:block;color:#1E1B4B}.gf-stat span{font-size:12px;color:#64748B;font-weight:800}
+.gf-warning{background:#FFF7ED;border:1px solid #FED7AA;color:#9A3412;border-radius:16px;padding:12px;margin:10px 0;font-size:13px;line-height:1.5}
+.gf-table{width:100%;border-collapse:separate;border-spacing:0 8px;font-size:13px}.gf-table th{text-align:left;color:#475569;padding:8px}.gf-table td{background:white;border-top:1px solid #E5E7EB;border-bottom:1px solid #E5E7EB;padding:10px}.gf-table td:first-child{border-left:1px solid #E5E7EB;border-radius:12px 0 0 12px}.gf-table td:last-child{border-right:1px solid #E5E7EB;border-radius:0 12px 12px 0}
+@media(max-width:900px){.gf-grid,.gf-grid-3{grid-template-columns:1fr}}
+
+.payment-form-grid{display:grid;grid-template-columns:1fr;gap:8px;margin-top:8px}.payment-form-grid input{width:100%;box-sizing:border-box;border:1px solid #d1d5db;border-radius:10px;padding:11px 12px;font-size:14px}.primary{background:linear-gradient(135deg,#facc15,#f97316);border:0;border-radius:12px;padding:12px 16px;font-weight:800;color:#111827;cursor:pointer}
+.admin-table{width:100%;border-collapse:collapse;background:white;border-radius:14px;overflow:hidden}.admin-table th,.admin-table td{border-bottom:1px solid #e5e7eb;padding:10px;text-align:left;font-size:13px}.admin-badge{display:inline-block;padding:4px 8px;border-radius:999px;background:#fef3c7;color:#92400e;font-weight:700}
+</style>
 <script>
 function copyText(id){
   const el=document.getElementById(id);
@@ -2363,7 +4392,79 @@ function closePremiumPopup(){
   if(m){m.style.display="none";}
 }
 
-/* Bot chat functions removed */
+function toggleFloatingBot(){
+  const panel=document.getElementById("floatingBotPanel");
+  if(!panel) return;
+  const isOpen=panel.style.display==="block";
+  panel.style.display=isOpen?"none":"block";
+  if(!isOpen){
+    setTimeout(()=>appendBotGreeting(),250);
+  }
+}
+function closeFloatingBot(){
+  const panel=document.getElementById("floatingBotPanel");
+  if(panel) panel.style.display="none";
+}
+let botGreeted=false;
+function escapeBotText(value){
+  return String(value || "").replace(/[&<>"]/g,function(ch){
+    return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[ch];
+  });
+}
+function appendBotGreeting(){
+  if(botGreeted) return;
+  botGreeted=true;
+  const body=document.getElementById("floatingBotBody");
+  if(!body) return;
+  body.innerHTML = `
+    <div class="bot-msg ai">
+      <b>Bot hỗ trợ:</b><br><br>
+      Dạ mình đang cần hỗ trợ vấn đề gì ạ?<br><br>
+      • Nâng cấp Premium<br>
+      • Kích hoạt tài khoản<br>
+      • Thanh toán<br>
+      • Hướng dẫn sử dụng<br>
+      • Báo lỗi hệ thống
+    </div>`;
+  body.scrollTop=body.scrollHeight;
+}
+function getBotReply(text){
+  const lower=String(text || "").toLowerCase();
+  let reply="Dạ mình đang cần hỗ trợ vấn đề gì ạ?<br><br>• Nâng cấp Premium<br>• Kích hoạt tài khoản<br>• Thanh toán<br>• Hướng dẫn sử dụng<br>• Báo lỗi hệ thống";
+  if(lower.includes("premium") || lower.includes("giá") || lower.includes("gói") || lower.includes("nâng cấp")){
+    reply="Dạ hiện hệ thống có các gói:<br><br>• 1 tháng: <b>159K</b><br>• 3 tháng: <b>359K</b><br>• 6 tháng: <b>559K</b><br>• 1 năm: <b>859K</b><br>• Nhà bán hàng chuyên nghiệp: <b>1.959K</b><br><br>Anh/chị muốn em tư vấn gói phù hợp không ạ?";
+  }else if(lower.includes("thanh toán") || lower.includes("chuyển khoản") || lower.includes("qr")){
+    reply="Dạ sau khi chuyển khoản thành công, anh/chị vui lòng gửi:<br><br>• ID thiết bị<br>• Ảnh thanh toán<br>• Gói đã đăng ký<br><br>Nếu sau 5 phút chưa được kích hoạt, vui lòng liên hệ Zalo <b>036 338 2629</b> hoặc Gmail <b>support@gptmini.pro</b>.";
+  }else if(lower.includes("kích hoạt") || lower.includes("duyệt")){
+    reply="Dạ để em hỗ trợ kích hoạt nhanh, anh/chị gửi giúp em:<br><br>• ID thiết bị<br>• Số điện thoại<br>• Gmail đăng ký<br>• Ảnh thanh toán<br>• Gói đã đăng ký";
+  }else if(lower.includes("zalo") || lower.includes("liên hệ") || lower.includes("hỗ trợ")){
+    reply="Dạ anh/chị có thể liên hệ hỗ trợ qua:<br><br><b>Zalo:</b> 036 338 2629<br><b>Gmail:</b> support@gptmini.pro<br><br>Nếu đã thanh toán, vui lòng gửi ID thiết bị, ảnh thanh toán và gói đã đăng ký để được ưu tiên kích hoạt nhanh ạ.";
+  }else if(lower.includes("lỗi") || lower.includes("không dùng") || lower.includes("không được") || lower.includes("báo lỗi")){
+    reply="Dạ anh/chị vui lòng mô tả lỗi đang gặp hoặc gửi ảnh màn hình giúp em ạ.<br><br>Nếu cần hỗ trợ nhanh, anh/chị liên hệ Zalo <b>036 338 2629</b>.";
+  }else if(lower.includes("tính năng") || lower.includes("hướng dẫn") || lower.includes("sử dụng")){
+    reply="Dạ tool hỗ trợ quản lý Fanpage, quản lý Group, đăng bài, AI Comment, AI Messenger, CRM Kanban và Marketing Director.<br><br>Anh/chị đang muốn dùng chức năng nào để em hướng dẫn đúng phần đó ạ?";
+  }
+  return reply;
+}
+function botQuick(text){
+  const body=document.getElementById("floatingBotBody");
+  if(!body) return;
+  body.innerHTML += `<div class="bot-msg"><b>Bạn:</b> ${escapeBotText(text)}</div>`;
+  body.innerHTML += `<div class="bot-msg ai bot-typing" id="botTypingNow"><b>Bot hỗ trợ:</b><br>Đang nhập<span class="typing-dots" style="vertical-align:middle"><span></span><span></span><span></span></span></div>`;
+  body.scrollTop=body.scrollHeight;
+  const reply=getBotReply(text);
+  setTimeout(function(){
+    const typing=document.getElementById("botTypingNow");
+    if(typing){ typing.outerHTML = `<div class="bot-msg ai"><b>Bot hỗ trợ:</b><br>${reply}</div>`; }
+    body.scrollTop=body.scrollHeight;
+  }, 900 + Math.floor(Math.random()*700));
+}
+function sendBotInput(){
+  const input=document.getElementById("botInputText");
+  if(!input || !input.value.trim()) return;
+  botQuick(input.value.trim());
+  input.value="";
+}
 function updateLiveTrust(){
   const el=document.getElementById("liveMemberCount");
   if(!el) return;
@@ -2542,7 +4643,7 @@ function submitPremiumRequest(){
     .then(r=>r.json()).then(data=>{
       if(data.ok){
         document.getElementById("payContent").innerText = data.payment_note;
-        alert("Đã ghi nhận thanh toán. Admin sẽ kiểm tra và kích hoạt Premium cho anh/chị trong thời gian sớm nhất.");
+        showPaymentNotice("Đã gửi yêu cầu thanh toán về web admin. Anh/chị vui lòng giữ lại ảnh giao dịch để đối chiếu khi cần.");
       }else alert(data.message || "Chưa gửi được yêu cầu, vui lòng thử lại.");
     }).catch(()=>alert("Kết nối chậm, vui lòng thử lại hoặc gửi Zalo hỗ trợ."));
   return false;
@@ -2555,8 +4656,8 @@ function openPayment(planKey){
 
   const amountText = Number(plan.amount).toLocaleString("vi-VN") + " VNĐ";
   const deviceId = getOrCreateDeviceId();
-  const phone = (document.getElementById("payPhone")?.value || "CHUA_SDT").trim();
-  const email = (document.getElementById("payEmail")?.value || "CHUA_GMAIL").trim();
+  const phone = (document.getElementById("payPhone")?.value || "").trim();
+  const email = (document.getElementById("payEmail")?.value || "").trim();
   const addInfo = deviceId + " | " + phone + " | " + email + " | " + plan.package.toUpperCase();
   const qrUrl = "https://img.vietqr.io/image/970405-8888363382629-compact2.png?amount=" + encodeURIComponent(plan.amount) + "&addInfo=" + encodeURIComponent(addInfo) + "&accountName=" + encodeURIComponent("NGUYEN DANG THI XUAN");
   window.currentPremiumPlanKey = planKey;
@@ -2637,10 +4738,6 @@ function closeLockedFeature(){
 
 </script>
 
-
-<style id="mkt-ui-base-restore-css">
-*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;font-family:Inter,Manrope,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;background:linear-gradient(135deg,#eef4ff 0%,#f8fafc 42%,#fff7ed 100%);color:#0f172a}a{text-decoration:none;color:inherit}button,input,select,textarea{font-family:inherit}button{cursor:pointer}.layout{display:grid;grid-template-columns:280px minmax(0,1fr) 330px;gap:18px;max-width:1580px;margin:0 auto;padding:18px}.v2-topbar{position:sticky;top:0;z-index:40;background:rgba(255,255,255,.82);backdrop-filter:blur(16px);border-bottom:1px solid rgba(148,163,184,.22);box-shadow:0 10px 30px rgba(15,23,42,.06)}.v2-brand-row{max-width:1580px;margin:auto;padding:14px 18px;display:flex;align-items:center;justify-content:space-between}.v2-brand-title{font-size:22px;font-weight:1000;letter-spacing:-.04em;background:linear-gradient(135deg,#2563eb,#7c3aed,#f59e0b);-webkit-background-clip:text;color:transparent}.v2-brand-sub{font-size:13px;color:#64748b;font-weight:800}.v2-status-pill,.v5-status-pill{background:#dcfce7;color:#166534;border:1px solid #86efac;padding:7px 12px;border-radius:999px;font-weight:1000;font-size:12px}.sidebar,.rightbar{position:sticky;top:76px;align-self:start;max-height:calc(100vh - 90px);overflow:auto}.sidebar{background:linear-gradient(180deg,#0f172a,#111827 55%,#1e1b4b);border:1px solid rgba(255,255,255,.1);border-radius:28px;padding:16px;box-shadow:0 28px 70px rgba(15,23,42,.28);color:white}.logo{display:flex;align-items:center;gap:10px;font-weight:1000;font-size:18px;margin-bottom:14px}.avatar{width:42px;height:42px;border-radius:16px;background:linear-gradient(135deg,#2563eb,#7c3aed);display:flex;align-items:center;justify-content:center;box-shadow:0 12px 30px rgba(37,99,235,.35)}.nav{display:flex;flex-direction:column;gap:8px}.v2-nav-title{margin:16px 8px 6px;color:#93c5fd;text-transform:uppercase;font-size:11px;font-weight:1000;letter-spacing:.08em}.v2-nav-link{position:relative;display:flex;align-items:center;gap:10px;border:1px solid rgba(255,255,255,.09);background:rgba(255,255,255,.045);color:#e5e7eb;border-radius:16px;padding:12px 13px;font-weight:900;transition:.18s ease;min-height:46px}.v2-nav-link:hover{background:rgba(37,99,235,.22);transform:translateX(4px);box-shadow:0 14px 30px rgba(37,99,235,.16)}.v2-nav-ico{width:28px;height:28px;border-radius:12px;background:rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;flex:0 0 auto}.v2-nav-text{flex:1}.v2-nav-tag{font-size:10px;font-weight:1000;padding:4px 8px;border-radius:999px;background:linear-gradient(135deg,#22c55e,#06b6d4);color:white}.v2-side-card,.trial-box{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:18px;padding:13px;margin:12px 0;color:#e5e7eb}.main{min-width:0}.top-hero,.panel,.card,.module-card,.module-section,.rightbar .card{background:rgba(255,255,255,.86);border:1px solid rgba(226,232,240,.95);border-radius:28px;padding:20px;box-shadow:0 20px 60px rgba(15,23,42,.08);margin-bottom:18px}.top-hero{background:linear-gradient(135deg,#ffffff,#eef4ff 50%,#fff7ed);overflow:hidden;position:relative}.top-hero:before{content:"";position:absolute;right:-80px;top:-80px;width:220px;height:220px;background:radial-gradient(circle,rgba(37,99,235,.18),transparent 70%)}h1,h2,h3{letter-spacing:-.04em;color:#0f172a}h1{font-size:34px;line-height:1.1;margin:0 0 10px}h2{font-size:24px;margin:0 0 14px}h3{font-size:18px;margin:12px 0}.subtitle,.small,.mini{color:#64748b;font-weight:700;line-height:1.5}.grid,.grid4,.v3-feature-grid,.analytics-grid,.v5-seller-grid,.v9-grid,.library-grid,.premium-grid-pro{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}.stat,.analytics-kpi,.gf-stat,.v3-feature-card,.v5-tool-card,.v9-card,.template-card,.activity-card,.app-quick-card{background:white;border:1px solid #e5e7eb;border-radius:22px;padding:16px;box-shadow:0 12px 34px rgba(15,23,42,.06)}.stat b,.analytics-kpi b{font-size:28px;color:#2563eb}.primary,.secondary,.plan-button,.btnlink,button:not(.support-btn):not(.support-close){border:0;border-radius:14px;padding:11px 14px;font-weight:1000;background:linear-gradient(135deg,#2563eb,#7c3aed);color:white;box-shadow:0 12px 28px rgba(37,99,235,.18);margin:4px}.secondary{background:#f1f5f9;color:#334155;box-shadow:none;border:1px solid #e2e8f0}input,select,textarea{border:1px solid #cbd5e1;border-radius:12px;padding:11px 12px;background:white;color:#0f172a;outline:none;margin:4px 0}textarea{min-height:100px}input:focus,select:focus,textarea:focus{border-color:#2563eb;box-shadow:0 0 0 4px rgba(37,99,235,.12)}table{width:100%;border-collapse:separate;border-spacing:0 8px}th{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:#64748b;text-align:left;background:#f8fafc;padding:10px}td{background:white;border-top:1px solid #e5e7eb;border-bottom:1px solid #e5e7eb;padding:10px}td:first-child{border-left:1px solid #e5e7eb;border-radius:12px 0 0 12px}td:last-child{border-right:1px solid #e5e7eb;border-radius:0 12px 12px 0}.premium-plan{background:white;border:1px solid #e5e7eb;border-radius:26px;padding:18px;box-shadow:0 18px 48px rgba(15,23,42,.08);position:relative}.premium-plan.featured{border:2px solid #7c3aed;background:linear-gradient(180deg,#fff,#f5f3ff)}.plan-name{font-weight:1000;font-size:18px}.plan-price{font-size:32px;font-weight:1000;color:#2563eb;margin:8px 0}.plan-ribbon{position:absolute;right:16px;top:14px;background:#f59e0b;color:white;padding:5px 10px;border-radius:999px;font-size:11px;font-weight:1000}.live-trust-bar{max-width:1580px;margin:14px auto 0;background:rgba(255,255,255,.75);border:1px solid #e5e7eb;border-radius:999px;padding:9px 16px;display:flex;align-items:center;gap:8px;width:max-content;box-shadow:0 12px 32px rgba(15,23,42,.06)}.live-dot{width:10px;height:10px;background:#22c55e;border-radius:50%;box-shadow:0 0 12px #22c55e}.mobilebar{display:none}.preview,.history,.page-list,.analytics-section-title{background:#f8fafc;border:1px solid #e5e7eb;border-radius:18px;padding:14px;margin:10px 0}.kanban-board{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}.kanban-col{background:#f8fafc;border:1px solid #e5e7eb;border-radius:18px;padding:12px;min-height:140px}.kanban-card{background:white;border:1px solid #e5e7eb;border-radius:14px;padding:10px;margin:8px 0;box-shadow:0 8px 20px rgba(15,23,42,.06)}.rightbar{display:flex;flex-direction:column;gap:14px}.success,.error{border-radius:16px;padding:12px;font-weight:900}.success{background:#dcfce7;color:#166534}.error{background:#fee2e2;color:#991b1b}.mkt-mobile-dock{z-index:2147482500}.support-float{z-index:2147483001}@media(max-width:1180px){.layout{grid-template-columns:250px minmax(0,1fr)}.rightbar{display:none}}@media(max-width:860px){.layout{display:block;padding:12px}.sidebar{position:relative;top:auto;max-height:none;margin-bottom:14px}.v2-brand-row{padding:12px}.v2-brand-title{font-size:18px}.top-hero,.panel,.card{border-radius:20px;padding:15px}h1{font-size:26px}.mobilebar{display:block}.live-trust-bar{width:auto;margin:10px 12px}.mkt-mobile-dock{left:8px!important;bottom:16px!important}.support-float{right:10px!important;bottom:16px!important}.support-panel{width:calc(100vw - 24px)!important}}
-</style>
 <style>
 .premium-grid-pro{grid-template-columns:repeat(auto-fit,minmax(230px,1fr)) !important;}
 .locked-plan-actions{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin:14px 0;}
@@ -2666,7 +4763,26 @@ function closeLockedFeature(){
 </style>
 
 
-
+<style id="chat-device-menu-fix">
+/* Bản sửa: chỉ dọn icon menu, tăng ưu tiên chat, hiển thị ID thiết bị rõ ràng */
+.v2-nav-ico{display:none!important;width:0!important;min-width:0!important;margin:0!important;padding:0!important;overflow:hidden!important}
+.v2-nav-link{cursor:pointer!important;pointer-events:auto!important}
+.activity-card span{font-size:0!important}
+.activity-card span::before{font-size:16px!important}
+.activity-card:nth-of-type(1) span::before{content:"Tổng bài"}
+.activity-card:nth-of-type(2) span::before{content:"Đã đăng"}
+.activity-card:nth-of-type(3) span::before{content:"Chờ đăng"}
+.activity-card:nth-of-type(4) span::before{content:"Lead CRM"}
+.activity-card:nth-of-type(5) span::before{content:"Chiến dịch"}
+#sidebarDeviceId{display:inline-block!important;color:#fff!important;font-weight:900!important;font-size:14px!important;letter-spacing:.4px;margin:4px 0}
+.floating-bot{z-index:2147483000!important;pointer-events:auto!important}
+.bot-bubble,.bot-panel,.bot-actions button,.bot-input button{pointer-events:auto!important}
+.bot-panel{z-index:2147483001!important}
+.bot-body{min-height:210px!important}
+.bot-actions{grid-template-columns:1fr 1fr!important}
+.bot-actions button{font-size:13px!important;line-height:1.25!important}
+.bot-title::before{content:"🤖 ";}
+</style>
 </head>
 <body>
 
@@ -2686,14 +4802,63 @@ function closeLockedFeature(){
   <span>Đã có <b id="liveMemberCount">231</b> khách hàng nâng cấp Premium</span>
 </div>
 
+<div class="floating-bot">
+  <div class="bot-panel" id="floatingBotPanel">
+    <div class="bot-head">
+      <div>
+        <div class="bot-title">Mini Chat Support</div>
+        <div class="bot-online">Đang trực tuyến
+          <span class="typing-dots"><span></span><span></span><span></span></span>
+        </div>
+      </div>
+      <button class="bot-close" onclick="closeFloatingBot()">×</button>
+    </div>
+    <div class="bot-body" id="floatingBotBody">
+      <div class="bot-msg ai">
+        <b>Bot hỗ trợ:</b><br><br>
+        Dạ mình đang cần hỗ trợ vấn đề gì ạ?<br><br>
+        • Nâng cấp Premium<br>
+        • Kích hoạt tài khoản<br>
+        • Thanh toán<br>
+        • Hướng dẫn sử dụng<br>
+        • Báo lỗi hệ thống
+      </div>
+    </div>
+    <div class="bot-actions">
+      <button onclick="botQuick('Nâng cấp Premium')">Nâng cấp Premium</button>
+      <button class="light" onclick="botQuick('Hướng dẫn thanh toán')">Hướng dẫn thanh toán</button>
+      <button class="light" onclick="botQuick('Kích hoạt tài khoản')">Kích hoạt tài khoản</button>
+      <button class="light" onclick="botQuick('Liên hệ hỗ trợ')">Liên hệ hỗ trợ</button>
+    </div>
+    <div class="bot-input">
+      <input id="botInputText" placeholder="Nhập câu hỏi cần hỗ trợ..." onkeydown="if(event.key==='Enter')sendBotInput()">
+      <button onclick="sendBotInput()">Gửi</button>
+    </div>
+  </div>
+  <button class="bot-bubble" onclick="toggleFloatingBot()">
+    🤖
+    <span class="bot-status"></span>
+  </button>
+</div>
+
 <div class="layout">
 <aside class="sidebar">
   <div class="logo">Marketing<br>Automation Pro</div>
-  <div class="subtitle">V12 DeviceID Premium Admin</div>
-  <div class="v2-side-card" style="margin-top:12px;background:linear-gradient(135deg,#111827,#1e293b);border:1px solid rgba(250,204,21,.45)">
+  <div class="v2-side-card device-premium-card" style="margin-top:12px;background:linear-gradient(135deg,#111827,#1e293b);border:1px solid rgba(250,204,21,.45)">
     <b>🖥 ID thiết bị</b><br>
-    <span id="sidebarDeviceId">{{ device_id }}</span><br>
-    <small id="sidebarPremiumStatus">Trạng thái: {{ free_status.label }}</small>
+    <div class="device-id-row">
+      <span id="sidebarDeviceId">{{ device_id }}</span>
+      {% if is_device_premium %}
+      <span class="premium-glow-badge">PREMIUM</span>
+      {% endif %}
+    </div>
+    <small id="sidebarPremiumStatus">
+      {% if is_device_premium %}
+        Trạng thái: <b style="color:#22c55e">Đã kích hoạt Premium</b>
+      {% else %}
+        Trạng thái: {{ free_status.label }}
+      {% endif %}
+    </small>
   </div>
   {% if renewal_notice %}
   <div class="v2-side-card" style="background:#fff7ed;color:#7c2d12;border:1px solid #fed7aa">
@@ -2702,40 +4867,31 @@ function closeLockedFeature(){
   </div>
   {% endif %}
 
-<div class="nav">
+<div class="nav mkt-saas-nav mkt-clean-nav">
   <div class="v2-nav-title">MENU CHÍNH</div>
-  <a class="v2-nav-link" href="#dashboard"><span class="v2-nav-ico">🏠</span><span class="v2-nav-text">Dashboard CEO</span><span class="v2-nav-tag">Home</span></a>
+  <a class="v2-nav-link" href="#dashboard" data-module="dashboard"><span class="v2-nav-text">Dashboard</span></a>
 
   <div class="v2-nav-title">FACEBOOK CENTER</div>
-  <a class="v2-nav-link" href="#facebook_center" onclick="return openModule('facebook_center')"><span class="v2-nav-ico">📣</span><span class="v2-nav-text">Facebook Center</span><span class="v2-nav-tag">Core</span></a>
-  <a class="v2-nav-link" href="#page_center_total" onclick="return openModule('page_center_total')"><span class="v2-nav-ico"></span><span class="v2-nav-text">Page Center Tổng</span><span class="v2-nav-tag">V11</span></a>
-  <a class="v2-nav-link" href="#post" onclick="return openModule('page_center_total')"><span class="v2-nav-ico"></span><span class="v2-nav-text">Đăng bài Facebook</span></a>
-  <a class="v2-nav-link" href="#fanpage_manager" onclick="return openModule('fanpage_manager')"><span class="v2-nav-ico">📄</span><span class="v2-nav-text">Quản lý Fanpage</span><span class="v2-nav-tag">V5</span></a>
-  <a class="v2-nav-link" href="#group_suite" onclick="return openModule('group_suite')"><span class="v2-nav-ico"></span><span class="v2-nav-text">Group Center Tổng</span><span class="v2-nav-tag">V11</span></a>
+  <a class="v2-nav-link mkt-menu-pro" href="#post" data-module="post"><span class="v2-nav-text">Đăng bài Facebook</span><span class="mkt-dot-tag pro"><i></i><span>Pro</span></span></a>
+  <a class="v2-nav-link mkt-menu-pro" href="#fanpage_manager" data-module="fanpage_manager"><span class="v2-nav-text">Quản lý Fanpage</span><span class="mkt-dot-tag pro"><i></i><span>Pro</span></span></a>
+  <a class="v2-nav-link mkt-menu-pro" href="#group_suite" data-module="group_suite"><span class="v2-nav-text">Group Center</span><span class="mkt-dot-tag pro"><i></i><span>Pro</span></span></a>
+  <a class="v2-nav-link mkt-menu-pro" href="#page_center_total" data-module="page_center_total"><span class="v2-nav-text">Token Fanpage</span><span class="mkt-dot-tag pro"><i></i><span>Pro</span></span></a>
 
   <div class="v2-nav-title">SELLER AI</div>
-  <a class="v2-nav-link" href="#comment_manager" onclick="return openModule('comment_manager')"><span class="v2-nav-ico">🤖</span><span class="v2-nav-text">AI Comment</span><span class="v2-nav-tag">AI</span></a>
-  <a class="v2-nav-link" href="#messenger_ai" onclick="return openModule('messenger_ai')"><span class="v2-nav-ico">💬</span><span class="v2-nav-text">AI Messenger</span><span class="v2-nav-tag">AI</span></a>
-  <a class="v2-nav-link" href="#crm_sales" onclick="return openModule('crm_sales')"><span class="v2-nav-ico">📋</span><span class="v2-nav-text">CRM Kanban</span><span class="v2-nav-tag">CRM</span></a>
-  <a class="v2-nav-link" href="#marketing_director" onclick="return openModule('marketing_director')"><span class="v2-nav-ico">🧠</span><span class="v2-nav-text">AI Marketing Director</span><span class="v2-nav-tag">HOT</span></a>
+  <a class="v2-nav-link mkt-menu-pro" href="#comment_manager" data-module="comment_manager"><span class="v2-nav-text">AI Comment</span><span class="mkt-dot-tag pro"><i></i><span>Pro</span></span></a>
+  <a class="v2-nav-link mkt-menu-premium" href="#messenger_ai" data-module="messenger_ai"><span class="v2-nav-text">AI Messenger</span><span class="mkt-dot-tag premium"><i></i><span>Premium</span></span></a>
+  <a class="v2-nav-link mkt-menu-premium" href="#crm_sales" data-module="crm_sales"><span class="v2-nav-text">CRM Kanban</span><span class="mkt-dot-tag premium"><i></i><span>Premium</span></span></a>
+  <a class="v2-nav-link mkt-menu-premium" href="#marketing_director" data-module="marketing_director"><span class="v2-nav-text">Marketing AI</span><span class="mkt-dot-tag premium"><i></i><span>Premium</span></span></a>
 
   <div class="v2-nav-title">AI STUDIO</div>
-  <a class="v2-nav-link" href="#ai_studio" onclick="return openModule('ai_studio')"><span class="v2-nav-ico">🎨</span><span class="v2-nav-text">AI Studio</span><span class="v2-nav-tag">Pro</span></a>
-  <a class="v2-nav-link" href="#creative_center" onclick="return openModule('creative_center')"><span class="v2-nav-ico">🖼️</span><span class="v2-nav-text">Image / Video / Voice</span></a>
-
-  <div class="v2-nav-title">AI BUSINESS</div>
-  <a class="v2-nav-link" href="#ai_studio" onclick="return openModule('ai_studio')"><span class="v2-nav-ico">🚀</span><span class="v2-nav-text">AI Facebook</span></a>
-  <a class="v2-nav-link" href="#marketing_director" onclick="return openModule('marketing_director')"><span class="v2-nav-ico">💼</span><span class="v2-nav-text">AI Kinh Doanh</span></a>
+  <a class="v2-nav-link mkt-menu-premium" href="#creative_center" data-module="creative_center"><span class="v2-nav-text">AI Image / Video</span><span class="mkt-dot-tag premium"><i></i><span>Premium</span></span></a>
+  <a class="v2-nav-link mkt-menu-premium" href="#ai_studio" data-module="ai_studio"><span class="v2-nav-text">AI Studio</span><span class="mkt-dot-tag premium"><i></i><span>Premium</span></span></a>
 
   <div class="v2-nav-title">HỆ THỐNG</div>
-  <a class="v2-nav-link" href="#premium" onclick="return openModule('premium')"><span class="v2-nav-ico">💎</span><span class="v2-nav-text">Premium</span><span class="v2-nav-tag">VIP</span></a>
-  <a class="v2-nav-link" href="#analytics" onclick="return openModule('analytics')"><span class="v2-nav-ico">📈</span><span class="v2-nav-text">Analytics Center</span></a>
-  <a class="v2-nav-link" href="#automation_center" onclick="return openModule('automation_center')"><span class="v2-nav-ico">⚙️</span><span class="v2-nav-text">Cài đặt Automation</span></a>
-
-  <div class="v2-side-card">
-    🚀 Mkt Automation Pro V5<br>
-    Fanpage • Group • Comment • Messenger • CRM • Marketing Director.
-  </div>
+  <a class="v2-nav-link" href="#analytics" data-module="analytics"><span class="v2-nav-text">Analytics</span></a>
+  <a class="v2-nav-link" href="#automation_center" data-module="automation_center"><span class="v2-nav-text">Automation</span></a>
+  <a data-aff-menu="1" class="v2-nav-link mkt-menu-pro" href="#affiliate_center" data-module="affiliate_center"><span class="v2-nav-text">CTV Hoa Hồng</span><span class="mkt-dot-tag pro"><i></i><span>Pro</span></span></a>
+  <a class="v2-nav-link mkt-menu-premium" href="#premium" data-module="premium"><span class="v2-nav-text">Bảng giá Premium</span><span class="mkt-dot-tag premium"><i></i><span>Premium</span></span></a>
 </div>
 </aside>
 
@@ -2743,6 +4899,7 @@ function closeLockedFeature(){
 
 <section class="top-hero" id="dashboard">
   <h1>Mkt Automation Pro V5 Seller AI Suite</h1>
+
 <div class="app-quick-grid">
   <div class="app-quick-card" onclick="return openModule('post')">
     <div class="app-ico">📢</div>
@@ -3692,155 +5849,141 @@ Thời gian tạo: {{ h[9] }}
 </section>
 
 <section class="panel pricing-visible" id="pricing">
-  <div class="premium-pricing-pro v4-pricing-shell">
-    <div class="premium-title">
-      <span class="mini">V5 SELLER AI PREMIUM</span>
+  <style>
+    .premium-pricing-compact{position:relative;padding:28px;background:radial-gradient(circle at top left,rgba(37,99,235,.12),transparent 32%),linear-gradient(135deg,#f8fafc,#ffffff 46%,#fff7ed);border-radius:30px;border:1px solid rgba(226,232,240,.95);box-shadow:0 24px 70px rgba(15,23,42,.10);overflow:hidden}
+    .premium-pricing-compact:before{content:"";position:absolute;inset:-2px;background:linear-gradient(120deg,rgba(59,130,246,.12),transparent,rgba(245,158,11,.14));pointer-events:none}
+    .pricing-compact-head{position:relative;text-align:center;margin-bottom:20px;z-index:1}
+    .pricing-compact-head .mini{display:inline-flex;align-items:center;justify-content:center;padding:7px 13px;border-radius:999px;background:linear-gradient(135deg,#eef2ff,#fff7ed);color:#1e3a8a;font-weight:1000;font-size:12px;letter-spacing:.08em;border:1px solid rgba(99,102,241,.18)}
+    .pricing-compact-head h2{margin:10px 0 6px;font-size:30px;line-height:1.15;color:#0f172a;letter-spacing:-.04em}
+    .pricing-compact-head p{margin:0;color:#64748b;font-size:14px}
+    .pricing-grid-5{position:relative;z-index:1;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:14px;align-items:stretch}
+    .compact-price-card{position:relative;background:rgba(255,255,255,.92);backdrop-filter:blur(12px);border:1px solid rgba(226,232,240,.96);border-radius:22px;padding:18px 14px;text-align:center;box-shadow:0 14px 34px rgba(15,23,42,.08);transition:.2s ease;overflow:hidden}
+    .compact-price-card:after{content:"";position:absolute;left:14px;right:14px;top:0;height:3px;border-radius:999px;background:linear-gradient(90deg,#2563eb,#f59e0b);opacity:.45}
+    .compact-price-card:hover{transform:translateY(-5px);box-shadow:0 22px 46px rgba(15,23,42,.14);border-color:rgba(37,99,235,.22)}
+    .compact-price-card .tag{display:inline-flex;padding:5px 10px;border-radius:999px;background:#f1f5f9;color:#334155;font-size:12px;font-weight:1000;margin-bottom:8px}
+    .compact-price-card h3{margin:2px 0 8px;font-size:19px;color:#111827;letter-spacing:-.02em}
+    .compact-price-card .price{font-size:25px;font-weight:1000;color:#2563eb;margin-bottom:6px;letter-spacing:-.04em}
+    .compact-price-card .sub{min-height:38px;margin:0 0 14px;color:#64748b;font-size:13px;line-height:1.35}
+    .plan-actions{display:grid;grid-template-columns:1fr;gap:8px;margin-top:auto}
+    .compact-price-card button{width:100%;border:0;border-radius:13px;padding:11px 10px;font-weight:1000;cursor:pointer;transition:.18s ease}
+    .compact-price-card .btn-upgrade{background:linear-gradient(135deg,#111827,#1e293b);color:#fff;box-shadow:0 12px 24px rgba(17,24,39,.18)}
+    .compact-price-card .btn-benefit{background:#f8fafc;color:#334155;border:1px solid #e2e8f0;box-shadow:none;font-size:12px;padding:9px 10px}
+    .compact-price-card .btn-benefit:hover{background:#eef2ff;color:#1d4ed8;border-color:#bfdbfe}
+    .compact-price-card.popular{border:2px solid #f59e0b;transform:translateY(-3px);box-shadow:0 22px 48px rgba(245,158,11,.18)}
+    .compact-price-card.popular:before{content:"Phổ biến";position:absolute;top:10px;right:-30px;background:#f59e0b;color:#111827;font-size:11px;font-weight:1000;padding:5px 32px;transform:rotate(35deg)}
+    .compact-price-card.pro{background:linear-gradient(180deg,#0f172a,#111827 72%,#172554);border-color:#334155;color:#fff;box-shadow:0 24px 55px rgba(15,23,42,.28)}
+    .compact-price-card.pro:after{background:linear-gradient(90deg,#facc15,#38bdf8);opacity:.85}
+    .compact-price-card.pro h3,.compact-price-card.pro .sub{color:#fff}
+    .compact-price-card.pro .price{color:#facc15;text-shadow:0 2px 16px rgba(250,204,21,.25)}
+    .compact-price-card.pro .tag{background:rgba(250,204,21,.16);color:#facc15;border:1px solid rgba(250,204,21,.20)}
+    .compact-price-card.pro .btn-upgrade{background:linear-gradient(135deg,#facc15,#f59e0b);color:#111827;box-shadow:0 12px 28px rgba(250,204,21,.20)}
+    .compact-price-card.pro .btn-benefit{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.14);color:#e5e7eb}
+    .premium-short-note{position:relative;z-index:1;margin-top:14px;padding:12px 14px;border-radius:16px;background:rgba(255,255,255,.78);border:1px dashed #cbd5e1;color:#475569;font-size:13px;text-align:center}
+    .benefit-modal{position:fixed;inset:0;z-index:99999;display:none;align-items:center;justify-content:center;background:rgba(15,23,42,.62);backdrop-filter:blur(8px);padding:18px}
+    .benefit-modal.show{display:flex}
+    .benefit-box{width:min(760px,96vw);max-height:90vh;overflow:auto;background:linear-gradient(180deg,#ffffff,#f8fafc);border-radius:26px;border:1px solid rgba(226,232,240,.95);box-shadow:0 35px 90px rgba(15,23,42,.35);padding:22px;position:relative}
+    .benefit-close{position:absolute;top:14px;right:14px;width:36px;height:36px;border:0;border-radius:999px;background:#f1f5f9;color:#0f172a;font-size:22px;font-weight:900;cursor:pointer}
+    .benefit-top{padding-right:42px;margin-bottom:14px}
+    .benefit-label{display:inline-flex;padding:6px 11px;border-radius:999px;background:#eef2ff;color:#1d4ed8;font-size:12px;font-weight:1000;margin-bottom:8px}
+    .benefit-title{margin:0;font-size:28px;color:#0f172a;letter-spacing:-.04em}
+    .benefit-price{margin:7px 0 0;font-size:24px;font-weight:1000;color:#2563eb}
+    .benefit-desc{margin:8px 0 0;color:#64748b;line-height:1.5}
+    .benefit-grid{display:grid;grid-template-columns:1.1fr .9fr .9fr;gap:12px;margin-top:16px}
+    .benefit-panel{background:#fff;border:1px solid #e5e7eb;border-radius:18px;padding:14px;box-shadow:0 10px 24px rgba(15,23,42,.05)}
+    .benefit-panel h4{margin:0 0 10px;color:#111827;font-size:15px}
+    .benefit-panel ul{margin:0;padding-left:18px;color:#475569;font-size:13px;line-height:1.7}
+    .benefit-actions{display:flex;gap:10px;margin-top:16px}
+    .benefit-actions button{border:0;border-radius:14px;padding:12px 16px;font-weight:1000;cursor:pointer}
+    .benefit-pay{background:#111827;color:#fff;flex:1}
+    .benefit-cancel{background:#f1f5f9;color:#334155}
+    @media(max-width:1200px){.pricing-grid-5{grid-template-columns:repeat(3,1fr)}}
+    @media(max-width:760px){.premium-pricing-compact{padding:18px}.pricing-grid-5{grid-template-columns:1fr}.compact-price-card.popular{transform:none}.benefit-grid{grid-template-columns:1fr}.benefit-actions{flex-direction:column}}
+  </style>
+
+  <div class="premium-pricing-compact">
+    <div class="pricing-compact-head">
+      <span class="mini">PREMIUM SAAS</span>
       <h2>Bảng Giá Premium</h2>
-      <p>Thiết kế theo giá trị nhận được: tiết kiệm thời gian, giảm chi phí thuê ngoài và mở khóa AI Marketing chuyên nghiệp.</p>
+      <p>Chọn gói phù hợp để mở khóa công cụ AI Marketing, CRM và Automation bán hàng.</p>
     </div>
 
-    <div class="v4-pricing-stats">
-      <div><b>2.381+</b><span>Khách hàng sử dụng</span></div>
-      <div><b>120.000+</b><span>Content đã tạo</span></div>
-      <div><b>98%</b><span>Đánh giá hài lòng</span></div>
-    </div>
-
-    <div class="premium-grid-pro v4-premium-grid">
-      <div class="premium-plan free-plan v4-plan">
-        <div class="plan-ribbon">DÙNG THỬ</div>
-        <div class="plan-name">Dùng thử miễn phí</div>
-        <div class="plan-price">3 ngày</div>
-        <div class="plan-desc">Dùng thử 3 ngày sau khi đăng ký, chỉ mở 3 công cụ chính để khách trải nghiệm trước khi nâng cấp.</div>
-        <div class="benefit-title">Quyền lợi dùng thử</div>
-        <ul class="benefit-list">
-          <li class="open">Quản lý Fanpage</li>
-          <li class="open">Quản lý Group</li>
-          <li class="open">AI Comment</li>
-          <li class="locked">AI Messenger cần Premium</li>
-          <li class="locked">CRM Kanban cần Premium</li>
-          <li class="locked">AI Marketing Director cần Premium</li>
-        </ul>
-      </div>
-
-      <div class="premium-plan v4-plan">
-        <div class="value-badge">🚀 GÓI 1 THÁNG</div>
-        <div class="plan-name">Gói 1 tháng</div>
-        <div class="plan-price">159.000đ</div>
-        <div class="price-sub">Chỉ 5.300đ/ngày</div>
-        <div class="benefit-title">Phù hợp</div>
-        <ul class="benefit-list">
-          <li class="open">Chủ shop mới</li>
-          <li class="open">Cá nhân kinh doanh online</li>
-          <li class="open">Người mới chạy quảng cáo</li>
-        </ul>
-        <div class="benefit-title">Giá trị nhận được</div>
-        <div class="v4-save-box">🔥 Tiết kiệm 2-3 giờ mỗi ngày</div>
-        <ul class="benefit-list">
-          <li class="open">AI Content Studio</li>
-          <li class="open">Tạo 5 content/lần</li>
-          <li class="open">Đăng Fanpage, ảnh, Video, Reel</li>
-          <li class="open">Upload Excel / CSV</li>
-          <li class="open">Lịch đăng cơ bản</li>
-          <li class="open">Dashboard cơ bản</li>
-          <li class="open">Token Manager</li>
-        </ul>
-        <button class="plan-button premium-btn" onclick="openPayment('monthly')">Mở khóa gói 1 tháng</button>
-      </div>
-
-      <div class="premium-plan v4-plan">
-        <div class="plan-name">Gói 3 tháng</div>
-        <div class="plan-price">359.000đ</div>
-        <div class="price-sub">Tối ưu hơn gói tháng</div>
-        <div class="benefit-title">Bao gồm toàn bộ gói 1 tháng</div>
-        <ul class="benefit-list">
-          <li class="open">Campaign Manager</li>
-          <li class="open">AI Marketing Planner</li>
-          <li class="open">Kho Content Premium</li>
-          <li class="open">Token Center nâng cao</li>
-          <li class="open">Báo cáo CSV</li>
-          <li class="open">Lịch đăng nâng cao</li>
-        </ul>
-        <div class="v4-value-received">
-          <b>🎁 Giá trị nhận được</b>
-          <span>Viết content + lập kế hoạch + báo cáo cơ bản cho shop nhỏ.</span>
+    <div class="pricing-grid-5">
+      <div class="compact-price-card" data-plan="monthly">
+        <span class="tag">Cơ bản</span>
+        <h3>Gói 1 Tháng</h3>
+        <div class="price">159.000đ</div>
+        <p class="sub">Dùng ngắn hạn, phù hợp người mới bắt đầu.</p>
+        <div class="plan-actions">
+          <button type="button" class="btn-upgrade" data-plan="monthly">Nâng cấp</button>
+          <button type="button" class="btn-benefit" data-benefit="monthly">Xem quyền lợi</button>
         </div>
-        <button class="plan-button premium-btn" onclick="openPayment('quarterly')">Đăng ký 3 tháng</button>
       </div>
 
-      <div class="premium-plan v4-plan">
-        <div class="plan-name">Gói 6 tháng</div>
-        <div class="plan-price">559.000đ</div>
-        <div class="price-sub">Mở CRM và Sales Bot</div>
-        <div class="benefit-title">Bao gồm toàn bộ gói 3 tháng</div>
-        <ul class="benefit-list">
-          <li class="open">CRM Pro</li>
-          <li class="open">AI Sales Bot</li>
-          <li class="open">Comment Manager</li>
-          <li class="open">Auto Tag khách hàng</li>
-          <li class="open">Quản lý khách hàng</li>
-          <li class="open">Chuyển khách sang CRM</li>
-        </ul>
-        <div class="v4-value-received">
-          <b>🎁 Giá trị nhận được</b>
-          <span>Tối ưu quy trình tư vấn, gom khách và chăm sóc khách hàng.</span>
+      <div class="compact-price-card" data-plan="quarterly">
+        <span class="tag">Tiết kiệm</span>
+        <h3>Gói 3 Tháng</h3>
+        <div class="price">359.000đ</div>
+        <p class="sub">Ổn định hơn cho shop nhỏ và cá nhân bán hàng.</p>
+        <div class="plan-actions">
+          <button type="button" class="btn-upgrade" data-plan="quarterly">Nâng cấp</button>
+          <button type="button" class="btn-benefit" data-benefit="quarterly">Xem quyền lợi</button>
         </div>
-        <button class="plan-button premium-btn" onclick="openPayment('halfyear')">Đăng ký 6 tháng</button>
       </div>
 
-      <div class="premium-plan featured v4-plan v4-yearly">
-        <div class="plan-ribbon">⭐ PHỔ BIẾN NHẤT</div>
-        <div class="plan-name">Gói 1 năm</div>
-        <div class="plan-price">859.000đ</div>
-        <div class="price-sub">Chỉ 2.300đ/ngày</div>
-        <div class="benefit-title">Giá trị thực tế</div>
-        <ul class="benefit-list">
-          <li class="open">AI Content Brain</li>
-          <li class="open">AI Marketing Director</li>
-          <li class="open">AI Ads Chuyên Gia</li>
-          <li class="open">CRM Pro</li>
-          <li class="open">Kho 50.000+ Content</li>
-          <li class="open">Automation Marketing</li>
-        </ul>
-        <div class="v4-save-box">🚀 Tiết kiệm ~12.000.000đ/năm chi phí thuê nhân sự</div>
-        <button class="plan-button premium-btn" onclick="openPayment('yearly')">Chọn gói phổ biến nhất</button>
+      <div class="compact-price-card" data-plan="halfyear">
+        <span class="tag">Tăng trưởng</span>
+        <h3>Gói 6 Tháng</h3>
+        <div class="price">559.000đ</div>
+        <p class="sub">Mở thêm CRM, Sales Bot và quản lý khách hàng.</p>
+        <div class="plan-actions">
+          <button type="button" class="btn-upgrade" data-plan="halfyear">Nâng cấp</button>
+          <button type="button" class="btn-benefit" data-benefit="halfyear">Xem quyền lợi</button>
+        </div>
       </div>
 
-      <div class="premium-plan featured v4-plan v4-lifetime">
-        <div class="plan-ribbon">👑 NHÀ BÁN HÀNG PRO</div>
-        <div class="plan-name">Gói nhà bán hàng chuyên nghiệp</div>
-        <div class="plan-price">1.959.000đ</div>
-        <div class="price-sub">Gói cao nhất cho nhà bán hàng chuyên nghiệp</div>
-        <div class="benefit-title">Bao gồm</div>
-        <ul class="benefit-list">
-          <li class="open">Toàn bộ AI hiện tại</li>
-          <li class="open">Toàn bộ AI tương lai</li>
-          <li class="open">Cập nhật miễn phí</li>
-          <li class="open">Ưu tiên hỗ trợ</li>
-          <li class="open">Không phí gia hạn</li>
-          <li class="open">AI Image Center</li>
-          <li class="open">AI Video Center</li>
-          <li class="open">Dashboard Enterprise</li>
-          <li class="open">Export PDF / Excel</li>
-          <li class="open">Backup Database</li>
-        </ul>
-        <div class="v4-save-box gold">💰 Tiết kiệm hơn 10.000.000đ chi phí sử dụng lâu dài</div>
-        <button class="plan-button premium-btn" onclick="openPayment('lifetime')">Mở khóa trọn đời</button>
+      <div class="compact-price-card popular" data-plan="yearly">
+        <span class="tag">Tối ưu</span>
+        <h3>Gói 1 Năm</h3>
+        <div class="price">859.000đ</div>
+        <p class="sub">Gói phổ biến, chi phí thấp cho sử dụng dài hạn.</p>
+        <div class="plan-actions">
+          <button type="button" class="btn-upgrade" data-plan="yearly">Nâng cấp</button>
+          <button type="button" class="btn-benefit" data-benefit="yearly">Xem quyền lợi</button>
+        </div>
+      </div>
+
+      <div class="compact-price-card pro" data-plan="sellerpro">
+        <span class="tag">Cao cấp</span>
+        <h3>Seller Pro</h3>
+        <div class="price">1.959.000đ</div>
+        <p class="sub">Toàn bộ công cụ hiện tại, tương lai và ưu tiên hỗ trợ.</p>
+        <div class="plan-actions">
+          <button type="button" class="btn-upgrade" data-plan="sellerpro">Nâng cấp</button>
+          <button type="button" class="btn-benefit" data-benefit="sellerpro">Xem quyền lợi</button>
+        </div>
       </div>
     </div>
 
-    <div class="v4-outsourcing-box">
-      <h3>🎁 Giá trị nhận được nếu thuê ngoài</h3>
-      <div class="v4-outsource-grid">
-        <div><b>2.000.000đ/tháng</b><span>Viết content</span></div>
-        <div><b>3.000.000đ/tháng</b><span>Marketing</span></div>
-        <div><b>1.000.000đ/tháng</b><span>CRM</span></div>
-        <div><b>6.000.000đ+</b><span>Tổng giá trị</span></div>
-      </div>
-      <p>Bạn chỉ trả từ <b>159.000đ</b> để có hệ thống AI Marketing hỗ trợ tạo nội dung, quản lý khách và tối ưu bán hàng.</p>
-    </div>
+  </div>
 
-    <div class="premium-note-box">
-      Sau khi thanh toán, nếu 5 phút chưa kích hoạt tự động, vui lòng gửi ảnh giao dịch và nội dung thanh toán qua Zalo 036 338 2629 để được hỗ trợ nhanh.
+  <div class="benefit-modal" id="planBenefitModal" aria-hidden="true">
+    <div class="benefit-box">
+      <button type="button" class="benefit-close" id="planBenefitClose">×</button>
+      <div class="benefit-top">
+        <span class="benefit-label" id="benefitLabel">PREMIUM</span>
+        <h3 class="benefit-title" id="benefitTitle">Gói Premium</h3>
+        <div class="benefit-price" id="benefitPrice">159.000đ</div>
+        <p class="benefit-desc" id="benefitDesc"></p>
+      </div>
+      <div class="benefit-grid">
+        <div class="benefit-panel"><h4>Tính năng mở khóa</h4><ul id="benefitFeatures"></ul></div>
+        <div class="benefit-panel"><h4>Phù hợp với</h4><ul id="benefitFit"></ul></div>
+        <div class="benefit-panel"><h4>Giá trị nhận được</h4><ul id="benefitValue"></ul></div>
+      </div>
+      <div class="benefit-actions">
+        <button type="button" class="benefit-pay" id="benefitUpgradeBtn">Nâng cấp gói này</button>
+        <button type="button" class="benefit-cancel" id="benefitCancelBtn">Đóng</button>
+      </div>
     </div>
   </div>
 </section>
@@ -3863,7 +6006,7 @@ Thời gian tạo: {{ h[9] }}
           <b>Ngân hàng:</b> Agribank<br>
           <b>STK:</b> 8888363382629<br>
           <b>Chủ TK:</b> NGUYEN DANG THI XUAN<br>
-          <b>Nội dung CK:</b> <span id="payContent">PREMIUM 1THANG</span>
+          <b>Nội dung CK:</b> <span id="payContent">ID_THIET_BI</span>
         </div>
       </div>
 
@@ -3879,17 +6022,11 @@ Thời gian tạo: {{ h[9] }}
         </div>
         <button class="primary" onclick="submitPremiumRequest()" style="margin:10px 0 16px;width:100%">ĐÃ THANH TOÁN</button>
 
-        <h3>Quyền lợi gói này</h3>
-        <div class="payment-benefits" id="payBenefits"></div>
-
-        <h3>Tính năng chưa mở ở gói này</h3>
-        <div class="payment-benefits" id="payLocked"></div>
+        <div class="payment-benefits" id="payBenefits" style="display:none"></div>
+        <div class="payment-benefits" id="payLocked" style="display:none"></div>
 
         <div class="payment-alert">
-          Sau khi thanh toán, hệ thống sẽ tự động kích hoạt gói Premium của bạn.
-          Nếu sau <b>5 phút</b> vẫn chưa được kích hoạt tự động, vui lòng liên hệ Zalo
-          <b>036 338 2629</b> để đội ngũ kỹ thuật hỗ trợ nhanh nhất.
-          Khi liên hệ vui lòng gửi ảnh giao dịch hoặc nội dung chuyển khoản.
+          Sau khi thanh toán, vui lòng bấm <b>Đã thanh toán</b> để gửi ID thiết bị, số điện thoại, Gmail và gói đã đăng ký về web admin. Nếu sau 5 phút chưa được hỗ trợ, liên hệ Zalo <b>036 338 2629</b>.
         </div>
 
         <div class="payment-actions">
@@ -3915,6 +6052,129 @@ Thời gian tạo: {{ h[9] }}
     </div>
   </div>
 </div>
+
+
+
+
+<style id="affiliate-mobile-visible-fix">
+#affiliateAdminSection{display:none!important}
+#mobileCtvQuickBtn{position:fixed;left:16px;bottom:92px;z-index:2147482500;border:0;border-radius:999px;padding:12px 16px;background:linear-gradient(135deg,#16a34a,#22c55e,#84cc16);color:#fff;font-weight:900;font-size:14px;box-shadow:0 14px 34px rgba(22,163,74,.38);cursor:pointer;display:flex;align-items:center;gap:8px;letter-spacing:.2px}
+#mobileCtvQuickBtn .dot{width:9px;height:9px;border-radius:50%;background:#dcfce7;box-shadow:0 0 0 6px rgba(220,252,231,.22)}
+@media(min-width:900px){ #mobileCtvQuickBtn{bottom:26px;left:24px}}
+@media(max-width:520px){ #mobileCtvQuickBtn{bottom:82px;left:12px;padding:11px 13px;font-size:13px}}
+</style>
+<button id="mobileCtvQuickBtn" type="button" onclick="return openModule('affiliate_center')"><span class="dot"></span>CTV Hoa Hồng</button>
+<script id="affiliate-mobile-visible-fix-js">
+(function(){
+  function hideAdminCTVOnCustomer(){document.querySelectorAll('a[href="#affiliate_admin"], [onclick*="affiliate_admin"], #affiliateAdminSection').forEach(function(el){el.style.display='none';});}
+  function makeCtvVisible(){hideAdminCTVOnCustomer();var btn=document.getElementById('mobileCtvQuickBtn'); if(btn) btn.style.display='flex'; if(location.hash==='#affiliate_center' && window.openModule) setTimeout(function(){window.openModule('affiliate_center')},300);}
+  document.addEventListener('DOMContentLoaded',makeCtvVisible);setTimeout(makeCtvVisible,700);setTimeout(makeCtvVisible,1800);
+})();
+</script>
+
+<!-- CTV AFFILIATE CENTER V1 -->
+<style id="affiliate-center-v1-style">
+#affiliateCenterSection,#affiliateAdminSection{display:none;background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:22px;padding:18px;margin:18px 0;box-shadow:0 20px 60px rgba(15,23,42,.08)}
+.aff-hero{display:grid;grid-template-columns:1.2fr .8fr;gap:14px;align-items:stretch}
+.aff-card{background:linear-gradient(135deg,#f8fafc,#eef2ff);border:1px solid #dbeafe;border-radius:18px;padding:16px}
+.aff-title{font-size:22px;font-weight:900;color:#0f172a;margin:0 0 6px}.aff-sub{color:#64748b;font-size:14px;line-height:1.5}
+.aff-link-box{display:flex;gap:8px;align-items:center;margin-top:12px}.aff-link-box input{flex:1;border:1px solid #cbd5e1;border-radius:12px;padding:11px;font-weight:700;color:#0f172a;background:white}.aff-btn{border:0;border-radius:12px;padding:11px 14px;font-weight:900;cursor:pointer;background:linear-gradient(135deg,#16a34a,#22c55e);color:white;box-shadow:0 10px 28px rgba(22,163,74,.25)}.aff-btn.dark{background:linear-gradient(135deg,#0f172a,#334155)}.aff-btn.gold{background:linear-gradient(135deg,#f59e0b,#facc15);color:#111827}.aff-btn.light{background:#fff;color:#0f172a;border:1px solid #cbd5e1;box-shadow:none}
+.aff-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:14px 0}.aff-stat{background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:12px}.aff-stat b{display:block;font-size:20px;color:#0f172a}.aff-stat span{font-size:12px;color:#64748b}
+.aff-form{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:12px}.aff-form input,.aff-form select{border:1px solid #cbd5e1;border-radius:12px;padding:11px;background:#fff;color:#0f172a}.aff-table{width:100%;border-collapse:collapse;margin-top:12px;font-size:13px}.aff-table th,.aff-table td{border-bottom:1px solid #e2e8f0;padding:9px;text-align:left}.aff-table th{color:#475569;background:#f8fafc}.aff-pill{display:inline-block;padding:4px 8px;border-radius:999px;background:#dcfce7;color:#166534;font-weight:900;font-size:12px}.aff-tabs{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}.aff-toast{position:fixed;right:22px;bottom:120px;background:#0f172a;color:white;padding:12px 14px;border-radius:14px;z-index:99999;box-shadow:0 12px 40px rgba(0,0,0,.25);display:none}
+@media(max-width:900px){.aff-hero,.aff-form{grid-template-columns:1fr}.aff-stats{grid-template-columns:repeat(2,1fr)}}
+</style>
+<div id="affiliateCenterSection" class="app-module-section">
+  <div class="aff-hero">
+    <div class="aff-card">
+      <h2 class="aff-title">CTV Hoa Hồng</h2>
+      <div class="aff-sub">CTV đăng ký miễn phí, không cần mua gói. Khi bấm vào mục này, hệ thống tự tạo mã CTV và link giới thiệu riêng để gửi khách đăng ký. Khách nâng cấp Premium thành công thì hoa hồng được ghi nhận theo mã CTV.</div>
+      <div class="aff-form">
+        <input id="affName" placeholder="Tên CTV">
+        <input id="affPhone" placeholder="Số điện thoại">
+        <input id="affEmail" placeholder="Gmail">
+      </div>
+      <div style="margin-top:10px"><button class="aff-btn" onclick="affiliateSaveProfile()">Tạo link CTV miễn phí</button></div>
+      <div class="aff-link-box"><input id="affRefLink" readonly placeholder="Link giới thiệu sẽ tự tạo tại đây"><button class="aff-btn dark" onclick="affiliateCopyLink()">Sao chép</button></div>
+      <div class="aff-sub" style="margin-top:8px;color:#16a34a;font-weight:900">Link CTV được tạo miễn phí. CTV chỉ cần chia sẻ link, không cần mua gói Premium.</div>
+      <div class="aff-sub" style="margin-top:8px">Mã CTV: <b id="affCode">---</b> • Cấp bậc: <b id="affLevel">---</b> • Hoa hồng: <b id="affPercent">---</b>%</div>
+    </div>
+    <div class="aff-card">
+      <h3 style="margin-top:0">Rút hoa hồng</h3>
+      <div class="aff-sub">Số dư khả dụng: <b id="affBalance">0đ</b></div>
+      <div class="aff-form" style="grid-template-columns:1fr">
+        <input id="wdAmount" placeholder="Số tiền muốn rút">
+        <input id="wdBank" placeholder="Ngân hàng">
+        <input id="wdNumber" placeholder="Số tài khoản">
+        <input id="wdName" placeholder="Chủ tài khoản">
+      </div>
+      <button class="aff-btn gold" style="margin-top:10px" onclick="affiliateWithdraw()">Gửi yêu cầu rút tiền</button>
+    </div>
+  </div>
+  <div class="aff-stats">
+    <div class="aff-stat"><b id="affClicks">0</b><span>Tổng click</span></div>
+    <div class="aff-stat"><b id="affRefs">0</b><span>Khách đăng ký</span></div>
+    <div class="aff-stat"><b id="affPremium">0</b><span>Khách Premium</span></div>
+    <div class="aff-stat"><b id="affCommission">0đ</b><span>Hoa hồng</span></div>
+  </div>
+  <h3>Khách đã giới thiệu</h3>
+  <div style="overflow:auto"><table class="aff-table" id="affRecent"><thead><tr><th>Thiết bị</th><th>SĐT</th><th>Gmail</th><th>Gói</th><th>Doanh thu</th><th>Hoa hồng</th><th>Trạng thái</th></tr></thead><tbody></tbody></table></div>
+</div>
+
+<div id="affiliateAdminSection" class="app-module-section">
+  <h2 class="aff-title">Quản Lý CTV</h2>
+  <div class="aff-sub">Admin chỉnh phần trăm hoa hồng theo cấp bậc, xem CTV, doanh thu, hoa hồng và duyệt yêu cầu rút tiền.</div>
+  <div class="aff-tabs">
+    <input id="setNormal" placeholder="CTV thường %" value="20">
+    <input id="setSilver" placeholder="CTV Bạc %" value="25">
+    <input id="setGold" placeholder="CTV Vàng %" value="30">
+    <input id="setDiamond" placeholder="CTV Kim Cương %" value="35">
+    <button class="aff-btn" onclick="affiliateSaveSettings()">Lưu hoa hồng</button>
+  </div>
+  <h3>Danh sách CTV</h3>
+  <div style="overflow:auto"><table class="aff-table" id="affAdminUsers"><thead><tr><th>CTV</th><th>SĐT</th><th>Gmail</th><th>Mã</th><th>Cấp</th><th>%</th><th>Đơn</th><th>Doanh thu</th><th>Hoa hồng</th></tr></thead><tbody></tbody></table></div>
+  <h3>Yêu cầu rút tiền</h3>
+  <div style="overflow:auto"><table class="aff-table" id="affWithdrawals"><thead><tr><th>ID</th><th>Mã CTV</th><th>Số tiền</th><th>Ngân hàng</th><th>STK</th><th>Chủ TK</th><th>Trạng thái</th><th>Thao tác</th></tr></thead><tbody></tbody></table></div>
+</div>
+<div id="affToast" class="aff-toast"></div>
+<script id="affiliate-center-v1-js">
+(function(){
+  function q(s){return document.querySelector(s)}; function qa(s){return Array.from(document.querySelectorAll(s))};
+  function money(n){n=parseInt(n||0,10)||0; return n.toLocaleString('vi-VN')+'đ'}
+  function toast(t){var el=q('#affToast'); if(!el){alert(t);return} el.textContent=t; el.style.display='block'; setTimeout(function(){el.style.display='none'},2200)}
+  function hideAllMain(){qa('main section,.module-section,.app-module-section').forEach(function(el){el.style.display='none'});}
+  var oldOpen=window.openModule;
+  window.openModule=function(name){
+    if(name==='affiliate_center'){hideAllMain(); var s=q('#affiliateCenterSection'); if(s){s.style.display='block'; affiliateLoadMe(); window.scrollTo({top:0,behavior:'smooth'});} return false;}
+    if(name==='affiliate_admin'){hideAllMain(); var a=q('#affiliateAdminSection'); if(a){a.style.display='block'; affiliateLoadAdmin(); window.scrollTo({top:0,behavior:'smooth'});} return false;}
+    if(typeof oldOpen==='function') return oldOpen(name); return true;
+  };
+  function addMenus(){
+    var nav=q('.nav'); if(!nav || q('[data-aff-menu="1"]')) return;
+    var sysTitle=Array.from(nav.querySelectorAll('.v2-nav-title')).find(function(x){return /HỆ THỐNG/i.test(x.textContent||'')});
+    var html='<a data-aff-menu="1" class="v2-nav-link" href="#affiliate_center" onclick="return openModule(\'affiliate_center\')"><span class="v2-nav-ico"></span><span class="v2-nav-text">CTV Hoa Hồng</span><span class="v2-nav-tag" style="background:#dcfce7;color:#166534">CTV</span></a>';
+    if(sysTitle) sysTitle.insertAdjacentHTML('afterend',html); else nav.insertAdjacentHTML('beforeend',html);
+  }
+  window.affiliateLoadMe=function(){fetch('/api/affiliate/me').then(r=>r.json()).then(function(d){
+    if(!d.ok) return; var s=d.summary||{};
+    q('#affName').value=d.full_name||''; q('#affPhone').value=d.phone||''; q('#affEmail').value=d.email||'';
+    q('#affRefLink').value=d.ref_link||''; q('#affCode').textContent=d.affiliate_code||'---'; q('#affLevel').textContent=d.level_name||'---'; q('#affPercent').textContent=d.commission_percent||20;
+    q('#affClicks').textContent=s.clicks||0; q('#affRefs').textContent=s.referrals||0; q('#affPremium').textContent=s.premium||0; q('#affCommission').textContent=money(s.commission||0); q('#affBalance').textContent=money(s.balance||0);
+    var tb=q('#affRecent tbody'); if(tb){tb.innerHTML=(s.recent||[]).map(function(r){return '<tr><td>'+ (r[0]||'') +'</td><td>'+ (r[1]||'') +'</td><td>'+ (r[2]||'') +'</td><td>'+ (r[3]||'') +'</td><td>'+ money(r[4]) +'</td><td>'+ money(r[5]) +'</td><td><span class="aff-pill">'+ (r[6]||'') +'</span></td></tr>'}).join('') || '<tr><td colspan="7">Chưa có khách giới thiệu.</td></tr>';}
+  }).catch(function(){toast('Không tải được dữ liệu CTV')})}
+  window.affiliateSaveProfile=function(){fetch('/api/affiliate/me',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({full_name:q('#affName').value,phone:q('#affPhone').value,email:q('#affEmail').value})}).then(r=>r.json()).then(function(d){toast(d.ok?'Đã cập nhật CTV':'Có lỗi xảy ra'); affiliateLoadMe();})}
+  window.affiliateCopyLink=function(){var inp=q('#affRefLink'); if(!inp)return; inp.select(); navigator.clipboard&&navigator.clipboard.writeText(inp.value); toast('Đã sao chép link CTV')}
+  window.affiliateWithdraw=function(){fetch('/api/affiliate/withdraw',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({amount:q('#wdAmount').value,bank_name:q('#wdBank').value,bank_number:q('#wdNumber').value,account_name:q('#wdName').value})}).then(r=>r.json()).then(function(d){toast(d.message||'Đã gửi yêu cầu'); affiliateLoadMe();})}
+  window.affiliateLoadAdmin=function(){fetch('/api/admin/affiliate').then(r=>r.json()).then(function(d){
+    var tb=q('#affAdminUsers tbody'); if(tb){tb.innerHTML=(d.users||[]).map(function(u){return '<tr><td>'+ (u[2]||u[1]||'') +'</td><td>'+ (u[3]||'') +'</td><td>'+ (u[4]||'') +'</td><td><b>'+ (u[5]||'') +'</b></td><td>'+ (u[6]||'') +'</td><td>'+ (u[7]||0) +'%</td><td>'+ (u[10]||0) +'</td><td>'+ money(u[11]) +'</td><td>'+ money(u[12]) +'</td></tr>'}).join('') || '<tr><td colspan="9">Chưa có CTV.</td></tr>';}
+    (d.settings||[]).forEach(function(s){if(s[1]==='CTV thường')q('#setNormal').value=s[3]; if(s[1]==='CTV Bạc')q('#setSilver').value=s[3]; if(s[1]==='CTV Vàng')q('#setGold').value=s[3]; if(s[1]==='CTV Kim Cương')q('#setDiamond').value=s[3];});
+    var wb=q('#affWithdrawals tbody'); if(wb){wb.innerHTML=(d.withdrawals||[]).map(function(w){return '<tr><td>'+w[0]+'</td><td>'+w[1]+'</td><td>'+money(w[2])+'</td><td>'+w[3]+'</td><td>'+w[4]+'</td><td>'+w[5]+'</td><td><span class="aff-pill">'+w[6]+'</span></td><td><button class="aff-btn light" onclick="affiliateWithdrawAction('+w[0]+',\'Đã thanh toán\')">Đã thanh toán</button> <button class="aff-btn light" onclick="affiliateWithdrawAction('+w[0]+',\'Từ chối\')">Từ chối</button></td></tr>'}).join('') || '<tr><td colspan="8">Chưa có yêu cầu rút tiền.</td></tr>';}
+  })}
+  window.affiliateSaveSettings=function(){fetch('/api/admin/affiliate/settings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({normal:q('#setNormal').value,silver:q('#setSilver').value,gold:q('#setGold').value,diamond:q('#setDiamond').value})}).then(r=>r.json()).then(function(d){toast(d.message||'Đã lưu'); affiliateLoadAdmin();})}
+  window.affiliateWithdrawAction=function(id,status){fetch('/api/admin/affiliate/withdraw/'+id,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:status})}).then(r=>r.json()).then(function(){toast('Đã cập nhật rút tiền'); affiliateLoadAdmin();})}
+  function init(){addMenus(); var url=new URL(location.href); if(url.searchParams.get('ref')){try{document.cookie='affiliate_code='+url.searchParams.get('ref').toUpperCase()+';path=/;max-age='+(60*60*24*90)}catch(e){}}}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init(); setTimeout(init,500); setTimeout(init,1500);
+})();
+</script>
 
 </main>
 
@@ -4024,13 +6284,72 @@ function toggleMenuGroup(el){
 </script>
 
 
+<script>
+function showInstallGuide(){
+  alert("Cách cài App Mini:\\n\\nAndroid Chrome: bấm dấu 3 chấm → Thêm vào màn hình chính.\\n\\niPhone Safari: bấm Chia sẻ → Thêm vào MH chính.\\n\\nSau đó mở Mkt Automation Pro như một app trên điện thoại.");
+}
+
+let deferredInstallPrompt = null;
+window.addEventListener('beforeinstallprompt', function(e){
+  e.preventDefault();
+  deferredInstallPrompt = e;
+});
+</script>
 
 
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function(){
+    navigator.serviceWorker.register('/sw.js').catch(function(err){
+      console.log('Service worker registration failed:', err);
+    });
+  });
+}
+</script>
 
 
-
-
-
+<script>
+function showInstallGuide(){
+  alert("Cách cài App Mini:\\n\\nAndroid Chrome: bấm dấu 3 chấm → Thêm vào màn hình chính.\\n\\niPhone Safari: bấm Chia sẻ → Thêm vào MH chính.\\n\\nSau đó mở Mkt Automation Pro V2 như một app.");
+}
+(function(){
+  function planKeyFromText(text){
+    text = (text || '').toLowerCase();
+    if(text.includes('1.959') || text.includes('1959') || text.includes('vĩnh') || text.includes('life')) return 'lifetime';
+    if(text.includes('859') || text.includes('1 năm') || text.includes('nam') || text.includes('year')) return 'yearly';
+    if(text.includes('559') || text.includes('6 tháng') || text.includes('business')) return 'halfyear';
+    if(text.includes('359') || text.includes('3 tháng') || text.includes('pro')) return 'quarterly';
+    if(text.includes('159') || text.includes('1 tháng') || text.includes('basic')) return 'monthly';
+    return 'yearly';
+  }
+  function bindV2Pricing(){
+    document.querySelectorAll('.price-card,.premium-plan').forEach(function(card){
+      if(card.dataset.v2PricingReady) return;
+      card.dataset.v2PricingReady = '1';
+      card.title = 'Bấm để xem chi tiết gói';
+      card.addEventListener('click', function(e){
+        if(e.target && (e.target.tagName === 'A' || e.target.tagName === 'BUTTON')) return;
+        var key = planKeyFromText(card.innerText);
+        if(typeof openPremiumCheckout === 'function') openPremiumCheckout(key);
+        else if(typeof openPayment === 'function') openPayment(key);
+        else if(typeof openPremium === 'function') openPremium();
+      });
+      card.querySelectorAll('button').forEach(function(btn){
+        if((btn.innerText || '').includes('Xem chi tiết gói')) btn.innerText = 'Xem chi tiết gói';
+      });
+    });
+  }
+  document.addEventListener('DOMContentLoaded', bindV2Pricing);
+  setTimeout(bindV2Pricing, 800);
+})();
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function(){
+    navigator.serviceWorker.register('/sw.js').catch(function(err){
+      console.log('Service worker failed:', err);
+    });
+  });
+}
+</script>
 
 
 <script>
@@ -4039,29 +6358,53 @@ function dragKanban(ev){ draggedKanbanCard=ev.target; }
 function dropKanban(ev){ ev.preventDefault(); const col=ev.currentTarget; if(draggedKanbanCard){ col.appendChild(draggedKanbanCard); draggedKanbanCard=null; } }
 </script>
 
+<script id="chat-device-menu-fix-js">
+(function(){
+  function ensureDeviceId(){
+    var id = localStorage.getItem("mkt_device_id");
+    if(!id || id === "Đang tạo..."){
+      id = "MKT-" + Math.random().toString(36).slice(2,8).toUpperCase() + Date.now().toString().slice(-4);
+      localStorage.setItem("mkt_device_id", id);
+    }
+    document.cookie = "mkt_device_id=" + encodeURIComponent(id) + "; path=/; max-age=" + (60*60*24*365*5);
+    var side = document.getElementById("sidebarDeviceId");
+    if(side) side.textContent = id;
+    var pay = document.getElementById("payDeviceId");
+    if(pay) pay.value = id;
+    return id;
+  }
+  window.ensureDeviceId = ensureDeviceId;
+  document.addEventListener("DOMContentLoaded", function(){
+    ensureDeviceId();
+    setTimeout(ensureDeviceId, 300);
+    setTimeout(ensureDeviceId, 1200);
 
+    var bubble = document.querySelector(".bot-bubble");
+    if(bubble){
+      bubble.addEventListener("click", function(e){
+        e.preventDefault();
+        var panel = document.getElementById("floatingBotPanel");
+        if(panel){
+          panel.style.display = (panel.style.display === "block") ? "none" : "block";
+          if(panel.style.display === "block" && typeof appendBotGreeting === "function") appendBotGreeting();
+        }
+      }, true);
+    }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+    document.querySelectorAll(".v2-nav-link[href^='#']").forEach(function(a){
+      a.addEventListener("click", function(e){
+        var id = (a.getAttribute("href") || "").replace("#", "");
+        if(!id) return;
+        e.preventDefault();
+        if(typeof openModule === "function") openModule(id);
+      }, true);
+    });
+  });
+})();
+</script>
 
 
 <!-- FINAL REAL FIX: menu PRO badge, pricing buttons, chat buttons, hide technical status -->
-
-
-
-
-
 <!-- FINAL OVERRIDE: pricing detail buttons real working -->
 <style id="mkt-price-detail-final-css">
 #mktPlanOverlay{display:none;position:fixed;inset:0;background:rgba(15,23,42,.72);z-index:2147483646;align-items:center;justify-content:center;padding:18px;box-sizing:border-box}
@@ -4078,98 +6421,1082 @@ function dropKanban(ev){ ev.preventDefault(); const col=ev.currentTarget; if(dra
 #mktPlanNote{margin-top:12px;color:#64748b;font-weight:700;line-height:1.5}.mktPlanMini{background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;border-radius:16px;padding:14px;font-weight:900;line-height:1.5}
 @media(max-width:760px){ #mktPlanBody{grid-template-columns:1fr} #mktPlanHead h2{font-size:22px} }
 </style>
-
-
-
-<!-- MKT MOBILE INSTALL + SUPPORT CHAT FINAL -->
-<style id="mkt-mobile-support-final-css">
-  .mkt-mobile-dock{position:fixed;left:16px;bottom:18px;z-index:2147483000;display:flex;flex-direction:column;gap:10px;font-family:'Manrope','Inter',Arial,sans-serif}
-  .mkt-dock-btn{border:0;border-radius:18px;padding:10px 13px;min-width:118px;display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:900;font-size:13px;color:#fff;box-shadow:0 14px 34px rgba(15,23,42,.25);animation:mktSoftMove 2.4s ease-in-out infinite}
-  .mkt-dock-btn.install{background:linear-gradient(135deg,#0ea5e9,#2563eb)}
-  .mkt-dock-btn.ctv{background:linear-gradient(135deg,#f59e0b,#ef4444)}
-  .mkt-dock-btn span{display:block;line-height:1.15}.mkt-dock-btn small{display:block;font-size:10px;opacity:.9;font-weight:800}
-  .mkt-install-note{display:none;max-width:260px;background:#fff;color:#334155;border:1px solid #dbeafe;border-radius:16px;padding:10px 12px;box-shadow:0 12px 32px rgba(15,23,42,.18);font-size:12px;font-weight:800;line-height:1.4}
-  @keyframes mktSoftMove{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
-
-  .support-float{position:fixed;right:18px;bottom:18px;z-index:2147483001;font-family:'Manrope','Inter',Arial,sans-serif!important;letter-spacing:-.015em}.support-btn{width:60px;height:60px;padding:0;border:0;border-radius:50%;cursor:pointer;position:relative;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#2563eb,#7c3aed);box-shadow:0 0 0 5px rgba(37,99,235,.12),0 14px 34px rgba(37,99,235,.38);animation:supportBotFloat 2.2s ease-in-out infinite;transition:transform .18s ease,box-shadow .18s ease}.support-robot{font-size:27px;line-height:1}.support-online-dot{position:absolute;right:5px;bottom:6px;width:10px;height:10px;border-radius:50%;background:#00ff88;border:2px solid white;box-shadow:0 0 8px #00ff88,0 0 15px rgba(0,255,136,.85);animation:supportOnlinePulse 1.5s infinite}.support-tooltip{position:absolute;right:66px;bottom:7px;min-width:150px;background:rgba(15,23,42,.96);color:#E0F2FE;border:1px solid rgba(34,197,94,.35);border-radius:14px;padding:9px 11px;font-size:12px;line-height:1.35;text-align:left;opacity:0;pointer-events:none;transform:translateX(8px);transition:.18s ease;box-shadow:0 14px 34px rgba(15,23,42,.28);font-weight:800}.support-btn:hover{transform:scale(1.08)}.support-btn:hover .support-tooltip{opacity:1;transform:translateX(0)}@keyframes supportBotFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}@keyframes supportOnlinePulse{0%{transform:scale(1);opacity:1}50%{transform:scale(1.35);opacity:.78}100%{transform:scale(1);opacity:1}}.support-panel{display:none;width:340px;max-width:calc(100vw - 30px);background:#0f172a;color:#e5e7eb;border:1px solid #334155;border-radius:20px;box-shadow:0 18px 60px rgba(0,0,0,.45);overflow:hidden;margin-bottom:10px}.support-panel.open{display:block}.support-head{background:#1e1b4b;padding:12px 14px;font-weight:900;color:#bfdbfe;display:flex;align-items:center;justify-content:space-between}.support-close{background:#020617;color:white;border:1px solid #334155;border-radius:10px;width:28px;height:28px;cursor:pointer;font-weight:900}.support-body{padding:12px}.support-mini-menu{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:8px}.support-mini-menu button{border:1px solid #334155;background:#111827;color:#dbeafe;border-radius:12px;padding:8px 5px;font-size:12px;font-weight:900;cursor:pointer}.support-mini-menu button:hover{background:#1e40af}.support-log{height:170px;overflow-y:auto;background:#020617;border:1px solid #1f2937;border-radius:14px;padding:10px;margin-bottom:10px;font-size:13px}.support-log .me{background:#1d4ed8;margin:6px 0 6px 35px;padding:8px;border-radius:12px}.support-log .ad{background:#14532d;margin:6px 35px 6px 0;padding:8px;border-radius:12px}.support-body input,.support-body textarea{box-sizing:border-box;width:100%;background:#020617;color:white;border:1px solid #334155;border-radius:12px;padding:10px;margin:5px 0}.support-body textarea{height:78px}.support-send{width:100%;background:#22c55e;color:white;border:0;border-radius:12px;padding:11px;font-weight:900;cursor:pointer}.support-note{font-size:12px;color:#94a3b8;margin-top:8px}.floating-bot{display:none!important}
-  @media(max-width:640px){.mkt-mobile-dock{left:10px;bottom:12px}.mkt-dock-btn{min-width:98px;padding:9px 10px;font-size:12px;border-radius:15px}.support-float{right:10px;bottom:12px}.support-panel{width:calc(100vw - 20px);max-width:360px}.support-tooltip{display:none}}
-</style>
-
-<div class="mkt-mobile-dock" id="mktMobileDock">
-  <button type="button" class="mkt-dock-btn install" onclick="showInstallGuide()"><b>⬇️</b><span>GPT MKT<small>Tải xuống</small></span></button>
-  <button type="button" class="mkt-dock-btn ctv" onclick="location.href='#ctv_center'"><b>🤝</b><span>CTV<small>Hoa hồng</small></span></button>
-  <div class="mkt-install-note" id="installStatus">Bấm Tải xuống để cài app trên điện thoại.</div>
-</div>
-
-<div class="support-float">
-  <div class="support-panel" id="supportPanel">
-    <div class="support-head"><span>💬 Hỗ trợ trực tiếp</span><button type="button" onclick="toggleSupportChat()" class="support-close">×</button></div>
-    <div class="support-body">
-      <div class="support-mini-menu">
-        <button type="button" onclick="quickSupportText('Tôi cần kích hoạt Premium')">👑 Premium</button>
-        <button type="button" onclick="quickSupportText('Tôi đã thanh toán cần hỗ trợ')">💳 Thanh toán</button>
-        <button type="button" onclick="quickSupportText('Tôi bị lỗi đăng bài Fanpage')">📣 Lỗi đăng</button>
-      </div>
-      <div class="support-log" id="supportLog"><div class="ad">Admin sẵn sàng hỗ trợ. Anh/chị để lại SĐT/Email và nội dung cần xử lý.</div></div>
-      <input id="supportPhone" placeholder="SĐT/Zalo của anh/chị">
-      <input id="supportEmail" placeholder="Email/Gmail">
-      <textarea id="supportMessage" placeholder="Nhập nội dung cần hỗ trợ..."></textarea>
-      <button class="support-send" onclick="sendSupportMessage()">Gửi cho Admin</button>
-      <div class="support-note" id="supportNote">Tin nhắn sẽ hiển thị trong Web Admin để kỹ thuật trả lời.</div>
-    </div>
-  </div>
-  <button class="support-btn" type="button" title="AI Online" onclick="toggleSupportChat()"><span class="support-robot">🤖</span><span class="support-online-dot"></span><span class="support-tooltip">AI Online<br>Phản hồi trong vài giây</span></button>
-</div>
-
-<script id="mkt-mobile-support-final-js">
-window.mktDeferredInstallPrompt = window.mktDeferredInstallPrompt || null;
-window.addEventListener('beforeinstallprompt', function(e){
-  e.preventDefault(); window.mktDeferredInstallPrompt = e;
-  var st=document.getElementById('installStatus'); if(st){st.style.display='block';st.innerText='Thiết bị này đã sẵn sàng cài đặt ứng dụng.';}
-});
-function showInstallGuide(){
-  var st=document.getElementById('installStatus'); if(st){st.style.display='block';}
-  var isStandalone=(window.matchMedia&&window.matchMedia('(display-mode: standalone)').matches)||window.navigator.standalone;
-  if(isStandalone){ if(st) st.innerText='App đã được cài đặt trên thiết bị này.'; alert('Mkt Automation Pro đã được cài đặt trên thiết bị này.'); return; }
-  var title='Cài đặt Mkt Automation Pro';
-  var intro='• Dùng như app trên điện thoại\n• Không cần mở trình duyệt\n• Truy cập chỉ 1 chạm';
-  if(window.mktDeferredInstallPrompt){
-    window.mktDeferredInstallPrompt.prompt();
-    window.mktDeferredInstallPrompt.userChoice.then(function(choice){
-      if(st){st.innerText=choice.outcome==='accepted'?'Đã gửi yêu cầu cài đặt ứng dụng.':'Anh/chị có thể bấm cài đặt lại bất kỳ lúc nào.';}
-      window.mktDeferredInstallPrompt=null;
-    });
-    return;
+<script id="mkt-price-detail-final-js">
+(function(){
+  'use strict';
+  var plans={
+    monthly:{title:'Gói 1 tháng',price:'159.000đ',amount:'159000',desc:'Phù hợp người mới bắt đầu, shop nhỏ cần đăng bài, tạo content và quản lý Fanpage cơ bản.',benefits:['Đăng bài Facebook','Quản lý Fanpage','Quản lý Group','AI Comment','Tạo content cơ bản','Token Manager','Hỗ trợ kích hoạt theo ID thiết bị']},
+    quarterly:{title:'Gói 3 tháng',price:'359.000đ',amount:'359000',desc:'Tối ưu cho shop đang bán hàng cần dùng ổn định hơn và tiết kiệm hơn gói tháng.',benefits:['Toàn bộ gói 1 tháng','AI Messenger','CRM Kanban cơ bản','Kịch bản inbox','Lịch đăng nâng cao','Báo cáo cơ bản','Ưu tiên hỗ trợ']},
+    halfyear:{title:'Gói 6 tháng',price:'559.000đ',amount:'559000',desc:'Phù hợp shop cần CRM, chăm sóc khách và tối ưu quy trình bán hàng.',benefits:['Toàn bộ gói 3 tháng','CRM Pro','AI Sales Bot','Comment Manager','Auto Tag khách hàng','Quản lý khách hàng','Chuyển khách sang CRM']},
+    yearly:{title:'Gói 1 năm',price:'859.000đ',amount:'859000',desc:'Gói phổ biến nhất cho nhà bán hàng muốn dùng đầy đủ công cụ AI Marketing trong 1 năm.',benefits:['Toàn bộ gói 6 tháng','AI Marketing Director','AI Ads Chuyên Gia','Kho Content Premium','Automation Marketing','Export báo cáo','Ưu tiên xử lý']},
+    sellerpro:{title:'Gói nhà bán hàng chuyên nghiệp',price:'1.959.000đ',amount:'1959000',desc:'Gói cao nhất cho nhà bán hàng chuyên nghiệp, mở toàn bộ hệ thống sau khi admin duyệt.',benefits:['Toàn bộ tính năng Premium','AI Image Center','AI Video Center','AI Voice Studio','Dashboard Enterprise','Export PDF / Excel','Backup Database','Ưu tiên hỗ trợ VIP']}
+  };
+  plans.lifetime=plans.sellerpro;
+  function norm(t){return String(t||'').toLowerCase();}
+  function keyFromText(t){t=norm(t); if(t.indexOf('1.959')>-1||t.indexOf('1959')>-1||t.indexOf('nhà bán')>-1||t.indexOf('seller')>-1||t.indexOf('trọn đời')>-1) return 'sellerpro'; if(t.indexOf('859')>-1||t.indexOf('1 năm')>-1) return 'yearly'; if(t.indexOf('559')>-1||t.indexOf('6 tháng')>-1) return 'halfyear'; if(t.indexOf('359')>-1||t.indexOf('3 tháng')>-1) return 'quarterly'; return 'monthly';}
+  function deviceId(){var m=document.cookie.match(/(?:^|; )mkt_device_id=([^;]+)/); if(m) return decodeURIComponent(m[1]); var id=localStorage.getItem('mkt_device_id'); if(!id){id='MKT-'+Math.random().toString(36).slice(2,8).toUpperCase()+Date.now().toString().slice(-4); localStorage.setItem('mkt_device_id',id);} document.cookie='mkt_device_id='+encodeURIComponent(id)+'; path=/; max-age=31536000; SameSite=Lax'; return id;}
+  function ensureBox(){
+    var o=document.getElementById('mktPlanOverlay'); if(o) return o;
+    o=document.createElement('div'); o.id='mktPlanOverlay';
+    o.innerHTML='<div id="mktPlanBox"><div id="mktPlanHead"><div><h2 id="mktPlanTitle"></h2><p id="mktPlanDesc"></p></div><button id="mktPlanClose" type="button">Đóng</button></div><div id="mktPlanBody"><div class="mktPlanPanel"><h3>Chi tiết gói</h3><div class="mktPlanPrice" id="mktPlanPrice"></div><div id="mktPlanNote"></div><button id="mktPlanPay" type="button">Nâng cấp gói này</button></div><div class="mktPlanPanel"><h3>Quyền lợi nhận được</h3><div class="mktPlanList" id="mktPlanBenefits"></div><div class="mktPlanMini">Vui lòng nhập số điện thoại và Gmail để được duyệt nâng cấp tự động lên gói Premium sau khi thanh toán xong.</div></div></div></div>';
+    document.body.appendChild(o);
+    o.addEventListener('click',function(e){if(e.target===o) closePlan();});
+    document.getElementById('mktPlanClose').onclick=closePlan;
+    return o;
   }
-  var isIOS=/iphone|ipad|ipod/i.test(navigator.userAgent);
-  var msg=isIOS?'iPhone/iPad: mở bằng Safari → bấm Chia sẻ → Thêm vào Màn hình chính.':'Chrome/Edge: bấm menu ⋮ → Cài đặt ứng dụng hoặc Thêm vào màn hình chính.';
-  if(st){st.innerText=msg;} alert(title+'\n\n'+intro+'\n\n'+msg);
-}
-window.addEventListener('appinstalled', function(){var st=document.getElementById('installStatus'); if(st){st.style.display='block';st.innerText='Đã cài đặt Mkt Automation Pro thành công.';}});
-function getMktDeviceId(){
-  let id=localStorage.getItem('mkt_device_id');
-  if(!id){id='MKT-'+new Date().toISOString().slice(0,10).replaceAll('-','')+'-'+Math.random().toString(16).slice(2,8).toUpperCase();localStorage.setItem('mkt_device_id',id)}
-  document.cookie='mkt_device_id='+encodeURIComponent(id)+';path=/;max-age=31536000;SameSite=Lax';
-  return id;
-}
-let shownAdminReplies=new Set();
-function toggleSupportChat(){var p=document.getElementById('supportPanel'); if(p){p.classList.toggle('open'); if(p.classList.contains('open')) pollSupportReplies();}}
-function quickSupportText(text){const box=document.getElementById('supportMessage'); if(box){box.value=text;box.focus();}}
-function addSupportBubble(type,text){const log=document.getElementById('supportLog'); if(!log)return; const div=document.createElement('div'); div.className=type; div.innerText=text; log.appendChild(div); log.scrollTop=log.scrollHeight;}
-async function sendSupportMessage(){
-  const msg=(document.getElementById('supportMessage')||{}).value?.trim()||'';
-  if(!msg){alert('Vui lòng nhập nội dung cần hỗ trợ.');return;}
-  addSupportBubble('me',msg); document.getElementById('supportMessage').value='';
-  const payload={device_id:getMktDeviceId(),phone:(document.getElementById('supportPhone')||{}).value||'',email:(document.getElementById('supportEmail')||{}).value||'',message:msg};
-  const res=await fetch('/support_send',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}).then(r=>r.json()).catch(()=>({ok:false,message:'Không gửi được tin nhắn, vui lòng thử lại.'}));
-  var note=document.getElementById('supportNote'); if(note){note.innerText=res.message||'Đã gửi.';} pollSupportReplies();
-}
-async function pollSupportReplies(){
-  const data=await fetch('/support_poll?device_id='+encodeURIComponent(getMktDeviceId())).then(r=>r.json()).catch(()=>({messages:[]}));
-  (data.messages||[]).forEach(function(m){ if(!shownAdminReplies.has(m.id)){ shownAdminReplies.add(m.id); addSupportBubble(m.sender==='admin'?'ad':'me',(m.sender==='admin'?'Admin: ':'')+m.message); } });
-}
-setInterval(function(){var p=document.getElementById('supportPanel'); if(p&&p.classList.contains('open')) pollSupportReplies();},3000);
-document.addEventListener('DOMContentLoaded', function(){ getMktDeviceId(); if('serviceWorker' in navigator){ navigator.serviceWorker.register('/sw.js').catch(function(){}); } });
+  function closePlan(){var o=document.getElementById('mktPlanOverlay'); if(o)o.style.display='none'; return false;}
+  function openPlan(k){
+    k=k||'monthly'; var p=plans[k]||plans.monthly; var o=ensureBox();
+    document.getElementById('mktPlanTitle').textContent=p.title;
+    document.getElementById('mktPlanDesc').textContent=p.desc;
+    document.getElementById('mktPlanPrice').textContent=p.price;
+    document.getElementById('mktPlanNote').innerHTML='ID thiết bị: <b>'+deviceId()+'</b><br><span style="color:#64748b">Vui lòng nhập số điện thoại và Gmail để được duyệt nâng cấp tự động lên gói Premium sau khi thanh toán xong.</span>';
+    document.getElementById('mktPlanBenefits').innerHTML=p.benefits.map(function(x){return '<div>'+x+'</div>';}).join('');
+    document.getElementById('mktPlanPay').onclick=function(ev){ev.preventDefault(); ev.stopPropagation(); if(typeof window.openPayment==='function'){closePlan(); window.openPayment(k); return false;} if(typeof window.openPayment==='function'){closePlan(); window.openPayment(k); return false;} closePlan(); return false;};
+    o.style.display='flex'; return false;
+  }
+  window.mktOpenPlanDetail=openPlan; window.mktClosePlanDetail=closePlan;
+  function shouldOpen(el){var txt=norm(el.innerText||el.textContent); if(txt.indexOf('xem chi tiết gói')>-1) return true; if(txt.indexOf('mở khóa gói')>-1) return true; if(txt.indexOf('đăng ký')>-1 && (txt.indexOf('tháng')>-1||txt.indexOf('gói')>-1)) return true; if(txt.indexOf('chọn gói phổ biến')>-1) return true; return false;}
+  document.addEventListener('click',function(e){
+    var target=e.target.closest('button,a,.premium-plan,.price-card,.v4-plan'); if(!target) return;
+    if(target.closest('.bot-actions,.bot-input,#floatingBotPanel,#mktPlanOverlay')) return;
+    var btn=e.target.closest('button,a'); var card=target.closest('.premium-plan,.price-card,.v4-plan');
+    if((btn && shouldOpen(btn)) || (card && (target===card || shouldOpen(target)))){
+      e.preventDefault(); e.stopPropagation(); if(e.stopImmediatePropagation)e.stopImmediatePropagation();
+      return openPlan(keyFromText((card||target).innerText||target.textContent));
+    }
+  },true);
+  function bind(){document.querySelectorAll('.premium-plan button,.price-card button,.v4-plan button').forEach(function(b){if(shouldOpen(b)){b.type='button'; b.style.pointerEvents='auto';}});}
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',bind); else bind(); setTimeout(bind,500); setTimeout(bind,1500);
+})();
+</script>
+
+
+
+<!-- FINAL PAYMENT UX OVERRIDE: no browser alert, professional checkout -->
+<style id="mkt-payment-professional-css">
+#mktPlanNote .pay-line,#mktPlanNote .pay-copy{display:block;margin:6px 0;color:#334155;font-weight:800}
+#mktPlanNote .pay-copy{background:#f1f5f9;border:1px dashed #cbd5e1;border-radius:12px;padding:10px;color:#1e293b}
+.payment-alert{background:#f8fafc!important;border:1px solid #dbeafe!important;color:#1e293b!important}
+.bank-info{line-height:1.75!important}
+</style>
+<script id="mkt-payment-professional-js">
+(function(){
+  'use strict';
+  function q(s){return document.querySelector(s)}
+  function money(v){try{return Number(v||0).toLocaleString('vi-VN')+' VNĐ'}catch(e){return (v||'')+' VNĐ'}}
+  function getDevice(){
+    var id=localStorage.getItem('mkt_device_id');
+    if(!id){
+      var m=document.cookie.match(/(?:^|; )mkt_device_id=([^;]+)/);
+      id=m?decodeURIComponent(m[1]):'';
+    }
+    if(!id){id='MKT-'+Math.random().toString(36).slice(2,8).toUpperCase()+Date.now().toString().slice(-4);}
+    localStorage.setItem('mkt_device_id',id);
+    document.cookie='mkt_device_id='+encodeURIComponent(id)+'; path=/; max-age=157680000; SameSite=Lax';
+    var side=q('#sidebarDeviceId'); if(side) side.textContent=id;
+    var pay=q('#payDeviceId'); if(pay) pay.value=id;
+    return id;
+  }
+  var plans=window.premiumPlans || {
+    monthly:{title:'Gói 1 tháng',price:'159.000đ',amount:'159000',package:'1THANG',desc:'Phù hợp người mới bắt đầu.'},
+    quarterly:{title:'Gói 3 tháng',price:'359.000đ',amount:'359000',package:'3THANG',desc:'Tối ưu hơn gói tháng.'},
+    halfyear:{title:'Gói 6 tháng',price:'559.000đ',amount:'559000',package:'6THANG',desc:'Mở CRM và Sales Bot.'},
+    yearly:{title:'Gói 1 năm',price:'859.000đ',amount:'859000',package:'1NAM',desc:'Gói phổ biến nhất.'},
+    sellerpro:{title:'Gói nhà bán hàng chuyên nghiệp',price:'1.959.000đ',amount:'1959000',package:'NHABANHANGCHUYENNGHIEP',desc:'Gói cao nhất cho nhà bán hàng chuyên nghiệp.'},
+    lifetime:{title:'Gói nhà bán hàng chuyên nghiệp',price:'1.959.000đ',amount:'1959000',package:'NHABANHANGCHUYENNGHIEP',desc:'Gói cao nhất cho nhà bán hàng chuyên nghiệp.'}
+  };
+  plans.sellerpro=plans.sellerpro||plans.lifetime; plans.lifetime=plans.lifetime||plans.sellerpro;
+  function plan(k){return plans[k]||plans.monthly;}
+  function buildContent(p){
+    var device=getDevice();
+    var phone=(q('#payPhone')&&q('#payPhone').value.trim())||'';
+    var email=(q('#payEmail')&&q('#payEmail').value.trim())||'';
+    return device+' | '+phone+' | '+email+' | '+(p.package||p.title||'PREMIUM').toUpperCase();
+  }
+  window.refreshPaymentContent=function(){
+    var p=plan(window.currentPremiumPlanKey||'monthly');
+    var content=buildContent(p);
+    var pc=q('#payContent'); if(pc) pc.textContent=content;
+    var qr=q('#payQr'); if(qr) qr.src='https://img.vietqr.io/image/970405-8888363382629-compact2.png?amount='+encodeURIComponent(p.amount||0)+'&addInfo='+encodeURIComponent(content)+'&accountName='+encodeURIComponent('NGUYEN DANG THI XUAN');
+  };
+  window.openPayment=function(planKey){
+    var p=plan(planKey); window.currentPremiumPlanKey=planKey||'monthly';
+    var modal=q('#paymentModal');
+    if(!modal){return false;}
+    var title=q('#payPlanTitle'); if(title) title.textContent=(p.title||'Gói Premium').replace(/^🚀 |^⭐ |^💎 |^🔥 |^👑 /,'');
+    var desc=q('#payPlanDesc'); if(desc) desc.textContent='Nhập số điện thoại và Gmail để đăng ký kích hoạt. Nội dung chuyển khoản sẽ tự kèm ID thiết bị và gói đã chọn.';
+    var price=q('#payPlanPrice'); if(price) price.textContent=money(p.amount);
+    var device=q('#payDeviceId'); if(device) device.value=getDevice();
+    var benefits=q('#payBenefits'); if(benefits && p.benefits){benefits.innerHTML=p.benefits.map(function(x){return '<div>'+x+'</div>';}).join('');}
+    var locked=q('#payLocked'); if(locked){locked.innerHTML=''; var h=locked.previousElementSibling; if(h) h.style.display='none';}
+    var alertBox=q('.payment-alert'); if(alertBox){alertBox.innerHTML='Sau khi chuyển khoản, bấm <b>Đã thanh toán</b> để gửi yêu cầu về web admin. Nội dung chuyển khoản gồm ID thiết bị, số điện thoại, Gmail và gói đã chọn. Zalo hỗ trợ: <b>036 338 2629</b>.';}
+    var payBtn=q('.payment-actions .light'); if(payBtn){payBtn.textContent='Đã thanh toán'; payBtn.removeAttribute('href'); payBtn.onclick=function(e){e.preventDefault(); if(typeof window.submitPremiumRequest==='function') return window.submitPremiumRequest(); return false;};}
+    window.refreshPaymentContent();
+    modal.style.display='flex';
+    var ph=q('#payPhone'); if(ph) setTimeout(function(){ph.focus();},150);
+    return false;
+  };
+  window.mktOpenPlanDetail = (function(old){
+    return function(k){
+      if(typeof old==='function') old(k);
+      setTimeout(function(){
+        var p=plan(k||window.currentPremiumPlanKey||'monthly');
+        var note=q('#mktPlanNote');
+        if(note){
+          var content=getDevice()+' | SỐ ĐIỆN THOẠI | GMAIL | '+(p.package||p.title||'PREMIUM').toUpperCase();
+          note.innerHTML='<span class="pay-line">ID thiết bị: <b>'+getDevice()+'</b></span><span class="pay-line">Gói đang chọn: <b>'+p.title+'</b></span><span class="pay-copy">Nội dung thanh toán: '+content+'</span>';
+        }
+        var mini=q('.mktPlanMini'); if(mini) mini.textContent='Vui lòng nhập số điện thoại và Gmail để được duyệt nâng cấp tự động lên gói Premium sau khi thanh toán xong.';
+        var btn=q('#mktPlanPay'); if(btn) btn.onclick=function(e){e.preventDefault(); if(q('#mktPlanOverlay')) q('#mktPlanOverlay').style.display='none'; return window.openPayment(k||'monthly');};
+      },60);
+      return false;
+    };
+  })(window.mktOpenPlanDetail);
+  document.addEventListener('click',function(e){
+    var t=e.target.closest('#mktPlanPay');
+    if(t){e.preventDefault(); e.stopPropagation(); return window.openPayment(window.currentPremiumPlanKey||'monthly');}
+  },true);
+  getDevice();
+})();
+</script>
+
+
+
+<!-- FINAL CLEAN PAYMENT PATCH V74 -->
+<style id="mkt-final-clean-payment-css">
+  #mktPlanOverlay #mktPlanNote{font-size:16px;line-height:1.55;color:#475569;font-weight:700}
+  #mktPlanOverlay .mktPlanMini{background:#f8fafc!important;border:1px solid #dbeafe!important;color:#334155!important}
+  #mktPlanOverlay .pay-copy,
+  #paymentModal .pay-copy{display:block;margin-top:8px;background:#f1f5f9;border:1px dashed #cbd5e1;border-radius:12px;padding:10px;color:#1e293b;font-weight:800;word-break:break-word}
+  #paymentModal .payment-alert{display:none!important}
+  #paymentModal .payment-actions{display:grid!important;grid-template-columns:1fr 1fr;gap:10px}
+  #paymentModal .payment-actions a{display:flex;align-items:center;justify-content:center;text-decoration:none}
+  #paymentNotice{margin:10px 0;padding:12px 14px;border:1px solid #bbf7d0;background:#f0fdf4;color:#166534;border-radius:12px;font-weight:800;display:none}
+</style>
+<script id="mkt-final-clean-payment-js">
+(function(){
+  'use strict';
+  var PLAN_MAP={
+    monthly:{title:'Gói 1 tháng',amount:'159000',price:'159.000đ',code:'GOI1THANG'},
+    quarterly:{title:'Gói 3 tháng',amount:'359000',price:'359.000đ',code:'GOI3THANG'},
+    halfyear:{title:'Gói 6 tháng',amount:'559000',price:'559.000đ',code:'GOI6THANG'},
+    yearly:{title:'Gói 1 năm',amount:'859000',price:'859.000đ',code:'GOI1NAM'},
+    sellerpro:{title:'Gói nhà bán hàng chuyên nghiệp',amount:'1959000',price:'1.959.000đ',code:'NHABANHANGPRO'},
+    lifetime:{title:'Gói nhà bán hàng chuyên nghiệp',amount:'1959000',price:'1.959.000đ',code:'NHABANHANGPRO'}
+  };
+  function q(s,root){return (root||document).querySelector(s)}
+  function qa(s,root){return Array.prototype.slice.call((root||document).querySelectorAll(s))}
+  function cleanText(){
+    var bad=['Gói sẽ mở sau khi admin duyệt thanh toán.','Gói sẽ mở sau khi admin duyệt thanh toán','Sau khi thanh toán, web admin sẽ duyệt theo ID thiết bị. Duyệt xong khách mới sử dụng được tính năng PRO.','Sau khi thanh toán, web admin sẽ duyệt theo ID thiết bị.','Duyệt xong khách mới sử dụng được tính năng PRO.'];
+    qa('body *').forEach(function(el){
+      if(el.children.length>0) return;
+      var t=el.textContent||''; var nt=t;
+      bad.forEach(function(b){nt=nt.split(b).join('')});
+      if(nt!==t) el.textContent=nt.trim();
+    });
+  }
+  function deviceId(){
+    var id=localStorage.getItem('mkt_device_id');
+    if(!id){var m=document.cookie.match(/(?:^|; )mkt_device_id=([^;]+)/); id=m?decodeURIComponent(m[1]):'';}
+    if(!id){id='MKT-'+Math.random().toString(36).slice(2,8).toUpperCase()+Date.now().toString().slice(-6);}
+    localStorage.setItem('mkt_device_id',id);
+    document.cookie='mkt_device_id='+encodeURIComponent(id)+'; path=/; max-age=157680000; SameSite=Lax';
+    var side=q('#sidebarDeviceId'); if(side) side.textContent=id;
+    var pay=q('#payDeviceId'); if(pay) pay.value=id;
+    return id;
+  }
+  function keyFromText(txt){
+    txt=String(txt||'').toLowerCase();
+    if(txt.indexOf('1.959')>-1||txt.indexOf('1959')>-1||txt.indexOf('nhà bán')>-1||txt.indexOf('seller')>-1) return 'sellerpro';
+    if(txt.indexOf('859')>-1||txt.indexOf('1 năm')>-1) return 'yearly';
+    if(txt.indexOf('559')>-1||txt.indexOf('6 tháng')>-1) return 'halfyear';
+    if(txt.indexOf('359')>-1||txt.indexOf('3 tháng')>-1) return 'quarterly';
+    return 'monthly';
+  }
+  function plan(k){return PLAN_MAP[k]||PLAN_MAP.monthly}
+  function contentFor(p){
+    var phone=(q('#payPhone')&&q('#payPhone').value.trim())||'SDT';
+    var email=(q('#payEmail')&&q('#payEmail').value.trim())||'GMAIL';
+    return deviceId();
+  }
+  window.showPaymentNotice=function(msg){
+    var n=q('#paymentNotice');
+    if(!n){
+      var btn=q('#paymentModal .primary');
+      n=document.createElement('div'); n.id='paymentNotice';
+      if(btn && btn.parentNode) btn.parentNode.insertBefore(n, btn.nextSibling);
+    }
+    n.textContent=msg||'Đã gửi yêu cầu về web admin.'; n.style.display='block';
+  };
+  window.refreshPaymentContent=function(){
+    var p=plan(window.currentPremiumPlanKey||'monthly');
+    var content=contentFor(p);
+    var pc=q('#payContent'); if(pc) pc.textContent=content;
+    var qr=q('#payQr'); if(qr) qr.src='https://img.vietqr.io/image/970405-8888363382629-compact2.png?amount='+encodeURIComponent(p.amount)+'&addInfo='+encodeURIComponent(content)+'&accountName='+encodeURIComponent('NGUYEN DANG THI XUAN');
+    var notice=q('#paymentNotice'); if(notice) notice.style.display='none';
+  };
+  window.openPayment=function(k){
+    var p=plan(k); window.currentPremiumPlanKey=k||'monthly';
+    var modal=q('#paymentModal'); if(!modal) return false;
+    var title=q('#payPlanTitle'); if(title) title.textContent=p.title;
+    var desc=q('#payPlanDesc'); if(desc) desc.textContent='Vui lòng nhập số điện thoại và Gmail để được duyệt nâng cấp tự động lên gói Premium sau khi thanh toán xong.';
+    var price=q('#payPlanPrice'); if(price) price.textContent=Number(p.amount).toLocaleString('vi-VN')+' VNĐ';
+    var device=q('#payDeviceId'); if(device) device.value=deviceId();
+    var locked=q('#payLocked'); if(locked) locked.innerHTML='';
+    var h=locked && locked.previousElementSibling; if(h) h.style.display='none';
+    var alertBox=q('#paymentModal .payment-alert'); if(alertBox) alertBox.style.display='none';
+    var z=q('#paymentModal .payment-actions a:not(.light)'); if(z){z.textContent='Zalo hỗ trợ: 036 338 2629'; z.href='https://zalo.me/0363382629'; z.target='_blank';}
+    var done=q('#paymentModal .payment-actions .light'); if(done){done.textContent='Gửi yêu cầu admin duyệt'; done.removeAttribute('href'); done.onclick=function(e){e.preventDefault(); return window.submitPremiumRequest();};}
+    var btn=q('#paymentModal .primary'); if(btn) btn.textContent='Gửi yêu cầu kích hoạt';
+    window.refreshPaymentContent();
+    modal.style.display='flex';
+    setTimeout(function(){var ph=q('#payPhone'); if(ph) ph.focus();},150);
+    cleanText(); return false;
+  };
+  var oldSubmit=window.submitPremiumRequest;
+  window.submitPremiumRequest=function(){
+    var phone=(q('#payPhone')&&q('#payPhone').value.trim())||'';
+    var email=(q('#payEmail')&&q('#payEmail').value.trim())||'';
+    if(!phone || !email){ window.showPaymentNotice('Vui lòng nhập số điện thoại và Gmail để được duyệt nâng cấp tự động lên gói Premium sau khi thanh toán xong.'); return false; }
+    if(typeof oldSubmit==='function'){
+      try{
+        var r=oldSubmit();
+        setTimeout(function(){window.showPaymentNotice('Đã gửi yêu cầu về web admin. Nội dung chuyển khoản đã kèm ID thiết bị và gói đã chọn.');},250);
+        return r;
+      }catch(e){}
+    }
+    window.showPaymentNotice('Đã gửi yêu cầu về web admin. Nội dung chuyển khoản đã kèm ID thiết bị và gói đã chọn.');
+    return false;
+  };
+  function patchPlanOverlay(){
+    var note=q('#mktPlanNote');
+    if(note){
+      var p=plan(window.currentPremiumPlanKey||keyFromText((q('#mktPlanOverlay')||document.body).innerText));
+      note.innerHTML='ID thiết bị: <b>'+deviceId()+'</b><br><span style="color:#64748b">Vui lòng nhập số điện thoại và Gmail để được duyệt nâng cấp tự động lên gói Premium sau khi thanh toán xong.</span>';
+    }
+    var mini=q('.mktPlanMini'); if(mini) mini.textContent='Vui lòng nhập số điện thoại và Gmail để được duyệt nâng cấp tự động lên gói Premium sau khi thanh toán xong.';
+    var pay=q('#mktPlanPay'); if(pay){pay.onclick=function(e){e.preventDefault(); e.stopPropagation(); var ov=q('#mktPlanOverlay'); if(ov) ov.style.display='none'; return window.openPayment(window.currentPremiumPlanKey||keyFromText((ov||document.body).innerText));};}
+    cleanText();
+  }
+  var oldPlan=window.mktOpenPlanDetail;
+  window.mktOpenPlanDetail=function(k){
+    window.currentPremiumPlanKey=k||window.currentPremiumPlanKey||'monthly';
+    var r=false;
+    if(typeof oldPlan==='function'){r=oldPlan(k);} 
+    setTimeout(patchPlanOverlay,50); setTimeout(patchPlanOverlay,200);
+    return r;
+  };
+  document.addEventListener('click',function(e){
+    var pay=e.target.closest && e.target.closest('#mktPlanPay');
+    if(pay){e.preventDefault(); e.stopPropagation(); if(e.stopImmediatePropagation)e.stopImmediatePropagation(); var ov=q('#mktPlanOverlay'); if(ov) ov.style.display='none'; return window.openPayment(window.currentPremiumPlanKey||keyFromText((ov||document.body).innerText));}
+    var detail=e.target.closest && e.target.closest('button,a');
+    if(detail && /xem chi tiết gói/i.test(detail.innerText||detail.textContent||'')){setTimeout(patchPlanOverlay,120);}
+  },true);
+  function init(){deviceId(); cleanText(); patchPlanOverlay();}
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',init); else init();
+  setTimeout(init,500); setTimeout(init,1500); setInterval(cleanText,2500);
+})();
+</script>
+<!-- CTV FINAL VISIBILITY PATCH -->
+<style id="ctv-final-visibility-patch">
+  #affiliateAdminSection{display:none!important}
+  a[href="#affiliate_admin"],[onclick*="affiliate_admin"]{display:none!important}
+  [data-aff-menu="1"]{display:flex!important;visibility:visible!important;opacity:1!important;pointer-events:auto!important}
+  #mobileCtvQuickBtn{display:flex!important;visibility:visible!important;opacity:1!important;pointer-events:auto!important}
+  #affiliateCenterSection.ctv-active{display:block!important;visibility:visible!important;opacity:1!important;min-height:420px!important}
+  .ctv-mobile-card{display:none}
+  @media(max-width:760px){
+    #affiliateCenterSection{margin:12px!important;border-radius:18px!important;padding:14px!important}
+    .aff-stats{grid-template-columns:1fr 1fr!important}
+    .aff-link-box{flex-direction:column!important;align-items:stretch!important}
+  }
+</style>
+<script id="ctv-final-visibility-js">
+(function(){
+  function qs(s){return document.querySelector(s)}
+  function qsa(s){return Array.prototype.slice.call(document.querySelectorAll(s))}
+  function money(n){return Number(n||0).toLocaleString('vi-VN')+'đ'}
+  function toast(msg){
+    var t=document.getElementById('affToast');
+    if(!t){t=document.createElement('div');t.id='affToast';t.className='aff-toast';document.body.appendChild(t)}
+    t.textContent=msg;t.style.display='block';setTimeout(function(){t.style.display='none'},2600)
+  }
+  function hideMain(){
+    qsa('main > section, main > div.module, main > div.card, main > div.app-module-section').forEach(function(el){
+      if(el.id!=='affiliateCenterSection') el.style.display='none';
+    });
+  }
+  function ensureMenu(){
+    qsa('a[href="#affiliate_admin"],[onclick*="affiliate_admin"],#affiliateAdminSection').forEach(function(el){el.style.display='none'});
+    var nav=qs('.nav');
+    if(nav && !qs('[data-aff-menu="1"]')){
+      var a=document.createElement('a');
+      a.setAttribute('data-aff-menu','1');
+      a.className='v2-nav-link';
+      a.href='#affiliate_center';
+      a.innerHTML='<span class="v2-nav-ico"></span><span class="v2-nav-text">CTV Hoa Hồng</span><span class="v2-nav-tag" style="background:#dcfce7;color:#166534;box-shadow:0 0 14px rgba(34,197,94,.55)">CTV</span>';
+      a.onclick=function(e){e.preventDefault(); return window.openAffiliateCenter();};
+      nav.appendChild(a);
+    }
+    qsa('[data-aff-menu="1"],a[href="#affiliate_center"]').forEach(function(a){
+      a.style.display='flex'; a.onclick=function(e){e.preventDefault(); return window.openAffiliateCenter();};
+    });
+    var btn=document.getElementById('mobileCtvQuickBtn');
+    if(!btn){
+      btn=document.createElement('button');btn.id='mobileCtvQuickBtn';btn.type='button';btn.innerHTML='<span class="dot"></span>CTV Hoa Hồng';document.body.appendChild(btn);
+    }
+    btn.onclick=function(e){e.preventDefault(); return window.openAffiliateCenter();};
+  }
+  window.openAffiliateCenter=function(){
+    var sec=document.getElementById('affiliateCenterSection');
+    if(!sec){toast('Chưa tìm thấy giao diện CTV trong file.');return false;}
+    hideMain();
+    sec.style.display='block';sec.classList.add('ctv-active');
+    if(history && history.replaceState) history.replaceState(null,'','#affiliate_center');
+    if(window.affiliateLoadMe) window.affiliateLoadMe();
+    setTimeout(function(){sec.scrollIntoView({behavior:'smooth',block:'start'})},60);
+    return false;
+  };
+  var oldOpen=window.openModule;
+  window.openModule=function(name){
+    if(name==='affiliate_center') return window.openAffiliateCenter();
+    if(name==='affiliate_admin') return false;
+    if(typeof oldOpen==='function') return oldOpen.apply(this,arguments);
+    return true;
+  };
+  window.affiliateLoadMe=window.affiliateLoadMe || function(){
+    fetch('/api/affiliate/me').then(function(r){return r.json()}).then(function(d){
+      if(qs('#affName')) qs('#affName').value=d.full_name||'';
+      if(qs('#affPhone')) qs('#affPhone').value=d.phone||'';
+      if(qs('#affEmail')) qs('#affEmail').value=d.email||'';
+      if(qs('#affRefLink')) qs('#affRefLink').value=d.ref_link||'';
+      if(qs('#affCode')) qs('#affCode').textContent=d.affiliate_code||'---';
+      if(qs('#affLevel')) qs('#affLevel').textContent=d.level_name||'CTV thường';
+      if(qs('#affPercent')) qs('#affPercent').textContent=d.commission_percent||20;
+      var s=d.summary||{};
+      if(qs('#affClicks')) qs('#affClicks').textContent=s.clicks||0;
+      if(qs('#affCustomers')) qs('#affCustomers').textContent=s.referrals||0;
+      if(qs('#affPremium')) qs('#affPremium').textContent=s.premium||0;
+      if(qs('#affCommission')) qs('#affCommission').textContent=money(s.commission||0);
+      if(qs('#affBalance')) qs('#affBalance').textContent=money(s.balance||0);
+    }).catch(function(){toast('Không tải được dữ liệu CTV')});
+  };
+  function init(){
+    ensureMenu();
+    var ref=(new URL(location.href)).searchParams.get('ref');
+    if(ref){try{document.cookie='affiliate_code='+encodeURIComponent(ref.toUpperCase())+';path=/;max-age='+(60*60*24*90)}catch(e){}}
+    if(location.hash==='#affiliate_center') setTimeout(window.openAffiliateCenter,350);
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',init); else init();
+  setTimeout(init,800); setTimeout(init,1800);
+})();
+</script>
+<!-- /CTV FINAL VISIBILITY PATCH -->
+
+
+  function selectedKey(){
+    return normKey(window.mktSelectedPlanKey || window.currentPremiumPlanKey || localStorage.getItem('mkt_selected_plan_key')) || 'monthly';
+  }
+
+  window.refreshPaymentContent=function(){
+    var p=plan(selectedKey());
+    var content=payContent(p);
+
+    var pc=q('#payContent'); 
+    if(pc) pc.textContent=content;
+
+    var qr=q('#payQr'); 
+    if(qr){
+      qr.src='https://img.vietqr.io/image/970405-8888363382629-compact2.png?amount='+
+        encodeURIComponent(p.amount)+
+        '&addInfo='+encodeURIComponent(content)+
+        '&accountName='+encodeURIComponent('NGUYEN DANG THI XUAN');
+    }
+
+    var price=q('#payPlanPrice'); 
+    if(price) price.textContent=Number(p.amount).toLocaleString('vi-VN')+' VNĐ';
+  };
+
+  window.openPayment=function(k){
+    k=setKey(k || selectedKey());
+    var p=plan(k);
+
+    var modal=q('#paymentModal'); 
+    if(!modal) return false;
+
+    var title=q('#payPlanTitle'); 
+    if(title) title.textContent=p.title;
+
+    var desc=q('#payPlanDesc'); 
+    if(desc) desc.textContent=p.desc || 'Vui lòng nhập số điện thoại và Gmail để được duyệt nâng cấp.';
+
+    var price=q('#payPlanPrice'); 
+    if(price) price.textContent=Number(p.amount).toLocaleString('vi-VN')+' VNĐ';
+
+    var device=q('#payDeviceId'); 
+    if(device) device.value=getDevice();
+
+    window.refreshPaymentContent();
+    modal.style.display='flex';
+    return false;
+  };
+
+  document.addEventListener('click',function(e){
+    var b=e.target.closest && e.target.closest('button,a');
+    if(!b) return;
+
+    var text=String(b.innerText || b.textContent || '');
+    var k=keyFromNode(b);
+
+    if(k) setKey(k);
+
+    if(/nâng cấp|thanh toán|kích hoạt|mở khóa/i.test(text)){
+      if(k){
+        e.preventDefault();
+        e.stopPropagation();
+        if(e.stopImmediatePropagation) e.stopImmediatePropagation();
+        return window.openPayment(k);
+      }
+    }
+  },true);
+
+  document.addEventListener('input',function(e){
+    if(e.target && /payPhone|payEmail/.test(e.target.id || '')){
+      window.refreshPaymentContent();
+    }
+  },true);
+
+  qa('[data-plan]').forEach(function(btn){
+    var k=normKey(btn.dataset.plan);
+    if(k){
+      btn.onclick=function(e){
+        e.preventDefault();
+        e.stopPropagation();
+        return window.openPayment(k);
+      };
+    }
+  });
+
+  getDevice();
+})();
+</script>
+
+  function fillPayment(k){
+    k=setKey(k);
+    var p=plan(k);
+    var title=q('#payPlanTitle'); if(title) title.textContent=p.title;
+    var desc=q('#payPlanDesc'); if(desc) desc.textContent=p.desc;
+    var price=q('#payPlanPrice'); if(price) price.textContent=Number(p.amount).toLocaleString('vi-VN')+' VNĐ';
+    var device=q('#payDeviceId'); if(device) device.value=getDevice();
+    var content=payContent(p);
+    var pc=q('#payContent'); if(pc) pc.textContent=content;
+    var qr=q('#payQr');
+    if(qr){
+      qr.src='https://img.vietqr.io/image/970405-8888363382629-compact2.png?amount='+encodeURIComponent(p.amount)+'&addInfo='+encodeURIComponent(content)+'&accountName='+encodeURIComponent('NGUYEN DANG THI XUAN');
+    }
+    var locked=q('#payLocked'); if(locked) locked.innerHTML='';
+    var notice=q('#paymentNotice'); if(notice) notice.style.display='none';
+    return p;
+  }
+
+  window.refreshPaymentContent=function(){fillPayment(window.currentPremiumPlanKey||'monthly');};
+  window.openPayment=function(planKey){
+    var k=setKey(planKey||window.mktSelectedPlanKey||'monthly');
+    fillPayment(k);
+    var modal=q('#paymentModal');
+    if(modal) modal.style.display='flex';
+    var z=q('#paymentModal .payment-actions a:not(.light)');
+    if(z){z.textContent='Zalo hỗ trợ: 036 338 2629'; z.href='https://zalo.me/0363382629'; z.target='_blank';}
+    var done=q('#paymentModal .payment-actions .light');
+    if(done){done.textContent='Gửi yêu cầu admin duyệt'; done.removeAttribute('href'); done.onclick=function(e){e.preventDefault(); return window.submitPremiumRequest();};}
+    var primary=q('#paymentModal .primary');
+    if(primary){primary.textContent='Gửi yêu cầu kích hoạt'; primary.onclick=function(e){e.preventDefault(); return window.submitPremiumRequest();};}
+    return false;
+  };
+
+  window.submitPremiumRequest=function(){
+    var k=setKey(window.mktSelectedPlanKey||window.currentPremiumPlanKey||'monthly');
+    var p=fillPayment(k);
+    var phone=(q('#payPhone')&&q('#payPhone').value.trim())||'';
+    var email=(q('#payEmail')&&q('#payEmail').value.trim())||'';
+    if(!phone||!email){
+      if(typeof window.showPaymentNotice==='function') window.showPaymentNotice('Vui lòng nhập số điện thoại và Gmail để được duyệt nâng cấp tự động lên gói Premium sau khi thanh toán xong.');
+      else alert('Vui lòng nhập số điện thoại và Gmail.');
+      return false;
+    }
+    fetch('/premium_request',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({device_id:getDevice(),phone:phone,email:email,package_key:k})})
+      .then(function(r){return r.json();})
+      .then(function(data){
+        var pc=q('#payContent'); if(pc) pc.textContent=(data&&data.payment_note)||payContent(p);
+        var msg=(data&&data.ok)?('Đã gửi yêu cầu '+p.title+' về web admin. Số tiền: '+p.price+'.'):((data&&data.message)||'Chưa gửi được yêu cầu, vui lòng thử lại.');
+        if(typeof window.showPaymentNotice==='function') window.showPaymentNotice(msg); else alert(msg);
+      })
+      .catch(function(){
+        if(typeof window.showPaymentNotice==='function') window.showPaymentNotice('Kết nối chậm, vui lòng thử lại hoặc gửi Zalo hỗ trợ.');
+      });
+    return false;
+  };
+
+  var oldDetail=window.mktOpenPlanDetail;
+  window.mktOpenPlanDetail=function(k){
+    k=setKey(k||window.mktSelectedPlanKey||'monthly');
+    var r=false;
+    if(typeof oldDetail==='function'){
+      try{r=oldDetail(k);}catch(e){}
+    }
+    setTimeout(function(){
+      var p=plan(k);
+      var note=q('#mktPlanNote');
+      if(note){note.innerHTML='ID thiết bị: <b>'+getDevice()+'</b><br>Gói đang chọn: <b>'+p.title+'</b><br><span style="color:#64748b">Số tiền: <b>'+p.price+'</b>. Vui lòng nhập số điện thoại và Gmail để được duyệt nâng cấp tự động lên gói Premium sau khi thanh toán xong.</span>';}
+      var mini=q('.mktPlanMini'); if(mini) mini.textContent='Gói đang chọn: '+p.title+' - '+p.price;
+      var pay=q('#mktPlanPay'); if(pay){pay.onclick=function(e){e.preventDefault(); e.stopPropagation(); var ov=q('#mktPlanOverlay'); if(ov) ov.style.display='none'; return window.openPayment(k);};}
+    },80);
+    return r;
+  };
+
+  function bindPlanCards(){
+    qa('.premium-plan,.v4-plan,.price-card,.plan-card,.pricing-card').forEach(function(card){
+      var k=keyFromText(card.innerText||card.textContent||'');
+      if(k){
+        card.setAttribute('data-plan',k);
+        qa('button,a',card).forEach(function(btn){
+          if(/nâng cấp|mở khóa|đăng ký|thanh toán|kích hoạt|xem chi tiết/i.test(btn.innerText||btn.textContent||'')) btn.setAttribute('data-plan',k);
+        });
+      }
+    });
+  }
+  document.addEventListener('click',function(e){
+    var btn=e.target.closest&&e.target.closest('button,a');
+    if(!btn) return;
+    var txt=btn.innerText||btn.textContent||'';
+    if(!/nâng cấp|mở khóa|đăng ký|thanh toán|kích hoạt|xem chi tiết|gửi yêu cầu/i.test(txt) && btn.id!=='mktPlanPay') return;
+    var k=keyFromNode(btn)||window.mktSelectedPlanKey||window.currentPremiumPlanKey||'monthly';
+    setKey(k);
+    if(btn.id==='mktPlanPay'){
+      e.preventDefault(); e.stopPropagation(); if(e.stopImmediatePropagation)e.stopImmediatePropagation();
+      var ov=q('#mktPlanOverlay'); if(ov) ov.style.display='none';
+      return window.openPayment(k);
+    }
+    if(/nâng cấp|mở khóa|đăng ký|thanh toán|kích hoạt/i.test(txt)) fillPayment(k);
+  },true);
+  document.addEventListener('input',function(e){if(e.target&&(/payPhone|payEmail/.test(e.target.id||''))) fillPayment(window.currentPremiumPlanKey||'monthly');},true);
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',bindPlanCards); else bindPlanCards();
+  setTimeout(bindPlanCards,500); setTimeout(bindPlanCards,1500);
+})();
+</script>
+
+
+
+
+<script id="mkt-premium-benefit-modal-v1">
+(function(){
+  'use strict';
+  var PLAN_BENEFITS={
+    monthly:{label:'CƠ BẢN',title:'Gói 1 tháng',price:'159.000đ',desc:'Phù hợp người mới bắt đầu muốn trải nghiệm Premium ngắn hạn và dùng các công cụ cốt lõi.',features:['AI Content Studio','Tạo content bán hàng nhanh','Đăng Fanpage cơ bản','Quản lý Fanpage','Quản lý Group','AI Comment','Token Manager cơ bản'],fit:['Chủ shop mới','Cá nhân kinh doanh online','Người mới làm nội dung','Người cần test hệ thống trước'],value:['Tiết kiệm thời gian viết bài mỗi ngày','Có nền tảng quản lý Fanpage/Group','Tạo nội dung đều hơn','Chi phí thấp để bắt đầu']},
+    quarterly:{label:'TIẾT KIỆM',title:'Gói 3 tháng',price:'359.000đ',desc:'Tối ưu hơn gói tháng, phù hợp shop nhỏ cần dùng ổn định và có thêm công cụ chăm sóc khách.',features:['Toàn bộ gói 1 tháng','AI Messenger','CRM Kanban cơ bản','Kịch bản inbox','Lịch đăng nâng cao','Báo cáo cơ bản','Ưu tiên hỗ trợ'],fit:['Shop nhỏ đang bán hàng','Người cần chăm sóc khách đều','Người chạy nội dung thường xuyên','CTV bán dịch vụ'],value:['Quy trình bán hàng rõ hơn','Giảm thời gian trả lời khách','Có kịch bản inbox sẵn','Tiết kiệm hơn so với mua từng tháng']},
+    halfyear:{label:'TĂNG TRƯỞNG',title:'Gói 6 tháng',price:'559.000đ',desc:'Phù hợp shop cần CRM, Sales Bot và quy trình gom khách để chăm sóc lâu dài.',features:['Toàn bộ gói 3 tháng','CRM Pro','AI Sales Bot','Comment Manager','Auto Tag khách hàng','Quản lý khách hàng','Chuyển khách sang CRM'],fit:['Shop có nhiều inbox/comment','Người cần gom khách về CRM','Đội sale nhỏ','Người muốn tối ưu chăm sóc khách'],value:['Không bỏ sót khách tiềm năng','Phân loại khách rõ ràng hơn','Chăm sóc khách có hệ thống','Tăng hiệu quả tư vấn và chốt đơn']},
+    yearly:{label:'PHỔ BIẾN NHẤT',title:'Gói 1 năm',price:'859.000đ',desc:'Gói phổ biến nhất cho nhà bán hàng muốn dùng đầy đủ công cụ AI Marketing trong 1 năm.',features:['Toàn bộ gói 6 tháng','AI Marketing Director','AI Ads Chuyên Gia','Kho Content Premium','Automation Marketing','Export báo cáo','Ưu tiên xử lý'],fit:['Shop bán hàng lâu dài','Người chạy quảng cáo','Agency nhỏ / CTV','Người cần hệ thống marketing đầy đủ'],value:['Chi phí thấp theo ngày','Có trợ lý AI định hướng marketing','Tối ưu nội dung và quảng cáo','Tiết kiệm chi phí thuê ngoài']},
+    sellerpro:{label:'VIP ENTERPRISE',title:'Gói nhà bán hàng chuyên nghiệp',price:'1.959.000đ',desc:'Gói cao nhất cho nhà bán hàng chuyên nghiệp, mở toàn bộ hệ thống hiện tại và các tính năng nâng cấp về sau.',features:['Toàn bộ tính năng Premium','AI Image Center','AI Video Center','AI Voice Studio','Dashboard Enterprise','Export PDF / Excel','Backup Database','Ưu tiên hỗ trợ VIP'],fit:['Nhà bán hàng chuyên nghiệp','Agency / đội marketing nhỏ','Người cần toàn bộ AI hiện tại và tương lai','Người muốn dùng lâu dài'],value:['Mở tối đa sức mạnh hệ thống','Giảm chi phí dùng nhiều công cụ rời','Quản lý dữ liệu chuyên nghiệp hơn','Được ưu tiên hỗ trợ và cập nhật']}
+  };
+  function q(s,r){return (r||document).querySelector(s)}
+  function fillList(id,arr){var el=q('#'+id); if(!el) return; el.innerHTML=(arr||[]).map(function(x){return '<li>'+x+'</li>'}).join('')}
+  function closeBenefit(){var m=q('#planBenefitModal'); if(m){m.classList.remove('show');m.setAttribute('aria-hidden','true')}}
+  window.openPlanBenefit=function(key){
+    key=PLAN_BENEFITS[key]?key:'monthly';
+    var p=PLAN_BENEFITS[key];
+    window.currentPremiumPlanKey=key; window.mktSelectedPlanKey=key;
+    var m=q('#planBenefitModal'); if(!m) return false;
+    q('#benefitLabel').textContent=p.label;
+    q('#benefitTitle').textContent=p.title;
+    q('#benefitPrice').textContent=p.price;
+    q('#benefitDesc').textContent=p.desc;
+    fillList('benefitFeatures',p.features); fillList('benefitFit',p.fit); fillList('benefitValue',p.value);
+    var pay=q('#benefitUpgradeBtn'); if(pay){pay.onclick=function(e){e.preventDefault(); closeBenefit(); if(typeof window.openPayment==='function') return window.openPayment(key); return false;};}
+    m.classList.add('show'); m.setAttribute('aria-hidden','false');
+    return false;
+  };
+  document.addEventListener('click',function(e){
+    var benefit=e.target.closest&&e.target.closest('[data-benefit]');
+    if(benefit){e.preventDefault();e.stopPropagation(); if(e.stopImmediatePropagation)e.stopImmediatePropagation(); return window.openPlanBenefit(benefit.getAttribute('data-benefit'));}
+    if(e.target&&e.target.id==='planBenefitClose'){e.preventDefault(); return closeBenefit();}
+    if(e.target&&e.target.id==='benefitCancelBtn'){e.preventDefault(); return closeBenefit();}
+    if(e.target&&e.target.id==='planBenefitModal'){return closeBenefit();}
+  },true);
+  document.addEventListener('keydown',function(e){if(e.key==='Escape') closeBenefit();});
+})();
+</script>
+
+
+<!-- V3 ULTIMATE PLAN PRICE LOCK: giữ nguyên giao diện, chỉ sửa sai gói/sai giá khi bấm nâng cấp -->
+<script id="mkt-ultimate-plan-price-lock-v3">
+(function(){
+  'use strict';
+  var PLAN={
+    monthly:{title:'Gói 1 tháng',amount:'159000',price:'159.000đ',code:'GOI1THANG',desc:'Phù hợp người mới bắt đầu.'},
+    quarterly:{title:'Gói 3 tháng',amount:'359000',price:'359.000đ',code:'GOI3THANG',desc:'Tối ưu hơn gói tháng.'},
+    halfyear:{title:'Gói 6 tháng',amount:'559000',price:'559.000đ',code:'GOI6THANG',desc:'Mở CRM và Sales Bot.'},
+    yearly:{title:'Gói 1 năm',amount:'859000',price:'859.000đ',code:'GOI1NAM',desc:'Gói phổ biến nhất.'},
+    sellerpro:{title:'Gói nhà bán hàng chuyên nghiệp',amount:'1959000',price:'1.959.000đ',code:'NHABANHANGPRO',desc:'Gói cao nhất cho nhà bán hàng chuyên nghiệp.'},
+    lifetime:{title:'Gói nhà bán hàng chuyên nghiệp',amount:'1959000',price:'1.959.000đ',code:'NHABANHANGPRO',desc:'Gói cao nhất cho nhà bán hàng chuyên nghiệp.'}
+  };
+  function q(s,r){return (r||document).querySelector(s)}
+  function qa(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s))}
+  function norm(t){return String(t||'').toLowerCase().replace(/\s+/g,' ')}
+  function keyFromText(t){
+    t=norm(t);
+    if(t.indexOf('1.959')>-1||t.indexOf('1959')>-1||t.indexOf('nhà bán')>-1||t.indexOf('seller')>-1||t.indexOf('trọn đời')>-1||t.indexOf('chuyên nghiệp')>-1) return 'sellerpro';
+    if(t.indexOf('859')>-1||t.indexOf('1 năm')>-1||t.indexOf('12 tháng')>-1) return 'yearly';
+    if(t.indexOf('559')>-1||t.indexOf('6 tháng')>-1) return 'halfyear';
+    if(t.indexOf('359')>-1||t.indexOf('3 tháng')>-1) return 'quarterly';
+    if(t.indexOf('159')>-1||t.indexOf('1 tháng')>-1) return 'monthly';
+    return '';
+  }
+  function plan(k){return PLAN[k]||PLAN.monthly}
+  function money(v){return Number(v||0).toLocaleString('vi-VN')+' VNĐ'}
+  function deviceId(){
+    var id=localStorage.getItem('mkt_device_id');
+    if(!id){var m=document.cookie.match(/(?:^|; )mkt_device_id=([^;]+)/); id=m?decodeURIComponent(m[1]):'';}
+    if(!id){id='MKT-'+Math.random().toString(36).slice(2,8).toUpperCase()+Date.now().toString().slice(-6);}
+    localStorage.setItem('mkt_device_id',id);
+    document.cookie='mkt_device_id='+encodeURIComponent(id)+'; path=/; max-age=157680000; SameSite=Lax';
+    var side=q('#sidebarDeviceId'); if(side) side.textContent=id;
+    var pay=q('#payDeviceId'); if(pay) pay.value=id;
+    return id;
+  }
+  function contentFor(p){
+    var phone=(q('#payPhone')&&q('#payPhone').value.trim())||'SDT';
+    var email=(q('#payEmail')&&q('#payEmail').value.trim())||'GMAIL';
+    return deviceId();
+  }
+  function applyPayment(k){
+    k=k||window.currentPremiumPlanKey||window.__mktClickedPlanKey||'monthly';
+    var p=plan(k);
+    window.currentPremiumPlanKey=k;
+    var modal=q('#paymentModal'); if(!modal) return false;
+    var title=q('#payPlanTitle'); if(title) title.textContent=p.title;
+    var desc=q('#payPlanDesc'); if(desc) desc.textContent=p.desc || 'Vui lòng nhập số điện thoại và Gmail để được duyệt nâng cấp.';
+    var price=q('#payPlanPrice'); if(price) price.textContent=money(p.amount);
+    var dev=q('#payDeviceId'); if(dev) dev.value=deviceId();
+    var content=contentFor(p);
+    var pc=q('#payContent'); if(pc) pc.textContent=content;
+    var qr=q('#payQr'); if(qr) qr.src='https://img.vietqr.io/image/970405-8888363382629-compact2.png?amount='+encodeURIComponent(p.amount)+'&addInfo='+encodeURIComponent(content)+'&accountName='+encodeURIComponent('NGUYEN DANG THI XUAN');
+    var locked=q('#payLocked'); if(locked) locked.innerHTML='';
+    var h=locked&&locked.previousElementSibling; if(h) h.style.display='none';
+    modal.style.display='flex';
+    return false;
+  }
+  function detectFromElement(el){
+    if(!el) return '';
+    var oc=(el.getAttribute&&el.getAttribute('onclick'))||'';
+    var m=oc.match(/openPayment\(['"]([^'"]+)['"]\)/i)||oc.match(/openPremiumCheckout\(['"]([^'"]+)['"]\)/i)||oc.match(/mktOpenPlanDetail\(['"]([^'"]+)['"]\)/i);
+    if(m && PLAN[m[1]]) return m[1];
+    var card=el.closest && el.closest('.premium-plan,.v4-plan,.price-card,.plan-card,.pricing-card,.premium-card,.mktPlanCard,.modal,.payment-inner,section,div');
+    var txt=(card&&card.innerText)||el.innerText||el.textContent||'';
+    return keyFromText(txt);
+  }
+  function remember(k){if(k&&PLAN[k]){window.__mktClickedPlanKey=k; window.__mktClickedPlanAt=Date.now(); window.currentPremiumPlanKey=k;}}
+  var oldOpen=window.openPayment;
+  window.openPayment=function(k){
+    var now=Date.now();
+    if((!k || k==='monthly') && window.__mktClickedPlanKey && now-(window.__mktClickedPlanAt||0)<2000) k=window.__mktClickedPlanKey;
+    if(!PLAN[k]) k=keyFromText((q('#mktPlanOverlay')||document.body).innerText)||'monthly';
+    remember(k);
+    return applyPayment(k);
+  };
+  window.openPremiumCheckout=function(k){return window.openPayment(k||window.__mktClickedPlanKey||'monthly');};
+  var oldDetail=window.mktOpenPlanDetail;
+  window.mktOpenPlanDetail=function(k){
+    if(!PLAN[k]) k=window.__mktClickedPlanKey||keyFromText((document.activeElement&&document.activeElement.innerText)||'')||'monthly';
+    remember(k);
+    var r=false; if(typeof oldDetail==='function'){try{r=oldDetail(k);}catch(e){}}
+    setTimeout(function(){
+      var pay=q('#mktPlanPay'); if(pay){pay.onclick=function(e){e.preventDefault(); e.stopPropagation(); return window.openPayment(window.currentPremiumPlanKey||k);};}
+      var note=q('#mktPlanNote'); if(note){note.innerHTML='ID thiết bị: <b>'+deviceId()+'</b><br><span style="color:#64748b">Gói đang chọn: <b>'+plan(k).title+'</b> - <b>'+plan(k).price+'</b></span>';}
+    },80);
+    return r;
+  };
+  document.addEventListener('click',function(e){
+    var btn=e.target.closest&&e.target.closest('button,a,.plan-button,.premium-btn');
+    if(!btn) return;
+    var text=norm(btn.innerText||btn.textContent||'');
+    var isUpgrade=/nâng cấp|mở khóa|đăng ký|thanh toán|chọn gói|xem chi tiết|premium|gửi yêu cầu/i.test(text) || ((btn.getAttribute('onclick')||'').indexOf('openPayment')>-1);
+    if(!isUpgrade) return;
+    var k=detectFromElement(btn); if(k) remember(k);
+  },true);
+  document.addEventListener('input',function(e){ if(e.target&&/payPhone|payEmail/.test(e.target.id||'')) applyPayment(window.currentPremiumPlanKey||window.__mktClickedPlanKey||'monthly'); },true);
+  setInterval(function(){
+    var modal=q('#paymentModal'); if(!modal) return;
+    var st=getComputedStyle(modal); if(st.display==='none') return;
+    var k=window.currentPremiumPlanKey||window.__mktClickedPlanKey||'monthly';
+    var p=plan(k); var price=q('#payPlanPrice');
+    if(price && price.textContent.indexOf(Number(p.amount).toLocaleString('vi-VN'))===-1) applyPayment(k);
+  },400);
+})();
+</script>
+
+<script id="mkt-compact-pricing-final-fix">
+(function(){
+  'use strict';
+  var PLANS={
+    monthly:{title:'Gói 1 tháng',price:'159.000đ',amount:'159000',code:'GOI1THANG',desc:'Phù hợp người mới bắt đầu.'},
+    quarterly:{title:'Gói 3 tháng',price:'359.000đ',amount:'359000',code:'GOI3THANG',desc:'Tối ưu hơn gói tháng.'},
+    halfyear:{title:'Gói 6 tháng',price:'559.000đ',amount:'559000',code:'GOI6THANG',desc:'Mở thêm CRM, Sales Bot và công cụ nâng cao.'},
+    yearly:{title:'Gói 1 năm',price:'859.000đ',amount:'859000',code:'GOI1NAM',desc:'Gói phổ biến, tối ưu chi phí dài hạn.'},
+    sellerpro:{title:'Gói nhà bán hàng chuyên nghiệp',price:'1.959.000đ',amount:'1959000',code:'NHABANHANGPRO',desc:'Gói cao nhất cho nhà bán hàng chuyên nghiệp.'}
+  };
+  PLANS.lifetime=PLANS.sellerpro;
+  function q(s,r){return (r||document).querySelector(s)}
+  function norm(k){k=String(k||'').toLowerCase().replace(/[^a-z0-9]/g,''); if(k==='lifetime'||k==='seller'||k==='sellerpro'||k==='nhabanhangpro')return 'sellerpro'; if(k==='monthly'||k==='basic'||k==='goi1thang')return 'monthly'; if(k==='quarterly'||k==='pro'||k==='goi3thang')return 'quarterly'; if(k==='halfyear'||k==='business'||k==='goi6thang')return 'halfyear'; if(k==='yearly'||k==='goi1nam')return 'yearly'; return PLANS[k]?k:'monthly'}
+  function device(){var id='';try{id=localStorage.getItem('mkt_device_id')||''}catch(e){} if(!id&&typeof window.getOrCreateDeviceId==='function')id=window.getOrCreateDeviceId(); if(!id){id='MKT-'+Math.random().toString(36).slice(2,8).toUpperCase()+Date.now().toString().slice(-4);try{localStorage.setItem('mkt_device_id',id)}catch(e){}} document.cookie='mkt_device_id='+encodeURIComponent(id)+'; path=/; max-age='+(60*60*24*365*5); return id}
+  function setKey(k){k=norm(k); window.currentPremiumPlanKey=k; window.mktSelectedPlanKey=k; window.__mktClickedPlanKey=k; try{localStorage.setItem('mkt_selected_plan_key',k)}catch(e){} return k}
+  function payNote(p){var phone=(q('#payPhone')&&q('#payPhone').value.trim())||''; var email=(q('#payEmail')&&q('#payEmail').value.trim())||''; return device();}
+  window.refreshPaymentContent=function(){var k=norm(window.currentPremiumPlanKey||window.mktSelectedPlanKey); var p=PLANS[k]||PLANS.monthly; var note=payNote(p); var pc=q('#payContent'); if(pc)pc.textContent=note; var price=q('#payPlanPrice'); if(price)price.textContent=Number(p.amount).toLocaleString('vi-VN')+' VNĐ'; var qr=q('#payQr'); if(qr)qr.src='https://img.vietqr.io/image/970405-8888363382629-compact2.png?amount='+encodeURIComponent(p.amount)+'&addInfo='+encodeURIComponent(note)+'&accountName='+encodeURIComponent('NGUYEN DANG THI XUAN')};
+  window.openPayment=function(k){k=setKey(k); var p=PLANS[k]||PLANS.monthly; var modal=q('#paymentModal'); if(!modal)return false; var title=q('#payPlanTitle'); if(title)title.textContent=p.title; var desc=q('#payPlanDesc'); if(desc)desc.textContent=p.desc; var price=q('#payPlanPrice'); if(price)price.textContent=Number(p.amount).toLocaleString('vi-VN')+' VNĐ'; var dev=q('#payDeviceId'); if(dev)dev.value=device(); window.refreshPaymentContent(); modal.style.display='flex'; return false};
+  document.addEventListener('click',function(e){var btn=e.target.closest&&e.target.closest('[data-plan]'); if(!btn)return; var k=norm(btn.getAttribute('data-plan')||(btn.dataset&&btn.dataset.plan)); setKey(k); if(/button|a/i.test(btn.tagName)||btn.closest('button,a')){e.preventDefault();e.stopPropagation();if(e.stopImmediatePropagation)e.stopImmediatePropagation();return window.openPayment(k)}},true);
+  document.addEventListener('input',function(e){if(e.target&&/payPhone|payEmail/.test(e.target.id||''))window.refreshPaymentContent()},true);
+})();
+</script>
+
+
+
+<!-- FINAL HOTFIX 20260610: PWA install + SaaS sidebar dot labels, no browser alert -->
+
+
+<script id="mkt-clean-payment-note-only">
+(function(){
+  'use strict';
+  function q(s,r){return (r||document).querySelector(s)}
+  function qa(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s))}
+  function device(){var id='';try{id=localStorage.getItem('mkt_device_id')||''}catch(e){} if(!id&&typeof window.getOrCreateDeviceId==='function')id=window.getOrCreateDeviceId(); if(!id){id='MKT-'+Math.random().toString(36).slice(2,8).toUpperCase()+Date.now().toString().slice(-4);try{localStorage.setItem('mkt_device_id',id)}catch(e){}} document.cookie='mkt_device_id='+encodeURIComponent(id)+'; path=/; max-age='+(60*60*24*365*5); return id;}
+  function amountOf(k){k=String(k||window.currentPremiumPlanKey||window.mktSelectedPlanKey||'monthly').toLowerCase(); if(/seller|lifetime|nhabanhang/.test(k))return '1959000'; if(/year|1nam/.test(k))return '859000'; if(/half|6thang/.test(k))return '559000'; if(/quarter|3thang/.test(k))return '359000'; return '159000';}
+  function cleanTransfer(){var id=device(); var pc=q('#payContent'); if(pc)pc.textContent=id; var dev=q('#payDeviceId'); if(dev)dev.value=id; var qr=q('#payQr'); if(qr){var k=window.currentPremiumPlanKey||window.mktSelectedPlanKey||'monthly';qr.src='https://img.vietqr.io/image/970405-8888363382629-compact2.png?amount='+encodeURIComponent(amountOf(k))+'&addInfo='+encodeURIComponent(id)+'&accountName='+encodeURIComponent('NGUYEN DANG THI XUAN');} qa('span,div,p,b').forEach(function(el){if(el.id==='payContent')return; var t=el.childNodes&&el.childNodes.length===1?el.textContent:''; if(/CHUA_SDT|CHUA_GMAIL|GOI1THANG|GOI3THANG|GOI6THANG|GOI1NAM|NHABANHANGPRO/.test(t||'')){el.textContent=(t||'').replace(/\s*\|\s*CHUA_SDT\s*\|\s*CHUA_GMAIL\s*\|\s*(GOI1THANG|GOI3THANG|GOI6THANG|GOI1NAM|NHABANHANGPRO)/g,'').replace(/\bCHUA_SDT\b|\bCHUA_GMAIL\b|\bGOI1THANG\b|\bGOI3THANG\b|\bGOI6THANG\b|\bGOI1NAM\b|\bNHABANHANGPRO\b/g,'').trim();}});}
+  var oldRefresh=window.refreshPaymentContent; window.refreshPaymentContent=function(){try{if(typeof oldRefresh==='function')oldRefresh.apply(this,arguments)}catch(e){} cleanTransfer();};
+  var oldOpen=window.openPayment; window.openPayment=function(k){var r; try{if(typeof oldOpen==='function')r=oldOpen.apply(this,arguments)}catch(e){} setTimeout(cleanTransfer,0);setTimeout(cleanTransfer,100);setTimeout(cleanTransfer,250);return r===undefined?false:r;};
+  document.addEventListener('click',function(){setTimeout(cleanTransfer,0);setTimeout(cleanTransfer,150);},true); document.addEventListener('input',function(e){if(e.target&&/payPhone|payEmail/.test(e.target.id||''))setTimeout(cleanTransfer,0);},true); if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',cleanTransfer);else cleanTransfer(); setInterval(cleanTransfer,1200);
+})();
+</script>
+
+
+<!-- CLEAN SAAS SIDEBAR + MOBILE PWA INSTALL 20260610 -->
+<style id="mkt-clean-saas-sidebar-mobile-pwa">
+  /* Dọn sạch badge/card cũ */
+  .app-install-card,.app-install-banner,.v2-install-box,#mktInstallFloat,#mktInstallPanel{display:none!important;visibility:hidden!important;height:0!important;margin:0!important;padding:0!important;overflow:hidden!important;pointer-events:none!important;}
+  .v2-side-card{display:none!important;}
+  .sidebar{width:292px!important;background:linear-gradient(180deg,#070b18 0%,#0b1024 60%,#0c0920 100%)!important;border-right:1px solid rgba(148,163,184,.16)!important;box-shadow:12px 0 38px rgba(2,6,23,.20)!important;}
+  .logo{font-size:23px!important;line-height:1.08!important;font-weight:1000!important;letter-spacing:-.045em!important;color:#fff!important;margin:0 18px 14px!important;text-shadow:0 10px 24px rgba(37,99,235,.24)!important;}
+  .logo:after{content:""!important;display:block!important;width:84px!important;height:4px!important;margin-top:13px!important;border-radius:999px!important;background:linear-gradient(90deg,#2563eb,#7c3aed)!important;}
+  .mkt-clean-nav{padding:8px 14px 24px!important;}
+  .v2-nav-title{margin:18px 0 7px!important;padding:0 4px!important;font-size:10.5px!important;line-height:1!important;font-weight:1000!important;letter-spacing:.12em!important;text-transform:uppercase!important;color:#9fb0ff!important;opacity:.95!important;}
+  .mkt-clean-nav .v2-nav-title:nth-of-type(2)::before{content:'📣 ';letter-spacing:0;text-transform:none;}
+  .mkt-clean-nav .v2-nav-title:nth-of-type(3)::before{content:'🤖 ';letter-spacing:0;text-transform:none;}
+  .mkt-clean-nav .v2-nav-title:nth-of-type(4)::before{content:'🎨 ';letter-spacing:0;text-transform:none;}
+  .mkt-clean-nav .v2-nav-title:nth-of-type(5)::before{content:'⚙️ ';letter-spacing:0;text-transform:none;}
+  .v2-nav-link{position:relative!important;display:flex!important;align-items:center!important;gap:8px!important;min-height:38px!important;height:auto!important;margin:2px 0!important;padding:8px 8px 8px 13px!important;border-radius:11px!important;background:transparent!important;border:1px solid transparent!important;box-shadow:none!important;color:#e8ecff!important;text-decoration:none!important;cursor:pointer!important;pointer-events:auto!important;user-select:none!important;overflow:visible!important;transform:none!important;transition:background .16s ease,border-color .16s ease,transform .16s ease!important;}
+  .v2-nav-link::before{content:'├'!important;display:inline-block!important;width:10px!important;margin-right:1px!important;color:rgba(165,180,252,.40)!important;font-size:13px!important;font-weight:900!important;background:transparent!important;box-shadow:none!important;position:static!important;opacity:1!important;}
+  .v2-nav-link:hover{background:rgba(99,102,241,.12)!important;border-color:rgba(129,140,248,.16)!important;transform:translateX(2px)!important;box-shadow:none!important;}
+  .v2-nav-link.active{background:linear-gradient(135deg,rgba(37,99,235,.20),rgba(124,58,237,.14))!important;border-color:rgba(129,140,248,.24)!important;}
+  .v2-nav-text{flex:1 1 auto!important;min-width:0!important;font-size:14px!important;line-height:1.15!important;font-weight:850!important;white-space:normal!important;overflow:visible!important;text-overflow:clip!important;color:inherit!important;text-shadow:none!important;}
+  .v2-nav-ico,.v2-nav-tag,.mkt-pro-mini{display:none!important;visibility:hidden!important;width:0!important;height:0!important;margin:0!important;padding:0!important;opacity:0!important;}
+  .v2-nav-link::after,.v2-nav-link.menu-pro::after,.v2-nav-link.pro-feature::after,.v2-nav-link.real-pro::after,.v2-nav-link.premium-locked::after,.v2-nav-link.real-premium-lock::after,.v2-nav-link.menu-locked::after{content:none!important;display:none!important;}
+  .mkt-dot-tag{display:inline-flex!important;align-items:center!important;gap:5px!important;margin-left:auto!important;font-size:11px!important;font-weight:950!important;letter-spacing:-.01em!important;white-space:nowrap!important;line-height:1!important;background:transparent!important;border:0!important;padding:0!important;box-shadow:none!important;}
+  .mkt-dot-tag i{display:block!important;width:8px!important;height:8px!important;border-radius:999px!important;box-shadow:0 0 8px currentColor!important;background:currentColor!important;flex:0 0 8px!important;}
+  .mkt-dot-tag.pro{color:#22c55e!important}.mkt-dot-tag.pro span{color:#bbf7d0!important}.mkt-dot-tag.premium{color:#facc15!important}.mkt-dot-tag.premium span{color:#fef3c7!important;}
+  .mkt-mobile-install-menu{display:none!important;}
+  .mkt-install-sheet-backdrop{position:fixed!important;inset:0!important;z-index:2147483400!important;display:none!important;align-items:flex-end!important;justify-content:center!important;background:rgba(2,6,23,.60)!important;backdrop-filter:blur(8px)!important;}
+  .mkt-install-sheet-backdrop.show{display:flex!important;}
+  .mkt-install-sheet{width:min(430px,100vw)!important;background:#fff!important;color:#111827!important;border-radius:24px 24px 0 0!important;padding:20px 18px 18px!important;box-shadow:0 -24px 70px rgba(15,23,42,.42)!important;border:1px solid rgba(15,23,42,.08)!important;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif!important;}
+  .mkt-install-sheet h3{margin:0 0 8px!important;font-size:20px!important;line-height:1.15!important;font-weight:1000!important;color:#0f172a!important;}
+  .mkt-install-sheet p{margin:8px 0!important;font-size:14px!important;line-height:1.5!important;color:#334155!important;font-weight:700!important;}
+  .mkt-install-actions{display:flex!important;gap:10px!important;margin-top:14px!important}.mkt-install-actions button{flex:1!important;border:0!important;border-radius:999px!important;padding:13px 14px!important;font-size:14px!important;font-weight:1000!important;cursor:pointer!important}.mkt-install-now{color:#fff!important;background:linear-gradient(135deg,#2563eb,#7c3aed)!important}.mkt-install-close{color:#334155!important;background:#e5e7eb!important;}
+  @media(max-width:768px){.mkt-mobile-install-menu{display:flex!important;align-items:center!important;gap:10px!important;margin:10px 12px 14px!important;padding:12px 13px!important;border-radius:17px!important;border:1px solid rgba(96,165,250,.28)!important;color:#fff!important;background:linear-gradient(135deg,rgba(37,99,235,.28),rgba(124,58,237,.18),rgba(15,23,42,.76))!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 12px 28px rgba(2,6,23,.20)!important;cursor:pointer!important}.mkt-mobile-install-menu .mkt-install-phone-icon{width:36px!important;height:36px!important;border-radius:13px!important;display:flex!important;align-items:center!important;justify-content:center!important;background:linear-gradient(135deg,#2563eb,#7c3aed)!important;box-shadow:0 10px 22px rgba(37,99,235,.30)!important;font-size:18px!important;flex:0 0 36px!important}.mkt-mobile-install-menu b{display:block!important;font-size:14px!important;line-height:1.05!important;font-weight:1000!important;color:#fff!important}.mkt-mobile-install-menu small{display:block!important;margin-top:4px!important;font-size:11px!important;line-height:1.25!important;font-weight:800!important;color:#bfdbfe!important}body.mkt-app-installed .mkt-mobile-install-menu{display:none!important;}}
+</style>
+<script id="mkt-clean-saas-sidebar-mobile-pwa-js">
+(function(){
+  'use strict';
+  var deferredPrompt=window.__mktDeferredPrompt||null;
+  var isIOS=/iphone|ipad|ipod/i.test(navigator.userAgent||'');
+  var isAndroid=/android/i.test(navigator.userAgent||'');
+  var isMobile=isIOS||isAndroid||(window.matchMedia&&window.matchMedia('(max-width:768px)').matches);
+  var ALIAS={facebook_center:'facebook_center',page_center:'page_center_total',group_marketing:'group_suite',group_finder:'group_suite',group_uid_splitter:'group_suite',group_join_queue:'group_suite',group_post_filter:'group_suite'};
+  function qs(s,r){return (r||document).querySelector(s)}
+  function qsa(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s))}
+  function norm(id){id=String(id||'').replace(/^#/,'').trim();return ALIAS[id]||id||'dashboard'}
+  function standalone(){return window.matchMedia('(display-mode: standalone)').matches||window.navigator.standalone===true}
+  function showSection(id){id=norm(id);qsa('#dashboard,.module-section').forEach(function(el){el.classList.remove('active-module');el.style.display='none'});var el=qs('#'+CSS.escape(id))||qs('#dashboard');if(el){el.style.display='block';el.classList.add('active-module')}qsa('.v2-nav-link').forEach(function(a){a.classList.toggle('active',norm(a.getAttribute('data-module')||a.getAttribute('href'))===id)});if(location.hash!=='#'+id){try{history.replaceState(null,'','#'+id)}catch(e){location.hash=id}}return false}
+  window.openModule=showSection;
+  window.visibleSection=showSection;
+  document.addEventListener('click',function(e){var a=e.target.closest&&e.target.closest('.v2-nav-link[href^="#"],.app-quick-card[onclick],.module-card[onclick]');if(!a||a.classList.contains('app-quick-card')||a.classList.contains('module-card'))return;var id=a.getAttribute('data-module')||a.getAttribute('href');e.preventDefault();e.stopPropagation();if(e.stopImmediatePropagation)e.stopImmediatePropagation();return showSection(id)},true);
+  function ensureSheet(){var old=qs('#mktInstallSheetBackdrop');if(old)return old;var wrap=document.createElement('div');wrap.id='mktInstallSheetBackdrop';wrap.className='mkt-install-sheet-backdrop';wrap.innerHTML='<div class="mkt-install-sheet" role="dialog" aria-modal="true"><h3>📱 Cài GPT MKT Pro vào điện thoại</h3><p id="mktInstallGuideText"></p><div class="mkt-install-actions"><button type="button" class="mkt-install-now" id="mktInstallNowBtn">Cài ngay</button><button type="button" class="mkt-install-close" id="mktInstallCloseBtn">Đóng</button></div></div>';document.body.appendChild(wrap);qs('#mktInstallCloseBtn',wrap).addEventListener('click',function(){wrap.classList.remove('show')});wrap.addEventListener('click',function(e){if(e.target===wrap)wrap.classList.remove('show')});qs('#mktInstallNowBtn',wrap).addEventListener('click',runInstall);return wrap}
+  function guideText(){if(deferredPrompt)return 'Bấm <b>Cài ngay</b>, sau đó chọn <b>Cài đặt</b> để đưa GPT MKT Pro ra màn hình chính.'; if(isIOS)return '<b>iPhone Safari:</b><br>1. Bấm nút <b>Chia sẻ</b> ở thanh dưới.<br>2. Chọn <b>Thêm vào màn hình chính</b>.<br>3. Bấm <b>Thêm</b>.'; if(isAndroid)return '<b>Android Chrome:</b><br>Nếu chưa hiện popup cài đặt, bấm menu <b>⋮</b> góc phải trình duyệt → chọn <b>Cài đặt ứng dụng</b> hoặc <b>Thêm vào màn hình chính</b>.'; return 'Mở website trên điện thoại bằng Chrome Android hoặc Safari iPhone để cài vào màn hình chính.'}
+  function openGuide(){var w=ensureSheet();qs('#mktInstallGuideText',w).innerHTML=guideText();qs('#mktInstallNowBtn',w).textContent=deferredPrompt?'Cài ngay':'Đã hiểu';w.classList.add('show')}
+  async function runInstall(e){if(e){e.preventDefault();e.stopPropagation()}if(standalone()){document.body.classList.add('mkt-app-installed');return false}if(deferredPrompt){try{deferredPrompt.prompt();await deferredPrompt.userChoice}catch(_e){}deferredPrompt=null;window.__mktDeferredPrompt=null;var w=qs('#mktInstallSheetBackdrop');if(w)w.classList.remove('show');return false}openGuide();return false}
+  function buildMobileInstall(){if(!isMobile||standalone()){document.body.classList.add('mkt-app-installed');return}if(qs('#mktMobileInstallMenu'))return;var sidebar=qs('.sidebar')||qs('aside')||qs('nav');if(!sidebar)return;var item=document.createElement('button');item.type='button';item.id='mktMobileInstallMenu';item.className='mkt-mobile-install-menu';item.innerHTML='<span class="mkt-install-phone-icon">📱</span><span><b>Cài ứng dụng</b><small>Bấm để thêm vào màn hình điện thoại</small></span>';var nav=qs('.mkt-clean-nav',sidebar)||qs('.nav',sidebar);if(nav)nav.insertBefore(item,nav.firstChild);else sidebar.appendChild(item);item.addEventListener('click',runInstall,true)}
+  window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();deferredPrompt=e;window.__mktDeferredPrompt=e;var t=qs('#mktMobileInstallMenu small');if(t)t.textContent='Bấm để cài nhanh trên Android'});
+  window.addEventListener('appinstalled',function(){deferredPrompt=null;window.__mktDeferredPrompt=null;document.body.classList.add('mkt-app-installed')});
+  function boot(){qsa('.v2-nav-link').forEach(function(a){a.removeAttribute('onclick');a.style.pointerEvents='auto';a.style.cursor='pointer'});buildMobileInstall();showSection((location.hash||'#dashboard').replace('#','')||'dashboard');if('serviceWorker' in navigator){navigator.serviceWorker.register('/service-worker.js',{scope:'/'}).catch(function(err){console.log('Service worker lỗi:',err)})}}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();setTimeout(boot,600);setTimeout(boot,1800);window.mktOpenInstallGuide=openGuide;
+})();
+</script>
+
+
+<!-- FINAL MOBILE APP INSTALL 20260610: phone-only download button in mobile menu + floating shortcut -->
+
+
+<!-- MOBILE PWA TOP DOWNLOAD FINAL 20260610: top blue GPT MKT download button + mobile responsive fix -->
+<style id="mkt-mobile-top-download-final-css">
+  /* Dọn toàn bộ nút tải cũ để không còn nút nổi dưới màn hình */
+  #mktInstallFloat,#mktInstallPanel,#mktPhoneInstallFloat,#mktPhoneInstallEntry,#mktMobileInstallMenu,
+  .app-install-card,.app-install-banner,.v2-install-box,.mkt-mobile-install-menu{display:none!important;visibility:hidden!important;pointer-events:none!important;}
+
+  #mktTopDownloadBar{display:none!important;}
+  #mktTopInstallSheet{position:fixed!important;inset:0!important;z-index:2147483646!important;display:none!important;align-items:flex-end!important;justify-content:center!important;background:rgba(2,6,23,.62)!important;backdrop-filter:blur(8px)!important;}
+  #mktTopInstallSheet.show{display:flex!important;}
+  .mkt-top-install-box{width:min(430px,100vw)!important;background:#fff!important;color:#0f172a!important;border-radius:24px 24px 0 0!important;padding:20px 18px 18px!important;box-shadow:0 -24px 70px rgba(15,23,42,.42)!important;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif!important;}
+  .mkt-top-install-box h3{margin:0 0 8px!important;font-size:20px!important;line-height:1.15!important;font-weight:1000!important;color:#0f172a!important;}
+  .mkt-top-install-box p{margin:8px 0!important;font-size:14px!important;line-height:1.55!important;color:#334155!important;font-weight:760!important;}
+  .mkt-top-install-actions{display:flex!important;gap:10px!important;margin-top:15px!important;}
+  .mkt-top-install-actions button{flex:1!important;border:0!important;border-radius:999px!important;padding:13px 14px!important;font-size:14px!important;font-weight:1000!important;cursor:pointer!important;}
+  #mktTopInstallNow{color:#fff!important;background:linear-gradient(135deg,#2563eb,#7c3aed)!important;box-shadow:0 12px 28px rgba(37,99,235,.28)!important;}
+  #mktTopInstallClose{color:#334155!important;background:#e5e7eb!important;}
+
+  @media(max-width:900px){
+    html,body{width:100%!important;max-width:100%!important;overflow-x:hidden!important;}
+    body:not(.mkt-app-installed){padding-top:58px!important;}
+    body:not(.mkt-app-installed) #mktTopDownloadBar{
+      display:flex!important;position:fixed!important;left:10px!important;right:10px!important;top:calc(8px + env(safe-area-inset-top,0px))!important;z-index:2147483000!important;
+      align-items:center!important;justify-content:center!important;gap:9px!important;border:0!important;border-radius:999px!important;padding:13px 16px!important;
+      color:#fff!important;background:linear-gradient(135deg,#0ea5e9,#2563eb,#7c3aed)!important;box-shadow:0 16px 38px rgba(37,99,235,.42), inset 0 1px 0 rgba(255,255,255,.22)!important;
+      font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif!important;font-size:15px!important;font-weight:1000!important;letter-spacing:.01em!important;cursor:pointer!important;
+      visibility:visible!important;pointer-events:auto!important;
+    }
+    #mktTopDownloadBar .mkt-dl-dot{width:10px!important;height:10px!important;border-radius:999px!important;background:#34d399!important;box-shadow:0 0 0 5px rgba(52,211,153,.18),0 0 14px rgba(52,211,153,.85)!important;flex:0 0 10px!important;}
+    #mktTopDownloadBar small{font-size:12px!important;font-weight:900!important;opacity:.94!important;}
+
+    /* Sửa giao diện điện thoại: bỏ layout desktop 3 cột để nội dung không bị bóp nhỏ */
+    .layout{display:block!important;width:100%!important;max-width:100%!important;margin:0!important;padding:10px!important;}
+    .sidebar{position:relative!important;top:auto!important;width:100%!important;height:auto!important;max-height:none!important;margin:0 0 12px!important;border-radius:18px!important;padding:14px!important;}
+    .rightbar{display:none!important;}
+    .main{width:100%!important;max-width:100%!important;min-width:0!important;}
+    .panel,.top-hero,section{max-width:100%!important;}
+    .app-quick-grid{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:10px!important;}
+    .app-quick-card{min-width:0!important;padding:14px!important;border-radius:18px!important;}
+    .app-quick-card h3,.app-quick-card b{font-size:14px!important;line-height:1.2!important;}
+    .app-quick-card p{font-size:12px!important;line-height:1.35!important;}
+    .floating-bot{right:14px!important;bottom:calc(74px + env(safe-area-inset-bottom,0px))!important;}
+  }
+</style>
+<script id="mkt-mobile-top-download-final-js">
+(function(){
+  'use strict';
+  var deferredPrompt = window.__mktDeferredPrompt || null;
+  var ua = navigator.userAgent || '';
+  var isIOS = /iphone|ipad|ipod/i.test(ua);
+  var isAndroid = /android/i.test(ua);
+  function qs(s,r){return (r||document).querySelector(s)}
+  function mobile(){return isIOS || isAndroid || (window.matchMedia && window.matchMedia('(max-width:900px)').matches)}
+  function standalone(){return (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone === true}
+  function ensureBar(){
+    if(!mobile() || standalone()){document.body.classList.add('mkt-app-installed');return null;}
+    var old=qs('#mktTopDownloadBar'); if(old) return old;
+    var btn=document.createElement('button'); btn.type='button'; btn.id='mktTopDownloadBar';
+    btn.innerHTML='<span class="mkt-dl-dot"></span><span>GPT MKT</span><small>Tải xuống</small>';
+    btn.addEventListener('click',runInstall,true);
+    document.body.appendChild(btn);
+    return btn;
+  }
+  function ensureSheet(){
+    var old=qs('#mktTopInstallSheet'); if(old) return old;
+    var wrap=document.createElement('div'); wrap.id='mktTopInstallSheet';
+    wrap.innerHTML='<div class="mkt-top-install-box" role="dialog" aria-modal="true"><h3>📱 Cài GPT MKT Pro</h3><p id="mktTopInstallText"></p><div class="mkt-top-install-actions"><button type="button" id="mktTopInstallNow">Cài ngay</button><button type="button" id="mktTopInstallClose">Đóng</button></div></div>';
+    document.body.appendChild(wrap);
+    qs('#mktTopInstallClose',wrap).addEventListener('click',function(){wrap.classList.remove('show')});
+    wrap.addEventListener('click',function(e){if(e.target===wrap)wrap.classList.remove('show')});
+    qs('#mktTopInstallNow',wrap).addEventListener('click',runInstall);
+    return wrap;
+  }
+  function guide(){
+    if(deferredPrompt) return 'Bấm <b>Cài ngay</b>, sau đó chọn <b>Cài đặt</b>. Ứng dụng sẽ tự xuất hiện ngoài màn hình điện thoại.';
+    if(isIOS) return 'iPhone không cho website tự cài bằng 1 chạm. Cách nhanh nhất:<br><b>Safari → Chia sẻ → Thêm vào màn hình chính → Thêm</b>.';
+    if(isAndroid) return 'Nếu chưa bật popup cài đặt: mở bằng <b>Chrome</b> → bấm menu <b>⋮</b> → chọn <b>Cài đặt ứng dụng</b> hoặc <b>Thêm vào màn hình chính</b>.';
+    return 'Mở website trên điện thoại bằng Chrome Android hoặc Safari iPhone để cài app.';
+  }
+  function openGuide(){var w=ensureSheet(); qs('#mktTopInstallText',w).innerHTML=guide(); qs('#mktTopInstallNow',w).textContent=deferredPrompt?'Cài ngay':'Đã hiểu'; w.classList.add('show')}
+  async function runInstall(e){
+    if(e){e.preventDefault();e.stopPropagation();if(e.stopImmediatePropagation)e.stopImmediatePropagation();}
+    if(standalone()){document.body.classList.add('mkt-app-installed');return false;}
+    if(deferredPrompt){try{deferredPrompt.prompt(); await deferredPrompt.userChoice;}catch(_e){} deferredPrompt=null; window.__mktDeferredPrompt=null; var w=qs('#mktTopInstallSheet'); if(w)w.classList.remove('show'); return false;}
+    openGuide(); return false;
+  }
+  window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();deferredPrompt=e;window.__mktDeferredPrompt=e;ensureBar();});
+  window.addEventListener('appinstalled',function(){deferredPrompt=null;window.__mktDeferredPrompt=null;document.body.classList.add('mkt-app-installed')});
+  window.mktTopInstall=runInstall;
+  function boot(){ensureBar(); if('serviceWorker' in navigator){navigator.serviceWorker.register('/service-worker.js',{scope:'/'}).catch(function(err){console.log('Service worker lỗi:',err);});}}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();
+  setTimeout(boot,500); setTimeout(boot,1600); setTimeout(boot,3500);
+})();
+</script>
+
+
+
+<!-- FINAL MOBILE QUICK ACTIONS 20260610: compact left GPT MKT download + CTV, fixed click PWA -->
+<style id="mkt-mobile-quick-actions-final-css">
+  #mktMobileQuickActions{display:none!important;}
+  @media(max-width:768px){
+    /* Ẩn các nút cài app/CTV cũ để không đè lên nội dung */
+    #mktTopDownloadBar,
+    #mobileCtvQuickBtn,
+    .mkt-mobile-install-menu,
+    .app-install-card,
+    .app-install-banner,
+    .v2-install-box{
+      display:none!important;visibility:hidden!important;opacity:0!important;pointer-events:none!important;
+    }
+    body:not(.mkt-app-installed){padding-top:0!important;}
+
+    #mktMobileQuickActions{
+      position:fixed!important;
+      left:10px!important;
+      top:calc(env(safe-area-inset-top,0px) + 10px)!important;
+      z-index:2147483600!important;
+      display:flex!important;
+      align-items:center!important;
+      gap:7px!important;
+      pointer-events:auto!important;
+      font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif!important;
+      animation:mktQuickFloat 2.6s ease-in-out infinite!important;
+    }
+    #mktMobileQuickActions button{
+      border:0!important;
+      outline:0!important;
+      cursor:pointer!important;
+      pointer-events:auto!important;
+      user-select:none!important;
+      -webkit-tap-highlight-color:transparent!important;
+      min-height:42px!important;
+      border-radius:999px!important;
+      display:inline-flex!important;
+      align-items:center!important;
+      justify-content:center!important;
+      gap:7px!important;
+      font-weight:1000!important;
+      letter-spacing:-.02em!important;
+      color:#fff!important;
+      box-shadow:0 12px 26px rgba(2,6,23,.24),inset 0 1px 0 rgba(255,255,255,.22)!important;
+      backdrop-filter:blur(12px)!important;
+      transform:translateZ(0)!important;
+    }
+    #mktMobileInstallQuick{
+      padding:8px 13px!important;
+      background:linear-gradient(135deg,#0284c7,#2563eb 48%,#7c3aed)!important;
+      min-width:142px!important;
+    }
+    #mktMobileInstallQuick .mkt-q-dot{
+      width:10px!important;height:10px!important;border-radius:50%!important;
+      background:#34d987!important;box-shadow:0 0 0 4px rgba(52,217,135,.15),0 0 12px rgba(52,217,135,.78)!important;
+      flex:0 0 10px!important;
+    }
+    #mktMobileInstallQuick .mkt-q-text{display:flex!important;flex-direction:column!important;align-items:flex-start!important;line-height:1.02!important;}
+    #mktMobileInstallQuick .mkt-q-title{font-size:13px!important;color:#fff!important;white-space:nowrap!important;}
+    #mktMobileInstallQuick .mkt-q-sub{font-size:10.5px!important;color:#dbeafe!important;white-space:nowrap!important;margin-top:2px!important;}
+    #mktMobileCtvQuick{
+      padding:8px 12px!important;
+      min-width:58px!important;
+      background:linear-gradient(135deg,#16a34a,#22c55e,#84cc16)!important;
+      font-size:13px!important;
+      color:#fff!important;
+    }
+    #mktMobileCtvQuick:before{
+      content:""!important;width:9px!important;height:9px!important;border-radius:50%!important;
+      background:#dcfce7!important;box-shadow:0 0 10px rgba(220,252,231,.9)!important;
+    }
+    #mktMobileQuickActions button:active{transform:scale(.96)!important;}
+    @keyframes mktQuickFloat{
+      0%,100%{transform:translateY(0)}
+      50%{transform:translateY(-3px)}
+    }
+    @media(max-width:390px){
+      #mktMobileQuickActions{left:8px!important;gap:6px!important;}
+      #mktMobileInstallQuick{min-width:128px!important;padding-left:11px!important;padding-right:11px!important;}
+      #mktMobileInstallQuick .mkt-q-title{font-size:12.2px!important;}
+      #mktMobileInstallQuick .mkt-q-sub{font-size:9.8px!important;}
+      #mktMobileCtvQuick{min-width:52px!important;font-size:12px!important;padding-left:10px!important;padding-right:10px!important;}
+    }
+  }
+</style>
+<script id="mkt-mobile-quick-actions-final-js">
+(function(){
+  'use strict';
+  var deferredPrompt = window.__mktDeferredPrompt || null;
+  function qs(s,r){return (r||document).querySelector(s)}
+  function isMobile(){return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent||'') || window.innerWidth<=768}
+  function standalone(){return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone===true}
+  function isIOS(){return /iPhone|iPad|iPod/i.test(navigator.userAgent||'')}
+  function ensureSheet(){
+    var old=qs('#mktQuickInstallSheet'); if(old) return old;
+    var wrap=document.createElement('div');
+    wrap.id='mktQuickInstallSheet';
+    wrap.style.cssText='position:fixed!important;inset:0!important;z-index:2147483640!important;display:none!important;align-items:flex-end!important;justify-content:center!important;background:rgba(2,6,23,.58)!important;backdrop-filter:blur(8px)!important;';
+    wrap.innerHTML='<div style="width:min(430px,100vw);background:#fff;color:#0f172a;border-radius:24px 24px 0 0;padding:20px 18px 18px;box-shadow:0 -24px 70px rgba(15,23,42,.42);font-family:system-ui,-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif"><h3 style="margin:0 0 8px;font-size:20px;line-height:1.15;font-weight:1000;color:#0f172a">📱 Cài GPT MKT Pro</h3><p id="mktQuickInstallText" style="margin:8px 0;font-size:14px;line-height:1.55;color:#334155;font-weight:760"></p><div style="display:flex;gap:10px;margin-top:15px"><button type="button" id="mktQuickInstallNow" style="flex:1;border:0;border-radius:999px;padding:13px 14px;font-size:14px;font-weight:1000;cursor:pointer;color:#fff;background:linear-gradient(135deg,#2563eb,#7c3aed)">Cài ngay</button><button type="button" id="mktQuickInstallClose" style="flex:1;border:0;border-radius:999px;padding:13px 14px;font-size:14px;font-weight:1000;cursor:pointer;color:#334155;background:#e5e7eb">Đóng</button></div></div>';
+    document.body.appendChild(wrap);
+    qs('#mktQuickInstallClose',wrap).onclick=function(){wrap.style.display='none'};
+    wrap.addEventListener('click',function(e){if(e.target===wrap)wrap.style.display='none'});
+    qs('#mktQuickInstallNow',wrap).onclick=runInstall;
+    return wrap;
+  }
+  function guide(){
+    var w=ensureSheet();
+    var p=qs('#mktQuickInstallText',w);
+    if(isIOS()){
+      p.innerHTML='<b>Trên iPhone:</b><br>1. Bấm nút <b>Chia sẻ</b> ở thanh dưới/trên trình duyệt.<br>2. Chọn <b>Thêm vào màn hình chính</b>.<br>3. Bấm <b>Thêm</b> để đưa GPT MKT ra màn hình.';
+      var n=qs('#mktQuickInstallNow',w); if(n) n.textContent='Đã hiểu';
+    }else{
+      p.innerHTML='<b>Trên Android Chrome:</b><br>Bấm <b>Cài ngay</b>. Nếu chưa hiện popup, chọn menu <b>⋮</b> → <b>Thêm vào màn hình chính</b>.';
+      var n2=qs('#mktQuickInstallNow',w); if(n2) n2.textContent='Cài ngay';
+    }
+    w.style.display='flex';
+  }
+  async function runInstall(e){
+    if(e){e.preventDefault();e.stopPropagation(); if(e.stopImmediatePropagation)e.stopImmediatePropagation();}
+    if(standalone()){document.body.classList.add('mkt-app-installed');return false;}
+    var dp = deferredPrompt || window.__mktDeferredPrompt;
+    if(dp){
+      try{dp.prompt(); await dp.userChoice;}catch(_e){}
+      deferredPrompt=null; window.__mktDeferredPrompt=null;
+      var w=qs('#mktQuickInstallSheet'); if(w) w.style.display='none';
+      return false;
+    }
+    guide();
+    return false;
+  }
+  function openCTV(e){
+    if(e){e.preventDefault();e.stopPropagation(); if(e.stopImmediatePropagation)e.stopImmediatePropagation();}
+    try{ if(typeof window.openModule==='function'){ window.openModule('affiliate_center'); return false; } }catch(_e){}
+    location.hash='affiliate_center';
+    var target=qs('#affiliate_center')||qs('[data-module="affiliate_center"]')||qs('[id*="affiliate"]');
+    if(target) target.scrollIntoView({behavior:'smooth',block:'start'});
+    return false;
+  }
+  function build(){
+    if(!isMobile() || standalone()){document.body.classList.add('mkt-app-installed');return;}
+    var old=qs('#mktMobileQuickActions'); if(old) return;
+    var box=document.createElement('div'); box.id='mktMobileQuickActions';
+    box.innerHTML='<button type="button" id="mktMobileInstallQuick" aria-label="Tải GPT MKT"><span class="mkt-q-dot"></span><span class="mkt-q-text"><span class="mkt-q-title">GPT MKT</span><span class="mkt-q-sub">Tải xuống</span></span></button><button type="button" id="mktMobileCtvQuick" aria-label="CTV">CTV</button>';
+    document.body.appendChild(box);
+    qs('#mktMobileInstallQuick',box).addEventListener('click',runInstall,true);
+    qs('#mktMobileCtvQuick',box).addEventListener('click',openCTV,true);
+  }
+  window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();deferredPrompt=e;window.__mktDeferredPrompt=e;build();},{capture:true});
+  window.addEventListener('appinstalled',function(){deferredPrompt=null;window.__mktDeferredPrompt=null;document.body.classList.add('mkt-app-installed')});
+  document.addEventListener('click',function(e){
+    var install=e.target.closest&&e.target.closest('#mktMobileInstallQuick,#mktTopDownloadBar,[data-install-app],#installAppBtn');
+    if(install) return runInstall(e);
+    var ctv=e.target.closest&&e.target.closest('#mktMobileCtvQuick');
+    if(ctv) return openCTV(e);
+  },true);
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',build);else build();
+  setTimeout(build,600);setTimeout(build,1800);
+})();
 </script>
 
 </body>
@@ -4195,7 +7522,16 @@ def render(content="", message="", ok=True, selected_industry="spa", analysis=""
 @app.route("/")
 def home():
     selected_industry = request.args.get("industry", "spa")
-    return render(selected_industry=selected_industry)
+    ref_code = current_affiliate_code()
+    if ref_code:
+        record_affiliate_click(ref_code)
+    resp = app.make_response(render(selected_industry=selected_industry))
+    if ref_code:
+        try:
+            resp.set_cookie('affiliate_code', ref_code, max_age=60*60*24*90)
+        except Exception:
+            pass
+    return resp
 
 @app.route("/generate", methods=["POST"])
 def generate():
@@ -4696,51 +8032,1731 @@ def ensure_support_table():
 
 def save_support_message(device_id, sender, message):
     ensure_support_table()
-    now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    device_id = (device_id or get_device_id()).strip().upper()
+    message = (message or '').strip()
+    sender = (sender or 'user').strip().lower()
+    if not message:
+        return None
+    now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     conn = db(); c = conn.cursor()
     c.execute("INSERT INTO support_messages(device_id,sender,message,status,created_at) VALUES(?,?,?,?,?)",
-              ((device_id or get_device_id()).strip().upper(), sender, (message or '').strip(), 'new', now))
+              (device_id, sender, message, 'new', now))
+    msg_id = c.lastrowid
+    if sender == 'user':
+        try:
+            c.execute("""INSERT INTO notifications(title,detail,level,status,created_at) VALUES(?,?,?,?,?)""",
+                      ("Tin nhắn hỗ trợ mới", f"{device_id}: {message[:120]}", "info", "new", now))
+        except Exception:
+            pass
     conn.commit(); conn.close()
+    return msg_id
 
-def get_support_messages(limit=100, device_id=None):
+def get_support_messages(device_id=None, after_id=0, limit=100):
     ensure_support_table()
     conn = db(); c = conn.cursor()
+    after_id = int(after_id or 0)
     if device_id:
-        c.execute("SELECT id,device_id,sender,message,created_at FROM support_messages WHERE device_id=? ORDER BY id ASC LIMIT ?", ((device_id or '').strip().upper(), limit))
+        c.execute("SELECT id,device_id,sender,message,created_at FROM support_messages WHERE device_id=? AND id>? ORDER BY id ASC LIMIT ?",
+                  ((device_id or '').strip().upper(), after_id, limit))
     else:
-        c.execute("SELECT id,device_id,sender,message,created_at FROM support_messages ORDER BY id DESC LIMIT ?", (limit,))
-    rows = c.fetchall(); conn.close(); return rows
+        c.execute("SELECT id,device_id,sender,message,created_at FROM support_messages WHERE id>? ORDER BY id DESC LIMIT ?",
+                  (after_id, limit))
+    rows = c.fetchall(); conn.close()
+    return rows
+
+
+def money_vnd(value):
+    try:
+        return f"{int(float(value or 0)):,}".replace(",", ".") + "đ"
+    except Exception:
+        return "0đ"
+
+def admin_ceo_stats():
+    """Dashboard CEO cho Web Admin: doanh thu Premium, CTV, hoa hồng, ngày/tháng."""
+    try:
+        ensure_affiliate_tables()
+    except Exception:
+        pass
+
+    today = datetime.datetime.now().strftime("%Y-%m-%d")
+    month = datetime.datetime.now().strftime("%Y-%m")
+    out = {
+        "today_revenue": 0, "month_revenue": 0, "total_revenue": 0,
+        "today_orders": 0, "month_orders": 0, "pending_requests": 0,
+        "active_premium": 0, "active_ctv": 0, "pending_withdraw": 0,
+        "pending_withdraw_amount": 0, "total_commission": 0,
+        "conversion_rate": 0, "daily_rows": [], "monthly_rows": [],
+        "top_ctv": [], "package_rows": []
+    }
+
+    conn = sqlite3.connect(DB)
+    c = conn.cursor()
+
+    def one(sql, params=()):
+        try:
+            c.execute(sql, params)
+            row = c.fetchone()
+            return row[0] if row and row[0] is not None else 0
+        except Exception:
+            return 0
+
+    def many(sql, params=()):
+        try:
+            c.execute(sql, params)
+            return c.fetchall()
+        except Exception:
+            return []
+
+    # Premium revenue theo yêu cầu đã duyệt
+    out["today_revenue"] = one("""
+        SELECT COALESCE(SUM(amount),0) FROM premium_upgrade_requests
+        WHERE status='Đã duyệt' AND substr(COALESCE(approved_at, created_at),1,10)=?
+    """, (today,))
+    out["month_revenue"] = one("""
+        SELECT COALESCE(SUM(amount),0) FROM premium_upgrade_requests
+        WHERE status='Đã duyệt' AND substr(COALESCE(approved_at, created_at),1,7)=?
+    """, (month,))
+    out["total_revenue"] = one("SELECT COALESCE(SUM(amount),0) FROM premium_upgrade_requests WHERE status='Đã duyệt'")
+    out["today_orders"] = one("""
+        SELECT COUNT(*) FROM premium_upgrade_requests
+        WHERE status='Đã duyệt' AND substr(COALESCE(approved_at, created_at),1,10)=?
+    """, (today,))
+    out["month_orders"] = one("""
+        SELECT COUNT(*) FROM premium_upgrade_requests
+        WHERE status='Đã duyệt' AND substr(COALESCE(approved_at, created_at),1,7)=?
+    """, (month,))
+    out["pending_requests"] = one("SELECT COUNT(*) FROM premium_upgrade_requests WHERE status='Chờ duyệt'")
+    out["active_premium"] = one("SELECT COUNT(*) FROM device_subscriptions WHERE status='premium'")
+
+    total_requests = one("SELECT COUNT(*) FROM premium_upgrade_requests")
+    approved_requests = one("SELECT COUNT(*) FROM premium_upgrade_requests WHERE status='Đã duyệt'")
+    out["conversion_rate"] = round((approved_requests / total_requests) * 100, 1) if total_requests else 0
+
+    # Affiliate / CTV
+    out["active_ctv"] = one("SELECT COUNT(*) FROM affiliate_users WHERE status='active'")
+    out["pending_withdraw"] = one("SELECT COUNT(*) FROM affiliate_withdrawals WHERE status='Chờ duyệt'")
+    out["pending_withdraw_amount"] = one("SELECT COALESCE(SUM(amount),0) FROM affiliate_withdrawals WHERE status='Chờ duyệt'")
+    out["total_commission"] = one("SELECT COALESCE(SUM(commission_amount),0) FROM affiliate_referrals WHERE status IN ('Đã duyệt','Đã thanh toán')")
+
+    out["daily_rows"] = many("""
+        SELECT substr(COALESCE(approved_at, created_at),1,10) AS day,
+               COUNT(*) AS orders,
+               COALESCE(SUM(amount),0) AS revenue
+        FROM premium_upgrade_requests
+        WHERE status='Đã duyệt'
+        GROUP BY substr(COALESCE(approved_at, created_at),1,10)
+        ORDER BY day DESC
+        LIMIT 14
+    """)
+    out["monthly_rows"] = many("""
+        SELECT substr(COALESCE(approved_at, created_at),1,7) AS month,
+               COUNT(*) AS orders,
+               COALESCE(SUM(amount),0) AS revenue
+        FROM premium_upgrade_requests
+        WHERE status='Đã duyệt'
+        GROUP BY substr(COALESCE(approved_at, created_at),1,7)
+        ORDER BY month DESC
+        LIMIT 12
+    """)
+    out["package_rows"] = many("""
+        SELECT COALESCE(NULLIF(package_name,''),'Chưa rõ') AS package_name,
+               COUNT(*) AS orders,
+               COALESCE(SUM(amount),0) AS revenue
+        FROM premium_upgrade_requests
+        WHERE status='Đã duyệt'
+        GROUP BY COALESCE(NULLIF(package_name,''),'Chưa rõ')
+        ORDER BY revenue DESC
+        LIMIT 10
+    """)
+    out["top_ctv"] = many("""
+        SELECT u.full_name, u.phone, u.email, u.affiliate_code, u.level_name,
+               COUNT(r.id) AS orders,
+               COALESCE(SUM(r.amount),0) AS revenue,
+               COALESCE(SUM(r.commission_amount),0) AS commission
+        FROM affiliate_users u
+        LEFT JOIN affiliate_referrals r
+             ON r.affiliate_code=u.affiliate_code
+             AND r.status IN ('Đã duyệt','Đã thanh toán')
+        GROUP BY u.id
+        ORDER BY revenue DESC, commission DESC
+        LIMIT 10
+    """)
+    conn.close()
+
+    for k in ["today_revenue","month_revenue","total_revenue","pending_withdraw_amount","total_commission"]:
+        out[k + "_fmt"] = money_vnd(out[k])
+    return out
+
 
 ADMIN_HTML = """
 <!doctype html><html lang="vi"><head><meta charset="utf-8"><title>Web Admin Premium</title>
-<style>body{font-family:system-ui;background:#f8fafc;margin:0;padding:24px;color:#111827}.wrap{max-width:1180px;margin:auto}h1{margin-top:0}.card{background:white;border:1px solid #e5e7eb;border-radius:18px;padding:18px;box-shadow:0 10px 30px rgba(15,23,42,.08)}table{width:100%;border-collapse:collapse}th,td{border-bottom:1px solid #e5e7eb;padding:10px;text-align:left;font-size:13px}th{background:#f1f5f9}.badge{display:inline-block;padding:4px 8px;border-radius:999px;background:#fef3c7;color:#92400e;font-weight:700}.ok{background:#dcfce7;color:#166534}.danger{background:#fee2e2;color:#991b1b}button{border:0;border-radius:10px;padding:9px 12px;font-weight:700;cursor:pointer}.approve{background:#16a34a;color:white}.reject{background:#ef4444;color:white}.top{display:flex;gap:12px;align-items:center;justify-content:space-between;margin-bottom:16px}a{color:#2563eb;text-decoration:none}</style>
+<style>body{font-family:system-ui;background:#f8fafc;margin:0;padding:24px;color:#111827}.wrap{max-width:1180px;margin:auto}h1{margin-top:0}.card{background:white;border:1px solid #e5e7eb;border-radius:18px;padding:18px;box-shadow:0 10px 30px rgba(15,23,42,.08)}table{width:100%;border-collapse:collapse}th,td{border-bottom:1px solid #e5e7eb;padding:10px;text-align:left;font-size:13px}th{background:#f1f5f9}.badge{display:inline-block;padding:4px 8px;border-radius:999px;background:#fef3c7;color:#92400e;font-weight:700}.ok{background:#dcfce7;color:#166534}.danger{background:#fee2e2;color:#991b1b}button{border:0;border-radius:10px;padding:9px 12px;font-weight:700;cursor:pointer}.approve{background:#16a34a;color:white}.reject{background:#ef4444;color:white}.top{display:flex;gap:12px;align-items:center;justify-content:space-between;margin-bottom:16px}a{color:#2563eb;text-decoration:none}
+.ceo-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:14px;margin:18px 0}
+.ceo-card{background:linear-gradient(135deg,#ffffff,#eef2ff);border:1px solid #dbeafe;border-radius:18px;padding:16px;box-shadow:0 12px 28px rgba(37,99,235,.08)}
+.ceo-card b{display:block;font-size:22px;color:#1d4ed8;margin-top:8px}
+.ceo-card small{color:#64748b;font-weight:700}
+.admin-tabs{display:flex;gap:10px;flex-wrap:wrap;margin:14px 0 20px}
+.admin-tabs a{background:#eef2ff;color:#312e81;padding:10px 14px;border-radius:999px;font-weight:900}
+.admin-section-title{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:22px 0 12px}
+.admin-two{display:grid;grid-template-columns:1.1fr .9fr;gap:18px;margin-top:18px}
+.admin-pill{display:inline-block;padding:5px 10px;border-radius:999px;background:#ecfeff;color:#0e7490;font-weight:900}
+.progress-wrap{height:12px;background:#e5e7eb;border-radius:999px;overflow:hidden}
+.progress-fill{height:100%;background:linear-gradient(90deg,#2563eb,#7c3aed,#22c55e);border-radius:999px}
+@media(max-width:1000px){.ceo-grid{grid-template-columns:repeat(2,1fr)}.admin-two{grid-template-columns:1fr}}
+</style>
 
+<style id="chat-device-menu-fix">
+/* Bản sửa: chỉ dọn icon menu, tăng ưu tiên chat, hiển thị ID thiết bị rõ ràng */
+.v2-nav-ico{display:none!important;width:0!important;min-width:0!important;margin:0!important;padding:0!important;overflow:hidden!important}
+.v2-nav-link{cursor:pointer!important;pointer-events:auto!important}
+.activity-card span{font-size:0!important}
+.activity-card span::before{font-size:16px!important}
+.activity-card:nth-of-type(1) span::before{content:"Tổng bài"}
+.activity-card:nth-of-type(2) span::before{content:"Đã đăng"}
+.activity-card:nth-of-type(3) span::before{content:"Chờ đăng"}
+.activity-card:nth-of-type(4) span::before{content:"Lead CRM"}
+.activity-card:nth-of-type(5) span::before{content:"Chiến dịch"}
+#sidebarDeviceId{display:inline-block!important;color:#fff!important;font-weight:900!important;font-size:14px!important;letter-spacing:.4px;margin:4px 0}
+.floating-bot{z-index:2147483000!important;pointer-events:auto!important}
+.bot-bubble,.bot-panel,.bot-actions button,.bot-input button{pointer-events:auto!important}
+.bot-panel{z-index:2147483001!important}
+.bot-body{min-height:210px!important}
+.bot-actions{grid-template-columns:1fr 1fr!important}
+.bot-actions button{font-size:13px!important;line-height:1.25!important}
+.bot-title::before{content:"🤖 ";}
+</style>
+</head><body><div class="wrap">
+<div class="admin-tabs">
+  <a href="/admin">🏠 Dashboard CEO</a>
+  <a href="#premiumRequests">👑 Premium</a>
+  <a href="#adminAffiliateBlock">🤝 CTV Hoa Hồng</a>
+  <a href="#revenueReport">💰 Doanh thu</a>
+  <a href="#withdrawReport">💳 Rút hoa hồng</a>
+</div>
 
-</head><body><div class="wrap"><div class="top"><div><h1>Web Admin - Duyệt Premium</h1><p>Danh sách yêu cầu nâng cấp theo ID thiết bị, SĐT và Gmail.</p></div><a href="/">← Về app khách</a></div><div class="card"><table><thead><tr><th>ID</th><th>ID thiết bị</th><th>SĐT</th><th>Gmail</th><th>Gói</th><th>Số tiền</th><th>Nội dung CK</th><th>Trạng thái</th><th>Ngày tạo</th><th>Thao tác</th></tr></thead><tbody>
+<div class="admin-section-title">
+  <h2 style="margin:0">Dashboard CEO</h2>
+  <span class="admin-pill">Tự động cập nhật theo dữ liệu duyệt Premium</span>
+</div>
+<div class="ceo-grid">
+  <div class="ceo-card"><small>💰 Doanh thu hôm nay</small><b>{{admin_stats.today_revenue_fmt}}</b><span>{{admin_stats.today_orders}} đơn</span></div>
+  <div class="ceo-card"><small>💎 Doanh thu tháng</small><b>{{admin_stats.month_revenue_fmt}}</b><span>{{admin_stats.month_orders}} đơn</span></div>
+  <div class="ceo-card"><small>👑 Premium hoạt động</small><b>{{admin_stats.active_premium}}</b><span>thiết bị</span></div>
+  <div class="ceo-card"><small>🤝 CTV hoạt động</small><b>{{admin_stats.active_ctv}}</b><span>cộng tác viên</span></div>
+  <div class="ceo-card"><small>📈 Tỷ lệ chuyển đổi</small><b>{{admin_stats.conversion_rate}}%</b><span>duyệt / yêu cầu</span></div>
+  <div class="ceo-card"><small>💵 Hoa hồng chờ chi</small><b>{{admin_stats.pending_withdraw_amount_fmt}}</b><span>{{admin_stats.pending_withdraw}} yêu cầu</span></div>
+</div>
+
+<div class="card" id="revenueReport" style="margin-bottom:18px">
+  <div class="admin-section-title"><h2 style="margin:0">💰 Báo cáo doanh thu</h2><span class="admin-pill">Tổng: {{admin_stats.total_revenue_fmt}}</span></div>
+  <div class="admin-two">
+    <div>
+      <h3>Doanh thu 14 ngày gần nhất</h3>
+      <table><thead><tr><th>Ngày</th><th>Đơn</th><th>Doanh thu</th></tr></thead><tbody>
+      {% for d in admin_stats.daily_rows %}
+        <tr><td>{{d[0]}}</td><td>{{d[1]}}</td><td><b>{{"{:,.0f}".format(d[2]).replace(",", ".")}}đ</b></td></tr>
+      {% endfor %}
+      {% if not admin_stats.daily_rows %}<tr><td colspan="3">Chưa có doanh thu.</td></tr>{% endif %}
+      </tbody></table>
+    </div>
+    <div>
+      <h3>Doanh thu theo gói</h3>
+      <table><thead><tr><th>Gói</th><th>Đơn</th><th>Doanh thu</th></tr></thead><tbody>
+      {% for p in admin_stats.package_rows %}
+        <tr><td>{{p[0]}}</td><td>{{p[1]}}</td><td><b>{{"{:,.0f}".format(p[2]).replace(",", ".")}}đ</b></td></tr>
+      {% endfor %}
+      {% if not admin_stats.package_rows %}<tr><td colspan="3">Chưa có dữ liệu gói.</td></tr>{% endif %}
+      </tbody></table>
+    </div>
+  </div>
+</div>
+
+<div class="card" id="withdrawReport" style="margin-bottom:18px">
+  <div class="admin-section-title"><h2 style="margin:0">🏆 Top CTV theo doanh thu</h2><span class="admin-pill">Hoa hồng tổng: {{admin_stats.total_commission_fmt}}</span></div>
+  <table><thead><tr><th>CTV</th><th>SĐT</th><th>Gmail</th><th>Mã CTV</th><th>Cấp</th><th>Đơn</th><th>Doanh thu</th><th>Hoa hồng</th></tr></thead><tbody>
+  {% for ctv in admin_stats.top_ctv %}
+    <tr><td><b>{{ctv[0] or 'CTV'}}</b></td><td>{{ctv[1] or ''}}</td><td>{{ctv[2] or ''}}</td><td><b>{{ctv[3]}}</b></td><td>{{ctv[4] or 'CTV thường'}}</td><td>{{ctv[5]}}</td><td><b>{{"{:,.0f}".format(ctv[6]).replace(",", ".")}}đ</b></td><td><b>{{"{:,.0f}".format(ctv[7]).replace(",", ".")}}đ</b></td></tr>
+  {% endfor %}
+  {% if not admin_stats.top_ctv %}<tr><td colspan="8">Chưa có CTV phát sinh doanh thu.</td></tr>{% endif %}
+  </tbody></table>
+</div>
+<div class="top"><div><h1>Web Admin - Duyệt Premium</h1><p>Danh sách yêu cầu nâng cấp theo ID thiết bị, SĐT và Gmail.</p><p><a href="#adminAffiliateBlock" style="display:inline-block;background:#16a34a;color:#fff;padding:9px 12px;border-radius:10px;font-weight:800">Quản Lý CTV / Hoa Hồng</a></p></div><a href="/">← Về app khách</a></div><div class="card" id="premiumRequests"><table><thead><tr><th>ID</th><th>ID thiết bị</th><th>SĐT</th><th>Gmail</th><th>Gói</th><th>Số tiền</th><th>Nội dung CK</th><th>Trạng thái</th><th>Ngày tạo</th><th>Thao tác</th></tr></thead><tbody>
 {% for r in rows %}
 <tr><td>{{r[0]}}</td><td><b>{{r[1]}}</b></td><td>{{r[2]}}</td><td>{{r[3]}}</td><td>{{r[5]}}</td><td>{{"{:,.0f}".format(r[6]).replace(",", ".")}}đ</td><td>{{r[7]}}</td><td><span class="badge {% if r[8]=='Đã duyệt' %}ok{% elif r[8]=='Từ chối' %}danger{% endif %}">{{r[8]}}</span></td><td>{{r[10]}}</td><td>{% if r[8]=='Chờ duyệt' %}<form method="post" action="/admin/premium_action" style="display:inline"><input type="hidden" name="request_id" value="{{r[0]}}"><input type="hidden" name="status" value="Đã duyệt"><button class="approve">Kích hoạt</button></form> <form method="post" action="/admin/premium_action" style="display:inline"><input type="hidden" name="request_id" value="{{r[0]}}"><input type="hidden" name="status" value="Từ chối"><button class="reject">Từ chối</button></form>{% else %}{{r[11] or ''}}{% endif %}</td></tr>
 {% endfor %}
 </tbody></table></div>
+
+<div class="card" id="adminAffiliateBlock" style="margin-top:18px">
+  <h2>Quản Lý CTV / Hoa Hồng</h2>
+  <p>CTV đăng ký trên app khách sẽ tự xuất hiện tại đây. Admin chỉnh % hoa hồng theo cấp bậc hoặc chỉnh riêng từng CTV.</p>
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:12px 0">
+    <input id="adminAffNormal" placeholder="CTV thường %" style="padding:10px;border:1px solid #ddd;border-radius:10px">
+    <input id="adminAffSilver" placeholder="CTV Bạc %" style="padding:10px;border:1px solid #ddd;border-radius:10px">
+    <input id="adminAffGold" placeholder="CTV Vàng %" style="padding:10px;border:1px solid #ddd;border-radius:10px">
+    <input id="adminAffDiamond" placeholder="CTV Kim Cương %" style="padding:10px;border:1px solid #ddd;border-radius:10px">
+  </div>
+  <button class="approve" onclick="adminAffiliateSaveSettings()">Lưu % hoa hồng cấp bậc</button>
+  <h3>Danh sách CTV</h3>
+  <div style="overflow:auto"><table id="adminAffiliateUsers"><thead><tr><th>CTV</th><th>SĐT</th><th>Gmail</th><th>Mã CTV</th><th>Cấp</th><th>% riêng</th><th>Trạng thái</th><th>Đơn</th><th>Doanh thu</th><th>Hoa hồng</th><th>Lưu</th></tr></thead><tbody><tr><td colspan="11">Đang tải...</td></tr></tbody></table></div>
+  <h3>Yêu cầu rút hoa hồng</h3>
+  <div style="overflow:auto"><table id="adminAffiliateWithdrawals"><thead><tr><th>ID</th><th>Mã CTV</th><th>Số tiền</th><th>Ngân hàng</th><th>STK</th><th>Chủ TK</th><th>Trạng thái</th><th>Thao tác</th></tr></thead><tbody><tr><td colspan="8">Đang tải...</td></tr></tbody></table></div>
+</div>
+<script id="admin-affiliate-panel-js">
+(function(){
+  function money(n){n=Number(n||0);return n.toLocaleString('vi-VN')+'đ'}
+  function esc(s){return String(s||'').replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+  window.adminAffiliateLoad=function(){fetch('/api/admin/affiliate').then(function(r){return r.json()}).then(function(d){
+    (d.settings||[]).forEach(function(s){if(s[1]==='CTV thường')document.getElementById('adminAffNormal').value=s[3];if(s[1]==='CTV Bạc')document.getElementById('adminAffSilver').value=s[3];if(s[1]==='CTV Vàng')document.getElementById('adminAffGold').value=s[3];if(s[1]==='CTV Kim Cương')document.getElementById('adminAffDiamond').value=s[3];});
+    var tb=document.querySelector('#adminAffiliateUsers tbody');
+    tb.innerHTML=(d.users||[]).map(function(u){var id=u[0];return '<tr><td>'+esc(u[2]||u[1]||'')+'</td><td>'+esc(u[3])+'</td><td>'+esc(u[4])+'</td><td><b>'+esc(u[5])+'</b></td><td><input id="lv_'+id+'" value="'+esc(u[6]||'CTV thường')+'" style="width:120px;padding:7px;border:1px solid #ddd;border-radius:8px"></td><td><input id="pct_'+id+'" value="'+esc(u[7]||20)+'" style="width:70px;padding:7px;border:1px solid #ddd;border-radius:8px"></td><td><select id="st_'+id+'"><option value="active" '+(u[8]==='active'?'selected':'')+'>active</option><option value="paused" '+(u[8]==='paused'?'selected':'')+'>paused</option><option value="blocked" '+(u[8]==='blocked'?'selected':'')+'>blocked</option></select></td><td>'+esc(u[10]||0)+'</td><td>'+money(u[11])+'</td><td>'+money(u[12])+'</td><td><button class="approve" onclick="adminAffiliateSaveUser('+id+')">Lưu riêng</button></td></tr>'}).join('') || '<tr><td colspan="11">Chưa có CTV.</td></tr>';
+    var wb=document.querySelector('#adminAffiliateWithdrawals tbody');
+    wb.innerHTML=(d.withdrawals||[]).map(function(w){return '<tr><td>'+w[0]+'</td><td>'+esc(w[1])+'</td><td>'+money(w[2])+'</td><td>'+esc(w[3])+'</td><td>'+esc(w[4])+'</td><td>'+esc(w[5])+'</td><td><span class="badge">'+esc(w[6])+'</span></td><td><button class="approve" onclick="adminAffiliateWithdrawal(' + w[0] + ',\'Đã thanh toán\')">Đã thanh toán</button> <button class="reject" onclick="adminAffiliateWithdrawal(' + w[0] + ',\'Từ chối\')">Từ chối</button></td></tr>'}).join('') || '<tr><td colspan="8">Chưa có yêu cầu rút tiền.</td></tr>';
+  });}
+  window.adminAffiliateSaveSettings=function(){fetch('/api/admin/affiliate/settings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({normal:document.getElementById('adminAffNormal').value,silver:document.getElementById('adminAffSilver').value,gold:document.getElementById('adminAffGold').value,diamond:document.getElementById('adminAffDiamond').value})}).then(function(r){return r.json()}).then(function(){alert('Đã lưu % hoa hồng cấp bậc');adminAffiliateLoad();})}
+  window.adminAffiliateSaveUser=function(id){fetch('/api/admin/affiliate/user/'+id,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({commission_percent:document.getElementById('pct_'+id).value,level_name:document.getElementById('lv_'+id).value,status:document.getElementById('st_'+id).value})}).then(function(r){return r.json()}).then(function(d){alert(d.message||'Đã lưu');adminAffiliateLoad();})}
+  window.adminAffiliateWithdrawal=function(id,status){fetch('/api/admin/affiliate/withdraw/'+id,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:status})}).then(function(r){return r.json()}).then(function(){alert('Đã cập nhật');adminAffiliateLoad();})}
+  document.addEventListener('DOMContentLoaded',adminAffiliateLoad);
+})();
+</script>
+
 <div class="card" style="margin-top:18px"><h2>Tin nhắn hỗ trợ khách hàng</h2><p>Admin nhập phản hồi theo đúng ID thiết bị, khách sẽ nhận lại trong khung chat.</p><table><thead><tr><th>ID</th><th>ID thiết bị</th><th>Người gửi</th><th>Tin nhắn</th><th>Thời gian</th><th>Phản hồi</th></tr></thead><tbody>{% for m in support_rows %}<tr><td>{{m[0]}}</td><td><b>{{m[1]}}</b></td><td>{{m[2]}}</td><td>{{m[3]}}</td><td>{{m[4]}}</td><td><form method="post" action="/admin/support_reply" style="display:flex;gap:8px"><input type="hidden" name="device_id" value="{{m[1]}}"><input name="message" placeholder="Nhập phản hồi..." style="flex:1;padding:9px;border:1px solid #ddd;border-radius:10px"><button class="approve">Gửi</button></form></td></tr>{% endfor %}</tbody></table></div></div>
+<script id="chat-device-menu-fix-js">
+(function(){
+  function ensureDeviceId(){
+    var id = localStorage.getItem("mkt_device_id");
+    if(!id || id === "Đang tạo..."){
+      id = "MKT-" + Math.random().toString(36).slice(2,8).toUpperCase() + Date.now().toString().slice(-4);
+      localStorage.setItem("mkt_device_id", id);
+    }
+    document.cookie = "mkt_device_id=" + encodeURIComponent(id) + "; path=/; max-age=" + (60*60*24*365*5);
+    var side = document.getElementById("sidebarDeviceId");
+    if(side) side.textContent = id;
+    var pay = document.getElementById("payDeviceId");
+    if(pay) pay.value = id;
+    return id;
+  }
+  window.ensureDeviceId = ensureDeviceId;
+  document.addEventListener("DOMContentLoaded", function(){
+    ensureDeviceId();
+    setTimeout(ensureDeviceId, 300);
+    setTimeout(ensureDeviceId, 1200);
 
+    var bubble = document.querySelector(".bot-bubble");
+    if(bubble){
+      bubble.addEventListener("click", function(e){
+        e.preventDefault();
+        var panel = document.getElementById("floatingBotPanel");
+        if(panel){
+          panel.style.display = (panel.style.display === "block") ? "none" : "block";
+          if(panel.style.display === "block" && typeof appendBotGreeting === "function") appendBotGreeting();
+        }
+      }, true);
+    }
 
-
-
-
-
-
+    document.querySelectorAll(".v2-nav-link[href^='#']").forEach(function(a){
+      a.addEventListener("click", function(e){
+        var id = (a.getAttribute("href") || "").replace("#", "");
+        if(!id) return;
+        e.preventDefault();
+        if(typeof openModule === "function") openModule(id);
+      }, true);
+    });
+  });
+})();
+</script>
 
 
 <!-- FINAL REAL FIX: menu PRO badge, pricing buttons, chat buttons, hide technical status -->
+<!-- FINAL PAYMENT UX OVERRIDE: no browser alert, professional checkout -->
+<style id="mkt-payment-professional-css">
+#mktPlanNote .pay-line,#mktPlanNote .pay-copy{display:block;margin:6px 0;color:#334155;font-weight:800}
+#mktPlanNote .pay-copy{background:#f1f5f9;border:1px dashed #cbd5e1;border-radius:12px;padding:10px;color:#1e293b}
+.payment-alert{background:#f8fafc!important;border:1px solid #dbeafe!important;color:#1e293b!important}
+.bank-info{line-height:1.75!important}
+</style>
+<script id="mkt-payment-professional-js">
+(function(){
+  'use strict';
+  function q(s){return document.querySelector(s)}
+  function money(v){try{return Number(v||0).toLocaleString('vi-VN')+' VNĐ'}catch(e){return (v||'')+' VNĐ'}}
+  function getDevice(){
+    var id=localStorage.getItem('mkt_device_id');
+    if(!id){
+      var m=document.cookie.match(/(?:^|; )mkt_device_id=([^;]+)/);
+      id=m?decodeURIComponent(m[1]):'';
+    }
+    if(!id){id='MKT-'+Math.random().toString(36).slice(2,8).toUpperCase()+Date.now().toString().slice(-4);}
+    localStorage.setItem('mkt_device_id',id);
+    document.cookie='mkt_device_id='+encodeURIComponent(id)+'; path=/; max-age=157680000; SameSite=Lax';
+    var side=q('#sidebarDeviceId'); if(side) side.textContent=id;
+    var pay=q('#payDeviceId'); if(pay) pay.value=id;
+    return id;
+  }
+  var plans=window.premiumPlans || {
+    monthly:{title:'Gói 1 tháng',price:'159.000đ',amount:'159000',package:'1THANG',desc:'Phù hợp người mới bắt đầu.'},
+    quarterly:{title:'Gói 3 tháng',price:'359.000đ',amount:'359000',package:'3THANG',desc:'Tối ưu hơn gói tháng.'},
+    halfyear:{title:'Gói 6 tháng',price:'559.000đ',amount:'559000',package:'6THANG',desc:'Mở CRM và Sales Bot.'},
+    yearly:{title:'Gói 1 năm',price:'859.000đ',amount:'859000',package:'1NAM',desc:'Gói phổ biến nhất.'},
+    sellerpro:{title:'Gói nhà bán hàng chuyên nghiệp',price:'1.959.000đ',amount:'1959000',package:'NHABANHANGCHUYENNGHIEP',desc:'Gói cao nhất cho nhà bán hàng chuyên nghiệp.'},
+    lifetime:{title:'Gói nhà bán hàng chuyên nghiệp',price:'1.959.000đ',amount:'1959000',package:'NHABANHANGCHUYENNGHIEP',desc:'Gói cao nhất cho nhà bán hàng chuyên nghiệp.'}
+  };
+  plans.sellerpro=plans.sellerpro||plans.lifetime; plans.lifetime=plans.lifetime||plans.sellerpro;
+  function plan(k){return plans[k]||plans.monthly;}
+  function buildContent(p){
+    var device=getDevice();
+    var phone=(q('#payPhone')&&q('#payPhone').value.trim())||'';
+    var email=(q('#payEmail')&&q('#payEmail').value.trim())||'';
+    return device+' | '+phone+' | '+email+' | '+(p.package||p.title||'PREMIUM').toUpperCase();
+  }
+  window.refreshPaymentContent=function(){
+    var p=plan(window.currentPremiumPlanKey||'monthly');
+    var content=buildContent(p);
+    var pc=q('#payContent'); if(pc) pc.textContent=content;
+    var qr=q('#payQr'); if(qr) qr.src='https://img.vietqr.io/image/970405-8888363382629-compact2.png?amount='+encodeURIComponent(p.amount||0)+'&addInfo='+encodeURIComponent(content)+'&accountName='+encodeURIComponent('NGUYEN DANG THI XUAN');
+  };
+  window.openPayment=function(planKey){
+    var p=plan(planKey); window.currentPremiumPlanKey=planKey||'monthly';
+    var modal=q('#paymentModal');
+    if(!modal){return false;}
+    var title=q('#payPlanTitle'); if(title) title.textContent=(p.title||'Gói Premium').replace(/^🚀 |^⭐ |^💎 |^🔥 |^👑 /,'');
+    var desc=q('#payPlanDesc'); if(desc) desc.textContent='Nhập số điện thoại và Gmail để đăng ký kích hoạt. Nội dung chuyển khoản sẽ tự kèm ID thiết bị và gói đã chọn.';
+    var price=q('#payPlanPrice'); if(price) price.textContent=money(p.amount);
+    var device=q('#payDeviceId'); if(device) device.value=getDevice();
+    var benefits=q('#payBenefits'); if(benefits && p.benefits){benefits.innerHTML=p.benefits.map(function(x){return '<div>'+x+'</div>';}).join('');}
+    var locked=q('#payLocked'); if(locked){locked.innerHTML=''; var h=locked.previousElementSibling; if(h) h.style.display='none';}
+    var alertBox=q('.payment-alert'); if(alertBox){alertBox.innerHTML='Sau khi chuyển khoản, bấm <b>Đã thanh toán</b> để gửi yêu cầu về web admin. Nội dung chuyển khoản gồm ID thiết bị, số điện thoại, Gmail và gói đã chọn. Zalo hỗ trợ: <b>036 338 2629</b>.';}
+    var payBtn=q('.payment-actions .light'); if(payBtn){payBtn.textContent='Đã thanh toán'; payBtn.removeAttribute('href'); payBtn.onclick=function(e){e.preventDefault(); if(typeof window.submitPremiumRequest==='function') return window.submitPremiumRequest(); return false;};}
+    window.refreshPaymentContent();
+    modal.style.display='flex';
+    var ph=q('#payPhone'); if(ph) setTimeout(function(){ph.focus();},150);
+    return false;
+  };
+  window.mktOpenPlanDetail = (function(old){
+    return function(k){
+      if(typeof old==='function') old(k);
+      setTimeout(function(){
+        var p=plan(k||window.currentPremiumPlanKey||'monthly');
+        var note=q('#mktPlanNote');
+        if(note){
+          var content=getDevice()+' | SỐ ĐIỆN THOẠI | GMAIL | '+(p.package||p.title||'PREMIUM').toUpperCase();
+          note.innerHTML='<span class="pay-line">ID thiết bị: <b>'+getDevice()+'</b></span><span class="pay-line">Gói đang chọn: <b>'+p.title+'</b></span><span class="pay-copy">Nội dung thanh toán: '+content+'</span>';
+        }
+        var mini=q('.mktPlanMini'); if(mini) mini.textContent='Vui lòng nhập số điện thoại và Gmail để được duyệt nâng cấp tự động lên gói Premium sau khi thanh toán xong.';
+        var btn=q('#mktPlanPay'); if(btn) btn.onclick=function(e){e.preventDefault(); if(q('#mktPlanOverlay')) q('#mktPlanOverlay').style.display='none'; return window.openPayment(k||'monthly');};
+      },60);
+      return false;
+    };
+  })(window.mktOpenPlanDetail);
+  document.addEventListener('click',function(e){
+    var t=e.target.closest('#mktPlanPay');
+    if(t){e.preventDefault(); e.stopPropagation(); return window.openPayment(window.currentPremiumPlanKey||'monthly');}
+  },true);
+  getDevice();
+})();
+</script>
 
 
+
+<!-- FINAL CLEAN PAYMENT PATCH V74 -->
+<style id="mkt-final-clean-payment-css">
+  #mktPlanOverlay #mktPlanNote{font-size:16px;line-height:1.55;color:#475569;font-weight:700}
+  #mktPlanOverlay .mktPlanMini{background:#f8fafc!important;border:1px solid #dbeafe!important;color:#334155!important}
+  #mktPlanOverlay .pay-copy,
+  #paymentModal .pay-copy{display:block;margin-top:8px;background:#f1f5f9;border:1px dashed #cbd5e1;border-radius:12px;padding:10px;color:#1e293b;font-weight:800;word-break:break-word}
+  #paymentModal .payment-alert{display:none!important}
+  #paymentModal .payment-actions{display:grid!important;grid-template-columns:1fr 1fr;gap:10px}
+  #paymentModal .payment-actions a{display:flex;align-items:center;justify-content:center;text-decoration:none}
+  #paymentNotice{margin:10px 0;padding:12px 14px;border:1px solid #bbf7d0;background:#f0fdf4;color:#166534;border-radius:12px;font-weight:800;display:none}
+</style>
+<script id="mkt-final-clean-payment-js">
+(function(){
+  'use strict';
+  var PLAN_MAP={
+    monthly:{title:'Gói 1 tháng',amount:'159000',price:'159.000đ',code:'GOI1THANG'},
+    quarterly:{title:'Gói 3 tháng',amount:'359000',price:'359.000đ',code:'GOI3THANG'},
+    halfyear:{title:'Gói 6 tháng',amount:'559000',price:'559.000đ',code:'GOI6THANG'},
+    yearly:{title:'Gói 1 năm',amount:'859000',price:'859.000đ',code:'GOI1NAM'},
+    sellerpro:{title:'Gói nhà bán hàng chuyên nghiệp',amount:'1959000',price:'1.959.000đ',code:'NHABANHANGPRO'},
+    lifetime:{title:'Gói nhà bán hàng chuyên nghiệp',amount:'1959000',price:'1.959.000đ',code:'NHABANHANGPRO'}
+  };
+  function q(s,root){return (root||document).querySelector(s)}
+  function qa(s,root){return Array.prototype.slice.call((root||document).querySelectorAll(s))}
+  function cleanText(){
+    var bad=['Gói sẽ mở sau khi admin duyệt thanh toán.','Gói sẽ mở sau khi admin duyệt thanh toán','Sau khi thanh toán, web admin sẽ duyệt theo ID thiết bị. Duyệt xong khách mới sử dụng được tính năng PRO.','Sau khi thanh toán, web admin sẽ duyệt theo ID thiết bị.','Duyệt xong khách mới sử dụng được tính năng PRO.'];
+    qa('body *').forEach(function(el){
+      if(el.children.length>0) return;
+      var t=el.textContent||''; var nt=t;
+      bad.forEach(function(b){nt=nt.split(b).join('')});
+      if(nt!==t) el.textContent=nt.trim();
+    });
+  }
+  function deviceId(){
+    var id=localStorage.getItem('mkt_device_id');
+    if(!id){var m=document.cookie.match(/(?:^|; )mkt_device_id=([^;]+)/); id=m?decodeURIComponent(m[1]):'';}
+    if(!id){id='MKT-'+Math.random().toString(36).slice(2,8).toUpperCase()+Date.now().toString().slice(-6);}
+    localStorage.setItem('mkt_device_id',id);
+    document.cookie='mkt_device_id='+encodeURIComponent(id)+'; path=/; max-age=157680000; SameSite=Lax';
+    var side=q('#sidebarDeviceId'); if(side) side.textContent=id;
+    var pay=q('#payDeviceId'); if(pay) pay.value=id;
+    return id;
+  }
+  function keyFromText(txt){
+    txt=String(txt||'').toLowerCase();
+    if(txt.indexOf('1.959')>-1||txt.indexOf('1959')>-1||txt.indexOf('nhà bán')>-1||txt.indexOf('seller')>-1) return 'sellerpro';
+    if(txt.indexOf('859')>-1||txt.indexOf('1 năm')>-1) return 'yearly';
+    if(txt.indexOf('559')>-1||txt.indexOf('6 tháng')>-1) return 'halfyear';
+    if(txt.indexOf('359')>-1||txt.indexOf('3 tháng')>-1) return 'quarterly';
+    return 'monthly';
+  }
+  function plan(k){return PLAN_MAP[k]||PLAN_MAP.monthly}
+  function contentFor(p){
+    var phone=(q('#payPhone')&&q('#payPhone').value.trim())||'SDT';
+    var email=(q('#payEmail')&&q('#payEmail').value.trim())||'GMAIL';
+    return deviceId();
+  }
+  window.showPaymentNotice=function(msg){
+    var n=q('#paymentNotice');
+    if(!n){
+      var btn=q('#paymentModal .primary');
+      n=document.createElement('div'); n.id='paymentNotice';
+      if(btn && btn.parentNode) btn.parentNode.insertBefore(n, btn.nextSibling);
+    }
+    n.textContent=msg||'Đã gửi yêu cầu về web admin.'; n.style.display='block';
+  };
+  window.refreshPaymentContent=function(){
+    var p=plan(window.currentPremiumPlanKey||'monthly');
+    var content=contentFor(p);
+    var pc=q('#payContent'); if(pc) pc.textContent=content;
+    var qr=q('#payQr'); if(qr) qr.src='https://img.vietqr.io/image/970405-8888363382629-compact2.png?amount='+encodeURIComponent(p.amount)+'&addInfo='+encodeURIComponent(content)+'&accountName='+encodeURIComponent('NGUYEN DANG THI XUAN');
+    var notice=q('#paymentNotice'); if(notice) notice.style.display='none';
+  };
+  window.openPayment=function(k){
+    var p=plan(k); window.currentPremiumPlanKey=k||'monthly';
+    var modal=q('#paymentModal'); if(!modal) return false;
+    var title=q('#payPlanTitle'); if(title) title.textContent=p.title;
+    var desc=q('#payPlanDesc'); if(desc) desc.textContent='Vui lòng nhập số điện thoại và Gmail để được duyệt nâng cấp tự động lên gói Premium sau khi thanh toán xong.';
+    var price=q('#payPlanPrice'); if(price) price.textContent=Number(p.amount).toLocaleString('vi-VN')+' VNĐ';
+    var device=q('#payDeviceId'); if(device) device.value=deviceId();
+    var locked=q('#payLocked'); if(locked) locked.innerHTML='';
+    var h=locked && locked.previousElementSibling; if(h) h.style.display='none';
+    var alertBox=q('#paymentModal .payment-alert'); if(alertBox) alertBox.style.display='none';
+    var z=q('#paymentModal .payment-actions a:not(.light)'); if(z){z.textContent='Zalo hỗ trợ: 036 338 2629'; z.href='https://zalo.me/0363382629'; z.target='_blank';}
+    var done=q('#paymentModal .payment-actions .light'); if(done){done.textContent='Gửi yêu cầu admin duyệt'; done.removeAttribute('href'); done.onclick=function(e){e.preventDefault(); return window.submitPremiumRequest();};}
+    var btn=q('#paymentModal .primary'); if(btn) btn.textContent='Gửi yêu cầu kích hoạt';
+    window.refreshPaymentContent();
+    modal.style.display='flex';
+    setTimeout(function(){var ph=q('#payPhone'); if(ph) ph.focus();},150);
+    cleanText(); return false;
+  };
+  var oldSubmit=window.submitPremiumRequest;
+  window.submitPremiumRequest=function(){
+    var phone=(q('#payPhone')&&q('#payPhone').value.trim())||'';
+    var email=(q('#payEmail')&&q('#payEmail').value.trim())||'';
+    if(!phone || !email){ window.showPaymentNotice('Vui lòng nhập số điện thoại và Gmail để được duyệt nâng cấp tự động lên gói Premium sau khi thanh toán xong.'); return false; }
+    if(typeof oldSubmit==='function'){
+      try{
+        var r=oldSubmit();
+        setTimeout(function(){window.showPaymentNotice('Đã gửi yêu cầu về web admin. Nội dung chuyển khoản đã kèm ID thiết bị và gói đã chọn.');},250);
+        return r;
+      }catch(e){}
+    }
+    window.showPaymentNotice('Đã gửi yêu cầu về web admin. Nội dung chuyển khoản đã kèm ID thiết bị và gói đã chọn.');
+    return false;
+  };
+  function patchPlanOverlay(){
+    var note=q('#mktPlanNote');
+    if(note){
+      var p=plan(window.currentPremiumPlanKey||keyFromText((q('#mktPlanOverlay')||document.body).innerText));
+      note.innerHTML='ID thiết bị: <b>'+deviceId()+'</b><br><span style="color:#64748b">Vui lòng nhập số điện thoại và Gmail để được duyệt nâng cấp tự động lên gói Premium sau khi thanh toán xong.</span>';
+    }
+    var mini=q('.mktPlanMini'); if(mini) mini.textContent='Vui lòng nhập số điện thoại và Gmail để được duyệt nâng cấp tự động lên gói Premium sau khi thanh toán xong.';
+    var pay=q('#mktPlanPay'); if(pay){pay.onclick=function(e){e.preventDefault(); e.stopPropagation(); var ov=q('#mktPlanOverlay'); if(ov) ov.style.display='none'; return window.openPayment(window.currentPremiumPlanKey||keyFromText((ov||document.body).innerText));};}
+    cleanText();
+  }
+  var oldPlan=window.mktOpenPlanDetail;
+  window.mktOpenPlanDetail=function(k){
+    window.currentPremiumPlanKey=k||window.currentPremiumPlanKey||'monthly';
+    var r=false;
+    if(typeof oldPlan==='function'){r=oldPlan(k);} 
+    setTimeout(patchPlanOverlay,50); setTimeout(patchPlanOverlay,200);
+    return r;
+  };
+  document.addEventListener('click',function(e){
+    var pay=e.target.closest && e.target.closest('#mktPlanPay');
+    if(pay){e.preventDefault(); e.stopPropagation(); if(e.stopImmediatePropagation)e.stopImmediatePropagation(); var ov=q('#mktPlanOverlay'); if(ov) ov.style.display='none'; return window.openPayment(window.currentPremiumPlanKey||keyFromText((ov||document.body).innerText));}
+    var detail=e.target.closest && e.target.closest('button,a');
+    if(detail && /xem chi tiết gói/i.test(detail.innerText||detail.textContent||'')){setTimeout(patchPlanOverlay,120);}
+  },true);
+  function init(){deviceId(); cleanText(); patchPlanOverlay();}
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',init); else init();
+  setTimeout(init,500); setTimeout(init,1500); setInterval(cleanText,2500);
+})();
+</script>
+
+
+
+<!-- FINAL FIX V76: close package modals + clean payment text -->
+<style id="mkt-v76-modal-close-css">
+  #mktPlanClose,.mktPlanClose,.payment-close,[data-close-plan],[data-close-payment]{cursor:pointer!important}
+</style>
+<script id="mkt-v76-modal-close-js">
+(function(){
+  'use strict';
+  var CLEAN_TEXT='Vui lòng nhập số điện thoại và Gmail để được duyệt nâng cấp tự động lên gói Premium sau khi thanh toán xong.';
+  var BAD_TEXTS=[
+    'Bấm nâng cấp để nhập số điện thoại, Gmail và nhận nội dung chuyển khoản tự động.',
+    'Bấm nâng cấp gói này để nhập số điện thoại, Gmail và xem nội dung chuyển khoản tự động.',
+    'Vui lòng nhập số điện thoại và Gmail để admin đối chiếu nhanh.',
+    'Gói sẽ mở sau khi admin duyệt thanh toán.',
+    'Sau khi thanh toán, web admin sẽ duyệt theo ID thiết bị. Duyệt xong khách mới sử dụng được tính năng PRO.',
+    'Sau khi thanh toán, web admin sẽ duyệt theo ID thiết bị.',
+    'Duyệt xong khách mới sử dụng được tính năng PRO.'
+  ];
+  function q(s,r){return (r||document).querySelector(s)}
+  function qa(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s))}
+  function cleanNodeText(){
+    qa('body *').forEach(function(el){
+      if(el.children && el.children.length) return;
+      var t=el.textContent||'';
+      var nt=t;
+      BAD_TEXTS.forEach(function(b){ nt=nt.split(b).join(''); });
+      if(t.indexOf('admin đối chiếu nhanh')>-1) nt=CLEAN_TEXT;
+      if(nt!==t) el.textContent=nt.trim();
+    });
+    var mini=q('.mktPlanMini'); if(mini) mini.textContent=CLEAN_TEXT;
+    var desc=q('#payPlanDesc'); if(desc) desc.textContent=CLEAN_TEXT;
+    var note=q('#mktPlanNote');
+    if(note && note.innerHTML.indexOf(CLEAN_TEXT)===-1){
+      var device=(window.mktGetDeviceId&&window.mktGetDeviceId()) || localStorage.getItem('mkt_device_id') || (document.cookie.match(/(?:^|; )mkt_device_id=([^;]+)/)||[])[1] || 'MKT-DEVICE';
+      try{ device=decodeURIComponent(device); }catch(e){}
+      note.innerHTML='ID thiết bị: <b>'+device+'</b><br><span style="color:#64748b">'+CLEAN_TEXT+'</span>';
+    }
+  }
+  function closePlan(){
+    ['#mktPlanOverlay','#packageModal','#priceModal','#planModal','.package-modal','.price-modal'].forEach(function(sel){
+      qa(sel).forEach(function(el){ el.style.display='none'; el.classList.remove('show','active','open'); });
+    });
+    document.body.classList.remove('modal-open');
+    return false;
+  }
+  function closePayment(){
+    ['#paymentModal','#premiumPaymentModal','#lockedFeatureModal'].forEach(function(sel){
+      qa(sel).forEach(function(el){ el.style.display='none'; el.classList.remove('show','active','open'); });
+    });
+    document.body.classList.remove('modal-open');
+    return false;
+  }
+  window.mktClosePlanDetail=closePlan;
+  window.closePackageModal=closePlan;
+  window.closePlanModal=closePlan;
+  window.closePriceModal=closePlan;
+  window.closePayment=closePayment;
+  window.closeLockedFeature=closePayment;
+  document.addEventListener('click',function(e){
+    var t=e.target;
+    var btn=t.closest && t.closest('#mktPlanClose,.mktPlanClose,[data-close-plan],.package-close,.price-close');
+    if(btn || ((t.id==='mktPlanOverlay'||t.id==='packageModal'||t.id==='priceModal'||t.id==='planModal') && t===e.target)){
+      e.preventDefault(); e.stopPropagation(); if(e.stopImmediatePropagation)e.stopImmediatePropagation(); return closePlan();
+    }
+    var pbtn=t.closest && t.closest('.payment-close,[data-close-payment],#paymentClose,#premiumPaymentClose');
+    if(pbtn || ((t.id==='paymentModal'||t.id==='premiumPaymentModal'||t.id==='lockedFeatureModal') && t===e.target)){
+      e.preventDefault(); e.stopPropagation(); if(e.stopImmediatePropagation)e.stopImmediatePropagation(); return closePayment();
+    }
+  },true);
+  document.addEventListener('keydown',function(e){ if(e.key==='Escape'){ closePlan(); closePayment(); } });
+  var oldOpen=window.mktOpenPlanDetail;
+  if(typeof oldOpen==='function'){
+    window.mktOpenPlanDetail=function(k){ var r=oldOpen(k); setTimeout(cleanNodeText,30); setTimeout(cleanNodeText,160); return r; };
+  }
+  var oldPayment=window.openPayment;
+  if(typeof oldPayment==='function'){
+    window.openPayment=function(k){ var r=oldPayment(k); setTimeout(cleanNodeText,30); setTimeout(cleanNodeText,160); return r; };
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',cleanNodeText); else cleanNodeText();
+  setTimeout(cleanNodeText,500); setTimeout(cleanNodeText,1500); setInterval(cleanNodeText,2500);
+})();
+</script>
+
+
+
+
+
+
+<!-- PATCH V85: Premium Glass badges + sellerpro payment amount fix -->
+<script id="mkt-v85-sellerpro-payment-fix">
+(function(){
+  'use strict';
+  var PLANS={
+    monthly:{title:'Gói 1 tháng',price:'159.000đ',amount:'159000',code:'GOI1THANG',package:'GOI1THANG',desc:'Phù hợp người mới bắt đầu.'},
+    quarterly:{title:'Gói 3 tháng',price:'359.000đ',amount:'359000',code:'GOI3THANG',package:'GOI3THANG',desc:'Tối ưu hơn gói tháng.'},
+    halfyear:{title:'Gói 6 tháng',price:'559.000đ',amount:'559000',code:'GOI6THANG',package:'GOI6THANG',desc:'Mở CRM và Sales Bot.'},
+    yearly:{title:'Gói 1 năm',price:'859.000đ',amount:'859000',code:'GOI1NAM',package:'GOI1NAM',desc:'Gói phổ biến nhất.'},
+    sellerpro:{title:'Gói nhà bán hàng chuyên nghiệp',price:'1.959.000đ',amount:'1959000',code:'NHABANHANGPRO',package:'NHABANHANGPRO',desc:'Gói cao nhất cho nhà bán hàng chuyên nghiệp.'},
+    lifetime:{title:'Gói nhà bán hàng chuyên nghiệp',price:'1.959.000đ',amount:'1959000',code:'NHABANHANGPRO',package:'NHABANHANGPRO',desc:'Gói cao nhất cho nhà bán hàng chuyên nghiệp.'}
+  };
+  function q(s,r){return (r||document).querySelector(s)}
+  function txt(el){return String((el&&el.innerText)||'').toLowerCase()}
+  function normKey(k){
+    k=String(k||'').toLowerCase().trim();
+    if(k==='lifetime') return 'sellerpro';
+    if(PLANS[k]) return k;
+    return '';
+  }
+  function keyFromText(t){
+    t=String(t||'').toLowerCase();
+    if(t.indexOf('1.959')>-1||t.indexOf('1959')>-1||t.indexOf('nhà bán')>-1||t.indexOf('nha ban')>-1||t.indexOf('chuyên nghiệp')>-1||t.indexOf('chuyen nghiep')>-1||t.indexOf('seller')>-1||t.indexOf('trọn đời')>-1||t.indexOf('tron doi')>-1||t.indexOf('vĩnh')>-1) return 'sellerpro';
+    if(t.indexOf('859')>-1||t.indexOf('1 năm')>-1||t.indexOf('1 nam')>-1) return 'yearly';
+    if(t.indexOf('559')>-1||t.indexOf('6 tháng')>-1||t.indexOf('6 thang')>-1) return 'halfyear';
+    if(t.indexOf('359')>-1||t.indexOf('3 tháng')>-1||t.indexOf('3 thang')>-1) return 'quarterly';
+    if(t.indexOf('159')>-1||t.indexOf('1 tháng')>-1||t.indexOf('1 thang')>-1) return 'monthly';
+    return '';
+  }
+  function keyFromNode(node){
+    var card=node&&node.closest&&node.closest('.premium-plan,.v4-plan,.plan-card,.pricing-card,.mkt-plan-card,.v4-lifetime,[class*="plan"],[class*="price"]');
+    return keyFromText(txt(card)||txt(node));
+  }
+  function getDevice(){
+    var id=localStorage.getItem('mkt_device_id');
+    if(!id){var m=document.cookie.match(/(?:^|; )mkt_device_id=([^;]+)/);id=m?decodeURIComponent(m[1]):'';}
+    if(!id){id='MKT-'+Math.random().toString(36).slice(2,8).toUpperCase()+Date.now().toString().slice(-6);}
+    localStorage.setItem('mkt_device_id',id);
+    document.cookie='mkt_device_id='+encodeURIComponent(id)+'; path=/; max-age=157680000; SameSite=Lax';
+    var side=q('#sidebarDeviceId'); if(side) side.textContent=id;
+    var pay=q('#payDeviceId'); if(pay) pay.value=id;
+    return id;
+  }
+  function selectedKey(fallback){
+    return normKey(window.mktSelectedPlanKey)||normKey(window.currentPremiumPlanKey)||normKey(fallback)||keyFromText((q('#mktPlanOverlay')||{}).innerText)||'monthly';
+  }
+  function setSelected(k){
+    k=normKey(k)||'monthly';
+    window.mktSelectedPlanKey=k;
+    window.currentPremiumPlanKey=k;
+    return k;
+  }
+  function plan(k){return PLANS[normKey(k)||'monthly']||PLANS.monthly}
+  function payContent(p){
+    var phone=(q('#payPhone')&&q('#payPhone').value.trim())||'SDT';
+    var email=(q('#payEmail')&&q('#payEmail').value.trim())||'GMAIL';
+    return getDevice();
+  }
+  window.refreshPaymentContent=function(){
+    var p=plan(selectedKey());
+    var content=payContent(p);
+    var pc=q('#payContent'); if(pc) pc.textContent=content;
+    var qr=q('#payQr'); if(qr) qr.src='https://img.vietqr.io/image/970405-8888363382629-compact2.png?amount='+encodeURIComponent(p.amount)+'&addInfo='+encodeURIComponent(content)+'&accountName='+encodeURIComponent('NGUYEN DANG THI XUAN');
+    var price=q('#payPlanPrice'); if(price) price.textContent=Number(p.amount).toLocaleString('vi-VN')+' VNĐ';
+  };
+  window.openPayment=function(k){
+    k=setSelected(k||selectedKey());
+    var p=plan(k);
+    var modal=q('#paymentModal'); if(!modal) return false;
+    var title=q('#payPlanTitle'); if(title) title.textContent=p.title;
+    var desc=q('#payPlanDesc'); if(desc) desc.textContent='Vui lòng nhập số điện thoại và Gmail để được duyệt nâng cấp tự động lên gói Premium sau khi thanh toán xong.';
+    var price=q('#payPlanPrice'); if(price) price.textContent=Number(p.amount).toLocaleString('vi-VN')+' VNĐ';
+    var device=q('#payDeviceId'); if(device) device.value=getDevice();
+    var locked=q('#payLocked'); if(locked) locked.innerHTML='';
+    var alert=q('#paymentModal .payment-alert'); if(alert) alert.style.display='none';
+    var z=q('#paymentModal .payment-actions a:not(.light)'); if(z){z.textContent='Zalo hỗ trợ: 036 338 2629'; z.href='https://zalo.me/0363382629'; z.target='_blank';}
+    var done=q('#paymentModal .payment-actions .light'); if(done){done.textContent='Gửi yêu cầu admin duyệt'; done.removeAttribute('href'); done.onclick=function(e){e.preventDefault();return window.submitPremiumRequest();};}
+    var primary=q('#paymentModal .primary'); if(primary){primary.textContent='Gửi yêu cầu kích hoạt'; primary.onclick=function(e){e.preventDefault();return window.submitPremiumRequest();};}
+    window.refreshPaymentContent();
+    modal.style.display='flex';
+    setTimeout(function(){var ph=q('#payPhone'); if(ph) ph.focus();},120);
+    return false;
+  };
+  window.submitPremiumRequest=function(){
+    var k=selectedKey(); setSelected(k);
+    var phone=(q('#payPhone')&&q('#payPhone').value.trim())||'';
+    var email=(q('#payEmail')&&q('#payEmail').value.trim())||'';
+    if(!phone||!email){
+      if(typeof window.showPaymentNotice==='function') window.showPaymentNotice('Vui lòng nhập số điện thoại và Gmail để được duyệt nâng cấp tự động lên gói Premium sau khi thanh toán xong.');
+      else alert('Vui lòng nhập số điện thoại và Gmail.');
+      return false;
+    }
+    var p=plan(k);
+    window.refreshPaymentContent();
+    fetch('/premium_request',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({device_id:getDevice(),phone:phone,email:email,package_key:k})})
+      .then(function(r){return r.json();}).then(function(data){
+        if(data&&data.ok){
+          var pc=q('#payContent'); if(pc) pc.textContent=data.payment_note||payContent(p);
+          if(typeof window.showPaymentNotice==='function') window.showPaymentNotice('Đã gửi yêu cầu '+p.title+' về web admin. Số tiền: '+p.price+'.');
+        }else{
+          if(typeof window.showPaymentNotice==='function') window.showPaymentNotice((data&&data.message)||'Chưa gửi được yêu cầu, vui lòng thử lại.');
+          else alert((data&&data.message)||'Chưa gửi được yêu cầu, vui lòng thử lại.');
+        }
+      }).catch(function(){
+        if(typeof window.showPaymentNotice==='function') window.showPaymentNotice('Kết nối chậm, vui lòng thử lại hoặc gửi Zalo hỗ trợ.');
+      });
+    return false;
+  };
+  var oldDetail=window.mktOpenPlanDetail;
+  window.mktOpenPlanDetail=function(k){
+    k=normKey(k)||selectedKey(); setSelected(k);
+    var r=false;
+    if(typeof oldDetail==='function') r=oldDetail(k);
+    setTimeout(function(){
+      var p=plan(selectedKey(k));
+      var note=q('#mktPlanNote');
+      if(note){note.innerHTML='ID thiết bị: <b>'+getDevice()+'</b><br>Gói đang chọn: <b>'+p.title+'</b><br><span style="color:#64748b">Số tiền: <b>'+p.price+'</b>. Vui lòng nhập số điện thoại và Gmail để được duyệt nâng cấp tự động lên gói Premium sau khi thanh toán xong.</span>';}
+      var mini=q('.mktPlanMini'); if(mini) mini.textContent='Vui lòng nhập số điện thoại và Gmail để được duyệt nâng cấp tự động lên gói Premium sau khi thanh toán xong.';
+      var pay=q('#mktPlanPay'); if(pay){pay.onclick=function(e){e.preventDefault();e.stopPropagation();var ov=q('#mktPlanOverlay'); if(ov) ov.style.display='none'; return window.openPayment(selectedKey(k));};}
+    },80);
+    return r;
+  };
+  document.addEventListener('click',function(e){
+    var b=e.target.closest&&e.target.closest('button,a');
+    if(!b) return;
+    var text=String(b.innerText||b.textContent||'');
+    var k=keyFromNode(b);
+    if(k) setSelected(k);
+    if(/xem chi tiết gói/i.test(text)){
+      setTimeout(function(){ if(k) setSelected(k); },30);
+      setTimeout(function(){ if(window.mktOpenPlanDetail && k) window.mktOpenPlanDetail(k); },80);
+    }
+    if(b.id==='mktPlanPay'||/nâng cấp|mở khóa|thanh toán|kích hoạt/i.test(text)){
+      if(k) setSelected(k);
+      if(b.id==='mktPlanPay'){
+        e.preventDefault();e.stopPropagation();if(e.stopImmediatePropagation)e.stopImmediatePropagation();
+        var ov=q('#mktPlanOverlay'); if(ov) ov.style.display='none';
+        return window.openPayment(selectedKey(k));
+      }
+    }
+  },true);
+  document.addEventListener('input',function(e){if(e.target&&(/payPhone|payEmail/.test(e.target.id||''))) window.refreshPaymentContent();},true);
+  getDevice();
+})();
+<script id="mkt-price-detail-final-js">
+(function(){
+  'use strict';
+
+  var plans={
+    monthly:{title:'Gói 1 tháng',price:'159.000đ',amount:'159000',desc:'Phù hợp người mới bắt đầu, shop nhỏ cần đăng bài, tạo content và quản lý Fanpage cơ bản.',benefits:['Đăng bài Facebook','Quản lý Fanpage','Quản lý Group','AI Comment','Tạo content cơ bản','Token Manager','Hỗ trợ kích hoạt theo ID thiết bị']},
+    quarterly:{title:'Gói 3 tháng',price:'359.000đ',amount:'359000',desc:'Tối ưu cho shop đang bán hàng cần dùng ổn định hơn và tiết kiệm hơn gói tháng.',benefits:['Toàn bộ gói 1 tháng','AI Messenger','CRM Kanban cơ bản','Kịch bản inbox','Lịch đăng nâng cao','Báo cáo cơ bản','Ưu tiên hỗ trợ']},
+    halfyear:{title:'Gói 6 tháng',price:'559.000đ',amount:'559000',desc:'Phù hợp shop cần CRM, chăm sóc khách và tối ưu quy trình bán hàng.',benefits:['Toàn bộ gói 3 tháng','CRM Pro','AI Sales Bot','Comment Manager','Auto Tag khách hàng','Quản lý khách hàng','Chuyển khách sang CRM']},
+    yearly:{title:'Gói 1 năm',price:'859.000đ',amount:'859000',desc:'Gói phổ biến nhất cho nhà bán hàng muốn dùng đầy đủ công cụ AI Marketing trong 1 năm.',benefits:['Toàn bộ gói 6 tháng','AI Marketing Director','AI Ads Chuyên Gia','Kho Content Premium','Automation Marketing','Export báo cáo','Ưu tiên xử lý']},
+    sellerpro:{title:'Gói nhà bán hàng chuyên nghiệp',price:'1.959.000đ',amount:'1959000',desc:'Gói cao nhất cho nhà bán hàng chuyên nghiệp, mở toàn bộ hệ thống sau khi admin duyệt.',benefits:['Toàn bộ tính năng Premium','AI Image Center','AI Video Center','AI Voice Studio','Dashboard Enterprise','Export PDF / Excel','Backup Database','Ưu tiên hỗ trợ VIP']}
+  };
+
+  plans.lifetime = plans.sellerpro;
+
+  function norm(t){
+    return String(t||'')
+      .toLowerCase()
+      .replace(/\s+/g,' ')
+      .replace(/vnđ|vnd|đ/g,'')
+      .trim();
+  }
+
+  function keyFromText(t){
+    t = norm(t);
+
+    if(t.includes('1959000') || t.includes('1.959') || t.includes('1959') || t.includes('nhà bán') || t.includes('seller') || t.includes('chuyên nghiệp') || t.includes('trọn đời')) return 'sellerpro';
+    if(t.includes('859000') || t.includes('859') || t.includes('1 năm') || t.includes('12 tháng')) return 'yearly';
+    if(t.includes('559000') || t.includes('559') || t.includes('6 tháng')) return 'halfyear';
+    if(t.includes('359000') || t.includes('359') || t.includes('3 tháng')) return 'quarterly';
+    if(t.includes('159000') || t.includes('159') || t.includes('1 tháng')) return 'monthly';
+
+    return '';
+  }
+
+  function findPlanKey(btn){
+    var key =
+      btn.getAttribute('data-plan') ||
+      btn.getAttribute('data-package') ||
+      btn.getAttribute('data-key') ||
+      btn.dataset.plan ||
+      btn.dataset.package ||
+      btn.dataset.key ||
+      '';
+
+    key = norm(key);
+
+    if(plans[key]) return key;
+
+    var card = btn.closest('.pricing-card,.price-card,.plan-card,.premium-card,.package-card,.mkt-plan-card,.v2-price-card,div');
+    var text = (btn.innerText || '') + ' ' + (card ? card.innerText : '') + ' ' + document.body.innerText;
+
+    return keyFromText(text) || 'monthly';
+  }
+
+  document.addEventListener('click', function(e){
+    var btn = e.target.closest('button,a');
+    if(!btn) return;
+
+    var text = norm(btn.innerText || btn.textContent || '');
+
+    if(
+      text.includes('nâng cấp') ||
+      text.includes('thanh toán') ||
+      text.includes('chọn gói') ||
+      text.includes('mua gói')
+    ){
+      var key = findPlanKey(btn);
+      window.MKT_SELECTED_PLAN_KEY = key;
+      localStorage.setItem('mkt_selected_plan_key', key);
+    }
+  }, true);
+
+})();
+</script>  function payContent(p){
+    var phone=(q('#payPhone')&&q('#payPhone').value.trim())||'';
+    var email=(q('#payEmail')&&q('#payEmail').value.trim())||'';
+    return deviceId();
+  }
+  function fill(k){
+    k=setPlan(k); var p=getPlan(k);
+    var t=q('#payPlanTitle'); if(t) t.textContent=p.title;
+    var d=q('#payPlanDesc'); if(d) d.textContent=p.desc;
+    var pr=q('#payPlanPrice'); if(pr) pr.textContent=Number(p.amount).toLocaleString('vi-VN')+' VNĐ';
+    var dev=q('#payDeviceId'); if(dev) dev.value=deviceId();
+    var content=payContent(p);
+    var pc=q('#payContent'); if(pc) pc.textContent=content;
+    var qr=q('#payQr'); if(qr) qr.src='https://img.vietqr.io/image/970405-8888363382629-compact2.png?amount='+encodeURIComponent(p.amount)+'&addInfo='+encodeURIComponent(content)+'&accountName='+encodeURIComponent('NGUYEN DANG THI XUAN');
+    var lock=q('#payLocked'); if(lock) lock.innerHTML='';
+    return p;
+  }
+  window.refreshPaymentContent=function(){fill(window.mktPaymentPlanKey||window.mktSelectedPlanKey||window.currentPremiumPlanKey||'monthly')};
+  window.openPayment=function(planKey){
+    var k=normKey(planKey)||normKey(window.mktPaymentPlanKey)||normKey(window.mktSelectedPlanKey)||normKey(window.currentPremiumPlanKey)||'monthly';
+    fill(k);
+    var modal=q('#paymentModal'); if(modal) modal.style.display='flex';
+    var primary=q('#paymentModal .primary'); if(primary){primary.textContent='Gửi yêu cầu kích hoạt'; primary.onclick=function(e){e.preventDefault(); return window.submitPremiumRequest();};}
+    var light=q('#paymentModal .payment-actions .light'); if(light){light.textContent='Gửi yêu cầu admin duyệt'; light.removeAttribute('href'); light.onclick=function(e){e.preventDefault(); return window.submitPremiumRequest();};}
+    return false;
+  };
+  var previousDetail=window.mktOpenPlanDetail;
+  window.mktOpenPlanDetail=function(k){
+    k=setPlan(k||window.mktPaymentPlanKey||'monthly');
+    var ret=false; if(typeof previousDetail==='function'){try{ret=previousDetail(k)}catch(e){}}
+    setTimeout(function(){
+      setPlan(k); var p=getPlan(k);
+      var note=q('#mktPlanNote');
+      if(note) note.innerHTML='ID thiết bị: <b>'+deviceId()+'</b><br>Gói đang chọn: <b>'+p.title+'</b><br><span style="color:#64748b">Số tiền: <b>'+p.price+'</b>. Vui lòng nhập số điện thoại và Gmail để được duyệt nâng cấp tự động lên gói Premium sau khi thanh toán xong.</span>';
+      var mini=q('.mktPlanMini'); if(mini) mini.textContent='Gói đang chọn: '+p.title+' - '+p.price;
+      var pay=q('#mktPlanPay'); if(pay){pay.setAttribute('data-plan',k); pay.onclick=function(e){e.preventDefault(); e.stopPropagation(); if(e.stopImmediatePropagation)e.stopImmediatePropagation(); var ov=q('#mktPlanOverlay'); if(ov) ov.style.display='none'; return window.openPayment(k);};}
+    },100);
+    return ret;
+  };
+  window.submitPremiumRequest=function(){
+    var k=setPlan(window.mktPaymentPlanKey||window.mktSelectedPlanKey||window.currentPremiumPlanKey||'monthly');
+    var p=fill(k);
+    var phone=(q('#payPhone')&&q('#payPhone').value.trim())||'';
+    var email=(q('#payEmail')&&q('#payEmail').value.trim())||'';
+    if(!phone||!email){ if(typeof window.showPaymentNotice==='function') window.showPaymentNotice('Vui lòng nhập số điện thoại và Gmail để được duyệt nâng cấp tự động lên gói Premium sau khi thanh toán xong.'); else alert('Vui lòng nhập số điện thoại và Gmail.'); return false; }
+    fetch('/premium_request',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({device_id:deviceId(),phone:phone,email:email,package_key:k})})
+      .then(function(r){return r.json()}).then(function(data){
+        if(data&&data.payment_note){var pc=q('#payContent'); if(pc) pc.textContent=data.payment_note;}
+        var msg=(data&&data.ok)?('Đã gửi yêu cầu '+p.title+' về web admin. Số tiền: '+p.price+'.'):((data&&data.message)||'Chưa gửi được yêu cầu, vui lòng thử lại.');
+        if(typeof window.showPaymentNotice==='function') window.showPaymentNotice(msg); else alert(msg);
+      }).catch(function(){if(typeof window.showPaymentNotice==='function') window.showPaymentNotice('Kết nối chậm, vui lòng thử lại hoặc gửi Zalo hỗ trợ.');});
+    return false;
+  };
+  function bindCards(){
+    qa('.premium-plan,.v4-plan,.price-card,.pricing-card,.plan-card').forEach(function(card){
+      var k=keyFromText(card.innerText||card.textContent||'');
+      if(!k) return;
+      card.setAttribute('data-plan',k);
+      qa('button,a',card).forEach(function(b){b.setAttribute('data-plan',k);});
+    });
+  }
+  document.addEventListener('click',function(e){
+    var b=e.target.closest&&e.target.closest('button,a'); if(!b) return;
+    var k=keyFromNode(b);
+    if(k) setPlan(k);
+    var text=norm(b.innerText||b.textContent||'');
+    var isPay=b.id==='mktPlanPay'||/nang cap|mo khoa|dang ky|thanh toan|kich hoat|da thanh toan|gui yeu cau/.test(text)||/openPayment\(/i.test(String(b.getAttribute('onclick')||''));
+    if(b.id==='mktPlanPay'){
+      e.preventDefault(); e.stopPropagation(); if(e.stopImmediatePropagation)e.stopImmediatePropagation();
+      var ov=q('#mktPlanOverlay'); if(ov) ov.style.display='none';
+      return window.openPayment(k||window.mktPaymentPlanKey||window.mktSelectedPlanKey||'monthly');
+    }
+    if(isPay && k){
+      e.preventDefault(); e.stopPropagation(); if(e.stopImmediatePropagation)e.stopImmediatePropagation();
+      return window.openPayment(k);
+    }
+  },true);
+  document.addEventListener('input',function(e){if(e.target&&(/payPhone|payEmail/.test(e.target.id||''))) window.refreshPaymentContent();},true);
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',bindCards); else bindCards();
+  setTimeout(bindCards,300); setTimeout(bindCards,1000); setTimeout(bindCards,2500);
+  deviceId();
+})();
+</script>
+
+<script id="mkt-compact-pricing-final-fix">
+(function(){
+  'use strict';
+  var PLANS={
+    monthly:{title:'Gói 1 tháng',price:'159.000đ',amount:'159000',code:'GOI1THANG',desc:'Phù hợp người mới bắt đầu.'},
+    quarterly:{title:'Gói 3 tháng',price:'359.000đ',amount:'359000',code:'GOI3THANG',desc:'Tối ưu hơn gói tháng.'},
+    halfyear:{title:'Gói 6 tháng',price:'559.000đ',amount:'559000',code:'GOI6THANG',desc:'Mở thêm CRM, Sales Bot và công cụ nâng cao.'},
+    yearly:{title:'Gói 1 năm',price:'859.000đ',amount:'859000',code:'GOI1NAM',desc:'Gói phổ biến, tối ưu chi phí dài hạn.'},
+    sellerpro:{title:'Gói nhà bán hàng chuyên nghiệp',price:'1.959.000đ',amount:'1959000',code:'NHABANHANGPRO',desc:'Gói cao nhất cho nhà bán hàng chuyên nghiệp.'}
+  };
+  PLANS.lifetime=PLANS.sellerpro;
+  function q(s,r){return (r||document).querySelector(s)}
+  function norm(k){k=String(k||'').toLowerCase().replace(/[^a-z0-9]/g,''); if(k==='lifetime'||k==='seller'||k==='sellerpro'||k==='nhabanhangpro')return 'sellerpro'; if(k==='monthly'||k==='basic'||k==='goi1thang')return 'monthly'; if(k==='quarterly'||k==='pro'||k==='goi3thang')return 'quarterly'; if(k==='halfyear'||k==='business'||k==='goi6thang')return 'halfyear'; if(k==='yearly'||k==='goi1nam')return 'yearly'; return PLANS[k]?k:'monthly'}
+  function device(){var id='';try{id=localStorage.getItem('mkt_device_id')||''}catch(e){} if(!id&&typeof window.getOrCreateDeviceId==='function')id=window.getOrCreateDeviceId(); if(!id){id='MKT-'+Math.random().toString(36).slice(2,8).toUpperCase()+Date.now().toString().slice(-4);try{localStorage.setItem('mkt_device_id',id)}catch(e){}} document.cookie='mkt_device_id='+encodeURIComponent(id)+'; path=/; max-age='+(60*60*24*365*5); return id}
+  function setKey(k){k=norm(k); window.currentPremiumPlanKey=k; window.mktSelectedPlanKey=k; window.__mktClickedPlanKey=k; try{localStorage.setItem('mkt_selected_plan_key',k)}catch(e){} return k}
+  function payNote(p){var phone=(q('#payPhone')&&q('#payPhone').value.trim())||''; var email=(q('#payEmail')&&q('#payEmail').value.trim())||''; return device();}
+  window.refreshPaymentContent=function(){var k=norm(window.currentPremiumPlanKey||window.mktSelectedPlanKey); var p=PLANS[k]||PLANS.monthly; var note=payNote(p); var pc=q('#payContent'); if(pc)pc.textContent=note; var price=q('#payPlanPrice'); if(price)price.textContent=Number(p.amount).toLocaleString('vi-VN')+' VNĐ'; var qr=q('#payQr'); if(qr)qr.src='https://img.vietqr.io/image/970405-8888363382629-compact2.png?amount='+encodeURIComponent(p.amount)+'&addInfo='+encodeURIComponent(note)+'&accountName='+encodeURIComponent('NGUYEN DANG THI XUAN')};
+  window.openPayment=function(k){k=setKey(k); var p=PLANS[k]||PLANS.monthly; var modal=q('#paymentModal'); if(!modal)return false; var title=q('#payPlanTitle'); if(title)title.textContent=p.title; var desc=q('#payPlanDesc'); if(desc)desc.textContent=p.desc; var price=q('#payPlanPrice'); if(price)price.textContent=Number(p.amount).toLocaleString('vi-VN')+' VNĐ'; var dev=q('#payDeviceId'); if(dev)dev.value=device(); window.refreshPaymentContent(); modal.style.display='flex'; return false};
+  document.addEventListener('click',function(e){var btn=e.target.closest&&e.target.closest('[data-plan]'); if(!btn)return; var k=norm(btn.getAttribute('data-plan')||(btn.dataset&&btn.dataset.plan)); setKey(k); if(/button|a/i.test(btn.tagName)||btn.closest('button,a')){e.preventDefault();e.stopPropagation();if(e.stopImmediatePropagation)e.stopImmediatePropagation();return window.openPayment(k)}},true);
+  document.addEventListener('input',function(e){if(e.target&&/payPhone|payEmail/.test(e.target.id||''))window.refreshPaymentContent()},true);
+})();
+</script>
+
+
+
+<!-- FINAL MENU PRO UPGRADE: sang hơn, gọn hơn, không đổi logic menu -->
+<!-- FINAL FIX V96: clean transfer note + auto open premium menus -->
+<!-- FINAL FIX V97: remove transfer placeholders + premium menu micro badge -->
+<!-- FINAL UPGRADE V98: SaaS premium polish + smart locked menu routing -->
+<!-- FINAL UPGRADE V99: Luxury sidebar + compact PRO badges + smart Premium routing -->
+<!-- FINAL PATCH V100: only compact PRO/PREMIUM badges + upgraded mobile install link -->
+<!-- FINAL PATCH V101: matte luxury PRO/PREMIUM badges - giảm chói, nhỏ gọn, không đổi nội dung -->
+
+
+<!-- MOBILE INSTALL MENU FINAL 20260610: mobile sidebar installer, one-tap Android PWA, iPhone guide -->
+
+
+
+<!-- FINAL SUPPORT BOT 2-WAY PATCH: khách ↔ Web Admin theo ID thiết bị -->
+<style id="mkt-support-2way-css">
+  .floating-bot,.bot-bubble,#floatingBotPanel{z-index:2147483647!important;pointer-events:auto!important}
+  .bot-bubble{cursor:pointer!important;box-shadow:0 12px 34px rgba(79,70,229,.38)!important}
+  #floatingBotPanel{display:none;pointer-events:auto!important}
+  .bot-msg.admin{background:linear-gradient(135deg,#eef2ff,#f5f3ff)!important;border:1px solid #ddd6fe!important;color:#1e1b4b!important}
+  .bot-msg.system{background:#ecfeff!important;border:1px dashed #67e8f9!important;color:#155e75!important;font-size:12px!important}
+  .bot-admin-wait{font-size:12px;color:#64748b;margin-top:6px;font-weight:800}
+</style>
+<script id="mkt-support-2way-js">
+(function(){
+  'use strict';
+  if(window.__mktSupport2WayReady) return;
+  window.__mktSupport2WayReady=true;
+
+  var lastSupportId = Number(localStorage.getItem('mkt_support_last_id') || '0');
+  var pollingStarted = false;
+
+  function $(id){return document.getElementById(id)}
+  function body(){return $('floatingBotBody')}
+  function esc(v){
+    return String(v||'').replace(/[&<>\"]/g,function(ch){return {'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[ch] || ch;});
+  }
+  function deviceId(){
+    try{
+      if(typeof window.ensureDeviceId==='function') return window.ensureDeviceId();
+    }catch(e){}
+    var id=localStorage.getItem('mkt_device_id') || '';
+    if(!id || id==='Đang tạo...'){
+      id='MKT-'+Math.random().toString(36).slice(2,8).toUpperCase()+Date.now().toString().slice(-4);
+      localStorage.setItem('mkt_device_id',id);
+    }
+    document.cookie='mkt_device_id='+encodeURIComponent(id)+'; path=/; max-age='+(60*60*24*365*5)+'; SameSite=Lax';
+    return id;
+  }
+  function scrollBottom(){var b=body(); if(b) b.scrollTop=b.scrollHeight;}
+  function append(role, html, id){
+    var b=body(); if(!b) return;
+    if(id && b.querySelector('[data-support-id="'+id+'"]')) return;
+    var div=document.createElement('div');
+    div.className='bot-msg '+(role||'');
+    if(id) div.setAttribute('data-support-id',String(id));
+    div.innerHTML=html;
+    b.appendChild(div);
+    scrollBottom();
+  }
+  function localBotReply(text){
+    if(typeof window.getBotReply==='function') return window.getBotReply(text);
+    return 'Dạ em đã nhận tin nhắn. Admin sẽ phản hồi lại ngay trong khung chat này ạ.';
+  }
+  async function sendToAdmin(text){
+    try{
+      var res=await fetch('/support_send',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({device_id:deviceId(),sender:'user',message:text})
+      });
+      var data=await res.json().catch(function(){return {}});
+      if(data && data.id){
+        lastSupportId=Math.max(lastSupportId,Number(data.id)||0);
+        localStorage.setItem('mkt_support_last_id',String(lastSupportId));
+      }
+      append('system','Đã gửi tin nhắn về Web Admin theo ID thiết bị: <b>'+esc(deviceId())+'</b><div class="bot-admin-wait">Admin phản hồi sẽ tự hiện tại đây.</div>');
+    }catch(err){
+      append('system','Chưa gửi được tin nhắn về Web Admin. Vui lòng kiểm tra mạng rồi thử lại.');
+    }
+  }
+  async function pollAdmin(){
+    try{
+      var res=await fetch('/support_poll?device_id='+encodeURIComponent(deviceId())+'&after_id='+encodeURIComponent(lastSupportId),{cache:'no-store'});
+      var data=await res.json().catch(function(){return {messages:[]}});
+      (data.messages||[]).forEach(function(m){
+        var mid=Number(m.id)||0;
+        if(mid<=lastSupportId) return;
+        lastSupportId=mid;
+        localStorage.setItem('mkt_support_last_id',String(lastSupportId));
+        if(String(m.sender||'').toLowerCase()==='admin'){
+          append('admin','<b>Admin hỗ trợ:</b><br>'+esc(m.message).replace(/\n/g,'<br>'), mid);
+        }
+      });
+    }catch(e){}
+  }
+  function startPolling(){
+    if(pollingStarted) return;
+    pollingStarted=true;
+    pollAdmin();
+    setInterval(pollAdmin,3500);
+  }
+
+  window.toggleFloatingBot=function(){
+    var panel=$('floatingBotPanel'); if(!panel) return;
+    var isOpen=panel.style.display==='block';
+    panel.style.display=isOpen?'none':'block';
+    if(!isOpen){
+      if(typeof window.appendBotGreeting==='function') setTimeout(window.appendBotGreeting,120);
+      startPolling();
+      setTimeout(pollAdmin,450);
+    }
+  };
+  window.closeFloatingBot=function(){var panel=$('floatingBotPanel'); if(panel) panel.style.display='none';};
+
+  window.botQuick=function(text){
+    text=String(text||'').trim(); if(!text) return;
+    append('', '<b>Bạn:</b> '+esc(text));
+    var typingId='typing_'+Date.now();
+    append('ai bot-typing','<b>Bot hỗ trợ:</b><br>Đang nhập<span class="typing-dots" style="vertical-align:middle"><span></span><span></span><span></span></span>',typingId);
+    sendToAdmin(text);
+    setTimeout(function(){
+      var typing=document.querySelector('[data-support-id="'+typingId+'"]');
+      if(typing){ typing.outerHTML='<div class="bot-msg ai"><b>Bot hỗ trợ:</b><br>'+localBotReply(text)+'<div class="bot-admin-wait">Tin nhắn cũng đã chuyển về Web Admin để hỗ trợ 2 chiều.</div></div>'; }
+      scrollBottom();
+    },700+Math.floor(Math.random()*500));
+    startPolling();
+  };
+  window.sendBotInput=function(){
+    var input=$('botInputText');
+    if(!input || !input.value.trim()) return;
+    var text=input.value.trim();
+    input.value='';
+    window.botQuick(text);
+  };
+
+  document.addEventListener('click',function(e){
+    var bubble=e.target.closest('.bot-bubble,.floating-bot .bot-bubble,[data-open-support-bot]');
+    if(!bubble) return;
+    e.preventDefault();
+    e.stopPropagation();
+    if(e.stopImmediatePropagation) e.stopImmediatePropagation();
+    window.toggleFloatingBot();
+  },true);
+
+  document.addEventListener('DOMContentLoaded',function(){deviceId(); startPolling();});
+  setTimeout(function(){deviceId(); startPolling();},800);
+})();
+</script>
+
+
+
+
+<!-- FINAL PATCH V130: Device ID card + Reliable support chat + Simple mobile PWA download -->
+<style id="mkt-v130-device-chat-install">
+  /* ID thiết bị dưới thương hiệu */
+  .mkt-device-card-v130{
+    margin:14px 0 18px!important;
+    padding:13px 14px!important;
+    border-radius:18px!important;
+    background:linear-gradient(135deg,rgba(37,99,235,.12),rgba(124,58,237,.10))!important;
+    border:1px solid rgba(148,163,184,.28)!important;
+    box-shadow:0 12px 30px rgba(2,6,23,.16)!important;
+    color:#e5e7eb!important;
+  }
+  .mkt-device-card-v130 .mkt-device-label{
+    font-size:11px!important;
+    font-weight:900!important;
+    letter-spacing:.05em!important;
+    text-transform:uppercase!important;
+    color:#a5b4fc!important;
+    margin-bottom:7px!important;
+  }
+  .mkt-device-card-v130 .mkt-device-value{
+    font-size:16px!important;
+    font-weight:1000!important;
+    color:#fff!important;
+    letter-spacing:.02em!important;
+    word-break:break-all!important;
+  }
+  .mkt-device-card-v130 .mkt-device-status{
+    margin-top:7px!important;
+    font-size:11px!important;
+    color:#cbd5e1!important;
+    line-height:1.35!important;
+  }
+
+  /* Ẩn các nút cài app cũ để tránh rối giao diện */
+  .app-install-banner,#installAppBtn,.mkt-install-old,.mkt-install-sheet,
+  #mktInstallSheet,.install-app-btn,.mkt-mobile-actions-old{
+    display:none!important;
+  }
+
+  /* Nút tải xuống đơn giản, chỉ hiện trên điện thoại */
+  .mkt-mobile-download-v130{
+    position:fixed!important;
+    left:12px!important;
+    top:calc(10px + env(safe-area-inset-top,0px))!important;
+    z-index:2147483200!important;
+    display:none!important;
+    align-items:center!important;
+    gap:8px!important;
+    border:0!important;
+    border-radius:999px!important;
+    padding:10px 15px!important;
+    min-height:42px!important;
+    color:#fff!important;
+    font-weight:1000!important;
+    font-size:14px!important;
+    letter-spacing:.01em!important;
+    background:linear-gradient(135deg,#06b6d4,#2563eb,#7c3aed)!important;
+    box-shadow:0 12px 34px rgba(37,99,235,.35)!important;
+    cursor:pointer!important;
+    animation:mktDownloadFloatV130 2.2s ease-in-out infinite!important;
+    touch-action:manipulation!important;
+  }
+  .mkt-mobile-download-v130 small{
+    font-size:11px!important;
+    font-weight:900!important;
+    opacity:.94!important;
+    margin-left:2px!important;
+  }
+  .mkt-mobile-download-v130 .mkt-dot{
+    width:10px!important;height:10px!important;border-radius:50%!important;
+    background:#22c55e!important;box-shadow:0 0 0 6px rgba(34,197,94,.16),0 0 12px rgba(34,197,94,.7)!important;
+  }
+  @keyframes mktDownloadFloatV130{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+
+  .mkt-install-guide-v130{
+    position:fixed!important;
+    inset:0!important;
+    z-index:2147483600!important;
+    display:none!important;
+    align-items:flex-end!important;
+    background:rgba(2,6,23,.62)!important;
+    backdrop-filter:blur(7px)!important;
+  }
+  .mkt-install-guide-v130.open{display:flex!important;}
+  .mkt-install-guide-box-v130{
+    width:100%!important;
+    background:#ffffff!important;
+    color:#0f172a!important;
+    border-radius:24px 24px 0 0!important;
+    padding:18px 18px calc(18px + env(safe-area-inset-bottom,0px))!important;
+    box-shadow:0 -20px 60px rgba(0,0,0,.34)!important;
+  }
+  .mkt-install-guide-box-v130 h3{
+    margin:0 0 8px!important;
+    font-size:20px!important;
+    font-weight:1000!important;
+    color:#0f172a!important;
+  }
+  .mkt-install-guide-box-v130 p{
+    margin:0 0 12px!important;
+    color:#475569!important;
+    font-size:14px!important;
+    line-height:1.45!important;
+  }
+  .mkt-install-steps-v130{
+    background:#f8fafc!important;
+    border:1px solid #e2e8f0!important;
+    border-radius:16px!important;
+    padding:12px!important;
+    color:#334155!important;
+    font-size:13px!important;
+    line-height:1.55!important;
+    margin:10px 0 14px!important;
+  }
+  .mkt-install-guide-actions-v130{display:flex!important;gap:10px!important;}
+  .mkt-install-guide-actions-v130 button{
+    flex:1!important;
+    border:0!important;
+    border-radius:15px!important;
+    padding:13px 10px!important;
+    font-weight:1000!important;
+    cursor:pointer!important;
+  }
+  .mkt-install-go-v130{background:linear-gradient(135deg,#2563eb,#7c3aed)!important;color:#fff!important;}
+  .mkt-install-close-v130{background:#eef2ff!important;color:#312e81!important;}
+
+  /* Bot luôn có thể click và mở panel */
+  .floating-bot{
+    z-index:2147483400!important;
+    pointer-events:auto!important;
+  }
+  .bot-bubble{
+    pointer-events:auto!important;
+    touch-action:manipulation!important;
+    cursor:pointer!important;
+    position:relative!important;
+    z-index:2147483402!important;
+  }
+  .bot-panel{
+    z-index:2147483403!important;
+    pointer-events:auto!important;
+  }
+  .bot-panel.mkt-bot-open,
+  body.mkt-support-open .bot-panel{
+    display:block!important;
+    opacity:1!important;
+    visibility:visible!important;
+  }
+  .bot-input input,.bot-input button,.bot-actions button{
+    pointer-events:auto!important;
+  }
+
+  @media(max-width:820px){
+    .mkt-mobile-download-v130{display:inline-flex!important;}
+    body{padding-top:54px!important;}
+    .floating-bot{
+      right:14px!important;
+      bottom:calc(18px + env(safe-area-inset-bottom,0px))!important;
+    }
+    .bot-bubble{width:62px!important;height:62px!important;font-size:28px!important;}
+    .bot-panel{
+      position:fixed!important;
+      left:10px!important;
+      right:10px!important;
+      bottom:calc(88px + env(safe-area-inset-bottom,0px))!important;
+      width:auto!important;
+      max-width:none!important;
+      max-height:74vh!important;
+      border-radius:22px!important;
+      overflow:hidden!important;
+    }
+    .bot-body{max-height:40vh!important;}
+  }
+</style>
+
+<button type="button" class="mkt-mobile-download-v130" id="mktDownloadAppV130" aria-label="Tải GPT MKT">
+  <span class="mkt-dot"></span>
+  <span>GPT MKT <small>Tải xuống</small></span>
+</button>
+
+<div class="mkt-install-guide-v130" id="mktInstallGuideV130" aria-hidden="true">
+  <div class="mkt-install-guide-box-v130">
+    <h3>Cài GPT MKT Pro vào điện thoại</h3>
+    <p id="mktInstallIntroV130">Bấm cài để đưa ứng dụng ra màn hình chính.</p>
+    <div class="mkt-install-steps-v130" id="mktInstallStepsV130"></div>
+    <div class="mkt-install-guide-actions-v130">
+      <button type="button" class="mkt-install-go-v130" id="mktInstallGoV130">Cài ngay</button>
+      <button type="button" class="mkt-install-close-v130" id="mktInstallCloseV130">Đóng</button>
+    </div>
+  </div>
+</div>
+
+<script id="mkt-v130-device-chat-install-js">
+(function(){
+  'use strict';
+
+  var deferredPrompt=null;
+  var supportPollStarted=false;
+  var lastSupportId=Number(localStorage.getItem('mkt_support_last_id')||0);
+
+  function q(s,r){return (r||document).querySelector(s);}
+  function qa(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s));}
+  function byId(id){return document.getElementById(id);}
+  function esc(s){return String(s||'').replace(/[&<>"']/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]});}
+  function isIOS(){return /iphone|ipad|ipod/i.test(navigator.userAgent);}
+  function isAndroid(){return /android/i.test(navigator.userAgent);}
+  function isStandalone(){return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone===true;}
+
+  function makeDeviceId(){
+    var id='';
+    try{id=localStorage.getItem('mkt_device_id')||'';}catch(e){}
+    if(!id || id==='Đang tạo...' || id.length<8){
+      id='MKT-'+Math.random().toString(36).slice(2,8).toUpperCase()+Date.now().toString().slice(-6);
+      try{localStorage.setItem('mkt_device_id',id);}catch(e){}
+    }
+    try{document.cookie='mkt_device_id='+encodeURIComponent(id)+'; path=/; max-age='+(60*60*24*365*5)+'; SameSite=Lax';}catch(e){}
+    return String(id).toUpperCase();
+  }
+
+  function ensureDeviceCard(){
+    var id=makeDeviceId();
+    var existing=byId('mktDeviceCardV130');
+    var brand=q('.v2-brand') || q('.sidebar .brand') || q('.sidebar') || q('.v2-sidebar') || q('[class*="sidebar"]');
+    if(!brand) return;
+    if(!existing){
+      var card=document.createElement('div');
+      card.id='mktDeviceCardV130';
+      card.className='mkt-device-card-v130';
+      card.innerHTML='<div class="mkt-device-label">ID thiết bị</div><div class="mkt-device-value" id="mktDeviceValueV130"></div><div class="mkt-device-status">Trạng thái: Dùng thử miễn phí 3 ngày</div>';
+      var after=q('.v2-brand-sub', brand) || q('.v2-brand-title', brand) || brand.firstElementChild;
+      if(after && after.parentNode===brand){ after.insertAdjacentElement('afterend', card); }
+      else { brand.insertBefore(card, brand.firstChild ? brand.firstChild.nextSibling : null); }
+    }
+    var val=byId('mktDeviceValueV130');
+    if(val) val.textContent=id;
+    qa('#sidebarDeviceId,.device-id-value,[data-device-id-text]').forEach(function(el){el.textContent=id;});
+  }
+
+  function panel(){return byId('floatingBotPanel') || q('.bot-panel');}
+  function bodyBox(){return byId('floatingBotBody') || q('.bot-body');}
+  function inputBox(){return byId('botInputText') || q('.bot-input input');}
+  function scrollBot(){var b=bodyBox(); if(b) b.scrollTop=b.scrollHeight;}
+
+  function appendBot(sender,msg,msgId){
+    var b=bodyBox(); if(!b) return;
+    if(msgId && b.querySelector('[data-support-id="'+msgId+'"]')) return;
+    var name=sender==='admin'?'Admin hỗ trợ':(sender==='user'?'Bạn':'Bot hỗ trợ');
+    var cls=sender==='admin'||sender==='ai'?'bot-msg ai':'bot-msg';
+    var div=document.createElement('div');
+    div.className=cls;
+    if(msgId) div.setAttribute('data-support-id',String(msgId));
+    div.innerHTML='<b>'+name+':</b><br>'+esc(msg).replace(/\n/g,'<br>');
+    b.appendChild(div);
+    scrollBot();
+  }
+
+  async function supportSend(text){
+    if(!text) return;
+    try{
+      var res=await fetch('/support_send',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({device_id:makeDeviceId(),sender:'user',message:text})
+      });
+      var data=await res.json().catch(function(){return {};});
+      if(data && data.id){
+        lastSupportId=Math.max(lastSupportId,Number(data.id)||0);
+        try{localStorage.setItem('mkt_support_last_id',String(lastSupportId));}catch(e){}
+      }
+    }catch(e){}
+  }
+
+  async function pollSupport(){
+    try{
+      var res=await fetch('/support_poll?device_id='+encodeURIComponent(makeDeviceId())+'&after_id='+encodeURIComponent(lastSupportId),{cache:'no-store'});
+      var data=await res.json().catch(function(){return {messages:[]};});
+      (data.messages||[]).forEach(function(m){
+        var mid=Number(m.id)||0;
+        if(mid<=lastSupportId) return;
+        lastSupportId=mid;
+        try{localStorage.setItem('mkt_support_last_id',String(lastSupportId));}catch(e){}
+        if(String(m.sender||'').toLowerCase()==='admin'){
+          appendBot('admin',m.message,mid);
+          openBot();
+        }
+      });
+    }catch(e){}
+  }
+
+  function startSupportPoll(){
+    if(supportPollStarted) return;
+    supportPollStarted=true;
+    pollSupport();
+    setInterval(pollSupport,3500);
+  }
+
+  function openBot(){
+    var p=panel(); if(!p) return;
+    p.classList.add('mkt-bot-open');
+    p.style.display='block';
+    p.style.opacity='1';
+    p.style.visibility='visible';
+    document.body.classList.add('mkt-support-open');
+    startSupportPoll();
+    setTimeout(scrollBot,80);
+  }
+  function closeBot(){
+    var p=panel(); if(!p) return;
+    p.classList.remove('mkt-bot-open');
+    p.style.display='none';
+    document.body.classList.remove('mkt-support-open');
+  }
+  function toggleBot(){
+    var p=panel(); if(!p) return;
+    if(p.classList.contains('mkt-bot-open') || p.style.display==='block') closeBot(); else openBot();
+  }
+
+  window.openFloatingBot=openBot;
+  window.closeFloatingBot=closeBot;
+  window.toggleFloatingBot=toggleBot;
+
+  window.sendBotInput=function(){
+    var input=inputBox();
+    if(!input || !input.value.trim()) return;
+    var text=input.value.trim();
+    input.value='';
+    appendBot('user',text);
+    supportSend(text);
+    setTimeout(function(){appendBot('ai','Đã nhận tin nhắn của anh/chị. Admin sẽ phản hồi trực tiếp tại khung chat này.');},350);
+    startSupportPoll();
+  };
+
+  window.botQuick=function(text){
+    openBot();
+    var input=inputBox();
+    if(input){input.value=String(text||'');}
+    window.sendBotInput();
+  };
+
+  document.addEventListener('click',function(e){
+    var bot=e.target.closest('.bot-bubble,.floating-bot,[data-open-support-bot]');
+    if(!bot) return;
+    if(e.target.closest('.bot-panel')) return;
+    e.preventDefault();
+    e.stopPropagation();
+    if(e.stopImmediatePropagation) e.stopImmediatePropagation();
+    toggleBot();
+  },true);
+
+  document.addEventListener('click',function(e){
+    if(e.target.closest('.bot-close')){
+      e.preventDefault();
+      e.stopPropagation();
+      closeBot();
+    }
+  },true);
+
+  document.addEventListener('keydown',function(e){
+    if(e.key==='Enter' && e.target && (e.target.id==='botInputText' || e.target.closest('.bot-input'))){
+      e.preventDefault();
+      window.sendBotInput();
+    }
+  },true);
+
+  window.addEventListener('beforeinstallprompt',function(e){
+    e.preventDefault();
+    deferredPrompt=e;
+  });
+
+  function guideText(){
+    var intro=byId('mktInstallIntroV130'), steps=byId('mktInstallStepsV130'), go=byId('mktInstallGoV130');
+    if(isIOS()){
+      if(intro) intro.textContent='iPhone không cho website tự cài 1 chạm. Làm theo 3 bước dưới đây để đưa app ra màn hình chính.';
+      if(steps) steps.innerHTML='1. Bấm biểu tượng <b>Chia sẻ</b> trên thanh trình duyệt.<br>2. Chọn <b>Thêm vào màn hình chính</b>.<br>3. Bấm <b>Thêm</b> để hoàn tất.';
+      if(go) go.textContent='Đã hiểu';
+    }else if(deferredPrompt){
+      if(intro) intro.textContent='Bấm Cài ngay để thêm GPT MKT Pro ra màn hình chính.';
+      if(steps) steps.innerHTML='Sau khi cài, khách mở như app riêng, không cần vào trình duyệt.';
+      if(go) go.textContent='Cài ngay';
+    }else{
+      if(intro) intro.textContent='Trình duyệt chưa bật popup cài tự động. Vẫn có thể cài bằng menu trình duyệt.';
+      if(steps) steps.innerHTML='Android Chrome: bấm menu <b>⋮</b> → <b>Thêm vào màn hình chính</b> hoặc <b>Cài đặt ứng dụng</b>.';
+      if(go) go.textContent='Đã hiểu';
+    }
+  }
+
+  async function installApp(){
+    if(isStandalone()) return;
+    if(deferredPrompt && !isIOS()){
+      deferredPrompt.prompt();
+      await deferredPrompt.userChoice.catch(function(){});
+      deferredPrompt=null;
+      return;
+    }
+    guideText();
+    var sheet=byId('mktInstallGuideV130');
+    if(sheet) sheet.classList.add('open');
+  }
+
+  document.addEventListener('click',function(e){
+    var btn=e.target.closest('#mktDownloadAppV130,[data-mkt-install-app],[data-install-app]');
+    if(!btn) return;
+    e.preventDefault();
+    e.stopPropagation();
+    if(e.stopImmediatePropagation) e.stopImmediatePropagation();
+    installApp();
+  },true);
+
+  document.addEventListener('click',function(e){
+    if(e.target.closest('#mktInstallCloseV130')){
+      var sheet=byId('mktInstallGuideV130'); if(sheet) sheet.classList.remove('open');
+    }
+    if(e.target.closest('#mktInstallGoV130')){
+      var sheet=byId('mktInstallGuideV130');
+      if(deferredPrompt && !isIOS()){
+        var dp=deferredPrompt; deferredPrompt=null; dp.prompt(); dp.userChoice.catch(function(){});
+        if(sheet) sheet.classList.remove('open');
+      }else{
+        if(sheet) sheet.classList.remove('open');
+      }
+    }
+  },true);
+
+  function boot(){
+    ensureDeviceCard();
+    startSupportPoll();
+    if(isStandalone()){
+      var b=byId('mktDownloadAppV130'); if(b) b.style.display='none';
+    }
+    if('serviceWorker' in navigator){
+      navigator.serviceWorker.register('/service-worker.js',{scope:'/'}).catch(function(){});
+    }
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',boot); else boot();
+  setTimeout(boot,700);
+  setTimeout(ensureDeviceCard,1600);
+})();
+</script>
+
+
+
+<!-- GPT MKT FINAL MOBILE INSTALL + SUPPORT CHAT OVERRIDE 20260610 -->
+<style id="gpt-mkt-final-mobile-chat-css">
+  /* Ẩn các nút cài app cũ để tránh chồng click */
+  #mktTopDownloadBar,#mktMobileInstallQuick,#mktPhoneInstallFloat,#mktPhoneInstallEntry,#mktMobileInstallMenu,
+  #mktInstallPanel,.app-install-card,.app-install-banner,.v2-install-box,.mkt-mobile-install-menu{
+    display:none!important;visibility:hidden!important;pointer-events:none!important;
+  }
+  .gptmkt-left-dock-final{
+    position:fixed!important;left:12px!important;bottom:calc(18px + env(safe-area-inset-bottom,0px))!important;
+    z-index:2147483646!important;display:flex!important;flex-direction:column!important;gap:10px!important;
+    font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif!important;pointer-events:auto!important;
+  }
+  .gptmkt-install-btn-final{
+    border:0!important;border-radius:999px!important;padding:11px 14px!important;min-width:128px!important;
+    display:inline-flex!important;align-items:center!important;justify-content:center!important;gap:8px!important;
+    color:#fff!important;background:linear-gradient(135deg,#0ea5e9,#2563eb,#7c3aed)!important;
+    box-shadow:0 16px 38px rgba(37,99,235,.38),inset 0 1px 0 rgba(255,255,255,.22)!important;
+    font-size:14px!important;font-weight:1000!important;line-height:1.1!important;cursor:pointer!important;
+    animation:gptMktSoftMoveFinal 3.8s ease-in-out infinite!important;touch-action:manipulation!important;
+  }
+  .gptmkt-install-btn-final small{display:block!important;font-size:11px!important;font-weight:900!important;opacity:.92!important;margin-top:2px!important}
+  .gptmkt-install-dot-final{width:10px!important;height:10px!important;border-radius:999px!important;background:#22c55e!important;box-shadow:0 0 0 6px rgba(34,197,94,.16),0 0 16px rgba(34,197,94,.82)!important;flex:0 0 auto!important;}
+  @keyframes gptMktSoftMoveFinal{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+
+  .gptmkt-chat-btn-final{
+    position:fixed!important;right:14px!important;bottom:calc(18px + env(safe-area-inset-bottom,0px))!important;
+    z-index:2147483647!important;width:68px!important;height:68px!important;border-radius:999px!important;border:0!important;
+    color:#fff!important;background:linear-gradient(135deg,#111827,#2563eb,#7c3aed)!important;
+    box-shadow:0 18px 44px rgba(37,99,235,.42)!important;display:flex!important;align-items:center!important;justify-content:center!important;
+    font-size:30px!important;cursor:pointer!important;pointer-events:auto!important;touch-action:manipulation!important;animation:gptMktBotBreathFinal 2.4s ease-in-out infinite!important;
+  }
+  .gptmkt-chat-btn-final:after{content:"";position:absolute;right:4px;bottom:5px;width:17px;height:17px;border-radius:50%;background:#22c55e;border:3px solid #fff;box-shadow:0 0 0 5px rgba(34,197,94,.18),0 0 14px rgba(34,197,94,.8)}
+  @keyframes gptMktBotBreathFinal{0%,100%{transform:scale(1)}50%{transform:scale(1.055)}}
+
+  .floating-bot{z-index:2147483645!important;pointer-events:none!important;}
+  .floating-bot .bot-bubble{display:none!important;}
+  #floatingBotPanel,.bot-panel{
+    z-index:2147483647!important;pointer-events:auto!important;visibility:visible!important;opacity:1!important;
+  }
+  #floatingBotPanel.gptmkt-chat-open-final,.bot-panel.gptmkt-chat-open-final{
+    display:block!important;position:fixed!important;right:14px!important;bottom:calc(96px + env(safe-area-inset-bottom,0px))!important;
+    width:360px!important;max-width:calc(100vw - 28px)!important;max-height:76vh!important;border-radius:24px!important;
+    box-shadow:0 26px 72px rgba(15,23,42,.32)!important;overflow:hidden!important;
+  }
+  .bot-input input,.bot-input button,.bot-actions button,.bot-close{pointer-events:auto!important;}
+  .bot-body{max-height:42vh!important;overflow:auto!important;}
+
+  .gptmkt-install-sheet-final{position:fixed!important;inset:0!important;z-index:2147483647!important;display:none!important;align-items:flex-end!important;justify-content:center!important;background:rgba(2,6,23,.64)!important;backdrop-filter:blur(8px)!important;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif!important;}
+  .gptmkt-install-sheet-final.open{display:flex!important;}
+  .gptmkt-install-box-final{width:min(440px,100vw)!important;background:#fff!important;color:#0f172a!important;border-radius:26px 26px 0 0!important;padding:20px 18px calc(18px + env(safe-area-inset-bottom,0px))!important;box-shadow:0 -24px 70px rgba(15,23,42,.42)!important;}
+  .gptmkt-install-box-final h3{margin:0 0 8px!important;font-size:20px!important;font-weight:1000!important;color:#0f172a!important;}
+  .gptmkt-install-box-final p{margin:8px 0!important;font-size:14px!important;line-height:1.55!important;color:#334155!important;font-weight:760!important;}
+  .gptmkt-install-steps-final{background:#f8fafc!important;border:1px solid #e2e8f0!important;border-radius:16px!important;padding:12px!important;margin:12px 0 14px!important;font-size:13px!important;line-height:1.55!important;color:#334155!important;}
+  .gptmkt-install-actions-final{display:flex!important;gap:10px!important;}
+  .gptmkt-install-actions-final button{flex:1!important;border:0!important;border-radius:15px!important;padding:13px 12px!important;font-weight:1000!important;cursor:pointer!important;}
+  #gptMktInstallGoFinal{background:linear-gradient(135deg,#2563eb,#7c3aed)!important;color:#fff!important;}
+  #gptMktInstallCloseFinal{background:#eef2ff!important;color:#312e81!important;}
+
+  @media(max-width:820px){
+    #floatingBotPanel.gptmkt-chat-open-final,.bot-panel.gptmkt-chat-open-final{left:10px!important;right:10px!important;width:auto!important;bottom:calc(92px + env(safe-area-inset-bottom,0px))!important;}
+    .gptmkt-install-btn-final{min-width:116px!important;padding:10px 12px!important;font-size:13px!important;}
+  }
+</style>
+<script id="gpt-mkt-final-mobile-chat-js">
+(function(){
+  'use strict';
+  if(window.__gptMktFinalMobileChatReady) return;
+  window.__gptMktFinalMobileChatReady=true;
+
+  var deferredPrompt=null;
+  var lastSupportId=Number(localStorage.getItem('mkt_support_last_id')||0);
+  var pollTimer=null;
+  function q(s,r){return (r||document).querySelector(s)}
+  function byId(id){return document.getElementById(id)}
+  function esc(v){return String(v||'').replace(/[&<>"']/g,function(ch){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]})}
+  function ios(){return /iphone|ipad|ipod/i.test(navigator.userAgent)}
+  function android(){return /android/i.test(navigator.userAgent)}
+  function standalone(){return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone===true}
+  function deviceId(){
+    var id='';try{id=localStorage.getItem('mkt_device_id')||''}catch(e){}
+    if(!id || id==='Đang tạo...' || id.length<8){id='MKT-'+Math.random().toString(36).slice(2,8).toUpperCase()+Date.now().toString().slice(-6);try{localStorage.setItem('mkt_device_id',id)}catch(e){}}
+    try{document.cookie='mkt_device_id='+encodeURIComponent(id)+'; path=/; max-age='+(60*60*24*365*5)+'; SameSite=Lax'}catch(e){}
+    return String(id).toUpperCase();
+  }
+  window.ensureDeviceId=deviceId;
+
+  function ensureDock(){
+    if(!byId('gptMktLeftDockFinal')){
+      var dock=document.createElement('div');dock.id='gptMktLeftDockFinal';dock.className='gptmkt-left-dock-final';
+      dock.innerHTML='<button type="button" id="gptMktInstallFinal" class="gptmkt-install-btn-final" aria-label="Tải GPT MKT"><span class="gptmkt-install-dot-final"></span><span>GPT MKT<small>Tải xuống</small></span></button>';
+      document.body.appendChild(dock);
+    }
+    if(!byId('gptMktChatFinal')){
+      var chat=document.createElement('button');chat.type='button';chat.id='gptMktChatFinal';chat.className='gptmkt-chat-btn-final';chat.setAttribute('aria-label','Mở GPT MKT Support');chat.innerHTML='🤖';document.body.appendChild(chat);
+    }
+    if(!byId('gptMktInstallSheetFinal')){
+      var sheet=document.createElement('div');sheet.id='gptMktInstallSheetFinal';sheet.className='gptmkt-install-sheet-final';
+      sheet.innerHTML='<div class="gptmkt-install-box-final"><h3>📱 Cài GPT MKT vào điện thoại</h3><p id="gptMktInstallIntroFinal">Đưa app ra màn hình chính để khách mở nhanh như ứng dụng.</p><div class="gptmkt-install-steps-final" id="gptMktInstallStepsFinal"></div><div class="gptmkt-install-actions-final"><button type="button" id="gptMktInstallGoFinal">Cài ngay</button><button type="button" id="gptMktInstallCloseFinal">Đóng</button></div></div>';
+      document.body.appendChild(sheet);
+    }
+  }
+
+  function panel(){return byId('floatingBotPanel') || q('.bot-panel')}
+  function bodyBox(){return byId('floatingBotBody') || q('.bot-body')}
+  function inputBox(){return byId('botInputText') || q('.bot-input input')}
+  function scrollBot(){var b=bodyBox(); if(b) b.scrollTop=b.scrollHeight}
+  function appendMsg(role,msg,id){
+    var b=bodyBox(); if(!b) return;
+    if(id && b.querySelector('[data-support-id="'+id+'"]')) return;
+    var div=document.createElement('div'); div.className=(role==='user')?'bot-msg':'bot-msg ai';
+    if(id) div.setAttribute('data-support-id',String(id));
+    var name=role==='admin'?'Admin hỗ trợ':(role==='user'?'Bạn':'Bot hỗ trợ');
+    div.innerHTML='<b>'+name+':</b><br>'+esc(msg).replace(/\n/g,'<br>'); b.appendChild(div); scrollBot();
+  }
+  function greet(){
+    var b=bodyBox(); if(!b || b.dataset.gptMktGreeted==='1') return; b.dataset.gptMktGreeted='1';
+    if(!b.innerHTML.trim()) appendMsg('ai','Xin chào 👋\nEm là GPT MKT Support. Anh/chị cần hỗ trợ tải app, kích hoạt Premium, thanh toán hay lỗi kỹ thuật ạ?');
+  }
+  function openChat(){var p=panel(); if(!p) return; p.classList.add('gptmkt-chat-open-final'); p.style.display='block'; p.style.opacity='1'; p.style.visibility='visible'; greet(); startPoll(); setTimeout(scrollBot,80)}
+  function closeChat(){var p=panel(); if(!p) return; p.classList.remove('gptmkt-chat-open-final'); p.style.display='none'}
+  function toggleChat(){var p=panel(); if(p && (p.classList.contains('gptmkt-chat-open-final') || p.style.display==='block')) closeChat(); else openChat()}
+  window.openFloatingBot=openChat; window.closeFloatingBot=closeChat; window.toggleFloatingBot=toggleChat;
+
+  async function saveSupport(text){try{var r=await fetch('/support_send',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({device_id:deviceId(),sender:'user',message:text})});var d=await r.json().catch(function(){return{}});if(d.id){lastSupportId=Math.max(lastSupportId,Number(d.id)||0);localStorage.setItem('mkt_support_last_id',String(lastSupportId));}}catch(e){}}
+  async function poll(){try{var r=await fetch('/support_poll?device_id='+encodeURIComponent(deviceId())+'&after_id='+encodeURIComponent(lastSupportId),{cache:'no-store'});var d=await r.json().catch(function(){return{messages:[]}});(d.messages||[]).forEach(function(m){var mid=Number(m.id)||0;if(mid<=lastSupportId)return;lastSupportId=mid;localStorage.setItem('mkt_support_last_id',String(lastSupportId));if(String(m.sender||'').toLowerCase()==='admin'){appendMsg('admin',m.message,mid);openChat();}})}catch(e){}}
+  function startPoll(){if(pollTimer) return; poll(); pollTimer=setInterval(poll,3500)}
+  function localReply(text){var low=String(text||'').toLowerCase();if(low.indexOf('tải')>=0||low.indexOf('cài')>=0)return 'Anh/chị bấm nút GPT MKT bên trái để cài ra màn hình chính. Android có thể cài trực tiếp, iPhone làm theo hướng dẫn Chia sẻ → Thêm vào màn hình chính.'; if(low.indexOf('thanh toán')>=0||low.indexOf('qr')>=0)return 'Sau khi thanh toán, anh/chị gửi ID thiết bị + ảnh thanh toán + gói đăng ký. Nếu 5 phút chưa kích hoạt, liên hệ Zalo 036 338 2629.'; if(low.indexOf('premium')>=0||low.indexOf('gói')>=0)return 'Các gói hiện có: 1 tháng 159K, 3 tháng 359K, 6 tháng 559K, 1 năm 859K, Nhà bán hàng chuyên nghiệp 1.959K.'; return 'Em đã nhận tin nhắn. Admin sẽ phản hồi trực tiếp trong khung chat này ạ.'}
+  window.sendBotInput=function(){var input=inputBox(); if(!input || !input.value.trim()) return; var text=input.value.trim(); input.value=''; openChat(); appendMsg('user',text); saveSupport(text); setTimeout(function(){appendMsg('ai',localReply(text))},350)};
+  window.botQuick=function(text){openChat(); var input=inputBox(); if(input){input.value=String(text||'')} window.sendBotInput()};
+
+  function setGuide(){var intro=byId('gptMktInstallIntroFinal'),steps=byId('gptMktInstallStepsFinal'),go=byId('gptMktInstallGoFinal'); if(ios()){if(intro)intro.textContent='iPhone cần thêm app thủ công bằng nút Chia sẻ của Safari.'; if(steps)steps.innerHTML='1. Mở bằng <b>Safari</b>.<br>2. Bấm nút <b>Chia sẻ</b>.<br>3. Chọn <b>Thêm vào màn hình chính</b> → <b>Thêm</b>.'; if(go)go.textContent='Đã hiểu';}else if(deferredPrompt && android()){if(intro)intro.textContent='Bấm Cài ngay để đưa GPT MKT ra màn hình chính.'; if(steps)steps.innerHTML='Sau khi cài, khách mở như app riêng, thao tác nhanh hơn trên điện thoại.'; if(go)go.textContent='Cài ngay';}else{if(intro)intro.textContent='Trình duyệt chưa bật popup cài tự động.'; if(steps)steps.innerHTML='Android Chrome: bấm menu <b>⋮</b> → <b>Thêm vào màn hình chính</b> hoặc <b>Cài đặt ứng dụng</b>.<br>iPhone Safari: <b>Chia sẻ</b> → <b>Thêm vào màn hình chính</b>.'; if(go)go.textContent='Đã hiểu';}}
+  async function install(){if(standalone())return; if(deferredPrompt && android()){var dp=deferredPrompt; deferredPrompt=null; try{dp.prompt(); await dp.userChoice}catch(e){} return;} setGuide(); var s=byId('gptMktInstallSheetFinal'); if(s)s.classList.add('open')}
+
+  window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();deferredPrompt=e;window.__gptMktDeferredPrompt=e});
+  document.addEventListener('click',function(e){var btn=e.target.closest('#gptMktInstallFinal'); if(btn){e.preventDefault();e.stopPropagation(); if(e.stopImmediatePropagation)e.stopImmediatePropagation(); install();}},true);
+  document.addEventListener('click',function(e){var btn=e.target.closest('#gptMktChatFinal,.bot-bubble,[data-open-support-bot]'); if(btn){e.preventDefault();e.stopPropagation(); if(e.stopImmediatePropagation)e.stopImmediatePropagation(); toggleChat();}},true);
+  document.addEventListener('click',function(e){if(e.target.closest('.bot-close')){e.preventDefault();e.stopPropagation();closeChat()} if(e.target.closest('#gptMktInstallCloseFinal')){var s=byId('gptMktInstallSheetFinal'); if(s)s.classList.remove('open')} if(e.target.closest('#gptMktInstallGoFinal')){if(deferredPrompt && android()){var dp=deferredPrompt; deferredPrompt=null; try{dp.prompt();dp.userChoice}catch(_e){}} var sh=byId('gptMktInstallSheetFinal'); if(sh)sh.classList.remove('open')}},true);
+  document.addEventListener('keydown',function(e){if(e.key==='Enter' && e.target && (e.target.id==='botInputText' || e.target.closest('.bot-input'))){e.preventDefault();window.sendBotInput()}},true);
+
+  function boot(){ensureDock();deviceId();startPoll(); if(standalone()){var d=byId('gptMktLeftDockFinal'); if(d)d.style.display='none'} if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js').catch(function(){})}}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot(); setTimeout(boot,600);
+})();
+</script>
 
 </body></html>
 """
 
 @app.route("/admin")
 def admin_home():
-    return render_template_string(ADMIN_HTML, rows=get_premium_requests(), support_rows=get_support_messages(100))
+    return render_template_string(ADMIN_HTML, rows=get_premium_requests(), support_rows=get_support_messages(limit=200), admin_stats=admin_ceo_stats())
+
+
+@app.route('/api/admin/ceo_dashboard')
+def api_admin_ceo_dashboard():
+    return jsonify(admin_ceo_stats())
 
 @app.route("/admin/premium_action", methods=["POST"])
 def admin_premium_action():
@@ -4762,8 +9778,33 @@ def api_device_status():
 def healthz_route():
     return jsonify({"ok": True, "app": APP_TITLE, "pages": len(get_pages_dynamic())})
 
+@app.route("/support_poll")
+def support_poll_route():
+    device_id = (request.args.get("device_id") or get_device_id()).strip().upper()
+    after_id = request.args.get("after_id", 0)
+    rows = get_support_messages(device_id=device_id, after_id=after_id, limit=100)
+    messages = [{"id": r[0], "device_id": r[1], "sender": r[2], "message": r[3], "created_at": r[4]} for r in rows]
+    last_id = messages[-1]["id"] if messages else int(after_id or 0)
+    return jsonify({"success": True, "messages": messages, "last_id": last_id})
 
+@app.route("/support_send", methods=["POST"])
+def support_send_route():
+    data = request.get_json(silent=True) or request.form
+    device_id = (data.get("device_id") or get_device_id()).strip().upper()
+    message = (data.get("message") or "").strip()
+    sender = (data.get("sender") or "user").strip().lower()
+    msg_id = save_support_message(device_id, sender, message)
+    if not msg_id:
+        return jsonify({"success": False, "message": "Tin nhắn trống."}), 400
+    return jsonify({"success": True, "id": msg_id, "message": "Đã gửi tin nhắn hỗ trợ."})
 
+@app.route("/admin/support_reply", methods=["POST"])
+def admin_support_reply_route():
+    device_id = (request.form.get("device_id") or "").strip().upper()
+    message = (request.form.get("message") or "").strip()
+    if device_id and message:
+        save_support_message(device_id, "admin", message)
+    return admin_home()
 
 @app.route("/page_comment_queue_add", methods=["POST"])
 def page_comment_queue_add_route():
@@ -4873,73 +9914,458 @@ def api_templates():
     return jsonify(current_library(industry))
 
 
-
-
-
-@app.route("/support_send", methods=["POST"])
-@app.route("/support_message", methods=["POST"])
-def support_send_route():
-    data = request.get_json(silent=True) or request.form
-    device_id = (data.get("device_id") or get_device_id()).strip().upper()
-    phone = (data.get("phone") or "").strip()
-    email = (data.get("email") or "").strip()
-    message = (data.get("message") or "").strip()
-    if not message:
-        return jsonify({"ok": False, "message": "Vui lòng nhập nội dung cần hỗ trợ."}), 400
-    full_message = message
-    if phone or email:
-        full_message = f"{message}\nSĐT/Zalo: {phone or 'Chưa nhập'}\nEmail: {email or 'Chưa nhập'}"
-    save_support_message(device_id, "customer", full_message)
-    return jsonify({"ok": True, "message": "Đã gửi cho Admin. Kỹ thuật sẽ phản hồi ngay trong khung chat."})
-
-@app.route("/support_poll")
-def support_poll_route():
-    device_id = (request.args.get("device_id") or get_device_id()).strip().upper()
-    rows = get_support_messages(100, device_id=device_id)
-    return jsonify({"ok": True, "messages": [{"id": r[0], "device_id": r[1], "sender": r[2], "message": r[3], "created_at": r[4]} for r in rows]})
-
-@app.route("/admin/support_reply", methods=["POST"])
-def admin_support_reply_route():
-    device_id = (request.form.get("device_id") or "").strip().upper()
-    message = (request.form.get("message") or "").strip()
-    if device_id and message:
-        save_support_message(device_id, "admin", message)
-    return admin_home()
-
-@app.route("/manifest.json")
-def manifest_route():
+@app.get("/manifest.json")
+def pwa_manifest():
     return jsonify({
-        "name": "Mkt Automation Pro",
+        "name": "GPT MKT Pro",
         "short_name": "GPT MKT",
         "start_url": "/",
         "scope": "/",
         "display": "standalone",
-        "background_color": "#0f172a",
+        "background_color": "#ffffff",
         "theme_color": "#2563eb",
+        "orientation": "portrait",
         "icons": [
-            {"src": "/pwa-icon-192.png", "sizes": "192x192", "type": "image/png"},
-            {"src": "/pwa-icon-512.png", "sizes": "512x512", "type": "image/png"}
+            {"src": "/static/icon-192.png", "sizes": "192x192", "type": "image/png"},
+            {"src": "/static/icon-512.png", "sizes": "512x512", "type": "image/png"}
         ]
     })
 
-@app.route("/sw.js")
-def service_worker_route():
-    return app.response_class("self.addEventListener('fetch', function(event){});", mimetype="application/javascript")
+@app.get("/sw.js")
+def pwa_sw():
+    js = """
+const CACHE_NAME = "gptmkt-v1";
+const urlsToCache = [
+  "/",
+  "/manifest.json"
+];
 
-@app.route("/pwa-icon-192.png")
-@app.route("/pwa-icon-512.png")
-def pwa_icon_route():
-    # PNG 1x1 trong suốt để PWA không lỗi thiếu icon; có thể thay bằng logo thật sau.
+self.addEventListener("install", event => {
+  event.waitUntil(
+    caches.open(CACHE_NAME).then(cache => cache.addAll(urlsToCache)).catch(() => Promise.resolve())
+  );
+  self.skipWaiting();
+});
+
+self.addEventListener("activate", event => {
+  event.waitUntil(self.clients.claim());
+});
+
+self.addEventListener("fetch", event => {
+  event.respondWith(
+    fetch(event.request).catch(() => caches.match(event.request))
+  );
+});
+"""
+    return app.response_class(js, mimetype="application/javascript")
+
+@app.get("/service-worker.js")
+def pwa_service_worker():
+    return pwa_sw()
+
+@app.get("/static/icon-192.png")
+def static_icon_192():
+    if os.path.exists(os.path.join("static", "icon-192.png")):
+        return send_file(os.path.join("static", "icon-192.png"), mimetype="image/png")
+    if os.path.exists("pwa-icon-192.png"):
+        return send_file("pwa-icon-192.png", mimetype="image/png")
     import base64
-    data = base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=')
-    return app.response_class(data, mimetype='image/png')
+    png = base64.b64decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=")
+    return app.response_class(png, mimetype="image/png")
+
+@app.get("/static/icon-512.png")
+def static_icon_512():
+    if os.path.exists(os.path.join("static", "icon-512.png")):
+        return send_file(os.path.join("static", "icon-512.png"), mimetype="image/png")
+    if os.path.exists("pwa-icon-512.png"):
+        return send_file("pwa-icon-512.png", mimetype="image/png")
+    import base64
+    png = base64.b64decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=")
+    return app.response_class(png, mimetype="image/png")
+
+@app.get("/pwa-icon-192.png")
+def pwa_icon_192():
+    if os.path.exists("pwa-icon-192.png"):
+        return send_file("pwa-icon-192.png", mimetype="image/png")
+    import base64
+    png = base64.b64decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=")
+    return app.response_class(png, mimetype="image/png")
+
+@app.get("/pwa-icon-512.png")
+def pwa_icon_512():
+    if os.path.exists("pwa-icon-512.png"):
+        return send_file("pwa-icon-512.png", mimetype="image/png")
+    import base64
+    png = base64.b64decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=")
+    return app.response_class(png, mimetype="image/png")
 
 
+# =========================
+# CTV / AFFILIATE CENTER V1
+# =========================
+def ensure_affiliate_tables():
+    conn = db(); c = conn.cursor()
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS affiliate_users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            device_id TEXT UNIQUE,
+            full_name TEXT,
+            phone TEXT,
+            email TEXT,
+            affiliate_code TEXT UNIQUE,
+            custom_slug TEXT UNIQUE,
+            level_name TEXT DEFAULT 'CTV thường',
+            commission_percent REAL DEFAULT 20,
+            status TEXT DEFAULT 'active',
+            created_at TEXT,
+            updated_at TEXT
+        )
+    """)
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS affiliate_clicks (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            affiliate_code TEXT,
+            visitor_device_id TEXT,
+            ip TEXT,
+            user_agent TEXT,
+            created_at TEXT
+        )
+    """)
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS affiliate_referrals (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            affiliate_code TEXT,
+            customer_device_id TEXT,
+            customer_phone TEXT,
+            customer_email TEXT,
+            package_key TEXT,
+            package_name TEXT,
+            amount INTEGER DEFAULT 0,
+            commission_percent REAL DEFAULT 20,
+            commission_amount INTEGER DEFAULT 0,
+            status TEXT DEFAULT 'Chờ duyệt',
+            premium_request_id INTEGER,
+            created_at TEXT,
+            approved_at TEXT
+        )
+    """)
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS affiliate_withdrawals (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            affiliate_code TEXT,
+            amount INTEGER DEFAULT 0,
+            bank_name TEXT,
+            bank_number TEXT,
+            account_name TEXT,
+            status TEXT DEFAULT 'Chờ duyệt',
+            admin_note TEXT,
+            created_at TEXT,
+            paid_at TEXT
+        )
+    """)
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS affiliate_settings (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            level_name TEXT UNIQUE,
+            min_orders INTEGER DEFAULT 0,
+            commission_percent REAL DEFAULT 20,
+            note TEXT,
+            updated_at TEXT
+        )
+    """)
+    now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    defaults = [
+        ('CTV thường', 0, 20, '0-10 đơn'),
+        ('CTV Bạc', 11, 25, '11-30 đơn'),
+        ('CTV Vàng', 31, 30, '31-70 đơn'),
+        ('CTV Kim Cương', 71, 35, '71+ đơn'),
+    ]
+    for name, min_orders, pct, note in defaults:
+        c.execute("""
+            INSERT OR IGNORE INTO affiliate_settings(level_name,min_orders,commission_percent,note,updated_at)
+            VALUES(?,?,?,?,?)
+        """, (name, min_orders, pct, note, now))
+    try:
+        c.execute("ALTER TABLE premium_upgrade_requests ADD COLUMN affiliate_code TEXT")
+    except Exception:
+        pass
+    conn.commit(); conn.close()
+
+
+def current_affiliate_code():
+    ref = (request.args.get('ref') or request.cookies.get('affiliate_code') or '').strip().upper()
+    ref = ref.replace(' ', '').replace('_', '-')
+    if ref and not ref.startswith('CTV-') and ref.startswith('CTV'):
+        ref = 'CTV-' + ref[3:]
+    return ref[:40]
+
+
+def generate_affiliate_code():
+    ensure_affiliate_tables()
+    conn = db(); c = conn.cursor()
+    while True:
+        code = 'CTV-' + ''.join(random.choice('0123456789') for _ in range(6))
+        c.execute('SELECT id FROM affiliate_users WHERE affiliate_code=?', (code,))
+        if not c.fetchone():
+            conn.close(); return code
+
+
+def get_or_create_affiliate(device_id=None, full_name='', phone='', email=''):
+    ensure_affiliate_tables()
+    device_id = (device_id or get_device_id()).strip().upper()
+    now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    conn = db(); c = conn.cursor()
+    c.execute('SELECT id,device_id,full_name,phone,email,affiliate_code,custom_slug,level_name,commission_percent,status FROM affiliate_users WHERE device_id=?', (device_id,))
+    row = c.fetchone()
+    if row:
+        if full_name or phone or email:
+            c.execute("""
+                UPDATE affiliate_users SET
+                    full_name=COALESCE(NULLIF(?,''),full_name),
+                    phone=COALESCE(NULLIF(?,''),phone),
+                    email=COALESCE(NULLIF(?,''),email),
+                    updated_at=?
+                WHERE device_id=?
+            """, (full_name.strip(), phone.strip(), email.strip(), now, device_id))
+            conn.commit()
+        c.execute('SELECT id,device_id,full_name,phone,email,affiliate_code,custom_slug,level_name,commission_percent,status FROM affiliate_users WHERE device_id=?', (device_id,))
+        row = c.fetchone(); conn.close(); return row
+    code = generate_affiliate_code()
+    slug = code.lower().replace('-', '')
+    c.execute("""
+        INSERT INTO affiliate_users(device_id,full_name,phone,email,affiliate_code,custom_slug,level_name,commission_percent,status,created_at,updated_at)
+        VALUES(?,?,?,?,?,?,?,?,?,?,?)
+    """, (device_id, full_name.strip(), phone.strip(), email.strip(), code, slug, 'CTV thường', 20, 'active', now, now))
+    conn.commit()
+    c.execute('SELECT id,device_id,full_name,phone,email,affiliate_code,custom_slug,level_name,commission_percent,status FROM affiliate_users WHERE device_id=?', (device_id,))
+    row = c.fetchone(); conn.close(); return row
+
+
+def affiliate_summary(affiliate_code):
+    ensure_affiliate_tables()
+    affiliate_code = (affiliate_code or '').strip().upper()
+    conn = db(); c = conn.cursor()
+    def one(sql, params=()):
+        c.execute(sql, params); r = c.fetchone(); return r[0] if r and r[0] is not None else 0
+    clicks = one('SELECT COUNT(*) FROM affiliate_clicks WHERE affiliate_code=?', (affiliate_code,))
+    referrals = one('SELECT COUNT(*) FROM affiliate_referrals WHERE affiliate_code=?', (affiliate_code,))
+    premium = one("SELECT COUNT(*) FROM affiliate_referrals WHERE affiliate_code=? AND status IN ('Đã duyệt','Đã thanh toán')", (affiliate_code,))
+    revenue = one("SELECT COALESCE(SUM(amount),0) FROM affiliate_referrals WHERE affiliate_code=? AND status IN ('Đã duyệt','Đã thanh toán')", (affiliate_code,))
+    commission = one("SELECT COALESCE(SUM(commission_amount),0) FROM affiliate_referrals WHERE affiliate_code=? AND status IN ('Đã duyệt','Đã thanh toán')", (affiliate_code,))
+    paid = one("SELECT COALESCE(SUM(amount),0) FROM affiliate_withdrawals WHERE affiliate_code=? AND status='Đã thanh toán'", (affiliate_code,))
+    pending_withdraw = one("SELECT COALESCE(SUM(amount),0) FROM affiliate_withdrawals WHERE affiliate_code=? AND status='Chờ duyệt'", (affiliate_code,))
+    c.execute("""SELECT customer_device_id,customer_phone,customer_email,package_name,amount,commission_amount,status,created_at
+                 FROM affiliate_referrals WHERE affiliate_code=? ORDER BY id DESC LIMIT 20""", (affiliate_code,))
+    recent = c.fetchall()
+    c.execute("SELECT amount,bank_name,bank_number,account_name,status,created_at,paid_at FROM affiliate_withdrawals WHERE affiliate_code=? ORDER BY id DESC LIMIT 20", (affiliate_code,))
+    withdrawals = c.fetchall()
+    conn.close()
+    return {
+        'clicks': clicks, 'referrals': referrals, 'premium': premium, 'revenue': revenue,
+        'commission': commission, 'paid': paid, 'balance': max(0, int(commission or 0) - int(paid or 0) - int(pending_withdraw or 0)),
+        'pending_withdraw': pending_withdraw, 'recent': recent, 'withdrawals': withdrawals
+    }
+
+
+def record_affiliate_click(affiliate_code):
+    ensure_affiliate_tables()
+    affiliate_code = (affiliate_code or '').strip().upper()
+    if not affiliate_code:
+        return
+    now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    conn = db(); c = conn.cursor()
+    c.execute('SELECT id FROM affiliate_users WHERE affiliate_code=? AND status="active"', (affiliate_code,))
+    if c.fetchone():
+        c.execute("""INSERT INTO affiliate_clicks(affiliate_code,visitor_device_id,ip,user_agent,created_at)
+                     VALUES(?,?,?,?,?)""", (affiliate_code, get_device_id(), request.remote_addr or '', request.headers.get('User-Agent','')[:250], now))
+        conn.commit()
+    conn.close()
+
+
+def create_affiliate_commission_for_request(cursor, request_id):
+    try:
+        cursor.execute("SELECT device_id,phone,email,package_key,package_name,amount,affiliate_code,status FROM premium_upgrade_requests WHERE id=?", (request_id,))
+    except Exception:
+        return False
+    row = cursor.fetchone()
+    if not row:
+        return False
+    device_id, phone, email, package_key, package_name, amount, affiliate_code, req_status = row
+    affiliate_code = (affiliate_code or '').strip().upper()
+    if not affiliate_code:
+        return False
+    cursor.execute('SELECT commission_percent FROM affiliate_users WHERE affiliate_code=? AND status="active"', (affiliate_code,))
+    ar = cursor.fetchone()
+    if not ar:
+        return False
+    pct = float(ar[0] or 20)
+    amount = int(amount or 0)
+    commission = int(round(amount * pct / 100))
+    now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    cursor.execute('SELECT id FROM affiliate_referrals WHERE premium_request_id=?', (request_id,))
+    if cursor.fetchone():
+        return False
+    cursor.execute("""
+        INSERT INTO affiliate_referrals(affiliate_code,customer_device_id,customer_phone,customer_email,package_key,package_name,amount,commission_percent,commission_amount,status,premium_request_id,created_at,approved_at)
+        VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)
+    """, (affiliate_code, device_id, phone, email, package_key, package_name, amount, pct, commission, 'Đã duyệt', request_id, now, now))
+    cursor.execute("""INSERT INTO notifications(title,detail,level,status,created_at) VALUES(?,?,?,?,?)""",
+                   ('Hoa hồng CTV mới', f'{affiliate_code} nhận {commission:,}đ từ {package_name}'.replace(',', '.'), 'success', 'new', now))
+    return True
+
+
+@app.route('/api/affiliate/me', methods=['GET', 'POST'])
+def api_affiliate_me():
+    ensure_affiliate_tables()
+    if request.method == 'POST':
+        data = request.get_json(silent=True) or request.form
+        row = get_or_create_affiliate(full_name=data.get('full_name',''), phone=data.get('phone',''), email=data.get('email',''))
+    else:
+        row = get_or_create_affiliate()
+    _, device_id, full_name, phone, email, code, slug, level, pct, status = row
+    base = request.host_url.rstrip('/')
+    summary = affiliate_summary(code)
+    return jsonify({
+        'ok': True,
+        'device_id': device_id,
+        'full_name': full_name or '',
+        'phone': phone or '',
+        'email': email or '',
+        'affiliate_code': code,
+        'custom_slug': slug or '',
+        'level_name': level or 'CTV thường',
+        'commission_percent': pct or 20,
+        'status': status or 'active',
+        'ref_link': f'{base}/?ref={code}',
+        'pretty_link': f'{base}/ctv/{slug or code.lower().replace("-","")}',
+        'summary': summary
+    })
+
+
+@app.route('/api/affiliate/withdraw', methods=['POST'])
+def api_affiliate_withdraw():
+    ensure_affiliate_tables()
+    data = request.get_json(silent=True) or request.form
+    row = get_or_create_affiliate()
+    code = row[5]
+    summary = affiliate_summary(code)
+    amount = int(str(data.get('amount','0')).replace('.','').replace(',','') or 0)
+    if amount <= 0 or amount > int(summary.get('balance',0)):
+        return jsonify({'ok': False, 'message': 'Số tiền rút không hợp lệ hoặc vượt số dư khả dụng.'}), 400
+    bank = (data.get('bank_name','') or '').strip()
+    number = (data.get('bank_number','') or '').strip()
+    account = (data.get('account_name','') or '').strip()
+    if not bank or not number or not account:
+        return jsonify({'ok': False, 'message': 'Vui lòng nhập đủ ngân hàng, số tài khoản và chủ tài khoản.'}), 400
+    now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    conn = db(); c = conn.cursor()
+    c.execute("""INSERT INTO affiliate_withdrawals(affiliate_code,amount,bank_name,bank_number,account_name,status,admin_note,created_at,paid_at)
+                 VALUES(?,?,?,?,?,?,?,?,?)""", (code, amount, bank, number, account, 'Chờ duyệt', '', now, ''))
+    c.execute("""INSERT INTO notifications(title,detail,level,status,created_at) VALUES(?,?,?,?,?)""",
+              ('CTV yêu cầu rút hoa hồng', f'{code} yêu cầu rút {amount:,}đ'.replace(',', '.'), 'warning', 'new', now))
+    conn.commit(); conn.close()
+    return jsonify({'ok': True, 'message': 'Đã gửi yêu cầu rút hoa hồng về web admin.'})
+
+
+@app.route('/api/admin/affiliate')
+def api_admin_affiliate():
+    ensure_affiliate_tables()
+    conn = db(); c = conn.cursor()
+    c.execute("""SELECT u.id,u.device_id,u.full_name,u.phone,u.email,u.affiliate_code,u.level_name,u.commission_percent,u.status,u.created_at,
+                        COALESCE(COUNT(r.id),0) AS orders,
+                        COALESCE(SUM(CASE WHEN r.status IN ('Đã duyệt','Đã thanh toán') THEN r.amount ELSE 0 END),0) AS revenue,
+                        COALESCE(SUM(CASE WHEN r.status IN ('Đã duyệt','Đã thanh toán') THEN r.commission_amount ELSE 0 END),0) AS commission
+                 FROM affiliate_users u
+                 LEFT JOIN affiliate_referrals r ON r.affiliate_code=u.affiliate_code
+                 GROUP BY u.id ORDER BY u.id DESC LIMIT 200""")
+    users = c.fetchall()
+    c.execute('SELECT id,level_name,min_orders,commission_percent,note,updated_at FROM affiliate_settings ORDER BY min_orders ASC')
+    settings = c.fetchall()
+    c.execute("SELECT id,affiliate_code,amount,bank_name,bank_number,account_name,status,created_at,paid_at FROM affiliate_withdrawals ORDER BY id DESC LIMIT 100")
+    withdrawals = c.fetchall()
+    conn.close()
+    return jsonify({'ok': True, 'users': users, 'settings': settings, 'withdrawals': withdrawals})
+
+
+@app.route('/api/admin/affiliate/settings', methods=['POST'])
+def api_admin_affiliate_settings():
+    ensure_affiliate_tables()
+    data = request.get_json(silent=True) or request.form
+    now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    conn = db(); c = conn.cursor()
+    for key, default in [('normal',20),('silver',25),('gold',30),('diamond',35)]:
+        pct = data.get(key)
+        if pct is None: continue
+        try: pct = float(pct)
+        except Exception: pct = default
+        name = {'normal':'CTV thường','silver':'CTV Bạc','gold':'CTV Vàng','diamond':'CTV Kim Cương'}[key]
+        c.execute('UPDATE affiliate_settings SET commission_percent=?, updated_at=? WHERE level_name=?', (pct, now, name))
+    conn.commit(); conn.close()
+    return jsonify({'ok': True, 'message': 'Đã cập nhật phần trăm hoa hồng.'})
+
+
+
+@app.route('/api/admin/affiliate/user/<int:user_id>', methods=['POST'])
+def api_admin_affiliate_user_update(user_id):
+    ensure_affiliate_tables()
+    data = request.get_json(silent=True) or request.form
+    status = (data.get('status') or 'active').strip()
+    if status not in ['active','paused','blocked']:
+        status = 'active'
+    try:
+        pct = float(data.get('commission_percent', 20))
+    except Exception:
+        pct = 20
+    pct = max(0, min(80, pct))
+    level_name = (data.get('level_name') or '').strip() or None
+    now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    conn = db(); c = conn.cursor()
+    if level_name:
+        c.execute('UPDATE affiliate_users SET commission_percent=?, status=?, level_name=?, updated_at=? WHERE id=?', (pct, status, level_name, now, user_id))
+    else:
+        c.execute('UPDATE affiliate_users SET commission_percent=?, status=?, updated_at=? WHERE id=?', (pct, status, now, user_id))
+    conn.commit(); conn.close()
+    return jsonify({'ok': True, 'message': 'Đã cập nhật hoa hồng riêng cho CTV.'})
+
+@app.route('/api/admin/affiliate/withdraw/<int:withdraw_id>', methods=['POST'])
+def api_admin_affiliate_withdraw_action(withdraw_id):
+    ensure_affiliate_tables()
+    data = request.get_json(silent=True) or request.form
+    status = data.get('status','Đã thanh toán')
+    if status not in ['Đã thanh toán','Từ chối','Chờ duyệt']:
+        status = 'Đã thanh toán'
+    now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S') if status == 'Đã thanh toán' else ''
+    conn = db(); c = conn.cursor()
+    c.execute('UPDATE affiliate_withdrawals SET status=?, paid_at=? WHERE id=?', (status, now, withdraw_id))
+    conn.commit(); conn.close()
+    return jsonify({'ok': True})
+
+
+@app.route('/ctv/<slug>')
+def affiliate_pretty_link(slug):
+    ensure_affiliate_tables()
+    slug = (slug or '').strip().lower()
+    conn = db(); c = conn.cursor()
+    c.execute('SELECT affiliate_code FROM affiliate_users WHERE lower(custom_slug)=? OR lower(replace(affiliate_code,"-",""))=? LIMIT 1', (slug, slug))
+    row = c.fetchone(); conn.close()
+    code = row[0] if row else ''
+    resp = home()
+    if code:
+        record_affiliate_click(code)
+        try:
+            resp.set_cookie('affiliate_code', code, max_age=60*60*24*90)
+        except Exception:
+            pass
+    return resp
+
+
+
+@app.route("/api/device_id")
+def api_device_id_route():
+    return jsonify({"success": True, "device_id": get_device_id()})
 
 if __name__ == "__main__":
     init_db()
     threading.Thread(target=scheduler_loop, daemon=True).start()
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port, debug=False)
-
-
