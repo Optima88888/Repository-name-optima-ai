@@ -9867,6 +9867,129 @@ ADMIN_HTML = """
 })();
 </script>
 
+
+
+<!-- FINAL UPGRADE V98: SaaS premium polish + smart locked menu routing -->
+<style id="mkt-v98-saas-menu-premium-polish">
+  :root{--mkt-blue:#3b82f6;--mkt-violet:#7c3aed;--mkt-gold:#facc15;--mkt-green:#22c55e;}
+  .sidebar,.v2-sidebar{
+    background:
+      radial-gradient(circle at 10% -10%,rgba(96,165,250,.42),transparent 33%),
+      radial-gradient(circle at 102% 10%,rgba(250,204,21,.20),transparent 28%),
+      radial-gradient(circle at 50% 110%,rgba(124,58,237,.30),transparent 38%),
+      linear-gradient(180deg,#06101f 0%,#0b1220 46%,#111827 100%)!important;
+    border-right:1px solid rgba(148,163,184,.26)!important;
+    box-shadow:22px 0 80px rgba(2,6,23,.46),inset -1px 0 0 rgba(255,255,255,.06)!important;
+  }
+  .sidebar .logo,.mkt-sidebar-brand{
+    position:relative!important;
+    padding:16px!important;
+    margin-bottom:14px!important;
+    border-radius:24px!important;
+    background:linear-gradient(135deg,rgba(255,255,255,.13),rgba(255,255,255,.04))!important;
+    border:1px solid rgba(255,255,255,.16)!important;
+    box-shadow:0 18px 44px rgba(0,0,0,.26),inset 0 1px 0 rgba(255,255,255,.10)!important;
+    overflow:hidden!important;
+  }
+  .sidebar .logo:before,.mkt-sidebar-brand:before{
+    content:""!important;position:absolute!important;inset:-60% -20% auto auto!important;width:160px!important;height:160px!important;
+    background:radial-gradient(circle,rgba(96,165,250,.38),transparent 62%)!important;pointer-events:none!important;
+  }
+  .mkt-sidebar-brand .brand-title{font-size:15px!important;font-weight:1000!important;color:#f8fafc!important;letter-spacing:-.02em!important;line-height:1.15!important;position:relative!important;z-index:2!important;}
+  .mkt-sidebar-brand .brand-sub{display:inline-flex!important;align-items:center!important;gap:7px!important;margin-top:9px!important;padding:7px 10px!important;border-radius:999px!important;background:rgba(34,197,94,.13)!important;border:1px solid rgba(34,197,94,.25)!important;color:#bbf7d0!important;font-size:11px!important;font-weight:900!important;position:relative!important;z-index:2!important;}
+  .mkt-sidebar-brand .brand-sub:before,.mkt-online-dot{
+    content:""!important;width:8px!important;height:8px!important;border-radius:50%!important;background:#00ff7f!important;
+    box-shadow:0 0 8px #00ff7f,0 0 18px #00ff7f,0 0 30px rgba(0,255,127,.8)!important;display:inline-block!important;flex:0 0 auto!important;
+  }
+  .v2-nav-title{color:#a5b4fc!important;font-size:10px!important;letter-spacing:.16em!important;font-weight:1000!important;margin:18px 12px 8px!important;text-transform:uppercase!important;}
+  .v2-nav-link{
+    margin:7px 10px!important;min-height:56px!important;padding:13px 72px 13px 16px!important;border-radius:18px!important;
+    color:#f8fafc!important;background:linear-gradient(135deg,rgba(255,255,255,.105),rgba(255,255,255,.035))!important;
+    border:1px solid rgba(148,163,184,.18)!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.075),0 10px 26px rgba(0,0,0,.16)!important;
+    transition:transform .2s ease,box-shadow .2s ease,border-color .2s ease,background .2s ease!important;position:relative!important;overflow:hidden!important;
+  }
+  .v2-nav-link:before{content:""!important;position:absolute!important;left:0!important;top:13px!important;bottom:13px!important;width:3px!important;border-radius:999px!important;background:linear-gradient(180deg,#38bdf8,#818cf8,#facc15)!important;opacity:.62!important;}
+  .v2-nav-link:hover,.v2-nav-link.active{transform:translateX(6px)!important;border-color:rgba(96,165,250,.46)!important;background:linear-gradient(135deg,rgba(37,99,235,.94),rgba(124,58,237,.84))!important;box-shadow:0 18px 48px rgba(37,99,235,.32)!important;}
+  .v2-nav-text{font-weight:950!important;letter-spacing:-.015em!important;line-height:1.24!important;text-shadow:0 1px 0 rgba(0,0,0,.14)!important;}
+  .v2-nav-link.premium-locked,.v2-nav-link.real-premium-lock{padding-right:74px!important;}
+  .v2-nav-link .v2-nav-tag,.v2-nav-link.premium-locked::after,.v2-nav-link.real-premium-lock::after{
+    content:"PRO"!important;position:absolute!important;right:12px!important;top:50%!important;transform:translateY(-50%)!important;
+    min-width:31px!important;height:17px!important;padding:0 7px 0 16px!important;border-radius:999px!important;font-size:7.5px!important;line-height:17px!important;font-weight:1000!important;letter-spacing:.045em!important;
+    color:#111827!important;background:linear-gradient(135deg,#fde047,#fb923c)!important;border:1px solid rgba(255,255,255,.58)!important;box-shadow:0 0 16px rgba(250,204,21,.52)!important;z-index:10!important;text-align:center!important;
+  }
+  .v2-nav-link .v2-nav-tag:before{content:""!important;width:6px!important;height:6px!important;border-radius:50%!important;background:#00ff7f!important;box-shadow:0 0 8px #00ff7f,0 0 16px rgba(0,255,127,.9)!important;position:absolute!important;left:6px!important;top:50%!important;transform:translateY(-50%)!important;}
+  .v2-nav-link[data-auto-plan="quarterly"] .v2-nav-tag,.v2-nav-link[data-auto-plan="quarterly"]::after{content:"PRO"!important;}
+  .v2-nav-link[data-auto-plan="halfyear"] .v2-nav-tag,.v2-nav-link[data-auto-plan="halfyear"]::after{content:"CRM"!important;}
+  .v2-nav-link[data-auto-plan="yearly"] .v2-nav-tag,.v2-nav-link[data-auto-plan="yearly"]::after{content:"AI"!important;}
+  .v2-nav-link[data-auto-plan="sellerpro"] .v2-nav-tag,.v2-nav-link[data-auto-plan="sellerpro"]::after{content:"VIP"!important;background:linear-gradient(135deg,#facc15,#f97316)!important;}
+  .tool-card,.feature-card,.v3-feature-card,.dashboard-card,.mini-card,.stat-card,.card:not(.compact-price-card){background:rgba(255,255,255,.96)!important;backdrop-filter:blur(10px)!important;border:1px solid rgba(99,102,241,.13)!important;box-shadow:0 12px 30px rgba(0,0,0,.08)!important;}
+  .tool-card:hover,.feature-card:hover,.v3-feature-card:hover,.dashboard-card:hover,.mini-card:hover{transform:translateY(-3px)!important;box-shadow:0 18px 44px rgba(37,99,235,.13)!important;border-color:rgba(99,102,241,.24)!important;}
+  .compact-price-card{box-shadow:0 18px 45px rgba(15,23,42,.10)!important;border:1px solid rgba(99,102,241,.16)!important;}
+  .compact-price-card:hover{transform:translateY(-6px)!important;box-shadow:0 24px 60px rgba(37,99,235,.18)!important;}
+  .mkt-shake-premium{animation:mktPremiumShake .45s ease both!important;}
+  @keyframes mktPremiumShake{0%,100%{transform:translateX(0)}20%{transform:translateX(-4px)}40%{transform:translateX(5px)}60%{transform:translateX(-3px)}80%{transform:translateX(2px)}}
+</style>
+<script id="mkt-v98-saas-menu-smart-routing">
+(function(){
+  'use strict';
+  function q(s,r){return (r||document).querySelector(s)}
+  function qa(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s))}
+  function device(){var id='';try{id=localStorage.getItem('mkt_device_id')||''}catch(e){};if(!id&&typeof window.getOrCreateDeviceId==='function')id=window.getOrCreateDeviceId();if(!id){id='MKT-'+Math.random().toString(36).slice(2,8).toUpperCase()+Date.now().toString().slice(-4);try{localStorage.setItem('mkt_device_id',id)}catch(e){}}document.cookie='mkt_device_id='+encodeURIComponent(id)+'; path=/; max-age='+(60*60*24*365*5);return id;}
+  function planForText(t){t=String(t||'').toLowerCase();if(/studio|image|video|voice|giọng|livestream|seller|vip|enterprise/.test(t))return 'sellerpro';if(/marketing director|ads|phễu|funnel|kpi|content brain/.test(t))return 'yearly';if(/crm|kanban|sales|khách hàng|chốt/.test(t))return 'halfyear';if(/messenger|inbox|kịch bản/.test(t))return 'quarterly';return 'monthly';}
+  function cleanPay(){
+    var id=device();
+    var pc=q('#payContent'); if(pc) pc.textContent=id;
+    var dev=q('#payDeviceId'); if(dev) dev.value=id;
+    var bank=q('.bank-info'); if(bank){
+      var html=bank.innerHTML;
+      if(/Nội dung CK/i.test(bank.textContent||'')){
+        bank.innerHTML='<b>Ngân hàng:</b> Agribank<br><b>STK:</b> 8888363382629<br><b>Chủ TK:</b> NGUYEN DANG THI XUAN<br><b>Nội dung CK:</b> <span id="payContent">'+id+'</span>';
+      }
+    }
+    var k=window.currentPremiumPlanKey||window.mktSelectedPlanKey||'monthly';
+    var amounts={monthly:'159000',quarterly:'359000',halfyear:'559000',yearly:'859000',sellerpro:'1959000',lifetime:'1959000'};
+    var qr=q('#payQr'); if(qr) qr.src='https://img.vietqr.io/image/970405-8888363382629-compact2.png?amount='+encodeURIComponent(amounts[k]||amounts.monthly)+'&addInfo='+encodeURIComponent(id)+'&accountName='+encodeURIComponent('NGUYEN DANG THI XUAN');
+  }
+  function addBrand(){
+    var side=q('.sidebar')||q('.v2-sidebar'); if(!side||q('.mkt-sidebar-brand',side))return;
+    var logo=q('.logo',side);
+    var box=document.createElement('div');box.className='mkt-sidebar-brand';
+    box.innerHTML='<div class="brand-title">Marketing Automation Pro</div><div class="brand-sub">Premium AI Suite</div>';
+    if(logo&&logo.parentNode){logo.parentNode.insertBefore(box,logo.nextSibling)}else side.insertBefore(box,side.firstChild);
+  }
+  function upgradeMenu(){
+    qa('.v2-nav-link').forEach(function(a){
+      var txt=(a.textContent||'');
+      var isLocked=/pro|premium/i.test(txt)||a.classList.contains('premium-locked')||a.classList.contains('real-premium-lock');
+      if(isLocked){
+        a.classList.add('premium-locked');
+        a.setAttribute('data-auto-plan',planForText(txt));
+        var tag=a.querySelector('.v2-nav-tag');
+        if(!tag){tag=document.createElement('span');tag.className='v2-nav-tag';a.appendChild(tag)}
+        var p=a.getAttribute('data-auto-plan'); tag.textContent=p==='sellerpro'?'VIP':(p==='halfyear'?'CRM':(p==='yearly'?'AI':'PRO'));
+      }
+    });
+  }
+  function focusPricing(plan){
+    var target=q('[data-plan="'+plan+'"].compact-price-card')||q('.compact-price-card[data-plan="'+plan+'"]')||q('[data-plan="'+plan+'"]')||q('.premium-pricing-compact')||q('#premium');
+    if(target){target.scrollIntoView({behavior:'smooth',block:'center'});target.classList.add('mkt-shake-premium');setTimeout(function(){target.classList.remove('mkt-shake-premium')},650);}
+    if(window.openPlanBenefit){setTimeout(function(){window.openPlanBenefit(plan)},450)}
+  }
+  document.addEventListener('click',function(e){
+    var a=e.target.closest&&e.target.closest('.v2-nav-link');
+    if(!a||!a.classList.contains('premium-locked'))return;
+    var plan=a.getAttribute('data-auto-plan')||planForText(a.textContent||'');
+    e.preventDefault();e.stopPropagation();if(e.stopImmediatePropagation)e.stopImmediatePropagation();
+    focusPricing(plan);return false;
+  },true);
+  var oldRefresh=window.refreshPaymentContent;window.refreshPaymentContent=function(){try{if(typeof oldRefresh==='function')oldRefresh.apply(this,arguments)}catch(e){}cleanPay();};
+  var oldOpen=window.openPayment;window.openPayment=function(){var r;try{if(typeof oldOpen==='function')r=oldOpen.apply(this,arguments)}catch(e){}setTimeout(cleanPay,0);setTimeout(cleanPay,90);setTimeout(cleanPay,260);return r===undefined?false:r;};
+  if(window.MutationObserver){new MutationObserver(function(){addBrand();upgradeMenu();cleanPay();}).observe(document.documentElement,{childList:true,subtree:true,characterData:true});}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){addBrand();upgradeMenu();cleanPay();});else{addBrand();upgradeMenu();cleanPay();}
+  setTimeout(function(){addBrand();upgradeMenu();cleanPay();},500);setTimeout(function(){addBrand();upgradeMenu();cleanPay();},1500);
+})();
+</script>
+
 </body></html>
 """
 
