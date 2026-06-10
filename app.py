@@ -4077,95 +4077,410 @@ function dropKanban(ev){ ev.preventDefault(); const col=ev.currentTarget; if(dra
 
 
 
-<!-- MKT MOBILE INSTALL + SUPPORT CHAT FINAL -->
-<style id="mkt-mobile-support-final-css">
-  .mkt-mobile-dock{position:fixed;left:16px;bottom:18px;z-index:2147483000;display:flex;flex-direction:column;gap:10px;font-family:'Manrope','Inter',Arial,sans-serif}
-  .mkt-dock-btn{border:0;border-radius:18px;padding:10px 13px;min-width:118px;display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:900;font-size:13px;color:#fff;box-shadow:0 14px 34px rgba(15,23,42,.25);animation:mktSoftMove 2.4s ease-in-out infinite}
-  .mkt-dock-btn.install{background:linear-gradient(135deg,#0ea5e9,#2563eb)}
-  .mkt-dock-btn.ctv{background:linear-gradient(135deg,#f59e0b,#ef4444)}
-  .mkt-dock-btn span{display:block;line-height:1.15}.mkt-dock-btn small{display:block;font-size:10px;opacity:.9;font-weight:800}
-  .mkt-install-note{display:none;max-width:260px;background:#fff;color:#334155;border:1px solid #dbeafe;border-radius:16px;padding:10px 12px;box-shadow:0 12px 32px rgba(15,23,42,.18);font-size:12px;font-weight:800;line-height:1.4}
-  @keyframes mktSoftMove{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+<!-- MKT FLOATING MOBILE INSTALL + SUPPORT CHAT - SAFE INSERT
+     Vị trí đúng: nằm ngay trước </body>, không đụng Menu trái/Card/CSS chính.
+-->
+<style id="mkt-mobile-support-safe-css">
+  /* LEFT DOCK: GPT MKT tải xuống + CTV */
+  .mkt-mobile-dock{
+    position:fixed!important;
+    left:16px!important;
+    bottom:18px!important;
+    z-index:99990!important;
+    display:flex!important;
+    flex-direction:column!important;
+    gap:10px!important;
+    font-family:'Manrope','Inter',Arial,sans-serif!important;
+    pointer-events:auto!important;
+  }
+  .mkt-dock-btn{
+    border:0!important;
+    outline:0!important;
+    border-radius:18px!important;
+    padding:10px 13px!important;
+    min-width:118px!important;
+    min-height:48px!important;
+    display:flex!important;
+    align-items:center!important;
+    justify-content:flex-start!important;
+    gap:8px!important;
+    cursor:pointer!important;
+    font-weight:900!important;
+    font-size:13px!important;
+    color:#fff!important;
+    box-shadow:0 14px 34px rgba(15,23,42,.25)!important;
+    animation:mktDockSoftMove 2.4s ease-in-out infinite!important;
+    text-decoration:none!important;
+    line-height:1.15!important;
+  }
+  .mkt-dock-btn.install{background:linear-gradient(135deg,#0ea5e9,#2563eb)!important}
+  .mkt-dock-btn.ctv{background:linear-gradient(135deg,#f59e0b,#ef4444)!important}
+  .mkt-dock-btn b{font-size:15px!important;line-height:1!important}
+  .mkt-dock-btn span{display:block!important;line-height:1.12!important}
+  .mkt-dock-btn small{display:block!important;font-size:10px!important;opacity:.95!important;font-weight:900!important;margin-top:2px!important}
+  .mkt-install-note{
+    display:none;
+    max-width:260px;
+    background:#fff;
+    color:#334155;
+    border:1px solid #dbeafe;
+    border-radius:16px;
+    padding:10px 12px;
+    box-shadow:0 12px 32px rgba(15,23,42,.18);
+    font-size:12px;
+    font-weight:800;
+    line-height:1.4;
+  }
+  @keyframes mktDockSoftMove{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
 
-  .support-float{position:fixed;right:18px;bottom:18px;z-index:2147483001;font-family:'Manrope','Inter',Arial,sans-serif!important;letter-spacing:-.015em}.support-btn{width:60px;height:60px;padding:0;border:0;border-radius:50%;cursor:pointer;position:relative;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#2563eb,#7c3aed);box-shadow:0 0 0 5px rgba(37,99,235,.12),0 14px 34px rgba(37,99,235,.38);animation:supportBotFloat 2.2s ease-in-out infinite;transition:transform .18s ease,box-shadow .18s ease}.support-robot{font-size:27px;line-height:1}.support-online-dot{position:absolute;right:5px;bottom:6px;width:10px;height:10px;border-radius:50%;background:#00ff88;border:2px solid white;box-shadow:0 0 8px #00ff88,0 0 15px rgba(0,255,136,.85);animation:supportOnlinePulse 1.5s infinite}.support-tooltip{position:absolute;right:66px;bottom:7px;min-width:150px;background:rgba(15,23,42,.96);color:#E0F2FE;border:1px solid rgba(34,197,94,.35);border-radius:14px;padding:9px 11px;font-size:12px;line-height:1.35;text-align:left;opacity:0;pointer-events:none;transform:translateX(8px);transition:.18s ease;box-shadow:0 14px 34px rgba(15,23,42,.28);font-weight:800}.support-btn:hover{transform:scale(1.08)}.support-btn:hover .support-tooltip{opacity:1;transform:translateX(0)}@keyframes supportBotFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}@keyframes supportOnlinePulse{0%{transform:scale(1);opacity:1}50%{transform:scale(1.35);opacity:.78}100%{transform:scale(1);opacity:1}}.support-panel{display:none;width:340px;max-width:calc(100vw - 30px);background:#0f172a;color:#e5e7eb;border:1px solid #334155;border-radius:20px;box-shadow:0 18px 60px rgba(0,0,0,.45);overflow:hidden;margin-bottom:10px}.support-panel.open{display:block}.support-head{background:#1e1b4b;padding:12px 14px;font-weight:900;color:#bfdbfe;display:flex;align-items:center;justify-content:space-between}.support-close{background:#020617;color:white;border:1px solid #334155;border-radius:10px;width:28px;height:28px;cursor:pointer;font-weight:900}.support-body{padding:12px}.support-mini-menu{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:8px}.support-mini-menu button{border:1px solid #334155;background:#111827;color:#dbeafe;border-radius:12px;padding:8px 5px;font-size:12px;font-weight:900;cursor:pointer}.support-mini-menu button:hover{background:#1e40af}.support-log{height:170px;overflow-y:auto;background:#020617;border:1px solid #1f2937;border-radius:14px;padding:10px;margin-bottom:10px;font-size:13px}.support-log .me{background:#1d4ed8;margin:6px 0 6px 35px;padding:8px;border-radius:12px}.support-log .ad{background:#14532d;margin:6px 35px 6px 0;padding:8px;border-radius:12px}.support-body input,.support-body textarea{box-sizing:border-box;width:100%;background:#020617;color:white;border:1px solid #334155;border-radius:12px;padding:10px;margin:5px 0}.support-body textarea{height:78px}.support-send{width:100%;background:#22c55e;color:white;border:0;border-radius:12px;padding:11px;font-weight:900;cursor:pointer}.support-note{font-size:12px;color:#94a3b8;margin-top:8px}.floating-bot{display:none!important}
-  @media(max-width:640px){.mkt-mobile-dock{left:10px;bottom:12px}.mkt-dock-btn{min-width:98px;padding:9px 10px;font-size:12px;border-radius:15px}.support-float{right:10px;bottom:12px}.support-panel{width:calc(100vw - 20px);max-width:360px}.support-tooltip{display:none}}
+  /* RIGHT CHAT: không đè Menu trái/Card */
+  .mkt-support-float{
+    position:fixed!important;
+    right:18px!important;
+    bottom:18px!important;
+    z-index:99991!important;
+    font-family:'Manrope','Inter',Arial,sans-serif!important;
+    letter-spacing:-.015em!important;
+  }
+  .mkt-support-btn{
+    width:60px!important;
+    height:60px!important;
+    padding:0!important;
+    border:0!important;
+    border-radius:50%!important;
+    cursor:pointer!important;
+    position:relative!important;
+    display:flex!important;
+    align-items:center!important;
+    justify-content:center!important;
+    background:linear-gradient(135deg,#2563eb,#7c3aed)!important;
+    box-shadow:0 0 0 5px rgba(37,99,235,.12),0 14px 34px rgba(37,99,235,.38)!important;
+    animation:mktSupportBotFloat 2.2s ease-in-out infinite!important;
+    transition:transform .18s ease,box-shadow .18s ease!important;
+  }
+  .mkt-support-robot{font-size:27px!important;line-height:1!important}
+  .mkt-support-online-dot{
+    position:absolute!important;
+    right:5px!important;
+    bottom:6px!important;
+    width:10px!important;
+    height:10px!important;
+    border-radius:50%!important;
+    background:#00ff88!important;
+    border:2px solid #fff!important;
+    box-shadow:0 0 8px #00ff88,0 0 15px rgba(0,255,136,.85)!important;
+    animation:mktSupportOnlinePulse 1.5s infinite!important;
+  }
+  .mkt-support-tooltip{
+    position:absolute!important;
+    right:66px!important;
+    bottom:7px!important;
+    min-width:150px!important;
+    background:rgba(15,23,42,.96)!important;
+    color:#E0F2FE!important;
+    border:1px solid rgba(34,197,94,.35)!important;
+    border-radius:14px!important;
+    padding:9px 11px!important;
+    font-size:12px!important;
+    line-height:1.35!important;
+    text-align:left!important;
+    opacity:0!important;
+    pointer-events:none!important;
+    transform:translateX(8px)!important;
+    transition:.18s ease!important;
+    box-shadow:0 14px 34px rgba(15,23,42,.28)!important;
+    font-weight:800!important;
+  }
+  .mkt-support-btn:hover{transform:scale(1.08)!important}
+  .mkt-support-btn:hover .mkt-support-tooltip{opacity:1!important;transform:translateX(0)!important}
+  @keyframes mktSupportBotFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+  @keyframes mktSupportOnlinePulse{0%{transform:scale(1);opacity:1}50%{transform:scale(1.35);opacity:.78}100%{transform:scale(1);opacity:1}}
+
+  .mkt-support-panel{
+    display:none;
+    width:340px;
+    max-width:calc(100vw - 30px);
+    background:#0f172a;
+    color:#e5e7eb;
+    border:1px solid #334155;
+    border-radius:20px;
+    box-shadow:0 18px 60px rgba(0,0,0,.45);
+    overflow:hidden;
+    margin-bottom:10px;
+  }
+  .mkt-support-panel.open{display:block!important}
+  .mkt-support-head{
+    background:#1e1b4b;
+    padding:12px 14px;
+    font-weight:900;
+    color:#bfdbfe;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+  }
+  .mkt-support-close{
+    background:#020617;
+    color:#fff;
+    border:1px solid #334155;
+    border-radius:10px;
+    width:28px;
+    height:28px;
+    cursor:pointer;
+    font-weight:900;
+  }
+  .mkt-support-body{padding:12px}
+  .mkt-support-mini-menu{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:8px}
+  .mkt-support-mini-menu button{
+    border:1px solid #334155;
+    background:#111827;
+    color:#dbeafe;
+    border-radius:12px;
+    padding:8px 5px;
+    font-size:12px;
+    font-weight:900;
+    cursor:pointer;
+  }
+  .mkt-support-mini-menu button:hover{background:#1e40af}
+  .mkt-support-log{
+    height:170px;
+    overflow-y:auto;
+    background:#020617;
+    border:1px solid #1f2937;
+    border-radius:14px;
+    padding:10px;
+    margin-bottom:10px;
+    font-size:13px;
+  }
+  .mkt-support-log .me{background:#1d4ed8;margin:6px 0 6px 35px;padding:8px;border-radius:12px}
+  .mkt-support-log .ad{background:#14532d;margin:6px 35px 6px 0;padding:8px;border-radius:12px}
+  .mkt-support-body input,.mkt-support-body textarea{
+    box-sizing:border-box;
+    width:100%;
+    background:#020617;
+    color:#fff;
+    border:1px solid #334155;
+    border-radius:12px;
+    padding:10px;
+    margin:5px 0;
+  }
+  .mkt-support-body textarea{height:78px}
+  .mkt-support-send{width:100%;background:#22c55e;color:#fff;border:0;border-radius:12px;padding:11px;font-weight:900;cursor:pointer}
+  .mkt-support-note{font-size:12px;color:#94a3b8;margin-top:8px}
+  .floating-bot{display:none!important}
+
+  @media(max-width:640px){
+    .mkt-mobile-dock{left:10px!important;bottom:12px!important}
+    .mkt-dock-btn{min-width:98px!important;padding:9px 10px!important;font-size:12px!important;border-radius:15px!important}
+    .mkt-support-float{right:10px!important;bottom:12px!important}
+    .mkt-support-panel{width:calc(100vw - 20px)!important;max-width:360px!important}
+    .mkt-support-tooltip{display:none!important}
+  }
 </style>
 
 <div class="mkt-mobile-dock" id="mktMobileDock">
-  <button type="button" class="mkt-dock-btn install" onclick="showInstallGuide()"><b>⬇️</b><span>GPT MKT<small>Tải xuống</small></span></button>
-  <button type="button" class="mkt-dock-btn ctv" onclick="location.href='#ctv_center'"><b>🤝</b><span>CTV<small>Hoa hồng</small></span></button>
+  <button type="button" class="mkt-dock-btn install" id="mktInstallBtn">
+    <b>⬇️</b><span>GPT MKT<small>Tải xuống</small></span>
+  </button>
+  <button type="button" class="mkt-dock-btn ctv" id="mktCtvBtn">
+    <b>🤝</b><span>CTV<small>Hoa hồng</small></span>
+  </button>
   <div class="mkt-install-note" id="installStatus">Bấm Tải xuống để cài app trên điện thoại.</div>
 </div>
 
-<div class="support-float">
-  <div class="support-panel" id="supportPanel">
-    <div class="support-head"><span>💬 Hỗ trợ trực tiếp</span><button type="button" onclick="toggleSupportChat()" class="support-close">×</button></div>
-    <div class="support-body">
-      <div class="support-mini-menu">
-        <button type="button" onclick="quickSupportText('Tôi cần kích hoạt Premium')">👑 Premium</button>
-        <button type="button" onclick="quickSupportText('Tôi đã thanh toán cần hỗ trợ')">💳 Thanh toán</button>
-        <button type="button" onclick="quickSupportText('Tôi bị lỗi đăng bài Fanpage')">📣 Lỗi đăng</button>
+<div class="mkt-support-float">
+  <div class="mkt-support-panel" id="supportPanel">
+    <div class="mkt-support-head">
+      <span>💬 Hỗ trợ trực tiếp</span>
+      <button type="button" id="supportCloseBtn" class="mkt-support-close">×</button>
+    </div>
+    <div class="mkt-support-body">
+      <div class="mkt-support-mini-menu">
+        <button type="button" data-support-text="Tôi cần kích hoạt Premium">👑 Premium</button>
+        <button type="button" data-support-text="Tôi đã thanh toán cần hỗ trợ">💳 Thanh toán</button>
+        <button type="button" data-support-text="Tôi bị lỗi đăng bài Fanpage">📣 Lỗi đăng</button>
       </div>
-      <div class="support-log" id="supportLog"><div class="ad">Admin sẵn sàng hỗ trợ. Anh/chị để lại SĐT/Email và nội dung cần xử lý.</div></div>
+      <div class="mkt-support-log" id="supportLog">
+        <div class="ad">Admin sẵn sàng hỗ trợ. Anh/chị để lại SĐT/Email và nội dung cần xử lý.</div>
+      </div>
       <input id="supportPhone" placeholder="SĐT/Zalo của anh/chị">
       <input id="supportEmail" placeholder="Email/Gmail">
       <textarea id="supportMessage" placeholder="Nhập nội dung cần hỗ trợ..."></textarea>
-      <button class="support-send" onclick="sendSupportMessage()">Gửi cho Admin</button>
-      <div class="support-note" id="supportNote">Tin nhắn sẽ hiển thị trong Web Admin để kỹ thuật trả lời.</div>
+      <button type="button" class="mkt-support-send" id="supportSendBtn">Gửi cho Admin</button>
+      <div class="mkt-support-note" id="supportNote">Tin nhắn sẽ hiển thị trong Web Admin để kỹ thuật trả lời.</div>
     </div>
   </div>
-  <button class="support-btn" type="button" title="AI Online" onclick="toggleSupportChat()"><span class="support-robot">🤖</span><span class="support-online-dot"></span><span class="support-tooltip">AI Online<br>Phản hồi trong vài giây</span></button>
+  <button class="mkt-support-btn" type="button" title="AI Online" id="supportOpenBtn">
+    <span class="mkt-support-robot">🤖</span>
+    <span class="mkt-support-online-dot"></span>
+    <span class="mkt-support-tooltip">AI Online<br>Phản hồi trong vài giây</span>
+  </button>
 </div>
 
-<script id="mkt-mobile-support-final-js">
-window.mktDeferredInstallPrompt = window.mktDeferredInstallPrompt || null;
-window.addEventListener('beforeinstallprompt', function(e){
-  e.preventDefault(); window.mktDeferredInstallPrompt = e;
-  var st=document.getElementById('installStatus'); if(st){st.style.display='block';st.innerText='Thiết bị này đã sẵn sàng cài đặt ứng dụng.';}
-});
-function showInstallGuide(){
-  var st=document.getElementById('installStatus'); if(st){st.style.display='block';}
-  var isStandalone=(window.matchMedia&&window.matchMedia('(display-mode: standalone)').matches)||window.navigator.standalone;
-  if(isStandalone){ if(st) st.innerText='App đã được cài đặt trên thiết bị này.'; alert('Mkt Automation Pro đã được cài đặt trên thiết bị này.'); return; }
-  var title='Cài đặt Mkt Automation Pro';
-  var intro='• Dùng như app trên điện thoại\n• Không cần mở trình duyệt\n• Truy cập chỉ 1 chạm';
-  if(window.mktDeferredInstallPrompt){
-    window.mktDeferredInstallPrompt.prompt();
-    window.mktDeferredInstallPrompt.userChoice.then(function(choice){
-      if(st){st.innerText=choice.outcome==='accepted'?'Đã gửi yêu cầu cài đặt ứng dụng.':'Anh/chị có thể bấm cài đặt lại bất kỳ lúc nào.';}
-      window.mktDeferredInstallPrompt=null;
-    });
-    return;
+<script id="mkt-mobile-support-safe-js">
+(function(){
+  'use strict';
+
+  window.mktDeferredInstallPrompt = window.mktDeferredInstallPrompt || null;
+  var shownAdminReplies = new Set();
+
+  function $(id){ return document.getElementById(id); }
+
+  function getMktDeviceId(){
+    var id = localStorage.getItem('mkt_device_id');
+    if(!id){
+      id = 'MKT-' + new Date().toISOString().slice(0,10).replaceAll('-','') + '-' + Math.random().toString(16).slice(2,8).toUpperCase();
+      localStorage.setItem('mkt_device_id', id);
+    }
+    document.cookie = 'mkt_device_id=' + encodeURIComponent(id) + ';path=/;max-age=31536000;SameSite=Lax';
+    return id;
   }
-  var isIOS=/iphone|ipad|ipod/i.test(navigator.userAgent);
-  var msg=isIOS?'iPhone/iPad: mở bằng Safari → bấm Chia sẻ → Thêm vào Màn hình chính.':'Chrome/Edge: bấm menu ⋮ → Cài đặt ứng dụng hoặc Thêm vào màn hình chính.';
-  if(st){st.innerText=msg;} alert(title+'\n\n'+intro+'\n\n'+msg);
-}
-window.addEventListener('appinstalled', function(){var st=document.getElementById('installStatus'); if(st){st.style.display='block';st.innerText='Đã cài đặt Mkt Automation Pro thành công.';}});
-function getMktDeviceId(){
-  let id=localStorage.getItem('mkt_device_id');
-  if(!id){id='MKT-'+new Date().toISOString().slice(0,10).replaceAll('-','')+'-'+Math.random().toString(16).slice(2,8).toUpperCase();localStorage.setItem('mkt_device_id',id)}
-  document.cookie='mkt_device_id='+encodeURIComponent(id)+';path=/;max-age=31536000;SameSite=Lax';
-  return id;
-}
-let shownAdminReplies=new Set();
-function toggleSupportChat(){var p=document.getElementById('supportPanel'); if(p){p.classList.toggle('open'); if(p.classList.contains('open')) pollSupportReplies();}}
-function quickSupportText(text){const box=document.getElementById('supportMessage'); if(box){box.value=text;box.focus();}}
-function addSupportBubble(type,text){const log=document.getElementById('supportLog'); if(!log)return; const div=document.createElement('div'); div.className=type; div.innerText=text; log.appendChild(div); log.scrollTop=log.scrollHeight;}
-async function sendSupportMessage(){
-  const msg=(document.getElementById('supportMessage')||{}).value?.trim()||'';
-  if(!msg){alert('Vui lòng nhập nội dung cần hỗ trợ.');return;}
-  addSupportBubble('me',msg); document.getElementById('supportMessage').value='';
-  const payload={device_id:getMktDeviceId(),phone:(document.getElementById('supportPhone')||{}).value||'',email:(document.getElementById('supportEmail')||{}).value||'',message:msg};
-  const res=await fetch('/support_send',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}).then(r=>r.json()).catch(()=>({ok:false,message:'Không gửi được tin nhắn, vui lòng thử lại.'}));
-  var note=document.getElementById('supportNote'); if(note){note.innerText=res.message||'Đã gửi.';} pollSupportReplies();
-}
-async function pollSupportReplies(){
-  const data=await fetch('/support_poll?device_id='+encodeURIComponent(getMktDeviceId())).then(r=>r.json()).catch(()=>({messages:[]}));
-  (data.messages||[]).forEach(function(m){ if(!shownAdminReplies.has(m.id)){ shownAdminReplies.add(m.id); addSupportBubble(m.sender==='admin'?'ad':'me',(m.sender==='admin'?'Admin: ':'')+m.message); } });
-}
-setInterval(function(){var p=document.getElementById('supportPanel'); if(p&&p.classList.contains('open')) pollSupportReplies();},3000);
-document.addEventListener('DOMContentLoaded', function(){ getMktDeviceId(); if('serviceWorker' in navigator){ navigator.serviceWorker.register('/sw.js').catch(function(){}); } });
+
+  function showInstallGuide(){
+    var st = $('installStatus');
+    if(st){ st.style.display = 'block'; }
+
+    var isStandalone = (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone;
+    if(isStandalone){
+      if(st) st.innerText = 'App đã được cài đặt trên thiết bị này.';
+      alert('Mkt Automation Pro đã được cài đặt trên thiết bị này.');
+      return;
+    }
+
+    if(window.mktDeferredInstallPrompt){
+      window.mktDeferredInstallPrompt.prompt();
+      window.mktDeferredInstallPrompt.userChoice.then(function(choice){
+        if(st){
+          st.innerText = choice.outcome === 'accepted'
+            ? 'Đã gửi yêu cầu cài đặt ứng dụng.'
+            : 'Anh/chị có thể bấm cài đặt lại bất kỳ lúc nào.';
+        }
+        window.mktDeferredInstallPrompt = null;
+      });
+      return;
+    }
+
+    var isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+    var msg = isIOS
+      ? 'iPhone/iPad: mở bằng Safari → bấm Chia sẻ → Thêm vào Màn hình chính.'
+      : 'Chrome/Edge: bấm menu ⋮ → Cài đặt ứng dụng hoặc Thêm vào màn hình chính.';
+    if(st){ st.innerText = msg; }
+    alert('Cài đặt Mkt Automation Pro\n\n• Dùng như app trên điện thoại\n• Không cần mở trình duyệt\n• Truy cập chỉ 1 chạm\n\n' + msg);
+  }
+
+  function toggleSupportChat(){
+    var p = $('supportPanel');
+    if(p){
+      p.classList.toggle('open');
+      if(p.classList.contains('open')) pollSupportReplies();
+    }
+  }
+
+  function quickSupportText(text){
+    var box = $('supportMessage');
+    if(box){ box.value = text; box.focus(); }
+  }
+
+  function addSupportBubble(type, text){
+    var log = $('supportLog');
+    if(!log) return;
+    var div = document.createElement('div');
+    div.className = type;
+    div.innerText = text;
+    log.appendChild(div);
+    log.scrollTop = log.scrollHeight;
+  }
+
+  async function sendSupportMessage(){
+    var box = $('supportMessage');
+    var msg = (box && box.value ? box.value : '').trim();
+    if(!msg){ alert('Vui lòng nhập nội dung cần hỗ trợ.'); return; }
+
+    addSupportBubble('me', msg);
+    if(box) box.value = '';
+
+    var payload = {
+      device_id: getMktDeviceId(),
+      phone: ($('supportPhone') || {}).value || '',
+      email: ($('supportEmail') || {}).value || '',
+      message: msg
+    };
+
+    var res = await fetch('/support_send', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(payload)
+    }).then(function(r){return r.json();}).catch(function(){
+      return {ok:false, message:'Không gửi được tin nhắn, vui lòng thử lại.'};
+    });
+
+    var note = $('supportNote');
+    if(note){ note.innerText = res.message || 'Đã gửi.'; }
+    pollSupportReplies();
+  }
+
+  async function pollSupportReplies(){
+    var data = await fetch('/support_poll?device_id=' + encodeURIComponent(getMktDeviceId()))
+      .then(function(r){return r.json();})
+      .catch(function(){return {messages:[]};});
+
+    (data.messages || []).forEach(function(m){
+      if(!shownAdminReplies.has(m.id)){
+        shownAdminReplies.add(m.id);
+        addSupportBubble(m.sender === 'admin' ? 'ad' : 'me', (m.sender === 'admin' ? 'Admin: ' : '') + m.message);
+      }
+    });
+  }
+
+  window.addEventListener('beforeinstallprompt', function(e){
+    e.preventDefault();
+    window.mktDeferredInstallPrompt = e;
+    var st = $('installStatus');
+    if(st){
+      st.style.display = 'block';
+      st.innerText = 'Thiết bị này đã sẵn sàng cài đặt ứng dụng.';
+    }
+  });
+
+  window.addEventListener('appinstalled', function(){
+    var st = $('installStatus');
+    if(st){
+      st.style.display = 'block';
+      st.innerText = 'Đã cài đặt Mkt Automation Pro thành công.';
+    }
+  });
+
+  document.addEventListener('DOMContentLoaded', function(){
+    getMktDeviceId();
+
+    var installBtn = $('mktInstallBtn');
+    if(installBtn) installBtn.addEventListener('click', showInstallGuide);
+
+    var ctvBtn = $('mktCtvBtn');
+    if(ctvBtn) ctvBtn.addEventListener('click', function(){ location.href = '#ctv_center'; });
+
+    var openBtn = $('supportOpenBtn');
+    if(openBtn) openBtn.addEventListener('click', toggleSupportChat);
+
+    var closeBtn = $('supportCloseBtn');
+    if(closeBtn) closeBtn.addEventListener('click', toggleSupportChat);
+
+    var sendBtn = $('supportSendBtn');
+    if(sendBtn) sendBtn.addEventListener('click', sendSupportMessage);
+
+    document.querySelectorAll('[data-support-text]').forEach(function(btn){
+      btn.addEventListener('click', function(){ quickSupportText(btn.getAttribute('data-support-text') || ''); });
+    });
+
+    if('serviceWorker' in navigator){
+      navigator.serviceWorker.register('/sw.js').catch(function(){});
+    }
+  });
+
+  setInterval(function(){
+    var p = $('supportPanel');
+    if(p && p.classList.contains('open')) pollSupportReplies();
+  }, 3000);
+})();
 </script>
 
 </body>
