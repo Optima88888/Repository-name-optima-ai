@@ -10304,6 +10304,157 @@ ADMIN_HTML = """
 })();
 </script>
 
+
+
+<!-- FINAL PATCH V100: only compact PRO/PREMIUM badges + upgraded mobile install link -->
+<style id="mkt-v100-badge-pwa-only">
+  /* Chỉ tối ưu badge PRO/PREMIUM, không đổi nội dung giao diện */
+  body .v2-nav-link.mkt-menu-pro,
+  body .v2-nav-link.mkt-menu-premium,
+  body .sidebar a.mkt-menu-pro,
+  body .sidebar a.mkt-menu-premium{
+    padding-right:78px!important;
+  }
+  body .v2-nav-link.mkt-menu-pro .v2-nav-tag,
+  body .v2-nav-link.mkt-menu-premium .v2-nav-tag,
+  body .v2-nav-link.mkt-menu-pro .mkt-pro-mini,
+  body .v2-nav-link.mkt-menu-premium .mkt-pro-mini{
+    position:absolute!important;
+    right:13px!important;
+    top:50%!important;
+    transform:translateY(-50%)!important;
+    display:inline-flex!important;
+    align-items:center!important;
+    justify-content:center!important;
+    width:auto!important;
+    min-width:42px!important;
+    max-width:74px!important;
+    height:19px!important;
+    padding:0 8px 0 18px!important;
+    border-radius:999px!important;
+    font-size:7.8px!important;
+    line-height:19px!important;
+    font-weight:1000!important;
+    letter-spacing:.045em!important;
+    text-shadow:none!important;
+    z-index:60!important;
+    overflow:visible!important;
+    white-space:nowrap!important;
+  }
+  body .v2-nav-link.mkt-menu-pro .v2-nav-tag,
+  body .v2-nav-link.mkt-menu-pro .mkt-pro-mini{
+    color:#052e16!important;
+    background:linear-gradient(135deg,#bbf7d0,#22c55e)!important;
+    border:1px solid rgba(255,255,255,.62)!important;
+    box-shadow:0 0 10px rgba(34,197,94,.44),0 0 22px rgba(34,197,94,.22)!important;
+  }
+  body .v2-nav-link.mkt-menu-premium .v2-nav-tag,
+  body .v2-nav-link.mkt-menu-premium .mkt-pro-mini{
+    color:#231400!important;
+    background:linear-gradient(135deg,#fde047,#fb923c)!important;
+    border:1px solid rgba(255,255,255,.62)!important;
+    box-shadow:0 0 10px rgba(250,204,21,.46),0 0 22px rgba(251,146,60,.24)!important;
+  }
+  body .v2-nav-link.mkt-menu-pro .v2-nav-tag:before,
+  body .v2-nav-link.mkt-menu-premium .v2-nav-tag:before,
+  body .v2-nav-link.mkt-menu-pro .mkt-pro-mini:before,
+  body .v2-nav-link.mkt-menu-premium .mkt-pro-mini:before{
+    content:""!important;
+    position:absolute!important;
+    left:6px!important;
+    top:50%!important;
+    transform:translateY(-50%)!important;
+    width:6px!important;
+    height:6px!important;
+    border-radius:50%!important;
+    background:#00ff7f!important;
+    box-shadow:0 0 7px #00ff7f,0 0 15px rgba(0,255,127,.92)!important;
+  }
+  body .v2-nav-link.mkt-menu-pro::after,
+  body .v2-nav-link.mkt-menu-premium::after,
+  body .v2-nav-link.real-premium-lock::after,
+  body .v2-nav-link.premium-locked::after{
+    display:none!important;
+    content:""!important;
+  }
+  body .app-install-banner{
+    border:1px solid rgba(255,255,255,.16)!important;
+    background:radial-gradient(circle at 90% 10%,rgba(34,197,94,.30),transparent 28%),linear-gradient(135deg,#0f172a,#312e81)!important;
+    box-shadow:0 18px 44px rgba(15,23,42,.28),inset 0 1px 0 rgba(255,255,255,.10)!important;
+  }
+  body .app-install-banner button{
+    border:0!important;
+    border-radius:999px!important;
+    padding:12px 16px!important;
+    font-weight:1000!important;
+    color:#07111f!important;
+    background:linear-gradient(135deg,#bbf7d0,#38bdf8,#c7d2fe)!important;
+    box-shadow:0 0 22px rgba(56,189,248,.35)!important;
+  }
+  body.mkt-installed-mode .app-install-banner{display:none!important;}
+</style>
+<script id="mkt-v100-badge-pwa-only-js">
+(function(){
+  'use strict';
+  var deferredInstallPrompt=null;
+  function qa(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s));}
+  function cleanText(el){return String((el&&el.textContent)||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/g,'d');}
+  function ensureTag(a,label){
+    if(!a) return;
+    var tag=a.querySelector('.v2-nav-tag,.mkt-pro-mini,.premium-badge,.pro-badge,[class*="badge"],[class*="tag"]');
+    if(!tag){tag=document.createElement('span');tag.className='v2-nav-tag';a.appendChild(tag);}
+    tag.className='v2-nav-tag';
+    tag.textContent=label;
+  }
+  function refreshBadges(){
+    qa('.v2-nav-link,.sidebar a,[class*="sidebar"] a').forEach(function(a){
+      var t=cleanText(a);
+      if(/ai messenger|crm|kanban|marketing director|ai studio|creative|analytics|automation|premium|video|image|giong noi|livestream|seller|vip/.test(t)){
+        a.classList.remove('mkt-menu-pro');
+        a.classList.add('mkt-menu-premium');
+        ensureTag(a,'PREMIUM');
+      }else if(/group center tong|group center|quan ly group|quan ly fanpage|ai comment|facebook center|fanpage|comment manager|dang bai facebook|token fanpage/.test(t)){
+        a.classList.remove('mkt-menu-premium');
+        a.classList.add('mkt-menu-pro');
+        ensureTag(a,'PRO');
+      }
+    });
+  }
+  function isStandalone(){
+    return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone===true;
+  }
+  function showGuide(){
+    alert('Cách cài App Mini:\n\nAndroid Chrome: bấm nút Cài app nếu hiện thông báo. Nếu chưa hiện, bấm dấu 3 chấm → Thêm vào màn hình chính.\n\niPhone Safari: bấm Chia sẻ → Thêm vào màn hình chính.\n\nLưu ý: cần mở bằng domain HTTPS thật, không dùng file:// hoặc localhost.');
+  }
+  window.addEventListener('beforeinstallprompt',function(e){
+    e.preventDefault();
+    deferredInstallPrompt=e;
+    qa('.app-install-banner button').forEach(function(btn){btn.textContent='Cài app vào điện thoại';});
+  });
+  window.addEventListener('appinstalled',function(){document.body.classList.add('mkt-installed-mode');deferredInstallPrompt=null;});
+  window.showInstallGuide=function(){
+    if(isStandalone()){document.body.classList.add('mkt-installed-mode');return false;}
+    if(deferredInstallPrompt){
+      deferredInstallPrompt.prompt();
+      deferredInstallPrompt.userChoice.finally(function(){deferredInstallPrompt=null;});
+      return false;
+    }
+    showGuide();
+    return false;
+  };
+  document.addEventListener('click',function(e){
+    var btn=e.target.closest&&e.target.closest('.app-install-banner button,[data-install-app],#installAppBtn');
+    if(!btn) return;
+    e.preventDefault();e.stopPropagation();if(e.stopImmediatePropagation)e.stopImmediatePropagation();
+    return window.showInstallGuide();
+  },true);
+  function init(){if(isStandalone()) document.body.classList.add('mkt-installed-mode');refreshBadges();}
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',init); else init();
+  if(window.MutationObserver){new MutationObserver(refreshBadges).observe(document.documentElement,{childList:true,subtree:true,characterData:true});}
+  setTimeout(refreshBadges,400);setTimeout(refreshBadges,1200);setInterval(refreshBadges,1800);
+})();
+</script>
+
 </body></html>
 """
 
@@ -10477,10 +10628,12 @@ def pwa_manifest():
     return jsonify({
         "name": "Mkt Automation Pro",
         "short_name": "Mkt Pro",
-        "description": "AI Marketing & Automation V3 Enterprise AI Suite",
+        "description": "Công cụ Marketing Automation Pro cài như app mini trên điện thoại",
         "start_url": "/",
         "scope": "/",
         "display": "standalone",
+        "display_override": ["standalone", "minimal-ui", "browser"],
+        "id": "/",
         "background_color": "#0F172A",
         "theme_color": "#0F172A",
         "orientation": "portrait",
@@ -10493,7 +10646,7 @@ def pwa_manifest():
 @app.get("/service-worker.js")
 def pwa_service_worker():
     js = """
-const CACHE_NAME = 'mkt-automation-pro-v1';
+const CACHE_NAME = 'mkt-automation-pro-v100';
 const ASSETS = ['/', '/manifest.json', '/pwa-icon-192.png', '/pwa-icon-512.png'];
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(ASSETS)));
