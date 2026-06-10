@@ -5865,156 +5865,82 @@ Thời gian tạo: {{ h[9] }}
 </section>
 
 <section class="panel pricing-visible" id="pricing">
-  <div class="premium-pricing-pro v4-pricing-shell">
-    <div class="premium-title">
-      <span class="mini">V5 SELLER AI PREMIUM</span>
+  <style>
+    .premium-pricing-compact{padding:24px;background:linear-gradient(180deg,#f8fafc,#ffffff);border-radius:26px;border:1px solid #e5e7eb;box-shadow:0 18px 45px rgba(15,23,42,.06)}
+    .pricing-compact-head{text-align:center;margin-bottom:18px}
+    .pricing-compact-head .mini{display:inline-flex;align-items:center;justify-content:center;padding:6px 12px;border-radius:999px;background:#eef2ff;color:#3730a3;font-weight:900;font-size:12px;letter-spacing:.04em}
+    .pricing-compact-head h2{margin:10px 0 6px;font-size:28px;line-height:1.15;color:#0f172a}
+    .pricing-compact-head p{margin:0;color:#64748b;font-size:14px}
+    .pricing-grid-5{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:14px;align-items:stretch}
+    .compact-price-card{position:relative;background:#fff;border:1px solid #e5e7eb;border-radius:20px;padding:18px 14px;text-align:center;box-shadow:0 12px 26px rgba(15,23,42,.06);transition:.18s ease;overflow:hidden}
+    .compact-price-card:hover{transform:translateY(-4px);box-shadow:0 18px 38px rgba(15,23,42,.10)}
+    .compact-price-card .tag{display:inline-flex;padding:5px 10px;border-radius:999px;background:#f1f5f9;color:#334155;font-size:12px;font-weight:900;margin-bottom:8px}
+    .compact-price-card h3{margin:2px 0 8px;font-size:19px;color:#111827}
+    .compact-price-card .price{font-size:24px;font-weight:1000;color:#2563eb;margin-bottom:6px;letter-spacing:-.03em}
+    .compact-price-card .sub{min-height:36px;margin:0 0 14px;color:#64748b;font-size:13px;line-height:1.35}
+    .compact-price-card button{width:100%;border:0;border-radius:13px;padding:12px 10px;background:#111827;color:#fff;font-weight:900;cursor:pointer;box-shadow:0 10px 22px rgba(17,24,39,.16)}
+    .compact-price-card.popular{border:2px solid #f59e0b;transform:translateY(-3px)}
+    .compact-price-card.popular:before{content:"Phổ biến";position:absolute;top:10px;right:-30px;background:#f59e0b;color:#111827;font-size:11px;font-weight:1000;padding:5px 32px;transform:rotate(35deg)}
+    .compact-price-card.pro{background:linear-gradient(180deg,#0f172a,#111827);border-color:#334155;color:#fff}
+    .compact-price-card.pro h3,.compact-price-card.pro .sub{color:#fff}
+    .compact-price-card.pro .price{color:#facc15}
+    .compact-price-card.pro .tag{background:rgba(250,204,21,.16);color:#facc15}
+    .compact-price-card.pro button{background:#facc15;color:#111827}
+    .premium-short-note{margin-top:14px;padding:12px 14px;border-radius:16px;background:#f8fafc;border:1px dashed #cbd5e1;color:#475569;font-size:13px;text-align:center}
+    @media(max-width:1200px){.pricing-grid-5{grid-template-columns:repeat(3,1fr)}}
+    @media(max-width:760px){.premium-pricing-compact{padding:18px}.pricing-grid-5{grid-template-columns:1fr}.compact-price-card.popular{transform:none}}
+  </style>
+
+  <div class="premium-pricing-compact">
+    <div class="pricing-compact-head">
+      <span class="mini">PREMIUM</span>
       <h2>Bảng Giá Premium</h2>
-      <p>Thiết kế theo giá trị nhận được: tiết kiệm thời gian, giảm chi phí thuê ngoài và mở khóa AI Marketing chuyên nghiệp.</p>
+      <p>Chọn gói phù hợp để mở khóa công cụ AI Marketing.</p>
     </div>
 
-    <div class="v4-pricing-stats">
-      <div><b>2.381+</b><span>Khách hàng sử dụng</span></div>
-      <div><b>120.000+</b><span>Content đã tạo</span></div>
-      <div><b>98%</b><span>Đánh giá hài lòng</span></div>
-    </div>
-
-    <div class="premium-grid-pro v4-premium-grid">
-      <div class="premium-plan free-plan v4-plan">
-        <div class="plan-ribbon">DÙNG THỬ</div>
-        <div class="plan-name">Dùng thử miễn phí</div>
-        <div class="plan-price">3 ngày</div>
-        <div class="plan-desc">Dùng thử 3 ngày sau khi đăng ký, chỉ mở 3 công cụ chính để khách trải nghiệm trước khi nâng cấp.</div>
-        <div class="benefit-title">Quyền lợi dùng thử</div>
-        <ul class="benefit-list">
-          <li class="open">Quản lý Fanpage</li>
-          <li class="open">Quản lý Group</li>
-          <li class="open">AI Comment</li>
-          <li class="locked">AI Messenger cần Premium</li>
-          <li class="locked">CRM Kanban cần Premium</li>
-          <li class="locked">AI Marketing Director cần Premium</li>
-        </ul>
+    <div class="pricing-grid-5">
+      <div class="compact-price-card" data-plan="monthly">
+        <span class="tag">Cơ bản</span>
+        <h3>Gói 1 Tháng</h3>
+        <div class="price">159.000đ</div>
+        <p class="sub">Dùng ngắn hạn, phù hợp người mới bắt đầu.</p>
+        <button type="button" data-plan="monthly">Nâng cấp</button>
       </div>
 
-      <div class="premium-plan v4-plan">
-        <div class="value-badge">🚀 GÓI 1 THÁNG</div>
-        <div class="plan-name">Gói 1 tháng</div>
-        <div class="plan-price">159.000đ</div>
-        <div class="price-sub">Chỉ 5.300đ/ngày</div>
-        <div class="benefit-title">Phù hợp</div>
-        <ul class="benefit-list">
-          <li class="open">Chủ shop mới</li>
-          <li class="open">Cá nhân kinh doanh online</li>
-          <li class="open">Người mới chạy quảng cáo</li>
-        </ul>
-        <div class="benefit-title">Giá trị nhận được</div>
-        <div class="v4-save-box">🔥 Tiết kiệm 2-3 giờ mỗi ngày</div>
-        <ul class="benefit-list">
-          <li class="open">AI Content Studio</li>
-          <li class="open">Tạo 5 content/lần</li>
-          <li class="open">Đăng Fanpage, ảnh, Video, Reel</li>
-          <li class="open">Upload Excel / CSV</li>
-          <li class="open">Lịch đăng cơ bản</li>
-          <li class="open">Dashboard cơ bản</li>
-          <li class="open">Token Manager</li>
-        </ul>
-        <button class="plan-button premium-btn" onclick="openPayment('monthly')">Mở khóa gói 1 tháng</button>
+      <div class="compact-price-card" data-plan="quarterly">
+        <span class="tag">Tiết kiệm</span>
+        <h3>Gói 3 Tháng</h3>
+        <div class="price">359.000đ</div>
+        <p class="sub">Ổn định hơn cho shop nhỏ và cá nhân bán hàng.</p>
+        <button type="button" data-plan="quarterly">Nâng cấp</button>
       </div>
 
-      <div class="premium-plan v4-plan">
-        <div class="plan-name">Gói 3 tháng</div>
-        <div class="plan-price">359.000đ</div>
-        <div class="price-sub">Tối ưu hơn gói tháng</div>
-        <div class="benefit-title">Bao gồm toàn bộ gói 1 tháng</div>
-        <ul class="benefit-list">
-          <li class="open">Campaign Manager</li>
-          <li class="open">AI Marketing Planner</li>
-          <li class="open">Kho Content Premium</li>
-          <li class="open">Token Center nâng cao</li>
-          <li class="open">Báo cáo CSV</li>
-          <li class="open">Lịch đăng nâng cao</li>
-        </ul>
-        <div class="v4-value-received">
-          <b>🎁 Giá trị nhận được</b>
-          <span>Viết content + lập kế hoạch + báo cáo cơ bản cho shop nhỏ.</span>
-        </div>
-        <button class="plan-button premium-btn" onclick="openPayment('quarterly')">Đăng ký 3 tháng</button>
+      <div class="compact-price-card" data-plan="halfyear">
+        <span class="tag">Tăng trưởng</span>
+        <h3>Gói 6 Tháng</h3>
+        <div class="price">559.000đ</div>
+        <p class="sub">Mở thêm CRM, Sales Bot và quản lý khách hàng.</p>
+        <button type="button" data-plan="halfyear">Nâng cấp</button>
       </div>
 
-      <div class="premium-plan v4-plan">
-        <div class="plan-name">Gói 6 tháng</div>
-        <div class="plan-price">559.000đ</div>
-        <div class="price-sub">Mở CRM và Sales Bot</div>
-        <div class="benefit-title">Bao gồm toàn bộ gói 3 tháng</div>
-        <ul class="benefit-list">
-          <li class="open">CRM Pro</li>
-          <li class="open">AI Sales Bot</li>
-          <li class="open">Comment Manager</li>
-          <li class="open">Auto Tag khách hàng</li>
-          <li class="open">Quản lý khách hàng</li>
-          <li class="open">Chuyển khách sang CRM</li>
-        </ul>
-        <div class="v4-value-received">
-          <b>🎁 Giá trị nhận được</b>
-          <span>Tối ưu quy trình tư vấn, gom khách và chăm sóc khách hàng.</span>
-        </div>
-        <button class="plan-button premium-btn" onclick="openPayment('halfyear')">Đăng ký 6 tháng</button>
+      <div class="compact-price-card popular" data-plan="yearly">
+        <span class="tag">Tối ưu</span>
+        <h3>Gói 1 Năm</h3>
+        <div class="price">859.000đ</div>
+        <p class="sub">Gói phổ biến, chi phí thấp cho sử dụng dài hạn.</p>
+        <button type="button" data-plan="yearly">Nâng cấp</button>
       </div>
 
-      <div class="premium-plan featured v4-plan v4-yearly">
-        <div class="plan-ribbon">⭐ PHỔ BIẾN NHẤT</div>
-        <div class="plan-name">Gói 1 năm</div>
-        <div class="plan-price">859.000đ</div>
-        <div class="price-sub">Chỉ 2.300đ/ngày</div>
-        <div class="benefit-title">Giá trị thực tế</div>
-        <ul class="benefit-list">
-          <li class="open">AI Content Brain</li>
-          <li class="open">AI Marketing Director</li>
-          <li class="open">AI Ads Chuyên Gia</li>
-          <li class="open">CRM Pro</li>
-          <li class="open">Kho 50.000+ Content</li>
-          <li class="open">Automation Marketing</li>
-        </ul>
-        <div class="v4-save-box">🚀 Tiết kiệm ~12.000.000đ/năm chi phí thuê nhân sự</div>
-        <button class="plan-button premium-btn" onclick="openPayment('yearly')">Chọn gói phổ biến nhất</button>
-      </div>
-
-      <div class="premium-plan featured v4-plan v4-lifetime">
-        <div class="plan-ribbon">👑 NHÀ BÁN HÀNG PRO</div>
-        <div class="plan-name">Gói nhà bán hàng chuyên nghiệp</div>
-        <div class="plan-price">1.959.000đ</div>
-        <div class="price-sub">Gói cao nhất cho nhà bán hàng chuyên nghiệp</div>
-        <div class="benefit-title">Bao gồm</div>
-        <ul class="benefit-list">
-          <li class="open">Toàn bộ AI hiện tại</li>
-          <li class="open">Toàn bộ AI tương lai</li>
-          <li class="open">Cập nhật miễn phí</li>
-          <li class="open">Ưu tiên hỗ trợ</li>
-          <li class="open">Không phí gia hạn</li>
-          <li class="open">AI Image Center</li>
-          <li class="open">AI Video Center</li>
-          <li class="open">Dashboard Enterprise</li>
-          <li class="open">Export PDF / Excel</li>
-          <li class="open">Backup Database</li>
-        </ul>
-        <div class="v4-save-box gold">💰 Tiết kiệm hơn 10.000.000đ chi phí sử dụng lâu dài</div>
-        <button class="plan-button premium-btn" onclick="openPayment('lifetime')">Mở khóa trọn đời</button>
+      <div class="compact-price-card pro" data-plan="sellerpro">
+        <span class="tag">Cao cấp</span>
+        <h3>Seller Pro</h3>
+        <div class="price">1.959.000đ</div>
+        <p class="sub">Toàn bộ công cụ hiện tại, tương lai và ưu tiên hỗ trợ.</p>
+        <button type="button" data-plan="sellerpro">Nâng cấp</button>
       </div>
     </div>
 
-    <div class="v4-outsourcing-box">
-      <h3>🎁 Giá trị nhận được nếu thuê ngoài</h3>
-      <div class="v4-outsource-grid">
-        <div><b>2.000.000đ/tháng</b><span>Viết content</span></div>
-        <div><b>3.000.000đ/tháng</b><span>Marketing</span></div>
-        <div><b>1.000.000đ/tháng</b><span>CRM</span></div>
-        <div><b>6.000.000đ+</b><span>Tổng giá trị</span></div>
-      </div>
-      <p>Bạn chỉ trả từ <b>159.000đ</b> để có hệ thống AI Marketing hỗ trợ tạo nội dung, quản lý khách và tối ưu bán hàng.</p>
-    </div>
-
-    <div class="premium-note-box">
-      Sau khi thanh toán, nếu 5 phút chưa kích hoạt tự động, vui lòng gửi ảnh giao dịch và nội dung thanh toán qua Zalo 036 338 2629 để được hỗ trợ nhanh.
-    </div>
+    <div class="premium-short-note">Sau khi thanh toán, nếu 5 phút chưa kích hoạt, vui lòng gửi ảnh giao dịch qua Zalo 036 338 2629.</div>
   </div>
 </section>
 
@@ -7587,6 +7513,30 @@ function dropKanban(ev){ ev.preventDefault(); const col=ev.currentTarget; if(dra
   },400);
 })();
 </script>
+
+<script id="mkt-compact-pricing-final-fix">
+(function(){
+  'use strict';
+  var PLANS={
+    monthly:{title:'Gói 1 tháng',price:'159.000đ',amount:'159000',code:'GOI1THANG',desc:'Phù hợp người mới bắt đầu.'},
+    quarterly:{title:'Gói 3 tháng',price:'359.000đ',amount:'359000',code:'GOI3THANG',desc:'Tối ưu hơn gói tháng.'},
+    halfyear:{title:'Gói 6 tháng',price:'559.000đ',amount:'559000',code:'GOI6THANG',desc:'Mở thêm CRM, Sales Bot và công cụ nâng cao.'},
+    yearly:{title:'Gói 1 năm',price:'859.000đ',amount:'859000',code:'GOI1NAM',desc:'Gói phổ biến, tối ưu chi phí dài hạn.'},
+    sellerpro:{title:'Gói nhà bán hàng chuyên nghiệp',price:'1.959.000đ',amount:'1959000',code:'NHABANHANGPRO',desc:'Gói cao nhất cho nhà bán hàng chuyên nghiệp.'}
+  };
+  PLANS.lifetime=PLANS.sellerpro;
+  function q(s,r){return (r||document).querySelector(s)}
+  function norm(k){k=String(k||'').toLowerCase().replace(/[^a-z0-9]/g,''); if(k==='lifetime'||k==='seller'||k==='sellerpro'||k==='nhabanhangpro')return 'sellerpro'; if(k==='monthly'||k==='basic'||k==='goi1thang')return 'monthly'; if(k==='quarterly'||k==='pro'||k==='goi3thang')return 'quarterly'; if(k==='halfyear'||k==='business'||k==='goi6thang')return 'halfyear'; if(k==='yearly'||k==='goi1nam')return 'yearly'; return PLANS[k]?k:'monthly'}
+  function device(){var id='';try{id=localStorage.getItem('mkt_device_id')||''}catch(e){} if(!id&&typeof window.getOrCreateDeviceId==='function')id=window.getOrCreateDeviceId(); if(!id){id='MKT-'+Math.random().toString(36).slice(2,8).toUpperCase()+Date.now().toString().slice(-4);try{localStorage.setItem('mkt_device_id',id)}catch(e){}} document.cookie='mkt_device_id='+encodeURIComponent(id)+'; path=/; max-age='+(60*60*24*365*5); return id}
+  function setKey(k){k=norm(k); window.currentPremiumPlanKey=k; window.mktSelectedPlanKey=k; window.__mktClickedPlanKey=k; try{localStorage.setItem('mkt_selected_plan_key',k)}catch(e){} return k}
+  function payNote(p){var phone=(q('#payPhone')&&q('#payPhone').value.trim())||'CHUA_SDT'; var email=(q('#payEmail')&&q('#payEmail').value.trim())||'CHUA_GMAIL'; return device()+' | '+phone+' | '+email+' | '+p.code}
+  window.refreshPaymentContent=function(){var k=norm(window.currentPremiumPlanKey||window.mktSelectedPlanKey); var p=PLANS[k]||PLANS.monthly; var note=payNote(p); var pc=q('#payContent'); if(pc)pc.textContent=note; var price=q('#payPlanPrice'); if(price)price.textContent=Number(p.amount).toLocaleString('vi-VN')+' VNĐ'; var qr=q('#payQr'); if(qr)qr.src='https://img.vietqr.io/image/970405-8888363382629-compact2.png?amount='+encodeURIComponent(p.amount)+'&addInfo='+encodeURIComponent(note)+'&accountName='+encodeURIComponent('NGUYEN DANG THI XUAN')};
+  window.openPayment=function(k){k=setKey(k); var p=PLANS[k]||PLANS.monthly; var modal=q('#paymentModal'); if(!modal)return false; var title=q('#payPlanTitle'); if(title)title.textContent=p.title; var desc=q('#payPlanDesc'); if(desc)desc.textContent=p.desc; var price=q('#payPlanPrice'); if(price)price.textContent=Number(p.amount).toLocaleString('vi-VN')+' VNĐ'; var dev=q('#payDeviceId'); if(dev)dev.value=device(); window.refreshPaymentContent(); modal.style.display='flex'; return false};
+  document.addEventListener('click',function(e){var btn=e.target.closest&&e.target.closest('[data-plan]'); if(!btn)return; var k=norm(btn.getAttribute('data-plan')||(btn.dataset&&btn.dataset.plan)); setKey(k); if(/button|a/i.test(btn.tagName)||btn.closest('button,a')){e.preventDefault();e.stopPropagation();if(e.stopImmediatePropagation)e.stopImmediatePropagation();return window.openPayment(k)}},true);
+  document.addEventListener('input',function(e){if(e.target&&/payPhone|payEmail/.test(e.target.id||''))window.refreshPaymentContent()},true);
+})();
+</script>
+
 </body>
 </html>
 """
@@ -9384,6 +9334,30 @@ ADMIN_HTML = """
   deviceId();
 })();
 </script>
+
+<script id="mkt-compact-pricing-final-fix">
+(function(){
+  'use strict';
+  var PLANS={
+    monthly:{title:'Gói 1 tháng',price:'159.000đ',amount:'159000',code:'GOI1THANG',desc:'Phù hợp người mới bắt đầu.'},
+    quarterly:{title:'Gói 3 tháng',price:'359.000đ',amount:'359000',code:'GOI3THANG',desc:'Tối ưu hơn gói tháng.'},
+    halfyear:{title:'Gói 6 tháng',price:'559.000đ',amount:'559000',code:'GOI6THANG',desc:'Mở thêm CRM, Sales Bot và công cụ nâng cao.'},
+    yearly:{title:'Gói 1 năm',price:'859.000đ',amount:'859000',code:'GOI1NAM',desc:'Gói phổ biến, tối ưu chi phí dài hạn.'},
+    sellerpro:{title:'Gói nhà bán hàng chuyên nghiệp',price:'1.959.000đ',amount:'1959000',code:'NHABANHANGPRO',desc:'Gói cao nhất cho nhà bán hàng chuyên nghiệp.'}
+  };
+  PLANS.lifetime=PLANS.sellerpro;
+  function q(s,r){return (r||document).querySelector(s)}
+  function norm(k){k=String(k||'').toLowerCase().replace(/[^a-z0-9]/g,''); if(k==='lifetime'||k==='seller'||k==='sellerpro'||k==='nhabanhangpro')return 'sellerpro'; if(k==='monthly'||k==='basic'||k==='goi1thang')return 'monthly'; if(k==='quarterly'||k==='pro'||k==='goi3thang')return 'quarterly'; if(k==='halfyear'||k==='business'||k==='goi6thang')return 'halfyear'; if(k==='yearly'||k==='goi1nam')return 'yearly'; return PLANS[k]?k:'monthly'}
+  function device(){var id='';try{id=localStorage.getItem('mkt_device_id')||''}catch(e){} if(!id&&typeof window.getOrCreateDeviceId==='function')id=window.getOrCreateDeviceId(); if(!id){id='MKT-'+Math.random().toString(36).slice(2,8).toUpperCase()+Date.now().toString().slice(-4);try{localStorage.setItem('mkt_device_id',id)}catch(e){}} document.cookie='mkt_device_id='+encodeURIComponent(id)+'; path=/; max-age='+(60*60*24*365*5); return id}
+  function setKey(k){k=norm(k); window.currentPremiumPlanKey=k; window.mktSelectedPlanKey=k; window.__mktClickedPlanKey=k; try{localStorage.setItem('mkt_selected_plan_key',k)}catch(e){} return k}
+  function payNote(p){var phone=(q('#payPhone')&&q('#payPhone').value.trim())||'CHUA_SDT'; var email=(q('#payEmail')&&q('#payEmail').value.trim())||'CHUA_GMAIL'; return device()+' | '+phone+' | '+email+' | '+p.code}
+  window.refreshPaymentContent=function(){var k=norm(window.currentPremiumPlanKey||window.mktSelectedPlanKey); var p=PLANS[k]||PLANS.monthly; var note=payNote(p); var pc=q('#payContent'); if(pc)pc.textContent=note; var price=q('#payPlanPrice'); if(price)price.textContent=Number(p.amount).toLocaleString('vi-VN')+' VNĐ'; var qr=q('#payQr'); if(qr)qr.src='https://img.vietqr.io/image/970405-8888363382629-compact2.png?amount='+encodeURIComponent(p.amount)+'&addInfo='+encodeURIComponent(note)+'&accountName='+encodeURIComponent('NGUYEN DANG THI XUAN')};
+  window.openPayment=function(k){k=setKey(k); var p=PLANS[k]||PLANS.monthly; var modal=q('#paymentModal'); if(!modal)return false; var title=q('#payPlanTitle'); if(title)title.textContent=p.title; var desc=q('#payPlanDesc'); if(desc)desc.textContent=p.desc; var price=q('#payPlanPrice'); if(price)price.textContent=Number(p.amount).toLocaleString('vi-VN')+' VNĐ'; var dev=q('#payDeviceId'); if(dev)dev.value=device(); window.refreshPaymentContent(); modal.style.display='flex'; return false};
+  document.addEventListener('click',function(e){var btn=e.target.closest&&e.target.closest('[data-plan]'); if(!btn)return; var k=norm(btn.getAttribute('data-plan')||(btn.dataset&&btn.dataset.plan)); setKey(k); if(/button|a/i.test(btn.tagName)||btn.closest('button,a')){e.preventDefault();e.stopPropagation();if(e.stopImmediatePropagation)e.stopImmediatePropagation();return window.openPayment(k)}},true);
+  document.addEventListener('input',function(e){if(e.target&&/payPhone|payEmail/.test(e.target.id||''))window.refreshPaymentContent()},true);
+})();
+</script>
+
 </body></html>
 """
 
