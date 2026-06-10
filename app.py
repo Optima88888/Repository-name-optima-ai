@@ -6748,6 +6748,74 @@ function dropKanban(ev){ ev.preventDefault(); const col=ev.currentTarget; if(dra
 })();
 </script>
 
+
+
+<!-- FINAL OVERRIDE: pricing detail buttons real working -->
+<style id="mkt-price-detail-final-css">
+#mktPlanOverlay{display:none;position:fixed;inset:0;background:rgba(15,23,42,.72);z-index:2147483646;align-items:center;justify-content:center;padding:18px;box-sizing:border-box}
+#mktPlanBox{width:min(860px,96vw);max-height:92vh;overflow:auto;background:#fff;border-radius:28px;box-shadow:0 35px 100px rgba(15,23,42,.45);border:1px solid #ddd6fe;color:#111827}
+#mktPlanHead{padding:22px 24px;background:linear-gradient(135deg,#2563eb,#7c3aed);color:#fff;display:flex;justify-content:space-between;gap:16px;align-items:flex-start}
+#mktPlanHead h2{margin:0 0 6px;color:#fff;font-size:28px;line-height:1.15}
+#mktPlanHead p{margin:0;color:#eef2ff;font-weight:800}
+#mktPlanClose{border:0;border-radius:999px;background:rgba(255,255,255,.18);color:#fff;font-weight:900;padding:10px 16px;cursor:pointer}
+#mktPlanBody{padding:24px;display:grid;grid-template-columns:1fr 1fr;gap:18px}
+#mktPlanBody h3{margin:0 0 12px;color:#1e1b4b;font-size:20px}
+.mktPlanPanel{border:1px solid #e5e7eb;border-radius:20px;padding:18px;background:#f8fafc}
+.mktPlanPrice{font-size:34px;font-weight:1000;color:#2563eb;margin:8px 0 12px}.mktPlanList div{padding:9px 0;border-bottom:1px dashed #e5e7eb;font-weight:800;color:#334155}.mktPlanList div:before{content:'✓ ';color:#059669;font-weight:1000}
+#mktPlanPay{display:block;width:100%;border:0;border-radius:18px;background:linear-gradient(135deg,#2563eb,#7c3aed);color:#fff;font-weight:1000;font-size:17px;padding:16px;cursor:pointer;margin-top:16px;box-shadow:0 14px 35px rgba(37,99,235,.25)}
+#mktPlanNote{margin-top:12px;color:#64748b;font-weight:700;line-height:1.5}.mktPlanMini{background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;border-radius:16px;padding:14px;font-weight:900;line-height:1.5}
+@media(max-width:760px){#mktPlanBody{grid-template-columns:1fr}#mktPlanHead h2{font-size:22px}}
+</style>
+<script id="mkt-price-detail-final-js">
+(function(){
+  'use strict';
+  var plans={
+    monthly:{title:'Gói 1 tháng',price:'159.000đ',amount:'159000',desc:'Phù hợp người mới bắt đầu, shop nhỏ cần đăng bài, tạo content và quản lý Fanpage cơ bản.',benefits:['Đăng bài Facebook','Quản lý Fanpage','Quản lý Group','AI Comment','Tạo content cơ bản','Token Manager','Hỗ trợ kích hoạt theo ID thiết bị']},
+    quarterly:{title:'Gói 3 tháng',price:'359.000đ',amount:'359000',desc:'Tối ưu cho shop đang bán hàng cần dùng ổn định hơn và tiết kiệm hơn gói tháng.',benefits:['Toàn bộ gói 1 tháng','AI Messenger','CRM Kanban cơ bản','Kịch bản inbox','Lịch đăng nâng cao','Báo cáo cơ bản','Ưu tiên hỗ trợ']},
+    halfyear:{title:'Gói 6 tháng',price:'559.000đ',amount:'559000',desc:'Phù hợp shop cần CRM, chăm sóc khách và tối ưu quy trình bán hàng.',benefits:['Toàn bộ gói 3 tháng','CRM Pro','AI Sales Bot','Comment Manager','Auto Tag khách hàng','Quản lý khách hàng','Chuyển khách sang CRM']},
+    yearly:{title:'Gói 1 năm',price:'859.000đ',amount:'859000',desc:'Gói phổ biến nhất cho nhà bán hàng muốn dùng đầy đủ công cụ AI Marketing trong 1 năm.',benefits:['Toàn bộ gói 6 tháng','AI Marketing Director','AI Ads Chuyên Gia','Kho Content Premium','Automation Marketing','Export báo cáo','Ưu tiên xử lý']},
+    sellerpro:{title:'Gói nhà bán hàng chuyên nghiệp',price:'1.959.000đ',amount:'1959000',desc:'Gói cao nhất cho nhà bán hàng chuyên nghiệp, mở toàn bộ hệ thống sau khi admin duyệt.',benefits:['Toàn bộ tính năng Premium','AI Image Center','AI Video Center','AI Voice Studio','Dashboard Enterprise','Export PDF / Excel','Backup Database','Ưu tiên hỗ trợ VIP']}
+  };
+  plans.lifetime=plans.sellerpro;
+  function norm(t){return String(t||'').toLowerCase();}
+  function keyFromText(t){t=norm(t); if(t.indexOf('1.959')>-1||t.indexOf('1959')>-1||t.indexOf('nhà bán')>-1||t.indexOf('seller')>-1||t.indexOf('trọn đời')>-1) return 'sellerpro'; if(t.indexOf('859')>-1||t.indexOf('1 năm')>-1) return 'yearly'; if(t.indexOf('559')>-1||t.indexOf('6 tháng')>-1) return 'halfyear'; if(t.indexOf('359')>-1||t.indexOf('3 tháng')>-1) return 'quarterly'; return 'monthly';}
+  function deviceId(){var m=document.cookie.match(/(?:^|; )mkt_device_id=([^;]+)/); if(m) return decodeURIComponent(m[1]); var id=localStorage.getItem('mkt_device_id'); if(!id){id='MKT-'+Math.random().toString(36).slice(2,8).toUpperCase()+Date.now().toString().slice(-4); localStorage.setItem('mkt_device_id',id);} document.cookie='mkt_device_id='+encodeURIComponent(id)+'; path=/; max-age=31536000; SameSite=Lax'; return id;}
+  function ensureBox(){
+    var o=document.getElementById('mktPlanOverlay'); if(o) return o;
+    o=document.createElement('div'); o.id='mktPlanOverlay';
+    o.innerHTML='<div id="mktPlanBox"><div id="mktPlanHead"><div><h2 id="mktPlanTitle"></h2><p id="mktPlanDesc"></p></div><button id="mktPlanClose" type="button">Đóng</button></div><div id="mktPlanBody"><div class="mktPlanPanel"><h3>Chi tiết gói</h3><div class="mktPlanPrice" id="mktPlanPrice"></div><div id="mktPlanNote"></div><button id="mktPlanPay" type="button">Nâng cấp gói này</button></div><div class="mktPlanPanel"><h3>Quyền lợi nhận được</h3><div class="mktPlanList" id="mktPlanBenefits"></div><div class="mktPlanMini">Sau khi thanh toán, web admin sẽ duyệt theo ID thiết bị. Duyệt xong khách mới sử dụng được tính năng PRO.</div></div></div></div>';
+    document.body.appendChild(o);
+    o.addEventListener('click',function(e){if(e.target===o) closePlan();});
+    document.getElementById('mktPlanClose').onclick=closePlan;
+    return o;
+  }
+  function closePlan(){var o=document.getElementById('mktPlanOverlay'); if(o)o.style.display='none'; return false;}
+  function openPlan(k){
+    k=k||'monthly'; var p=plans[k]||plans.monthly; var o=ensureBox();
+    document.getElementById('mktPlanTitle').textContent=p.title;
+    document.getElementById('mktPlanDesc').textContent=p.desc;
+    document.getElementById('mktPlanPrice').textContent=p.price;
+    document.getElementById('mktPlanNote').innerHTML='ID thiết bị: <b>'+deviceId()+'</b><br>Gói sẽ mở sau khi admin duyệt thanh toán.';
+    document.getElementById('mktPlanBenefits').innerHTML=p.benefits.map(function(x){return '<div>'+x+'</div>';}).join('');
+    document.getElementById('mktPlanPay').onclick=function(ev){ev.preventDefault(); ev.stopPropagation(); if(typeof window.openPayment==='function'){closePlan(); window.openPayment(k); return false;} alert('Vui lòng thanh toán gói '+p.title+' - '+p.price+' và gửi ID thiết bị: '+deviceId()); return false;};
+    o.style.display='flex'; return false;
+  }
+  window.mktOpenPlanDetail=openPlan; window.mktClosePlanDetail=closePlan;
+  function shouldOpen(el){var txt=norm(el.innerText||el.textContent); if(txt.indexOf('xem chi tiết gói')>-1) return true; if(txt.indexOf('mở khóa gói')>-1) return true; if(txt.indexOf('đăng ký')>-1 && (txt.indexOf('tháng')>-1||txt.indexOf('gói')>-1)) return true; if(txt.indexOf('chọn gói phổ biến')>-1) return true; return false;}
+  document.addEventListener('click',function(e){
+    var target=e.target.closest('button,a,.premium-plan,.price-card,.v4-plan'); if(!target) return;
+    if(target.closest('.bot-actions,.bot-input,#floatingBotPanel,#mktPlanOverlay')) return;
+    var btn=e.target.closest('button,a'); var card=target.closest('.premium-plan,.price-card,.v4-plan');
+    if((btn && shouldOpen(btn)) || (card && (target===card || shouldOpen(target)))){
+      e.preventDefault(); e.stopPropagation(); if(e.stopImmediatePropagation)e.stopImmediatePropagation();
+      return openPlan(keyFromText((card||target).innerText||target.textContent));
+    }
+  },true);
+  function bind(){document.querySelectorAll('.premium-plan button,.price-card button,.v4-plan button').forEach(function(b){if(shouldOpen(b)){b.type='button'; b.style.pointerEvents='auto';}});}
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',bind); else bind(); setTimeout(bind,500); setTimeout(bind,1500);
+})();
+</script>
+
 </body>
 </html>
 """
