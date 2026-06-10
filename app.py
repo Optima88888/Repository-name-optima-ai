@@ -7855,9 +7855,146 @@ def get_support_messages(device_id=None, after_id=0, limit=100):
     rows = c.fetchall(); conn.close()
     return rows
 
+
+def money_vnd(value):
+    try:
+        return f"{int(float(value or 0)):,}".replace(",", ".") + "đ"
+    except Exception:
+        return "0đ"
+
+def admin_ceo_stats():
+    """Dashboard CEO cho Web Admin: doanh thu Premium, CTV, hoa hồng, ngày/tháng."""
+    try:
+        ensure_affiliate_tables()
+    except Exception:
+        pass
+
+    today = datetime.datetime.now().strftime("%Y-%m-%d")
+    month = datetime.datetime.now().strftime("%Y-%m")
+    out = {
+        "today_revenue": 0, "month_revenue": 0, "total_revenue": 0,
+        "today_orders": 0, "month_orders": 0, "pending_requests": 0,
+        "active_premium": 0, "active_ctv": 0, "pending_withdraw": 0,
+        "pending_withdraw_amount": 0, "total_commission": 0,
+        "conversion_rate": 0, "daily_rows": [], "monthly_rows": [],
+        "top_ctv": [], "package_rows": []
+    }
+
+    conn = sqlite3.connect(DB)
+    c = conn.cursor()
+
+    def one(sql, params=()):
+        try:
+            c.execute(sql, params)
+            row = c.fetchone()
+            return row[0] if row and row[0] is not None else 0
+        except Exception:
+            return 0
+
+    def many(sql, params=()):
+        try:
+            c.execute(sql, params)
+            return c.fetchall()
+        except Exception:
+            return []
+
+    # Premium revenue theo yêu cầu đã duyệt
+    out["today_revenue"] = one("""
+        SELECT COALESCE(SUM(amount),0) FROM premium_upgrade_requests
+        WHERE status='Đã duyệt' AND substr(COALESCE(approved_at, created_at),1,10)=?
+    """, (today,))
+    out["month_revenue"] = one("""
+        SELECT COALESCE(SUM(amount),0) FROM premium_upgrade_requests
+        WHERE status='Đã duyệt' AND substr(COALESCE(approved_at, created_at),1,7)=?
+    """, (month,))
+    out["total_revenue"] = one("SELECT COALESCE(SUM(amount),0) FROM premium_upgrade_requests WHERE status='Đã duyệt'")
+    out["today_orders"] = one("""
+        SELECT COUNT(*) FROM premium_upgrade_requests
+        WHERE status='Đã duyệt' AND substr(COALESCE(approved_at, created_at),1,10)=?
+    """, (today,))
+    out["month_orders"] = one("""
+        SELECT COUNT(*) FROM premium_upgrade_requests
+        WHERE status='Đã duyệt' AND substr(COALESCE(approved_at, created_at),1,7)=?
+    """, (month,))
+    out["pending_requests"] = one("SELECT COUNT(*) FROM premium_upgrade_requests WHERE status='Chờ duyệt'")
+    out["active_premium"] = one("SELECT COUNT(*) FROM device_subscriptions WHERE status='premium'")
+
+    total_requests = one("SELECT COUNT(*) FROM premium_upgrade_requests")
+    approved_requests = one("SELECT COUNT(*) FROM premium_upgrade_requests WHERE status='Đã duyệt'")
+    out["conversion_rate"] = round((approved_requests / total_requests) * 100, 1) if total_requests else 0
+
+    # Affiliate / CTV
+    out["active_ctv"] = one("SELECT COUNT(*) FROM affiliate_users WHERE status='active'")
+    out["pending_withdraw"] = one("SELECT COUNT(*) FROM affiliate_withdrawals WHERE status='Chờ duyệt'")
+    out["pending_withdraw_amount"] = one("SELECT COALESCE(SUM(amount),0) FROM affiliate_withdrawals WHERE status='Chờ duyệt'")
+    out["total_commission"] = one("SELECT COALESCE(SUM(commission_amount),0) FROM affiliate_referrals WHERE status IN ('Đã duyệt','Đã thanh toán')")
+
+    out["daily_rows"] = many("""
+        SELECT substr(COALESCE(approved_at, created_at),1,10) AS day,
+               COUNT(*) AS orders,
+               COALESCE(SUM(amount),0) AS revenue
+        FROM premium_upgrade_requests
+        WHERE status='Đã duyệt'
+        GROUP BY substr(COALESCE(approved_at, created_at),1,10)
+        ORDER BY day DESC
+        LIMIT 14
+    """)
+    out["monthly_rows"] = many("""
+        SELECT substr(COALESCE(approved_at, created_at),1,7) AS month,
+               COUNT(*) AS orders,
+               COALESCE(SUM(amount),0) AS revenue
+        FROM premium_upgrade_requests
+        WHERE status='Đã duyệt'
+        GROUP BY substr(COALESCE(approved_at, created_at),1,7)
+        ORDER BY month DESC
+        LIMIT 12
+    """)
+    out["package_rows"] = many("""
+        SELECT COALESCE(NULLIF(package_name,''),'Chưa rõ') AS package_name,
+               COUNT(*) AS orders,
+               COALESCE(SUM(amount),0) AS revenue
+        FROM premium_upgrade_requests
+        WHERE status='Đã duyệt'
+        GROUP BY COALESCE(NULLIF(package_name,''),'Chưa rõ')
+        ORDER BY revenue DESC
+        LIMIT 10
+    """)
+    out["top_ctv"] = many("""
+        SELECT u.full_name, u.phone, u.email, u.affiliate_code, u.level_name,
+               COUNT(r.id) AS orders,
+               COALESCE(SUM(r.amount),0) AS revenue,
+               COALESCE(SUM(r.commission_amount),0) AS commission
+        FROM affiliate_users u
+        LEFT JOIN affiliate_referrals r
+             ON r.affiliate_code=u.affiliate_code
+             AND r.status IN ('Đã duyệt','Đã thanh toán')
+        GROUP BY u.id
+        ORDER BY revenue DESC, commission DESC
+        LIMIT 10
+    """)
+    conn.close()
+
+    for k in ["today_revenue","month_revenue","total_revenue","pending_withdraw_amount","total_commission"]:
+        out[k + "_fmt"] = money_vnd(out[k])
+    return out
+
+
 ADMIN_HTML = """
 <!doctype html><html lang="vi"><head><meta charset="utf-8"><title>Web Admin Premium</title>
-<style>body{font-family:system-ui;background:#f8fafc;margin:0;padding:24px;color:#111827}.wrap{max-width:1180px;margin:auto}h1{margin-top:0}.card{background:white;border:1px solid #e5e7eb;border-radius:18px;padding:18px;box-shadow:0 10px 30px rgba(15,23,42,.08)}table{width:100%;border-collapse:collapse}th,td{border-bottom:1px solid #e5e7eb;padding:10px;text-align:left;font-size:13px}th{background:#f1f5f9}.badge{display:inline-block;padding:4px 8px;border-radius:999px;background:#fef3c7;color:#92400e;font-weight:700}.ok{background:#dcfce7;color:#166534}.danger{background:#fee2e2;color:#991b1b}button{border:0;border-radius:10px;padding:9px 12px;font-weight:700;cursor:pointer}.approve{background:#16a34a;color:white}.reject{background:#ef4444;color:white}.top{display:flex;gap:12px;align-items:center;justify-content:space-between;margin-bottom:16px}a{color:#2563eb;text-decoration:none}</style>
+<style>body{font-family:system-ui;background:#f8fafc;margin:0;padding:24px;color:#111827}.wrap{max-width:1180px;margin:auto}h1{margin-top:0}.card{background:white;border:1px solid #e5e7eb;border-radius:18px;padding:18px;box-shadow:0 10px 30px rgba(15,23,42,.08)}table{width:100%;border-collapse:collapse}th,td{border-bottom:1px solid #e5e7eb;padding:10px;text-align:left;font-size:13px}th{background:#f1f5f9}.badge{display:inline-block;padding:4px 8px;border-radius:999px;background:#fef3c7;color:#92400e;font-weight:700}.ok{background:#dcfce7;color:#166534}.danger{background:#fee2e2;color:#991b1b}button{border:0;border-radius:10px;padding:9px 12px;font-weight:700;cursor:pointer}.approve{background:#16a34a;color:white}.reject{background:#ef4444;color:white}.top{display:flex;gap:12px;align-items:center;justify-content:space-between;margin-bottom:16px}a{color:#2563eb;text-decoration:none}
+.ceo-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:14px;margin:18px 0}
+.ceo-card{background:linear-gradient(135deg,#ffffff,#eef2ff);border:1px solid #dbeafe;border-radius:18px;padding:16px;box-shadow:0 12px 28px rgba(37,99,235,.08)}
+.ceo-card b{display:block;font-size:22px;color:#1d4ed8;margin-top:8px}
+.ceo-card small{color:#64748b;font-weight:700}
+.admin-tabs{display:flex;gap:10px;flex-wrap:wrap;margin:14px 0 20px}
+.admin-tabs a{background:#eef2ff;color:#312e81;padding:10px 14px;border-radius:999px;font-weight:900}
+.admin-section-title{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:22px 0 12px}
+.admin-two{display:grid;grid-template-columns:1.1fr .9fr;gap:18px;margin-top:18px}
+.admin-pill{display:inline-block;padding:5px 10px;border-radius:999px;background:#ecfeff;color:#0e7490;font-weight:900}
+.progress-wrap{height:12px;background:#e5e7eb;border-radius:999px;overflow:hidden}
+.progress-fill{height:100%;background:linear-gradient(90deg,#2563eb,#7c3aed,#22c55e);border-radius:999px}
+@media(max-width:1000px){.ceo-grid{grid-template-columns:repeat(2,1fr)}.admin-two{grid-template-columns:1fr}}
+</style>
 
 <style id="chat-device-menu-fix">
 /* Bản sửa: chỉ dọn icon menu, tăng ưu tiên chat, hiển thị ID thiết bị rõ ràng */
@@ -7879,7 +8016,62 @@ ADMIN_HTML = """
 .bot-actions button{font-size:13px!important;line-height:1.25!important}
 .bot-title::before{content:"🤖 ";}
 </style>
-</head><body><div class="wrap"><div class="top"><div><h1>Web Admin - Duyệt Premium</h1><p>Danh sách yêu cầu nâng cấp theo ID thiết bị, SĐT và Gmail.</p><p><a href="#adminAffiliateBlock" style="display:inline-block;background:#16a34a;color:#fff;padding:9px 12px;border-radius:10px;font-weight:800">Quản Lý CTV / Hoa Hồng</a></p></div><a href="/">← Về app khách</a></div><div class="card"><table><thead><tr><th>ID</th><th>ID thiết bị</th><th>SĐT</th><th>Gmail</th><th>Gói</th><th>Số tiền</th><th>Nội dung CK</th><th>Trạng thái</th><th>Ngày tạo</th><th>Thao tác</th></tr></thead><tbody>
+</head><body><div class="wrap">
+<div class="admin-tabs">
+  <a href="/admin">🏠 Dashboard CEO</a>
+  <a href="#premiumRequests">👑 Premium</a>
+  <a href="#adminAffiliateBlock">🤝 CTV Hoa Hồng</a>
+  <a href="#revenueReport">💰 Doanh thu</a>
+  <a href="#withdrawReport">💳 Rút hoa hồng</a>
+</div>
+
+<div class="admin-section-title">
+  <h2 style="margin:0">Dashboard CEO</h2>
+  <span class="admin-pill">Tự động cập nhật theo dữ liệu duyệt Premium</span>
+</div>
+<div class="ceo-grid">
+  <div class="ceo-card"><small>💰 Doanh thu hôm nay</small><b>{{admin_stats.today_revenue_fmt}}</b><span>{{admin_stats.today_orders}} đơn</span></div>
+  <div class="ceo-card"><small>💎 Doanh thu tháng</small><b>{{admin_stats.month_revenue_fmt}}</b><span>{{admin_stats.month_orders}} đơn</span></div>
+  <div class="ceo-card"><small>👑 Premium hoạt động</small><b>{{admin_stats.active_premium}}</b><span>thiết bị</span></div>
+  <div class="ceo-card"><small>🤝 CTV hoạt động</small><b>{{admin_stats.active_ctv}}</b><span>cộng tác viên</span></div>
+  <div class="ceo-card"><small>📈 Tỷ lệ chuyển đổi</small><b>{{admin_stats.conversion_rate}}%</b><span>duyệt / yêu cầu</span></div>
+  <div class="ceo-card"><small>💵 Hoa hồng chờ chi</small><b>{{admin_stats.pending_withdraw_amount_fmt}}</b><span>{{admin_stats.pending_withdraw}} yêu cầu</span></div>
+</div>
+
+<div class="card" id="revenueReport" style="margin-bottom:18px">
+  <div class="admin-section-title"><h2 style="margin:0">💰 Báo cáo doanh thu</h2><span class="admin-pill">Tổng: {{admin_stats.total_revenue_fmt}}</span></div>
+  <div class="admin-two">
+    <div>
+      <h3>Doanh thu 14 ngày gần nhất</h3>
+      <table><thead><tr><th>Ngày</th><th>Đơn</th><th>Doanh thu</th></tr></thead><tbody>
+      {% for d in admin_stats.daily_rows %}
+        <tr><td>{{d[0]}}</td><td>{{d[1]}}</td><td><b>{{"{:,.0f}".format(d[2]).replace(",", ".")}}đ</b></td></tr>
+      {% endfor %}
+      {% if not admin_stats.daily_rows %}<tr><td colspan="3">Chưa có doanh thu.</td></tr>{% endif %}
+      </tbody></table>
+    </div>
+    <div>
+      <h3>Doanh thu theo gói</h3>
+      <table><thead><tr><th>Gói</th><th>Đơn</th><th>Doanh thu</th></tr></thead><tbody>
+      {% for p in admin_stats.package_rows %}
+        <tr><td>{{p[0]}}</td><td>{{p[1]}}</td><td><b>{{"{:,.0f}".format(p[2]).replace(",", ".")}}đ</b></td></tr>
+      {% endfor %}
+      {% if not admin_stats.package_rows %}<tr><td colspan="3">Chưa có dữ liệu gói.</td></tr>{% endif %}
+      </tbody></table>
+    </div>
+  </div>
+</div>
+
+<div class="card" id="withdrawReport" style="margin-bottom:18px">
+  <div class="admin-section-title"><h2 style="margin:0">🏆 Top CTV theo doanh thu</h2><span class="admin-pill">Hoa hồng tổng: {{admin_stats.total_commission_fmt}}</span></div>
+  <table><thead><tr><th>CTV</th><th>SĐT</th><th>Gmail</th><th>Mã CTV</th><th>Cấp</th><th>Đơn</th><th>Doanh thu</th><th>Hoa hồng</th></tr></thead><tbody>
+  {% for ctv in admin_stats.top_ctv %}
+    <tr><td><b>{{ctv[0] or 'CTV'}}</b></td><td>{{ctv[1] or ''}}</td><td>{{ctv[2] or ''}}</td><td><b>{{ctv[3]}}</b></td><td>{{ctv[4] or 'CTV thường'}}</td><td>{{ctv[5]}}</td><td><b>{{"{:,.0f}".format(ctv[6]).replace(",", ".")}}đ</b></td><td><b>{{"{:,.0f}".format(ctv[7]).replace(",", ".")}}đ</b></td></tr>
+  {% endfor %}
+  {% if not admin_stats.top_ctv %}<tr><td colspan="8">Chưa có CTV phát sinh doanh thu.</td></tr>{% endif %}
+  </tbody></table>
+</div>
+<div class="top"><div><h1>Web Admin - Duyệt Premium</h1><p>Danh sách yêu cầu nâng cấp theo ID thiết bị, SĐT và Gmail.</p><p><a href="#adminAffiliateBlock" style="display:inline-block;background:#16a34a;color:#fff;padding:9px 12px;border-radius:10px;font-weight:800">Quản Lý CTV / Hoa Hồng</a></p></div><a href="/">← Về app khách</a></div><div class="card" id="premiumRequests"><table><thead><tr><th>ID</th><th>ID thiết bị</th><th>SĐT</th><th>Gmail</th><th>Gói</th><th>Số tiền</th><th>Nội dung CK</th><th>Trạng thái</th><th>Ngày tạo</th><th>Thao tác</th></tr></thead><tbody>
 {% for r in rows %}
 <tr><td>{{r[0]}}</td><td><b>{{r[1]}}</b></td><td>{{r[2]}}</td><td>{{r[3]}}</td><td>{{r[5]}}</td><td>{{"{:,.0f}".format(r[6]).replace(",", ".")}}đ</td><td>{{r[7]}}</td><td><span class="badge {% if r[8]=='Đã duyệt' %}ok{% elif r[8]=='Từ chối' %}danger{% endif %}">{{r[8]}}</span></td><td>{{r[10]}}</td><td>{% if r[8]=='Chờ duyệt' %}<form method="post" action="/admin/premium_action" style="display:inline"><input type="hidden" name="request_id" value="{{r[0]}}"><input type="hidden" name="status" value="Đã duyệt"><button class="approve">Kích hoạt</button></form> <form method="post" action="/admin/premium_action" style="display:inline"><input type="hidden" name="request_id" value="{{r[0]}}"><input type="hidden" name="status" value="Từ chối"><button class="reject">Từ chối</button></form>{% else %}{{r[11] or ''}}{% endif %}</td></tr>
 {% endfor %}
@@ -8558,7 +8750,12 @@ ADMIN_HTML = """
 
 @app.route("/admin")
 def admin_home():
-    return render_template_string(ADMIN_HTML, rows=get_premium_requests(), support_rows=get_support_messages(limit=200))
+    return render_template_string(ADMIN_HTML, rows=get_premium_requests(), support_rows=get_support_messages(limit=200), admin_stats=admin_ceo_stats())
+
+
+@app.route('/api/admin/ceo_dashboard')
+def api_admin_ceo_dashboard():
+    return jsonify(admin_ceo_stats())
 
 @app.route("/admin/premium_action", methods=["POST"])
 def admin_premium_action():
