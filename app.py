@@ -5980,7 +5980,6 @@ Thời gian tạo: {{ h[9] }}
       </div>
     </div>
 
-    <div class="premium-short-note">Nút “Xem quyền lợi” chỉ mở mô tả gói. Nút “Nâng cấp” mới mở thanh toán, giúp tránh nhảy sai giá.</div>
   </div>
 
   <div class="benefit-modal" id="planBenefitModal" aria-hidden="true">
@@ -6039,11 +6038,8 @@ Thời gian tạo: {{ h[9] }}
         </div>
         <button class="primary" onclick="submitPremiumRequest()" style="margin:10px 0 16px;width:100%">ĐÃ THANH TOÁN</button>
 
-        <h3>Quyền lợi gói này</h3>
-        <div class="payment-benefits" id="payBenefits"></div>
-
-        <h3>Tính năng chưa mở ở gói này</h3>
-        <div class="payment-benefits" id="payLocked"></div>
+        <div class="payment-benefits" id="payBenefits" style="display:none"></div>
+        <div class="payment-benefits" id="payLocked" style="display:none"></div>
 
         <div class="payment-alert">
           Sau khi thanh toán, vui lòng bấm <b>Đã thanh toán</b> để gửi ID thiết bị, số điện thoại, Gmail và gói đã đăng ký về web admin. Nếu sau 5 phút chưa được hỗ trợ, liên hệ Zalo <b>036 338 2629</b>.
@@ -9459,6 +9455,96 @@ ADMIN_HTML = """
 })();
 </script>
 
+
+
+<!-- FINAL MENU PRO UPGRADE: sang hơn, gọn hơn, không đổi logic menu -->
+<style id="mkt-final-menu-pro-style">
+  .sidebar{
+    background:
+      radial-gradient(circle at 20% 0%,rgba(59,130,246,.38),transparent 34%),
+      radial-gradient(circle at 100% 20%,rgba(250,204,21,.20),transparent 28%),
+      linear-gradient(180deg,#07111f 0%,#0f172a 52%,#111827 100%)!important;
+    border:1px solid rgba(148,163,184,.24)!important;
+    box-shadow:0 26px 80px rgba(2,6,23,.42), inset 0 1px 0 rgba(255,255,255,.08)!important;
+    padding:18px!important;
+  }
+  .sidebar .logo{
+    padding:16px 16px 14px!important;
+    border-radius:22px!important;
+    background:linear-gradient(135deg,rgba(255,255,255,.12),rgba(255,255,255,.04))!important;
+    border:1px solid rgba(255,255,255,.14)!important;
+    box-shadow:0 16px 36px rgba(0,0,0,.18)!important;
+  }
+  .sidebar .logo:after{
+    width:100%!important;height:1px!important;margin-top:14px!important;
+    background:linear-gradient(90deg,transparent,#60a5fa,#facc15,transparent)!important;
+    border:0!important;
+  }
+  .v2-nav-title{
+    margin:18px 0 9px!important;
+    padding-left:10px!important;
+    color:#93c5fd!important;
+    letter-spacing:.12em!important;
+    font-size:10px!important;
+    position:relative!important;
+  }
+  .v2-nav-title:before{
+    content:"";display:inline-block;width:7px;height:7px;border-radius:99px;
+    background:#22c55e;box-shadow:0 0 16px rgba(34,197,94,.95);margin-right:8px;
+  }
+  .v2-nav-link{
+    min-height:56px!important;
+    padding:13px 14px 13px 16px!important;
+    border-radius:18px!important;
+    background:linear-gradient(135deg,rgba(255,255,255,.105),rgba(255,255,255,.035))!important;
+    border:1px solid rgba(148,163,184,.16)!important;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 8px 22px rgba(0,0,0,.12)!important;
+    color:#f8fafc!important;
+    position:relative!important;
+    overflow:hidden!important;
+  }
+  .v2-nav-link:before{
+    content:"";position:absolute;left:0;top:12px;bottom:12px;width:3px;border-radius:999px;
+    background:linear-gradient(180deg,#38bdf8,#818cf8);opacity:.45;
+  }
+  .v2-nav-link:hover,.v2-nav-link.active{
+    background:linear-gradient(135deg,rgba(37,99,235,.95),rgba(124,58,237,.88))!important;
+    border-color:rgba(255,255,255,.24)!important;
+    transform:translateX(4px)!important;
+    box-shadow:0 16px 38px rgba(37,99,235,.28)!important;
+  }
+  .v2-nav-text{font-weight:900!important;letter-spacing:-.01em!important;line-height:1.22!important;}
+  .v2-nav-tag{
+    padding:5px 9px!important;
+    border-radius:999px!important;
+    font-size:10px!important;
+    font-weight:1000!important;
+    color:#0f172a!important;
+    background:linear-gradient(135deg,#f8fafc,#c7d2fe)!important;
+    border:1px solid rgba(255,255,255,.55)!important;
+    box-shadow:0 0 20px rgba(129,140,248,.22)!important;
+  }
+  .v2-nav-link .v2-nav-tag:empty{display:none!important;}
+  .v2-nav-link.premium-locked .v2-nav-tag,
+  .v2-nav-link.real-premium-lock .v2-nav-tag,
+  .v2-nav-link[href="#messenger_ai"] .v2-nav-tag,
+  .v2-nav-link[href="#crm_sales"] .v2-nav-tag,
+  .v2-nav-link[href="#marketing_director"] .v2-nav-tag{
+    background:linear-gradient(135deg,#facc15,#fb923c)!important;
+    color:#111827!important;
+    box-shadow:0 0 24px rgba(250,204,21,.55)!important;
+  }
+  #sidebarDeviceId{
+    padding:7px 10px!important;border-radius:12px!important;
+    background:rgba(15,23,42,.52)!important;border:1px solid rgba(96,165,250,.22)!important;
+    color:#bfdbfe!important;
+  }
+  #sidebarPremiumStatus{
+    display:inline-flex!important;margin-top:8px!important;padding:7px 10px!important;border-radius:999px!important;
+    background:rgba(34,197,94,.13)!important;border:1px solid rgba(34,197,94,.24)!important;color:#bbf7d0!important;
+    font-weight:900!important;
+  }
+</style>
 </body></html>
 """
 
