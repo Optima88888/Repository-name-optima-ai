@@ -4775,9 +4775,10 @@ function closeLockedFeature(){
 .activity-card:nth-of-type(4) span::before{content:"Lead CRM"}
 .activity-card:nth-of-type(5) span::before{content:"Chiến dịch"}
 #sidebarDeviceId{display:inline-block!important;color:#fff!important;font-weight:900!important;font-size:14px!important;letter-spacing:.4px;margin:4px 0}
-.floating-bot{z-index:2147483000!important;pointer-events:auto!important}
-.bot-bubble,.bot-panel,.bot-actions button,.bot-input button{pointer-events:auto!important}
-.bot-panel{z-index:2147483001!important}
+/* Đã loại bỏ bot cũ bị trùng, chỉ giữ bot hỗ trợ mới #mktFixSupportFloat */
+.floating-bot{display:none!important;visibility:hidden!important;opacity:0!important;pointer-events:none!important}
+.bot-bubble,.bot-panel,.bot-actions button,.bot-input button{pointer-events:none!important}
+.bot-panel{display:none!important;visibility:hidden!important}
 .bot-body{min-height:210px!important}
 .bot-actions{grid-template-columns:1fr 1fr!important}
 .bot-actions button{font-size:13px!important;line-height:1.25!important}
@@ -7193,7 +7194,7 @@ function dropKanban(ev){ ev.preventDefault(); const col=ev.currentTarget; if(dra
   .mkt-clean-nav .v2-nav-title:nth-of-type(4)::before{content:'🎨 ';letter-spacing:0;text-transform:none;}
   .mkt-clean-nav .v2-nav-title:nth-of-type(5)::before{content:'⚙️ ';letter-spacing:0;text-transform:none;}
   .v2-nav-link{position:relative!important;display:flex!important;align-items:center!important;gap:8px!important;min-height:38px!important;height:auto!important;margin:2px 0!important;padding:8px 8px 8px 13px!important;border-radius:11px!important;background:transparent!important;border:1px solid transparent!important;box-shadow:none!important;color:#e8ecff!important;text-decoration:none!important;cursor:pointer!important;pointer-events:auto!important;user-select:none!important;overflow:visible!important;transform:none!important;transition:background .16s ease,border-color .16s ease,transform .16s ease!important;}
-  .v2-nav-link::before{content:'├'!important;display:inline-block!important;width:10px!important;margin-right:1px!important;color:rgba(165,180,252,.40)!important;font-size:13px!important;font-weight:900!important;background:transparent!important;box-shadow:none!important;position:static!important;opacity:1!important;}
+  .v2-nav-link::before{content:none!important;display:none!important;width:0!important;margin:0!important;background:transparent!important;box-shadow:none!important;opacity:0!important;}
   .v2-nav-link:hover{background:rgba(99,102,241,.12)!important;border-color:rgba(129,140,248,.16)!important;transform:translateX(2px)!important;box-shadow:none!important;}
   .v2-nav-link.active{background:linear-gradient(135deg,rgba(37,99,235,.20),rgba(124,58,237,.14))!important;border-color:rgba(129,140,248,.24)!important;}
   .v2-nav-text{flex:1 1 auto!important;min-width:0!important;font-size:14px!important;line-height:1.15!important;font-weight:850!important;white-space:normal!important;overflow:visible!important;text-overflow:clip!important;color:inherit!important;text-shadow:none!important;}
@@ -7283,7 +7284,7 @@ function dropKanban(ev){ ev.preventDefault(); const col=ev.currentTarget; if(dra
     .app-quick-card{min-width:0!important;padding:14px!important;border-radius:18px!important;}
     .app-quick-card h3,.app-quick-card b{font-size:14px!important;line-height:1.2!important;}
     .app-quick-card p{font-size:12px!important;line-height:1.35!important;}
-    .floating-bot{right:14px!important;bottom:calc(74px + env(safe-area-inset-bottom,0px))!important;}
+    .floating-bot{display:none!important;visibility:hidden!important;pointer-events:none!important;}
   }
 </style>
 <script id="mkt-mobile-top-download-final-js">
@@ -7481,10 +7482,9 @@ function dropKanban(ev){ ev.preventDefault(); const col=ev.currentTarget; if(dra
     if(!isMobile() || standalone()){document.body.classList.add('mkt-app-installed');return;}
     var old=qs('#mktMobileQuickActions'); if(old) return;
     var box=document.createElement('div'); box.id='mktMobileQuickActions';
-    box.innerHTML='<button type="button" id="mktMobileInstallQuick" aria-label="Tải GPT MKT"><span class="mkt-q-dot"></span><span class="mkt-q-text"><span class="mkt-q-title">GPT MKT</span><span class="mkt-q-sub">Tải xuống</span></span></button><button type="button" id="mktMobileCtvQuick" aria-label="CTV">CTV</button>';
+    box.innerHTML='<button type="button" id="mktMobileInstallQuick" aria-label="Tải GPT MKT"><span class="mkt-q-dot"></span><span class="mkt-q-text"><span class="mkt-q-title">GPT MKT</span><span class="mkt-q-sub">Tải xuống</span></span></button>';
     document.body.appendChild(box);
     qs('#mktMobileInstallQuick',box).addEventListener('click',runInstall,true);
-    qs('#mktMobileCtvQuick',box).addEventListener('click',openCTV,true);
   }
   window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();deferredPrompt=e;window.__mktDeferredPrompt=e;build();},{capture:true});
   window.addEventListener('appinstalled',function(){deferredPrompt=null;window.__mktDeferredPrompt=null;document.body.classList.add('mkt-app-installed')});
@@ -7551,6 +7551,12 @@ function dropKanban(ev){ ev.preventDefault(); const col=ev.currentTarget; if(dra
   #mktFixSupportLog .ad{background:#14532d!important;margin:6px 35px 6px 0!important;padding:8px!important;border-radius:12px!important}
   .mkt-fix-body input,.mkt-fix-body textarea{width:100%!important;box-sizing:border-box!important;background:#020617!important;color:#fff!important;border:1px solid #334155!important;border-radius:12px!important;padding:10px!important;margin:5px 0!important}
   .mkt-fix-body textarea{height:78px!important}.mkt-fix-send{width:100%!important;background:#22c55e!important;color:white!important;border:0!important;border-radius:12px!important;padding:11px!important;font-weight:900!important;cursor:pointer!important}.mkt-fix-note{font-size:12px!important;color:#94a3b8!important;margin-top:8px!important}
+
+/* CLEANUP 20260611: bỏ nút CTV nổi bên ngoài, giữ CTV trong menu trái */
+#mktMobileCtvQuick,#mktMobileCtvQuickRestore,#mobileCtvQuickBtn,
+button[aria-label="CTV"]{
+  display:none!important;visibility:hidden!important;opacity:0!important;pointer-events:none!important;
+}
   @keyframes mktBotFloatRestore{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}@keyframes mktOnlinePulseRestore{0%{transform:scale(1);opacity:1}50%{transform:scale(1.35);opacity:.78}100%{transform:scale(1);opacity:1}}
 </style>
 <script id="mkt-restore-chat-install-pro-js">
@@ -7579,7 +7585,7 @@ function dropKanban(ev){ ev.preventDefault(); const col=ev.currentTarget; if(dra
   };
   window.addEventListener('appinstalled',function(){var st=byId('installStatus');if(st)st.innerText='Đã cài đặt Mkt Automation Pro thành công.';document.body.classList.add('mkt-app-installed')});
   function openCTV(){try{if(typeof window.openModule==='function'){window.openModule('affiliate_center');return false}}catch(e){} location.hash='affiliate_center';return false}
-  function buildMobileInstall(){if(!mobile()||standalone())return;if(byId('mktMobileQuickActionsRestore'))return;var box=document.createElement('div');box.id='mktMobileQuickActionsRestore';box.innerHTML='<button type="button" id="mktMobileInstallQuickRestore"><span class="dot"></span><span class="txt"><b>GPT MKT</b><span class="mkt-install-sub">Tải xuống</span></span></button><button type="button" id="mktMobileCtvQuickRestore">CTV</button>';document.body.appendChild(box);byId('mktMobileInstallQuickRestore').onclick=window.showInstallGuide;byId('mktMobileCtvQuickRestore').onclick=openCTV;}
+  function buildMobileInstall(){if(!mobile()||standalone())return;if(byId('mktMobileQuickActionsRestore'))return;var box=document.createElement('div');box.id='mktMobileQuickActionsRestore';box.innerHTML='<button type="button" id="mktMobileInstallQuickRestore"><span class="dot"></span><span class="txt"><b>GPT MKT</b><span class="mkt-install-sub">Tải xuống</span></span></button>';document.body.appendChild(box);byId('mktMobileInstallQuickRestore').onclick=window.showInstallGuide;}
   function bubble(type,text){var log=byId('mktFixSupportLog');if(!log)return;var div=document.createElement('div');div.className=type;div.innerText=text;log.appendChild(div);log.scrollTop=log.scrollHeight;}
   var lastId=0;
   async function poll(){try{var r=await fetch('/support_poll?device_id='+encodeURIComponent(deviceId())+'&after_id='+encodeURIComponent(lastId),{cache:'no-store'});var d=await r.json().catch(function(){return{messages:[]}});(d.messages||[]).forEach(function(m){var mid=Number(m.id)||0;if(mid<=lastId)return;lastId=mid;if(m.sender==='admin')bubble('ad','Admin: '+m.message);});}catch(e){}}
@@ -8310,9 +8316,10 @@ ADMIN_HTML = """
 .activity-card:nth-of-type(4) span::before{content:"Lead CRM"}
 .activity-card:nth-of-type(5) span::before{content:"Chiến dịch"}
 #sidebarDeviceId{display:inline-block!important;color:#fff!important;font-weight:900!important;font-size:14px!important;letter-spacing:.4px;margin:4px 0}
-.floating-bot{z-index:2147483000!important;pointer-events:auto!important}
-.bot-bubble,.bot-panel,.bot-actions button,.bot-input button{pointer-events:auto!important}
-.bot-panel{z-index:2147483001!important}
+/* Đã loại bỏ bot cũ bị trùng, chỉ giữ bot hỗ trợ mới #mktFixSupportFloat */
+.floating-bot{display:none!important;visibility:hidden!important;opacity:0!important;pointer-events:none!important}
+.bot-bubble,.bot-panel,.bot-actions button,.bot-input button{pointer-events:none!important}
+.bot-panel{display:none!important;visibility:hidden!important}
 .bot-body{min-height:210px!important}
 .bot-actions{grid-template-columns:1fr 1fr!important}
 .bot-actions button{font-size:13px!important;line-height:1.25!important}
@@ -9839,6 +9846,36 @@ ADMIN_HTML = """
 })();
 </script>
 
+
+<!-- CLEANUP FINAL 20260611: remove duplicate bot, external CTV, and menu garbage mark -->
+<style id="mkt-cleanup-duplicate-bot-ctv-menu-css">
+  .floating-bot{
+    display:none!important;
+    visibility:hidden!important;
+    opacity:0!important;
+    pointer-events:none!important;
+  }
+  #mktMobileCtvQuick,
+  #mktMobileCtvQuickRestore,
+  #mobileCtvQuickBtn,
+  button[aria-label="CTV"]{
+    display:none!important;
+    visibility:hidden!important;
+    opacity:0!important;
+    pointer-events:none!important;
+  }
+  .v2-nav-link::before,
+  .mkt-clean-nav .v2-nav-link::before,
+  .sidebar .v2-nav-link::before{
+    content:none!important;
+    display:none!important;
+    width:0!important;
+    min-width:0!important;
+    margin:0!important;
+    padding:0!important;
+    opacity:0!important;
+  }
+</style>
 </body></html>
 """
 
