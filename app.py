@@ -7192,6 +7192,104 @@ function dropKanban(ev){ ev.preventDefault(); const col=ev.currentTarget; if(dra
 })();
 </script>
 
+
+
+<!-- CTV FINAL VISIBILITY PATCH -->
+<style id="ctv-final-visibility-patch">
+  #affiliateAdminSection{display:none!important}
+  a[href="#affiliate_admin"],[onclick*="affiliate_admin"]{display:none!important}
+  [data-aff-menu="1"]{display:flex!important;visibility:visible!important;opacity:1!important;pointer-events:auto!important}
+  #mobileCtvQuickBtn{display:flex!important;visibility:visible!important;opacity:1!important;pointer-events:auto!important}
+  #affiliateCenterSection.ctv-active{display:block!important;visibility:visible!important;opacity:1!important;min-height:420px!important}
+  .ctv-mobile-card{display:none}
+  @media(max-width:760px){
+    #affiliateCenterSection{margin:12px!important;border-radius:18px!important;padding:14px!important}
+    .aff-stats{grid-template-columns:1fr 1fr!important}
+    .aff-link-box{flex-direction:column!important;align-items:stretch!important}
+  }
+</style>
+<script id="ctv-final-visibility-js">
+(function(){
+  function qs(s){return document.querySelector(s)}
+  function qsa(s){return Array.prototype.slice.call(document.querySelectorAll(s))}
+  function money(n){return Number(n||0).toLocaleString('vi-VN')+'đ'}
+  function toast(msg){
+    var t=document.getElementById('affToast');
+    if(!t){t=document.createElement('div');t.id='affToast';t.className='aff-toast';document.body.appendChild(t)}
+    t.textContent=msg;t.style.display='block';setTimeout(function(){t.style.display='none'},2600)
+  }
+  function hideMain(){
+    qsa('main > section, main > div.module, main > div.card, main > div.app-module-section').forEach(function(el){
+      if(el.id!=='affiliateCenterSection') el.style.display='none';
+    });
+  }
+  function ensureMenu(){
+    qsa('a[href="#affiliate_admin"],[onclick*="affiliate_admin"],#affiliateAdminSection').forEach(function(el){el.style.display='none'});
+    var nav=qs('.nav');
+    if(nav && !qs('[data-aff-menu="1"]')){
+      var a=document.createElement('a');
+      a.setAttribute('data-aff-menu','1');
+      a.className='v2-nav-link';
+      a.href='#affiliate_center';
+      a.innerHTML='<span class="v2-nav-ico"></span><span class="v2-nav-text">CTV Hoa Hồng</span><span class="v2-nav-tag" style="background:#dcfce7;color:#166534;box-shadow:0 0 14px rgba(34,197,94,.55)">CTV</span>';
+      a.onclick=function(e){e.preventDefault(); return window.openAffiliateCenter();};
+      nav.appendChild(a);
+    }
+    qsa('[data-aff-menu="1"],a[href="#affiliate_center"]').forEach(function(a){
+      a.style.display='flex'; a.onclick=function(e){e.preventDefault(); return window.openAffiliateCenter();};
+    });
+    var btn=document.getElementById('mobileCtvQuickBtn');
+    if(!btn){
+      btn=document.createElement('button');btn.id='mobileCtvQuickBtn';btn.type='button';btn.innerHTML='<span class="dot"></span>CTV Hoa Hồng';document.body.appendChild(btn);
+    }
+    btn.onclick=function(e){e.preventDefault(); return window.openAffiliateCenter();};
+  }
+  window.openAffiliateCenter=function(){
+    var sec=document.getElementById('affiliateCenterSection');
+    if(!sec){toast('Chưa tìm thấy giao diện CTV trong file.');return false;}
+    hideMain();
+    sec.style.display='block';sec.classList.add('ctv-active');
+    if(history && history.replaceState) history.replaceState(null,'','#affiliate_center');
+    if(window.affiliateLoadMe) window.affiliateLoadMe();
+    setTimeout(function(){sec.scrollIntoView({behavior:'smooth',block:'start'})},60);
+    return false;
+  };
+  var oldOpen=window.openModule;
+  window.openModule=function(name){
+    if(name==='affiliate_center') return window.openAffiliateCenter();
+    if(name==='affiliate_admin') return false;
+    if(typeof oldOpen==='function') return oldOpen.apply(this,arguments);
+    return true;
+  };
+  window.affiliateLoadMe=window.affiliateLoadMe || function(){
+    fetch('/api/affiliate/me').then(function(r){return r.json()}).then(function(d){
+      if(qs('#affName')) qs('#affName').value=d.full_name||'';
+      if(qs('#affPhone')) qs('#affPhone').value=d.phone||'';
+      if(qs('#affEmail')) qs('#affEmail').value=d.email||'';
+      if(qs('#affRefLink')) qs('#affRefLink').value=d.ref_link||'';
+      if(qs('#affCode')) qs('#affCode').textContent=d.affiliate_code||'---';
+      if(qs('#affLevel')) qs('#affLevel').textContent=d.level_name||'CTV thường';
+      if(qs('#affPercent')) qs('#affPercent').textContent=d.commission_percent||20;
+      var s=d.summary||{};
+      if(qs('#affClicks')) qs('#affClicks').textContent=s.clicks||0;
+      if(qs('#affCustomers')) qs('#affCustomers').textContent=s.referrals||0;
+      if(qs('#affPremium')) qs('#affPremium').textContent=s.premium||0;
+      if(qs('#affCommission')) qs('#affCommission').textContent=money(s.commission||0);
+      if(qs('#affBalance')) qs('#affBalance').textContent=money(s.balance||0);
+    }).catch(function(){toast('Không tải được dữ liệu CTV')});
+  };
+  function init(){
+    ensureMenu();
+    var ref=(new URL(location.href)).searchParams.get('ref');
+    if(ref){try{document.cookie='affiliate_code='+encodeURIComponent(ref.toUpperCase())+';path=/;max-age='+(60*60*24*90)}catch(e){}}
+    if(location.hash==='#affiliate_center') setTimeout(window.openAffiliateCenter,350);
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',init); else init();
+  setTimeout(init,800); setTimeout(init,1800);
+})();
+</script>
+<!-- /CTV FINAL VISIBILITY PATCH -->
+
 </body>
 </html>
 """
@@ -7781,13 +7879,13 @@ ADMIN_HTML = """
 .bot-actions button{font-size:13px!important;line-height:1.25!important}
 .bot-title::before{content:"🤖 ";}
 </style>
-</head><body><div class="wrap"><div class="top"><div><h1>Web Admin - Duyệt Premium</h1><p>Danh sách yêu cầu nâng cấp theo ID thiết bị, SĐT và Gmail.</p></div><a href="/">← Về app khách</a></div><div class="card"><table><thead><tr><th>ID</th><th>ID thiết bị</th><th>SĐT</th><th>Gmail</th><th>Gói</th><th>Số tiền</th><th>Nội dung CK</th><th>Trạng thái</th><th>Ngày tạo</th><th>Thao tác</th></tr></thead><tbody>
+</head><body><div class="wrap"><div class="top"><div><h1>Web Admin - Duyệt Premium</h1><p>Danh sách yêu cầu nâng cấp theo ID thiết bị, SĐT và Gmail.</p><p><a href="#adminAffiliateBlock" style="display:inline-block;background:#16a34a;color:#fff;padding:9px 12px;border-radius:10px;font-weight:800">Quản Lý CTV / Hoa Hồng</a></p></div><a href="/">← Về app khách</a></div><div class="card"><table><thead><tr><th>ID</th><th>ID thiết bị</th><th>SĐT</th><th>Gmail</th><th>Gói</th><th>Số tiền</th><th>Nội dung CK</th><th>Trạng thái</th><th>Ngày tạo</th><th>Thao tác</th></tr></thead><tbody>
 {% for r in rows %}
 <tr><td>{{r[0]}}</td><td><b>{{r[1]}}</b></td><td>{{r[2]}}</td><td>{{r[3]}}</td><td>{{r[5]}}</td><td>{{"{:,.0f}".format(r[6]).replace(",", ".")}}đ</td><td>{{r[7]}}</td><td><span class="badge {% if r[8]=='Đã duyệt' %}ok{% elif r[8]=='Từ chối' %}danger{% endif %}">{{r[8]}}</span></td><td>{{r[10]}}</td><td>{% if r[8]=='Chờ duyệt' %}<form method="post" action="/admin/premium_action" style="display:inline"><input type="hidden" name="request_id" value="{{r[0]}}"><input type="hidden" name="status" value="Đã duyệt"><button class="approve">Kích hoạt</button></form> <form method="post" action="/admin/premium_action" style="display:inline"><input type="hidden" name="request_id" value="{{r[0]}}"><input type="hidden" name="status" value="Từ chối"><button class="reject">Từ chối</button></form>{% else %}{{r[11] or ''}}{% endif %}</td></tr>
 {% endfor %}
 </tbody></table></div>
 
-<div class="card" style="margin-top:18px">
+<div class="card" id="adminAffiliateBlock" style="margin-top:18px">
   <h2>Quản Lý CTV / Hoa Hồng</h2>
   <p>CTV đăng ký trên app khách sẽ tự xuất hiện tại đây. Admin chỉnh % hoa hồng theo cấp bậc hoặc chỉnh riêng từng CTV.</p>
   <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:12px 0">
@@ -7811,7 +7909,7 @@ ADMIN_HTML = """
     var tb=document.querySelector('#adminAffiliateUsers tbody');
     tb.innerHTML=(d.users||[]).map(function(u){var id=u[0];return '<tr><td>'+esc(u[2]||u[1]||'')+'</td><td>'+esc(u[3])+'</td><td>'+esc(u[4])+'</td><td><b>'+esc(u[5])+'</b></td><td><input id="lv_'+id+'" value="'+esc(u[6]||'CTV thường')+'" style="width:120px;padding:7px;border:1px solid #ddd;border-radius:8px"></td><td><input id="pct_'+id+'" value="'+esc(u[7]||20)+'" style="width:70px;padding:7px;border:1px solid #ddd;border-radius:8px"></td><td><select id="st_'+id+'"><option value="active" '+(u[8]==='active'?'selected':'')+'>active</option><option value="paused" '+(u[8]==='paused'?'selected':'')+'>paused</option><option value="blocked" '+(u[8]==='blocked'?'selected':'')+'>blocked</option></select></td><td>'+esc(u[10]||0)+'</td><td>'+money(u[11])+'</td><td>'+money(u[12])+'</td><td><button class="approve" onclick="adminAffiliateSaveUser('+id+')">Lưu riêng</button></td></tr>'}).join('') || '<tr><td colspan="11">Chưa có CTV.</td></tr>';
     var wb=document.querySelector('#adminAffiliateWithdrawals tbody');
-    wb.innerHTML=(d.withdrawals||[]).map(function(w){return '<tr><td>'+w[0]+'</td><td>'+esc(w[1])+'</td><td>'+money(w[2])+'</td><td>'+esc(w[3])+'</td><td>'+esc(w[4])+'</td><td>'+esc(w[5])+'</td><td><span class="badge">'+esc(w[6])+'</span></td><td><button class="approve" onclick="adminAffiliateWithdrawal('+w[0]+','Đã thanh toán')">Đã thanh toán</button> <button class="reject" onclick="adminAffiliateWithdrawal('+w[0]+','Từ chối')">Từ chối</button></td></tr>'}).join('') || '<tr><td colspan="8">Chưa có yêu cầu rút tiền.</td></tr>';
+    wb.innerHTML=(d.withdrawals||[]).map(function(w){return '<tr><td>'+w[0]+'</td><td>'+esc(w[1])+'</td><td>'+money(w[2])+'</td><td>'+esc(w[3])+'</td><td>'+esc(w[4])+'</td><td>'+esc(w[5])+'</td><td><span class="badge">'+esc(w[6])+'</span></td><td><button class="approve" onclick="adminAffiliateWithdrawal(' + w[0] + ',\'Đã thanh toán\')">Đã thanh toán</button> <button class="reject" onclick="adminAffiliateWithdrawal(' + w[0] + ',\'Từ chối\')">Từ chối</button></td></tr>'}).join('') || '<tr><td colspan="8">Chưa có yêu cầu rút tiền.</td></tr>';
   });}
   window.adminAffiliateSaveSettings=function(){fetch('/api/admin/affiliate/settings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({normal:document.getElementById('adminAffNormal').value,silver:document.getElementById('adminAffSilver').value,gold:document.getElementById('adminAffGold').value,diamond:document.getElementById('adminAffDiamond').value})}).then(function(r){return r.json()}).then(function(){alert('Đã lưu % hoa hồng cấp bậc');adminAffiliateLoad();})}
   window.adminAffiliateSaveUser=function(id){fetch('/api/admin/affiliate/user/'+id,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({commission_percent:document.getElementById('pct_'+id).value,level_name:document.getElementById('lv_'+id).value,status:document.getElementById('st_'+id).value})}).then(function(r){return r.json()}).then(function(d){alert(d.message||'Đã lưu');adminAffiliateLoad();})}
