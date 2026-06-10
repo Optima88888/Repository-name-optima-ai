@@ -22,7 +22,7 @@ except Exception:
 
 load_dotenv()
 
-APP_TITLE = "Mkt Automation Pro V12 DeviceID Premium Admin"
+APP_TITLE = "Marketing Automation Pro"
 DB = "marketing_automation_pro_v11.db"
 UPLOAD_DIR = "uploads"
 REPORT_DIR = "reports"
@@ -6093,8 +6093,8 @@ Thời gian tạo: {{ h[9] }}
 #affiliateAdminSection{display:none!important}
 #mobileCtvQuickBtn{position:fixed;left:16px;bottom:92px;z-index:2147482500;border:0;border-radius:999px;padding:12px 16px;background:linear-gradient(135deg,#16a34a,#22c55e,#84cc16);color:#fff;font-weight:900;font-size:14px;box-shadow:0 14px 34px rgba(22,163,74,.38);cursor:pointer;display:flex;align-items:center;gap:8px;letter-spacing:.2px}
 #mobileCtvQuickBtn .dot{width:9px;height:9px;border-radius:50%;background:#dcfce7;box-shadow:0 0 0 6px rgba(220,252,231,.22)}
-@media(min-width:900px){#mobileCtvQuickBtn{bottom:26px;left:24px}}
-@media(max-width:520px){#mobileCtvQuickBtn{bottom:82px;left:12px;padding:11px 13px;font-size:13px}}
+@media(min-width:900px){ #mobileCtvQuickBtn{bottom:26px;left:24px}}
+@media(max-width:520px){ #mobileCtvQuickBtn{bottom:82px;left:12px;padding:11px 13px;font-size:13px}}
 </style>
 <button id="mobileCtvQuickBtn" type="button" onclick="return openModule('affiliate_center')"><span class="dot"></span>CTV Hoa Hồng</button>
 <script id="affiliate-mobile-visible-fix-js">
