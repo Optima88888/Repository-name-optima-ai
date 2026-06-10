@@ -4656,8 +4656,8 @@ function openPayment(planKey){
 
   const amountText = Number(plan.amount).toLocaleString("vi-VN") + " VNĐ";
   const deviceId = getOrCreateDeviceId();
-  const phone = (document.getElementById("payPhone")?.value || "CHUA_SDT").trim();
-  const email = (document.getElementById("payEmail")?.value || "CHUA_GMAIL").trim();
+  const phone = (document.getElementById("payPhone")?.value || "").trim();
+  const email = (document.getElementById("payEmail")?.value || "").trim();
   const addInfo = deviceId + " | " + phone + " | " + email + " | " + plan.package.toUpperCase();
   const qrUrl = "https://img.vietqr.io/image/970405-8888363382629-compact2.png?amount=" + encodeURIComponent(plan.amount) + "&addInfo=" + encodeURIComponent(addInfo) + "&accountName=" + encodeURIComponent("NGUYEN DANG THI XUAN");
   window.currentPremiumPlanKey = planKey;
@@ -6022,7 +6022,7 @@ Thời gian tạo: {{ h[9] }}
           <b>Ngân hàng:</b> Agribank<br>
           <b>STK:</b> 8888363382629<br>
           <b>Chủ TK:</b> NGUYEN DANG THI XUAN<br>
-          <b>Nội dung CK:</b> <span id="payContent">PREMIUM 1THANG</span>
+          <b>Nội dung CK:</b> <span id="payContent">ID_THIET_BI</span>
         </div>
       </div>
 
@@ -6986,8 +6986,8 @@ function dropKanban(ev){ ev.preventDefault(); const col=ev.currentTarget; if(dra
   function plan(k){return plans[k]||plans.monthly;}
   function buildContent(p){
     var device=getDevice();
-    var phone=(q('#payPhone')&&q('#payPhone').value.trim())||'CHUA_SDT';
-    var email=(q('#payEmail')&&q('#payEmail').value.trim())||'CHUA_GMAIL';
+    var phone=(q('#payPhone')&&q('#payPhone').value.trim())||'';
+    var email=(q('#payEmail')&&q('#payEmail').value.trim())||'';
     return device+' | '+phone+' | '+email+' | '+(p.package||p.title||'PREMIUM').toUpperCase();
   }
   window.refreshPaymentContent=function(){
@@ -7094,7 +7094,7 @@ function dropKanban(ev){ ev.preventDefault(); const col=ev.currentTarget; if(dra
   function contentFor(p){
     var phone=(q('#payPhone')&&q('#payPhone').value.trim())||'SDT';
     var email=(q('#payEmail')&&q('#payEmail').value.trim())||'GMAIL';
-    return deviceId()+' | '+phone+' | '+email+' | '+p.code;
+    return deviceId();
   }
   window.showPaymentNotice=function(msg){
     var n=q('#paymentNotice');
@@ -7543,7 +7543,7 @@ function dropKanban(ev){ ev.preventDefault(); const col=ev.currentTarget; if(dra
   function contentFor(p){
     var phone=(q('#payPhone')&&q('#payPhone').value.trim())||'SDT';
     var email=(q('#payEmail')&&q('#payEmail').value.trim())||'GMAIL';
-    return deviceId()+' | '+phone+' | '+email+' | '+p.code;
+    return deviceId();
   }
   function applyPayment(k){
     k=k||window.currentPremiumPlanKey||window.__mktClickedPlanKey||'monthly';
@@ -7626,7 +7626,7 @@ function dropKanban(ev){ ev.preventDefault(); const col=ev.currentTarget; if(dra
   function norm(k){k=String(k||'').toLowerCase().replace(/[^a-z0-9]/g,''); if(k==='lifetime'||k==='seller'||k==='sellerpro'||k==='nhabanhangpro')return 'sellerpro'; if(k==='monthly'||k==='basic'||k==='goi1thang')return 'monthly'; if(k==='quarterly'||k==='pro'||k==='goi3thang')return 'quarterly'; if(k==='halfyear'||k==='business'||k==='goi6thang')return 'halfyear'; if(k==='yearly'||k==='goi1nam')return 'yearly'; return PLANS[k]?k:'monthly'}
   function device(){var id='';try{id=localStorage.getItem('mkt_device_id')||''}catch(e){} if(!id&&typeof window.getOrCreateDeviceId==='function')id=window.getOrCreateDeviceId(); if(!id){id='MKT-'+Math.random().toString(36).slice(2,8).toUpperCase()+Date.now().toString().slice(-4);try{localStorage.setItem('mkt_device_id',id)}catch(e){}} document.cookie='mkt_device_id='+encodeURIComponent(id)+'; path=/; max-age='+(60*60*24*365*5); return id}
   function setKey(k){k=norm(k); window.currentPremiumPlanKey=k; window.mktSelectedPlanKey=k; window.__mktClickedPlanKey=k; try{localStorage.setItem('mkt_selected_plan_key',k)}catch(e){} return k}
-  function payNote(p){var phone=(q('#payPhone')&&q('#payPhone').value.trim())||'CHUA_SDT'; var email=(q('#payEmail')&&q('#payEmail').value.trim())||'CHUA_GMAIL'; return device()+' | '+phone+' | '+email+' | '+p.code}
+  function payNote(p){var phone=(q('#payPhone')&&q('#payPhone').value.trim())||''; var email=(q('#payEmail')&&q('#payEmail').value.trim())||''; return device();}
   window.refreshPaymentContent=function(){var k=norm(window.currentPremiumPlanKey||window.mktSelectedPlanKey); var p=PLANS[k]||PLANS.monthly; var note=payNote(p); var pc=q('#payContent'); if(pc)pc.textContent=note; var price=q('#payPlanPrice'); if(price)price.textContent=Number(p.amount).toLocaleString('vi-VN')+' VNĐ'; var qr=q('#payQr'); if(qr)qr.src='https://img.vietqr.io/image/970405-8888363382629-compact2.png?amount='+encodeURIComponent(p.amount)+'&addInfo='+encodeURIComponent(note)+'&accountName='+encodeURIComponent('NGUYEN DANG THI XUAN')};
   window.openPayment=function(k){k=setKey(k); var p=PLANS[k]||PLANS.monthly; var modal=q('#paymentModal'); if(!modal)return false; var title=q('#payPlanTitle'); if(title)title.textContent=p.title; var desc=q('#payPlanDesc'); if(desc)desc.textContent=p.desc; var price=q('#payPlanPrice'); if(price)price.textContent=Number(p.amount).toLocaleString('vi-VN')+' VNĐ'; var dev=q('#payDeviceId'); if(dev)dev.value=device(); window.refreshPaymentContent(); modal.style.display='flex'; return false};
   document.addEventListener('click',function(e){var btn=e.target.closest&&e.target.closest('[data-plan]'); if(!btn)return; var k=norm(btn.getAttribute('data-plan')||(btn.dataset&&btn.dataset.plan)); setKey(k); if(/button|a/i.test(btn.tagName)||btn.closest('button,a')){e.preventDefault();e.stopPropagation();if(e.stopImmediatePropagation)e.stopImmediatePropagation();return window.openPayment(k)}},true);
@@ -8813,8 +8813,8 @@ ADMIN_HTML = """
   function plan(k){return plans[k]||plans.monthly;}
   function buildContent(p){
     var device=getDevice();
-    var phone=(q('#payPhone')&&q('#payPhone').value.trim())||'CHUA_SDT';
-    var email=(q('#payEmail')&&q('#payEmail').value.trim())||'CHUA_GMAIL';
+    var phone=(q('#payPhone')&&q('#payPhone').value.trim())||'';
+    var email=(q('#payEmail')&&q('#payEmail').value.trim())||'';
     return device+' | '+phone+' | '+email+' | '+(p.package||p.title||'PREMIUM').toUpperCase();
   }
   window.refreshPaymentContent=function(){
@@ -8921,7 +8921,7 @@ ADMIN_HTML = """
   function contentFor(p){
     var phone=(q('#payPhone')&&q('#payPhone').value.trim())||'SDT';
     var email=(q('#payEmail')&&q('#payEmail').value.trim())||'GMAIL';
-    return deviceId()+' | '+phone+' | '+email+' | '+p.code;
+    return deviceId();
   }
   window.showPaymentNotice=function(msg){
     var n=q('#paymentNotice');
@@ -9187,7 +9187,7 @@ ADMIN_HTML = """
   function payContent(p){
     var phone=(q('#payPhone')&&q('#payPhone').value.trim())||'SDT';
     var email=(q('#payEmail')&&q('#payEmail').value.trim())||'GMAIL';
-    return getDevice()+' | '+phone+' | '+email+' | '+p.code;
+    return getDevice();
   }
   window.refreshPaymentContent=function(){
     var p=plan(selectedKey());
@@ -9349,9 +9349,9 @@ ADMIN_HTML = """
 
 })();
 </script>  function payContent(p){
-    var phone=(q('#payPhone')&&q('#payPhone').value.trim())||'CHUA_SDT';
-    var email=(q('#payEmail')&&q('#payEmail').value.trim())||'CHUA_GMAIL';
-    return deviceId()+' | '+phone+' | '+email+' | '+p.code;
+    var phone=(q('#payPhone')&&q('#payPhone').value.trim())||'';
+    var email=(q('#payEmail')&&q('#payEmail').value.trim())||'';
+    return deviceId();
   }
   function fill(k){
     k=setPlan(k); var p=getPlan(k);
@@ -9447,7 +9447,7 @@ ADMIN_HTML = """
   function norm(k){k=String(k||'').toLowerCase().replace(/[^a-z0-9]/g,''); if(k==='lifetime'||k==='seller'||k==='sellerpro'||k==='nhabanhangpro')return 'sellerpro'; if(k==='monthly'||k==='basic'||k==='goi1thang')return 'monthly'; if(k==='quarterly'||k==='pro'||k==='goi3thang')return 'quarterly'; if(k==='halfyear'||k==='business'||k==='goi6thang')return 'halfyear'; if(k==='yearly'||k==='goi1nam')return 'yearly'; return PLANS[k]?k:'monthly'}
   function device(){var id='';try{id=localStorage.getItem('mkt_device_id')||''}catch(e){} if(!id&&typeof window.getOrCreateDeviceId==='function')id=window.getOrCreateDeviceId(); if(!id){id='MKT-'+Math.random().toString(36).slice(2,8).toUpperCase()+Date.now().toString().slice(-4);try{localStorage.setItem('mkt_device_id',id)}catch(e){}} document.cookie='mkt_device_id='+encodeURIComponent(id)+'; path=/; max-age='+(60*60*24*365*5); return id}
   function setKey(k){k=norm(k); window.currentPremiumPlanKey=k; window.mktSelectedPlanKey=k; window.__mktClickedPlanKey=k; try{localStorage.setItem('mkt_selected_plan_key',k)}catch(e){} return k}
-  function payNote(p){var phone=(q('#payPhone')&&q('#payPhone').value.trim())||'CHUA_SDT'; var email=(q('#payEmail')&&q('#payEmail').value.trim())||'CHUA_GMAIL'; return device()+' | '+phone+' | '+email+' | '+p.code}
+  function payNote(p){var phone=(q('#payPhone')&&q('#payPhone').value.trim())||''; var email=(q('#payEmail')&&q('#payEmail').value.trim())||''; return device();}
   window.refreshPaymentContent=function(){var k=norm(window.currentPremiumPlanKey||window.mktSelectedPlanKey); var p=PLANS[k]||PLANS.monthly; var note=payNote(p); var pc=q('#payContent'); if(pc)pc.textContent=note; var price=q('#payPlanPrice'); if(price)price.textContent=Number(p.amount).toLocaleString('vi-VN')+' VNĐ'; var qr=q('#payQr'); if(qr)qr.src='https://img.vietqr.io/image/970405-8888363382629-compact2.png?amount='+encodeURIComponent(p.amount)+'&addInfo='+encodeURIComponent(note)+'&accountName='+encodeURIComponent('NGUYEN DANG THI XUAN')};
   window.openPayment=function(k){k=setKey(k); var p=PLANS[k]||PLANS.monthly; var modal=q('#paymentModal'); if(!modal)return false; var title=q('#payPlanTitle'); if(title)title.textContent=p.title; var desc=q('#payPlanDesc'); if(desc)desc.textContent=p.desc; var price=q('#payPlanPrice'); if(price)price.textContent=Number(p.amount).toLocaleString('vi-VN')+' VNĐ'; var dev=q('#payDeviceId'); if(dev)dev.value=device(); window.refreshPaymentContent(); modal.style.display='flex'; return false};
   document.addEventListener('click',function(e){var btn=e.target.closest&&e.target.closest('[data-plan]'); if(!btn)return; var k=norm(btn.getAttribute('data-plan')||(btn.dataset&&btn.dataset.plan)); setKey(k); if(/button|a/i.test(btn.tagName)||btn.closest('button,a')){e.preventDefault();e.stopPropagation();if(e.stopImmediatePropagation)e.stopImmediatePropagation();return window.openPayment(k)}},true);
@@ -9747,6 +9747,126 @@ ADMIN_HTML = """
   fillPayment(window.currentPremiumPlanKey||window.mktSelectedPlanKey||'monthly');
 })();
 </script>
+
+
+<!-- FINAL FIX V97: remove transfer placeholders + premium menu micro badge -->
+<style id="mkt-v97-menu-micro-pro-css">
+  #payContent{white-space:normal!important;word-break:break-word!important;}
+  .v2-nav-link.premium-locked,
+  .v2-nav-link.real-premium-lock{
+    position:relative!important;
+    overflow:hidden!important;
+    background:linear-gradient(135deg,rgba(17,24,39,.94),rgba(49,46,129,.72))!important;
+    border:1px solid rgba(129,140,248,.28)!important;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 12px 30px rgba(15,23,42,.28)!important;
+    padding-right:76px!important;
+  }
+  .v2-nav-link.premium-locked:hover,
+  .v2-nav-link.real-premium-lock:hover{
+    background:linear-gradient(135deg,rgba(37,99,235,.95),rgba(124,58,237,.85))!important;
+    transform:translateX(5px)!important;
+    box-shadow:0 18px 45px rgba(37,99,235,.32)!important;
+  }
+  .v2-nav-link.premium-locked .v2-nav-tag,
+  .v2-nav-link.real-premium-lock .v2-nav-tag,
+  .v2-nav-link.premium-locked::after,
+  .v2-nav-link.real-premium-lock::after{
+    content:"PRO"!important;
+    min-width:34px!important;
+    height:18px!important;
+    padding:0 7px 0 17px!important;
+    border-radius:999px!important;
+    font-size:8px!important;
+    line-height:18px!important;
+    font-weight:1000!important;
+    letter-spacing:.04em!important;
+    color:#111827!important;
+    background:linear-gradient(135deg,#fde047,#fb923c)!important;
+    border:1px solid rgba(255,255,255,.55)!important;
+    box-shadow:0 0 16px rgba(250,204,21,.55)!important;
+    position:absolute!important;
+    right:12px!important;
+    top:50%!important;
+    transform:translateY(-50%)!important;
+    z-index:9!important;
+  }
+  .v2-nav-link.premium-locked .v2-nav-tag::before,
+  .v2-nav-link.real-premium-lock .v2-nav-tag::before{
+    content:""!important;
+    width:7px!important;
+    height:7px!important;
+    border-radius:50%!important;
+    background:#22c55e!important;
+    box-shadow:0 0 0 4px rgba(34,197,94,.20),0 0 15px rgba(34,197,94,.95)!important;
+    position:absolute!important;
+    left:6px!important;
+    top:50%!important;
+    transform:translateY(-50%)!important;
+  }
+</style>
+<script id="mkt-v97-clean-transfer-note-final">
+(function(){
+  'use strict';
+  function q(s,r){return (r||document).querySelector(s)}
+  function qa(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s))}
+  function device(){
+    var id='';
+    try{id=localStorage.getItem('mkt_device_id')||''}catch(e){}
+    if(!id && typeof window.getOrCreateDeviceId==='function') id=window.getOrCreateDeviceId();
+    if(!id){id='MKT-'+Math.random().toString(36).slice(2,8).toUpperCase()+Date.now().toString().slice(-4);try{localStorage.setItem('mkt_device_id',id)}catch(e){}}
+    document.cookie='mkt_device_id='+encodeURIComponent(id)+'; path=/; max-age='+(60*60*24*365*5);
+    return id;
+  }
+  function amountOf(k){
+    k=String(k||window.currentPremiumPlanKey||window.mktSelectedPlanKey||'monthly').toLowerCase();
+    if(/seller|lifetime|nhabanhang/.test(k)) return '1959000';
+    if(/year|1nam/.test(k)) return '859000';
+    if(/half|6thang/.test(k)) return '559000';
+    if(/quarter|3thang/.test(k)) return '359000';
+    return '159000';
+  }
+  function cleanTransfer(){
+    var id=device();
+    var pc=q('#payContent');
+    if(pc && pc.textContent!==id) pc.textContent=id;
+    var dev=q('#payDeviceId'); if(dev) dev.value=id;
+    var qr=q('#payQr');
+    if(qr){
+      var k=window.currentPremiumPlanKey||window.mktSelectedPlanKey||'monthly';
+      qr.src='https://img.vietqr.io/image/970405-8888363382629-compact2.png?amount='+encodeURIComponent(amountOf(k))+'&addInfo='+encodeURIComponent(id)+'&accountName='+encodeURIComponent('NGUYEN DANG THI XUAN');
+    }
+    qa('span,div,p,b').forEach(function(el){
+      if(el.id==='payContent') return;
+      var t=el.childNodes&&el.childNodes.length===1?el.textContent:'';
+      if(/CHUA_SDT|CHUA_GMAIL|GOI1THANG|GOI3THANG|GOI6THANG|GOI1NAM|NHABANHANGPRO/.test(t||'')){
+        el.textContent=(t||'').replace(/\s*\|\s*CHUA_SDT\s*\|\s*CHUA_GMAIL\s*\|\s*(GOI1THANG|GOI3THANG|GOI6THANG|GOI1NAM|NHABANHANGPRO)/g,'').replace(/CHUA_SDT|CHUA_GMAIL|GOI1THANG|GOI3THANG|GOI6THANG|GOI1NAM|NHABANHANGPRO/g,'').trim();
+      }
+    });
+  }
+  var oldRefresh=window.refreshPaymentContent;
+  window.refreshPaymentContent=function(){try{if(typeof oldRefresh==='function') oldRefresh.apply(this,arguments)}catch(e){} cleanTransfer();};
+  var oldOpen=window.openPayment;
+  window.openPayment=function(k){var r; try{if(typeof oldOpen==='function') r=oldOpen.apply(this,arguments)}catch(e){} setTimeout(cleanTransfer,0); setTimeout(cleanTransfer,80); setTimeout(cleanTransfer,250); return r===undefined?false:r;};
+  function upgradeMenu(){
+    qa('.v2-nav-link').forEach(function(a){
+      var txt=(a.textContent||'').toLowerCase();
+      if(/pro|premium/.test(txt)||a.classList.contains('premium-locked')||a.classList.contains('real-premium-lock')){
+        a.classList.add('premium-locked');
+        var tag=a.querySelector('.v2-nav-tag');
+        if(!tag){tag=document.createElement('span');tag.className='v2-nav-tag';tag.textContent='PRO';a.appendChild(tag)}
+        tag.textContent='PRO';
+      }
+    });
+  }
+  document.addEventListener('click',function(e){setTimeout(cleanTransfer,0);setTimeout(cleanTransfer,150);},true);
+  document.addEventListener('input',function(e){if(e.target&&/payPhone|payEmail/.test(e.target.id||''))setTimeout(cleanTransfer,0);},true);
+  if(window.MutationObserver){new MutationObserver(function(){cleanTransfer();upgradeMenu();}).observe(document.documentElement,{childList:true,subtree:true,characterData:true});}
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',function(){cleanTransfer();upgradeMenu();}); else {cleanTransfer();upgradeMenu();}
+  setInterval(cleanTransfer,700);
+  setInterval(upgradeMenu,1200);
+})();
+</script>
+
 </body></html>
 """
 
