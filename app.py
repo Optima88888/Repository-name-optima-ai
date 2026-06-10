@@ -6764,7 +6764,7 @@ function dropKanban(ev){ ev.preventDefault(); const col=ev.currentTarget; if(dra
 .mktPlanPrice{font-size:34px;font-weight:1000;color:#2563eb;margin:8px 0 12px}.mktPlanList div{padding:9px 0;border-bottom:1px dashed #e5e7eb;font-weight:800;color:#334155}.mktPlanList div:before{content:'✓ ';color:#059669;font-weight:1000}
 #mktPlanPay{display:block;width:100%;border:0;border-radius:18px;background:linear-gradient(135deg,#2563eb,#7c3aed);color:#fff;font-weight:1000;font-size:17px;padding:16px;cursor:pointer;margin-top:16px;box-shadow:0 14px 35px rgba(37,99,235,.25)}
 #mktPlanNote{margin-top:12px;color:#64748b;font-weight:700;line-height:1.5}.mktPlanMini{background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;border-radius:16px;padding:14px;font-weight:900;line-height:1.5}
-@media(max-width:760px){#mktPlanBody{grid-template-columns:1fr}#mktPlanHead h2{font-size:22px}}
+@media(max-width:760px){ #mktPlanBody{grid-template-columns:1fr} #mktPlanHead h2{font-size:22px} }
 </style>
 <script id="mkt-price-detail-final-js">
 (function(){
@@ -6826,7 +6826,7 @@ def current_library(selected_industry):
 def render(content="", message="", ok=True, selected_industry="spa", analysis="", plan=""):
     score = score_content(content) if content else 0
     warnings = policy_check(content) if content else []
-    token_warning = "Cấu hình ổn." if PAGES and GEMINI_API_KEY else "Thiếu Gemini API hoặc PAGES_JSON trong file .env."
+    token_warning = ""
     return render_template_string(
         HTML, title=APP_TITLE, pages=get_pages_dynamic(), content=content, message=message, ok=ok,
         history=get_history(), campaigns=get_campaigns(), s=get_stats(), crm_rows=get_crm(), token_report=token_manager_report(), token_checks=get_latest_token_checks(), clusters=get_page_clusters(), analytics=get_analytics_summary(), free_status=get_free_status(),
@@ -7923,11 +7923,19 @@ self.addEventListener('fetch', event => {
 
 @app.get("/pwa-icon-192.png")
 def pwa_icon_192():
-    return send_file("pwa-icon-192.png", mimetype="image/png")
+    if os.path.exists("pwa-icon-192.png"):
+        return send_file("pwa-icon-192.png", mimetype="image/png")
+    import base64
+    png = base64.b64decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=")
+    return app.response_class(png, mimetype="image/png")
 
 @app.get("/pwa-icon-512.png")
 def pwa_icon_512():
-    return send_file("pwa-icon-512.png", mimetype="image/png")
+    if os.path.exists("pwa-icon-512.png"):
+        return send_file("pwa-icon-512.png", mimetype="image/png")
+    import base64
+    png = base64.b64decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=")
+    return app.response_class(png, mimetype="image/png")
 
 
 if __name__ == "__main__":
