@@ -4868,13 +4868,7 @@ function closeLockedFeature(){
   {% endif %}
 
 <div class="nav mkt-saas-nav">
-  <div class="app-install-card">
-    <div class="app-install-icon">📲</div>
-    <div class="app-install-text"><b>Cài đặt App</b><small>Thêm GPT MKT Pro vào màn hình điện thoại</small></div>
-    <button type="button" id="installAppBtn" data-install-app="1">Cài đặt</button>
-  </div>
-
-  <div class="v2-nav-title">MENU CHÍNH</div>
+<div class="v2-nav-title">MENU CHÍNH</div>
   <a class="v2-nav-link" href="#dashboard" data-module="dashboard"><span class="v2-nav-text">Dashboard CEO</span></a>
 
   <div class="v2-nav-title">FACEBOOK CENTER</div>
@@ -7262,6 +7256,129 @@ function dropKanban(ev){ ev.preventDefault(); const col=ev.currentTarget; if(dra
 })();
 </script>
 
+
+
+<!-- FINAL CLEAN SIDEBAR + PWA GUIDE 20260610 -->
+<style id="mkt-final-clean-sidebar-pwa">
+  /* Bỏ hoàn toàn card cài app cũ trong sidebar */
+  .app-install-card,.v2-install-box,.app-install-banner{display:none!important;visibility:hidden!important;height:0!important;margin:0!important;padding:0!important;overflow:hidden!important}
+
+  /* Sidebar kiểu SaaS: không dùng card lớn */
+  .nav{padding:8px 14px 22px!important}
+  .v2-nav-title{
+    margin:18px 0 7px!important;padding:0 4px!important;font-size:10.5px!important;line-height:1!important;
+    font-weight:1000!important;letter-spacing:.11em!important;text-transform:uppercase!important;color:#9fb0ff!important;
+  }
+  .v2-nav-title:nth-of-type(2)::before{content:'📣 ';letter-spacing:0;text-transform:none}
+  .v2-nav-title:nth-of-type(3)::before{content:'🤖 ';letter-spacing:0;text-transform:none}
+  .v2-nav-title:nth-of-type(4)::before{content:'🎨 ';letter-spacing:0;text-transform:none}
+  .v2-nav-title:nth-of-type(5)::before{content:'🚀 ';letter-spacing:0;text-transform:none}
+  .v2-nav-title:nth-of-type(6)::before{content:'⚙️ ';letter-spacing:0;text-transform:none}
+
+  .v2-nav-link{
+    position:relative!important;display:flex!important;align-items:center!important;gap:9px!important;min-height:38px!important;
+    margin:2px 0!important;padding:8px 8px 8px 14px!important;border-radius:11px!important;
+    background:transparent!important;border:1px solid transparent!important;box-shadow:none!important;transform:none!important;
+    color:#e8ecff!important;text-decoration:none!important;cursor:pointer!important;pointer-events:auto!important;user-select:none!important;
+  }
+  .v2-nav-link::before{content:'├';display:inline-block;width:10px;margin-right:1px;color:rgba(165,180,252,.38);font-weight:800;font-size:13px;line-height:1}
+  .v2-nav-link:hover{background:rgba(99,102,241,.12)!important;border-color:rgba(129,140,248,.16)!important;transform:translateX(2px)!important;box-shadow:none!important}
+  .v2-nav-link.active{background:linear-gradient(135deg,rgba(37,99,235,.20),rgba(124,58,237,.14))!important;border-color:rgba(129,140,248,.24)!important}
+  .v2-nav-ico,.v2-nav-link .v2-nav-ico{display:none!important;width:0!important;min-width:0!important;height:0!important;margin:0!important;padding:0!important;overflow:hidden!important;background:none!important}
+  .v2-nav-text{flex:1!important;min-width:0!important;font-size:14px!important;line-height:1.15!important;font-weight:850!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;color:inherit!important}
+  .v2-nav-tag{display:none!important}
+  .v2-nav-link::after,.v2-nav-link.menu-pro::after,.v2-nav-link.pro-feature::after,.v2-nav-link.real-pro::after,.v2-nav-link.premium-locked::after,.v2-nav-link.real-premium-lock::after{content:none!important;display:none!important}
+  .v2-nav-link .mkt-dot-tag{display:inline-flex!important;align-items:center!important;gap:5px!important;margin-left:auto!important;font-size:11px!important;font-weight:950!important;letter-spacing:-.01em!important;white-space:nowrap!important;line-height:1!important;color:#dbeafe!important}
+  .v2-nav-link .mkt-dot-tag i{display:block!important;width:8px!important;height:8px!important;border-radius:999px!important;box-shadow:0 0 8px currentColor!important;background:currentColor!important}
+  .v2-nav-link .mkt-dot-tag.pro{color:#22c55e!important}
+  .v2-nav-link .mkt-dot-tag.pro span{color:#bbf7d0!important}
+  .v2-nav-link .mkt-dot-tag.premium{color:#facc15!important}
+  .v2-nav-link .mkt-dot-tag.premium span{color:#fef3c7!important}
+  .v2-side-card{display:none!important}
+
+  /* Nút cài app nhỏ, không chiếm menu */
+  #mktInstallFloat{
+    position:fixed!important;right:18px!important;bottom:82px!important;z-index:2147482500!important;
+    display:inline-flex!important;align-items:center!important;gap:8px!important;border:1px solid rgba(147,197,253,.45)!important;
+    border-radius:999px!important;padding:10px 14px!important;color:#fff!important;font-size:13px!important;font-weight:1000!important;
+    background:linear-gradient(135deg,#2563eb,#7c3aed)!important;box-shadow:0 14px 34px rgba(37,99,235,.32)!important;cursor:pointer!important;
+  }
+  #mktInstallPanel{position:fixed!important;right:18px!important;bottom:132px!important;width:min(330px,calc(100vw - 36px))!important;z-index:2147482501!important;display:none!important;background:#fff!important;color:#111827!important;border-radius:20px!important;padding:18px!important;box-shadow:0 24px 70px rgba(15,23,42,.35)!important;border:1px solid rgba(15,23,42,.08)!important}
+  #mktInstallPanel.show{display:block!important}
+  #mktInstallPanel h3{margin:0 0 8px!important;font-size:18px!important;color:#111827!important}
+  #mktInstallPanel p{margin:7px 0!important;font-size:13px!important;line-height:1.45!important;color:#334155!important;font-weight:700!important}
+  #mktInstallPanel button{width:100%!important;margin-top:12px!important;border:0!important;border-radius:999px!important;padding:12px!important;color:#fff!important;font-weight:1000!important;background:linear-gradient(135deg,#2563eb,#7c3aed)!important;cursor:pointer!important}
+</style>
+<script id="mkt-final-clean-sidebar-pwa-js">
+(function(){
+  'use strict';
+  var deferredPrompt=null;
+  function qsa(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s));}
+  function norm(s){return String(s||'').replace(/^#/,'').trim();}
+  function label(a,type){
+    a.classList.remove('menu-pro','pro-feature','real-pro','premium-locked','real-premium-lock','menu-locked');
+    qsa('.mkt-dot-tag',a).forEach(function(x){x.remove();});
+    if(!type)return;
+    var b=document.createElement('span'); b.className='mkt-dot-tag '+type;
+    b.innerHTML='<i></i><span>'+(type==='pro'?'Pro':'Premium')+'</span>';
+    a.appendChild(b);
+  }
+  function cleanText(a){
+    var t=a.querySelector('.v2-nav-text'); if(!t)return;
+    var map={
+      facebook_center:'Facebook Center', page_center_total:'Page Center', post:'Đăng bài Facebook', fanpage_manager:'Quản lý Fanpage', group_suite:'Group Center',
+      comment_manager:'AI Comment', messenger_ai:'AI Messenger', crm_sales:'CRM Kanban', marketing_director:'Marketing AI', ai_studio:'AI Studio', creative_center:'Image / Video / Voice',
+      dashboard:'Dashboard', premium:'Bảng giá Premium', analytics:'Analytics', automation_center:'Automation', affiliate_center:'CTV Hoa Hồng'
+    };
+    var id=norm(a.getAttribute('href'));
+    if(map[id]) t.textContent=map[id];
+  }
+  function markMenu(){
+    qsa('.v2-nav-link[href^="#"]').forEach(function(a){
+      a.removeAttribute('onclick'); a.style.pointerEvents='auto'; a.style.cursor='pointer';
+      qsa('.v2-nav-ico,.v2-nav-tag',a).forEach(function(x){x.remove();});
+      cleanText(a);
+      var id=norm(a.getAttribute('href'));
+      if(['facebook_center','page_center_total','post','fanpage_manager','group_suite','comment_manager','affiliate_center'].indexOf(id)>-1) label(a,'pro');
+      else if(['messenger_ai','crm_sales','marketing_director','ai_studio','creative_center','premium','analytics','automation_center'].indexOf(id)>-1) label(a,'premium');
+      else label(a,'');
+    });
+  }
+  function visibleSection(id){
+    id=norm(id)||'dashboard';
+    if(typeof window.openModule==='function') return window.openModule(id);
+    qsa('.module-section,.section,.content-section').forEach(function(s){s.style.display='none';});
+    var el=document.getElementById(id); if(el) el.style.display='block';
+    qsa('.v2-nav-link').forEach(function(a){a.classList.toggle('active',norm(a.getAttribute('href'))===id);});
+    location.hash=id; return false;
+  }
+  function buildInstall(){
+    if(document.getElementById('mktInstallFloat'))return;
+    var btn=document.createElement('button'); btn.id='mktInstallFloat'; btn.type='button'; btn.innerHTML='📱 Cài app';
+    var panel=document.createElement('div'); panel.id='mktInstallPanel'; panel.innerHTML='<h3>Cài GPT MKT Pro</h3><p><b>Android Chrome:</b> bấm Cài ngay hoặc menu 3 chấm → Cài đặt ứng dụng / Thêm vào màn hình chính.</p><p><b>iPhone Safari:</b> bấm Chia sẻ → Thêm vào màn hình chính.</p><p>Web phải mở bằng HTTPS: gptmini.pro</p><button type="button" id="mktDoInstall">Cài ngay</button>';
+    document.body.appendChild(btn); document.body.appendChild(panel);
+    btn.addEventListener('click',function(e){e.preventDefault(); panel.classList.toggle('show');});
+    panel.querySelector('#mktDoInstall').addEventListener('click',async function(e){
+      e.preventDefault();
+      if(deferredPrompt){deferredPrompt.prompt(); try{await deferredPrompt.userChoice;}catch(_e){} deferredPrompt=null; panel.classList.remove('show');}
+      else {panel.classList.add('show');}
+    });
+  }
+  window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();deferredPrompt=e;});
+  window.addEventListener('appinstalled',function(){deferredPrompt=null; var b=document.getElementById('mktInstallFloat'); if(b)b.style.display='none';});
+  function boot(){markMenu();buildInstall();}
+  document.addEventListener('click',function(e){
+    var a=e.target.closest&&e.target.closest('.v2-nav-link[href^="#"]');
+    if(!a)return;
+    e.preventDefault(); e.stopPropagation(); if(e.stopImmediatePropagation)e.stopImmediatePropagation();
+    markMenu(); return visibleSection(a.getAttribute('href'));
+  },true);
+  if('serviceWorker' in navigator){navigator.serviceWorker.register('/service-worker.js').catch(function(){});}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();
+  setTimeout(boot,500); setTimeout(boot,1500); setTimeout(boot,3000);
+})();
+</script>
+
 </body>
 </html>
 """
@@ -8778,6 +8895,131 @@ ADMIN_HTML = """
 <!-- FINAL UPGRADE V99: Luxury sidebar + compact PRO badges + smart Premium routing -->
 <!-- FINAL PATCH V100: only compact PRO/PREMIUM badges + upgraded mobile install link -->
 <!-- FINAL PATCH V101: matte luxury PRO/PREMIUM badges - giảm chói, nhỏ gọn, không đổi nội dung -->
+
+
+<!-- MOBILE INSTALL MENU FINAL 20260610: mobile sidebar installer, one-tap Android PWA, iPhone guide -->
+<style id="mkt-mobile-install-menu-final-css">
+  /* Ẩn nút cài app nổi cũ để không chiếm giao diện */
+  #mktInstallFloat,#mktInstallPanel,.app-install-card,.app-install-banner,.v2-install-box{
+    display:none!important;visibility:hidden!important;pointer-events:none!important;
+  }
+  .mkt-mobile-install-menu{
+    display:none!important;
+  }
+  .mkt-install-sheet-backdrop{
+    position:fixed!important;inset:0!important;background:rgba(2,6,23,.58)!important;
+    z-index:2147483400!important;display:none!important;align-items:flex-end!important;justify-content:center!important;
+    backdrop-filter:blur(8px)!important;
+  }
+  .mkt-install-sheet-backdrop.show{display:flex!important;}
+  .mkt-install-sheet{
+    width:min(430px,100vw)!important;background:#fff!important;color:#111827!important;border-radius:24px 24px 0 0!important;
+    padding:20px 18px 18px!important;box-shadow:0 -24px 70px rgba(15,23,42,.42)!important;border:1px solid rgba(15,23,42,.08)!important;
+    font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif!important;
+  }
+  .mkt-install-sheet h3{margin:0 0 8px!important;font-size:20px!important;line-height:1.15!important;font-weight:1000!important;color:#0f172a!important;}
+  .mkt-install-sheet p{margin:8px 0!important;font-size:14px!important;line-height:1.5!important;color:#334155!important;font-weight:700!important;}
+  .mkt-install-sheet .mkt-install-actions{display:flex!important;gap:10px!important;margin-top:14px!important;}
+  .mkt-install-sheet button{flex:1!important;border:0!important;border-radius:999px!important;padding:13px 14px!important;font-size:14px!important;font-weight:1000!important;cursor:pointer!important;}
+  .mkt-install-now{color:#fff!important;background:linear-gradient(135deg,#2563eb,#7c3aed)!important;box-shadow:0 12px 28px rgba(37,99,235,.28)!important;}
+  .mkt-install-close{color:#334155!important;background:#e5e7eb!important;}
+  @media (max-width: 768px){
+    .mkt-mobile-install-menu{
+      display:flex!important;align-items:center!important;gap:10px!important;margin:10px 12px 14px!important;padding:12px 13px!important;
+      border-radius:17px!important;border:1px solid rgba(96,165,250,.28)!important;color:#fff!important;text-decoration:none!important;
+      background:linear-gradient(135deg,rgba(37,99,235,.28),rgba(124,58,237,.18),rgba(15,23,42,.76))!important;
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 12px 28px rgba(2,6,23,.20)!important;cursor:pointer!important;
+    }
+    .mkt-mobile-install-menu .mkt-install-phone-icon{
+      width:36px!important;height:36px!important;border-radius:13px!important;display:flex!important;align-items:center!important;justify-content:center!important;
+      background:linear-gradient(135deg,#2563eb,#7c3aed)!important;box-shadow:0 10px 22px rgba(37,99,235,.30)!important;font-size:18px!important;flex:0 0 36px!important;
+    }
+    .mkt-mobile-install-menu b{display:block!important;font-size:14px!important;line-height:1.05!important;font-weight:1000!important;color:#fff!important;}
+    .mkt-mobile-install-menu small{display:block!important;margin-top:4px!important;font-size:11px!important;line-height:1.25!important;font-weight:800!important;color:#bfdbfe!important;}
+    body.mkt-app-installed .mkt-mobile-install-menu{display:none!important;}
+  }
+</style>
+<script id="mkt-mobile-install-menu-final-js">
+(function(){
+  'use strict';
+  var deferredPrompt = window.__mktDeferredPrompt || null;
+  var isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent||'');
+  var isAndroid = /android/i.test(navigator.userAgent||'');
+  var isMobile = isIOS || isAndroid || (window.matchMedia && window.matchMedia('(max-width: 768px)').matches);
+  function standalone(){
+    return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+  }
+  function qs(s,r){return (r||document).querySelector(s)}
+  function qsa(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s))}
+  function ensureSheet(){
+    var old=qs('#mktInstallSheetBackdrop');
+    if(old)return old;
+    var wrap=document.createElement('div');
+    wrap.id='mktInstallSheetBackdrop';
+    wrap.className='mkt-install-sheet-backdrop';
+    wrap.innerHTML='<div class="mkt-install-sheet" role="dialog" aria-modal="true">'+
+      '<h3>📱 Cài GPT MKT Pro vào điện thoại</h3>'+
+      '<p id="mktInstallGuideText">Bấm <b>Cài ngay</b> để thêm ứng dụng ra màn hình điện thoại.</p>'+
+      '<div class="mkt-install-actions"><button type="button" class="mkt-install-now" id="mktInstallNowBtn">Cài ngay</button><button type="button" class="mkt-install-close" id="mktInstallCloseBtn">Đóng</button></div>'+
+      '</div>';
+    document.body.appendChild(wrap);
+    qs('#mktInstallCloseBtn',wrap).addEventListener('click',function(){wrap.classList.remove('show')});
+    wrap.addEventListener('click',function(e){if(e.target===wrap)wrap.classList.remove('show')});
+    qs('#mktInstallNowBtn',wrap).addEventListener('click',runInstall);
+    return wrap;
+  }
+  function guideText(){
+    if(deferredPrompt){return 'Bấm <b>Cài ngay</b>, sau đó chọn <b>Cài đặt</b> để đưa GPT MKT Pro ra màn hình chính.';}
+    if(isIOS){return '<b>iPhone Safari:</b><br>1. Bấm nút <b>Chia sẻ</b> ở thanh dưới.<br>2. Chọn <b>Thêm vào màn hình chính</b>.<br>3. Bấm <b>Thêm</b>.';}
+    if(isAndroid){return '<b>Android Chrome:</b><br>Nếu chưa hiện popup cài đặt, bấm menu <b>⋮</b> góc phải trình duyệt → chọn <b>Cài đặt ứng dụng</b> hoặc <b>Thêm vào màn hình chính</b>.';}
+    return 'Mở website trên điện thoại bằng Chrome Android hoặc Safari iPhone để cài vào màn hình chính.';
+  }
+  function openGuide(){
+    var wrap=ensureSheet();
+    qs('#mktInstallGuideText',wrap).innerHTML=guideText();
+    var now=qs('#mktInstallNowBtn',wrap);
+    now.textContent = deferredPrompt ? 'Cài ngay' : 'Đã hiểu';
+    wrap.classList.add('show');
+  }
+  async function runInstall(e){
+    if(e){e.preventDefault();e.stopPropagation();}
+    if(standalone()){document.body.classList.add('mkt-app-installed');return;}
+    if(deferredPrompt){
+      try{deferredPrompt.prompt(); await deferredPrompt.userChoice;}catch(_e){}
+      deferredPrompt=null; window.__mktDeferredPrompt=null;
+      var sheet=qs('#mktInstallSheetBackdrop'); if(sheet)sheet.classList.remove('show');
+      return;
+    }
+    openGuide();
+  }
+  function buildMobileMenu(){
+    if(!isMobile || standalone()){document.body.classList.add('mkt-app-installed');return;}
+    if(qs('#mktMobileInstallMenu'))return;
+    var sidebar=qs('.sidebar') || qs('.v2-sidebar') || qs('aside') || qs('nav');
+    if(!sidebar)return;
+    var item=document.createElement('button');
+    item.type='button';
+    item.id='mktMobileInstallMenu';
+    item.className='mkt-mobile-install-menu';
+    item.innerHTML='<span class="mkt-install-phone-icon">📱</span><span><b>Cài ứng dụng</b><small>Bấm để thêm vào màn hình điện thoại</small></span>';
+    var logo=qs('.logo',sidebar);
+    if(logo && logo.parentNode===sidebar){logo.insertAdjacentElement('afterend',item);}else{sidebar.insertBefore(item,sidebar.firstChild);}
+    item.addEventListener('click',runInstall,true);
+  }
+  window.addEventListener('beforeinstallprompt',function(e){
+    e.preventDefault(); deferredPrompt=e; window.__mktDeferredPrompt=e;
+    var t=qs('#mktMobileInstallMenu small'); if(t)t.textContent='Bấm để cài nhanh trên Android';
+  });
+  window.addEventListener('appinstalled',function(){
+    deferredPrompt=null; window.__mktDeferredPrompt=null; document.body.classList.add('mkt-app-installed');
+  });
+  function boot(){buildMobileMenu(); if('serviceWorker' in navigator){navigator.serviceWorker.register('/service-worker.js',{scope:'/'}).catch(function(err){console.log('Service worker lỗi:',err);});}}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();
+  setTimeout(boot,600); setTimeout(boot,1800); setTimeout(boot,3500);
+  window.mktOpenInstallGuide=openGuide;
+})();
+</script>
+
 </body></html>
 """
 
