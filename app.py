@@ -1634,7 +1634,7 @@ def get_free_status(username=None):
     percent = max(0, min(100, int((total_seconds / (3 * 86400)) * 100))) if package_name == "trial" else 100
 
     allowed_features = ["Quản lý Fanpage", "Quản lý Group", "AI Comment"]
-    locked_features = ["AI Messenger", "CRM Kanban", "AI Marketing Director", "AI Video", "AI Image", "AI Kinh Doanh", "AI Giọng Nói", "AI Livestream"]
+    locked_features = ["AI Messenger", "CRM Kanban", "AI Marketing Director", "Omni Channel", "Auto Comment", "Auto Inbox", "AI Content Studio", "AI Viral Content", "AI Landing Page", "AI Video", "AI Voice", "Group Finder Pro", "Group Posting Pro", "AI Livestream"]
 
     return {
         "package_name": package_name,
@@ -1924,10 +1924,16 @@ def get_subscription_view(device_id=None):
         end_dt = datetime.datetime.strptime(end_date, "%Y-%m-%d %H:%M:%S")
     except Exception:
         end_dt = now
-    total_seconds = max(1, int((end_dt - start_dt).total_seconds()))
-    left_seconds = int((end_dt - now).total_seconds())
-    is_active = status == "premium" and left_seconds > 0
-    if status == "premium" and left_seconds <= 0:
+    is_forever = str(package_key or "").lower() in ["sellerpro", "lifetime", "forever"]
+    if is_forever:
+        total_seconds = 1
+        left_seconds = 999999999
+        is_active = status == "premium"
+    else:
+        total_seconds = max(1, int((end_dt - start_dt).total_seconds()))
+        left_seconds = int((end_dt - now).total_seconds())
+        is_active = status == "premium" and left_seconds > 0
+    if (not is_forever) and status == "premium" and left_seconds <= 0:
         try:
             conn = db(); c = conn.cursor()
             c.execute("UPDATE device_subscriptions SET status='expired', updated_at=? WHERE device_id=?",
@@ -1939,7 +1945,9 @@ def get_subscription_view(device_id=None):
     days_left = max(0, left_seconds // 86400)
     hours_left = max(0, (left_seconds % 86400) // 3600)
     percent_left = max(0, min(100, int((max(0, left_seconds) / total_seconds) * 100)))
-    if is_active:
+    if is_forever and is_active:
+        msg = f"Gói {package_name} đang hoạt động vĩnh viễn, không giới hạn thời gian."
+    elif is_active:
         msg = f"Gói {package_name} đang hoạt động, còn {days_left} ngày {hours_left} giờ."
     elif status == "expired":
         msg = f"Gói {package_name} đã hết hạn. Vui lòng gia hạn để tiếp tục sử dụng."
@@ -1957,7 +1965,9 @@ def get_subscription_view(device_id=None):
         "status": status,
         "days_left": days_left,
         "hours_left": hours_left,
-        "percent_left": percent_left,
+        "percent_left": 100 if is_forever and is_active else percent_left,
+        "is_forever": bool(is_forever and is_active),
+        "remaining_label": "Premium Forever • Không giới hạn" if is_forever and is_active else f"{days_left} ngày {hours_left} giờ",
         "message": msg
     }
 
@@ -1981,13 +1991,16 @@ def get_device_subscriptions(limit=200):
     out = []
     now = datetime.datetime.now()
     for r in rows:
-        try:
-            end_dt = datetime.datetime.strptime(r[7], "%Y-%m-%d %H:%M:%S")
-            left = int((end_dt - now).total_seconds())
-            days_left = max(0, left // 86400)
-            hours_left = max(0, (left % 86400) // 3600)
-        except Exception:
-            days_left = 0; hours_left = 0
+        if str(r[4] or '').lower() in ['sellerpro','lifetime','forever'] and r[8] == 'premium':
+            days_left = 9999; hours_left = 0
+        else:
+            try:
+                end_dt = datetime.datetime.strptime(r[7], "%Y-%m-%d %H:%M:%S")
+                left = int((end_dt - now).total_seconds())
+                days_left = max(0, left // 86400)
+                hours_left = max(0, (left % 86400) // 3600)
+            except Exception:
+                days_left = 0; hours_left = 0
         out.append(tuple(list(r) + [days_left, hours_left]))
     return out
 
@@ -2034,7 +2047,7 @@ def get_renewal_notice(device_id=None):
     except Exception:
         return None
     remaining_days = (end_dt - datetime.datetime.now()).days
-    if status == 'premium' and 0 <= remaining_days <= 5:
+    if status == 'premium' and remaining_days in [7,5,3,1,0]:
         return {"device_id": device_id, "package_name": package_name, "end_date": end_date, "remaining_days": remaining_days}
     return None
 
@@ -4776,6 +4789,7 @@ document.addEventListener("DOMContentLoaded",function(){
 });
 
 
+window.MKT_IS_DEVICE_PREMIUM = {{ 'true' if is_device_premium else 'false' }};
 function openModule(moduleId){
   const moduleAlias = {
     "group_marketing":"group_suite",
@@ -4789,6 +4803,13 @@ function openModule(moduleId){
     "post":"page_center_total"
   };
   moduleId = moduleAlias[moduleId] || moduleId;
+  const premiumOnlyModules = ["messenger_ai", "crm_sales", "marketing_director", "creative_center", "ai_studio", "omni_channel_center", "ai_video", "ai_image", "ai_voice", "analytics_center"];
+  if(premiumOnlyModules.indexOf(moduleId) >= 0 && !window.MKT_IS_DEVICE_PREMIUM){
+    if(typeof showLockedFeatureModal === 'function'){ showLockedFeatureModal(moduleId); }
+    else if(typeof openPremiumPopup === 'function'){ openPremiumPopup(); }
+    else { location.hash = '#premium'; }
+    return false;
+  }
   const trialAllowed = ["dashboard", "fanpage_manager", "page_center_total", "group_suite", "group_marketing", "comment_manager"];
   const premiumLocked = {
     "messenger_ai": "AI Messenger",
@@ -5166,7 +5187,7 @@ function closeLockedFeature(){
     <small id="sidebarPremiumStatus">
       {% if subscription_view.active %}
         👑 Gói hiện tại: <b style="color:#facc15">{{ subscription_view.package_name }}</b><br>
-        ⏳ Còn lại: <b style="color:#22c55e">{{ subscription_view.days_left }} ngày {{ subscription_view.hours_left }} giờ</b><br>
+        ⏳ Còn lại: <b style="color:#22c55e">{{ subscription_view.remaining_label }}</b><br>
         📅 Hết hạn: {{ subscription_view.end_date }}
         <div style="height:7px;background:rgba(255,255,255,.12);border-radius:999px;margin-top:8px;overflow:hidden">
           <span style="display:block;height:100%;width:{{ subscription_view.percent_left }}%;background:linear-gradient(90deg,#22c55e,#facc15);border-radius:999px"></span>
@@ -5189,7 +5210,7 @@ function closeLockedFeature(){
     <b>👑 Premium Subscription Center</b><br>
     {% if subscription_view.active %}
       <small>Gói: <b style="color:#facc15">{{ subscription_view.package_name }}</b></small><br>
-      <small>Còn lại: <b style="color:#22c55e">{{ subscription_view.days_left }} ngày {{ subscription_view.hours_left }} giờ</b></small><br>
+      <small>Còn lại: <b style="color:#22c55e">{{ subscription_view.remaining_label }}</b></small><br>
       <small>Kích hoạt: {{ subscription_view.start_date }}</small><br>
       <small>Hết hạn: {{ subscription_view.end_date }}</small>
     {% elif subscription_view.status == 'expired' %}
@@ -5236,6 +5257,40 @@ function closeLockedFeature(){
 
 <section class="top-hero" id="dashboard">
   <h1>Mkt Automation Pro V5 Seller AI Suite</h1>
+
+  <div id="premiumCenterV2Top" style="margin:16px 0 20px;padding:20px;border-radius:24px;background:linear-gradient(135deg,#020617,#111827 55%,#312e81);border:1px solid rgba(250,204,21,.45);box-shadow:0 22px 60px rgba(2,6,23,.28);color:#e5e7eb">
+    <div style="display:flex;justify-content:space-between;gap:14px;align-items:flex-start;flex-wrap:wrap">
+      <div>
+        <div style="display:inline-flex;align-items:center;gap:8px;padding:7px 12px;border-radius:999px;background:linear-gradient(135deg,#facc15,#f59e0b);color:#111827;font-weight:1000;font-size:12px;letter-spacing:.3px">👑 PREMIUM CENTER V2</div>
+        <h2 style="margin:12px 0 6px;color:#fff;font-size:26px">Premium Subscription Center V2</h2>
+        <p style="margin:0;color:#cbd5e1;font-weight:700">Kích hoạt tự động theo gói Admin đã duyệt, tự tính ngày còn lại và tự mở khóa tính năng Premium.</p>
+      </div>
+      <div style="min-width:250px;background:rgba(15,23,42,.82);border:1px solid rgba(148,163,184,.25);padding:14px;border-radius:18px">
+        <b style="color:#facc15">ID Máy</b><br>
+        <span style="font-size:20px;font-weight:1000;color:#fff">{{ subscription_view.device_id }}</span>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-top:16px">
+      <div style="background:rgba(15,23,42,.72);border:1px solid rgba(148,163,184,.22);border-radius:18px;padding:14px"><small style="color:#94a3b8;font-weight:900">Gói hiện tại</small><br><b style="color:#facc15;font-size:18px">{% if subscription_view.active %}{{ subscription_view.package_name }}{% else %}Chưa kích hoạt Premium{% endif %}</b></div>
+      <div style="background:rgba(15,23,42,.72);border:1px solid rgba(148,163,184,.22);border-radius:18px;padding:14px"><small style="color:#94a3b8;font-weight:900">Ngày kích hoạt</small><br><b style="color:#fff">{{ subscription_view.start_date or '---' }}</b></div>
+      <div style="background:rgba(15,23,42,.72);border:1px solid rgba(148,163,184,.22);border-radius:18px;padding:14px"><small style="color:#94a3b8;font-weight:900">Ngày hết hạn</small><br><b style="color:#fff">{% if subscription_view.is_forever %}Không giới hạn{% else %}{{ subscription_view.end_date or '---' }}{% endif %}</b></div>
+      <div style="background:rgba(15,23,42,.72);border:1px solid rgba(148,163,184,.22);border-radius:18px;padding:14px"><small style="color:#94a3b8;font-weight:900">Còn lại</small><br><b style="color:#22c55e;font-size:18px">{{ subscription_view.remaining_label }}</b></div>
+    </div>
+    <div style="margin-top:14px;height:12px;background:rgba(255,255,255,.12);border-radius:999px;overflow:hidden">
+      <span style="display:block;height:100%;width:{{ subscription_view.percent_left }}%;background:linear-gradient(90deg,#22c55e,#facc15,#a855f7);border-radius:999px"></span>
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:14px">
+      <button type="button" onclick="openPayment('monthly')" style="border:0;border-radius:12px;padding:10px 14px;font-weight:1000;background:#2563eb;color:#fff">🔄 Gia Hạn 1 Tháng</button>
+      <button type="button" onclick="openPayment('quarterly')" style="border:0;border-radius:12px;padding:10px 14px;font-weight:1000;background:#4f46e5;color:#fff">🔄 Gia Hạn 3 Tháng</button>
+      <button type="button" onclick="openPayment('halfyear')" style="border:0;border-radius:12px;padding:10px 14px;font-weight:1000;background:#7c3aed;color:#fff">🔄 Gia Hạn 6 Tháng</button>
+      <button type="button" onclick="openPayment('yearly')" style="border:0;border-radius:12px;padding:10px 14px;font-weight:1000;background:#f59e0b;color:#111827">🔄 Gia Hạn 1 Năm</button>
+    </div>
+    {% if subscription_view.active %}
+    <div style="margin-top:14px;display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;color:#bbf7d0;font-weight:800;font-size:13px">
+      <span>✓ AI Messenger</span><span>✓ CRM Kanban</span><span>✓ AI Marketing Director</span><span>✓ Omni Channel</span><span>✓ Auto Comment</span><span>✓ Auto Inbox</span><span>✓ AI Content Studio</span><span>✓ AI Viral Content</span><span>✓ AI Landing Page</span><span>✓ AI Video</span><span>✓ AI Voice</span><span>✓ Group Finder Pro</span><span>✓ Group Posting Pro</span>
+    </div>
+    {% endif %}
+  </div>
 
 <div class="app-quick-grid">
   <div class="app-quick-card" onclick="return openModule('post')">
@@ -5713,7 +5768,7 @@ function closeLockedFeature(){
         <b>Gói hiện tại</b><br>
         {% if subscription_view.active %}
           <span style="color:#facc15;font-weight:1000">{{ subscription_view.package_name }}</span><br>
-          <span class="small" style="color:#86efac">Còn {{ subscription_view.days_left }} ngày {{ subscription_view.hours_left }} giờ</span>
+          <span class="small" style="color:#86efac">Còn {{ subscription_view.remaining_label }}</span>
         {% else %}
           <span style="color:#fb923c;font-weight:1000">Chưa kích hoạt Premium</span><br>
           <span class="small" style="color:#cbd5e1">Bấm nâng cấp để mở đăng không giới hạn.</span>
@@ -9956,8 +10011,15 @@ ADMIN_HTML = """
 
 
 <div class="card" id="premiumSubscriptionCenter" style="margin-top:18px">
-  <h2>👑 Premium Subscription Center</h2>
-  <p>Quản lý gói đã duyệt theo ID thiết bị. Số ngày còn lại được tính tự động theo thời gian thực.</p>
+  <h2>👑 Premium Subscription Center V2</h2>
+  <p>Quản lý gói đã duyệt theo ID thiết bị. Admin bấm Kích hoạt gói nào, tài khoản khách tự chuyển đúng gói đó: 1 tháng 30 ngày, 3 tháng 90 ngày, 6 tháng 180 ngày, 1 năm 365 ngày, Vĩnh Viễn không giới hạn.</p>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:12px 0">
+    <div class="card" style="box-shadow:none;background:#ecfeff"><b>Gói 1 tháng</b><br><span class="badge ok">Premium Active</span><br>Còn lại: 30 ngày</div>
+    <div class="card" style="box-shadow:none;background:#eef2ff"><b>Gói 3 tháng</b><br><span class="badge ok">Premium Active</span><br>Còn lại: 90 ngày</div>
+    <div class="card" style="box-shadow:none;background:#f5f3ff"><b>Gói 6 tháng</b><br><span class="badge ok">Premium Active</span><br>Còn lại: 180 ngày</div>
+    <div class="card" style="box-shadow:none;background:#fffbeb"><b>Gói 1 năm</b><br><span class="badge ok">Premium Active</span><br>Còn lại: 365 ngày</div>
+    <div class="card" style="box-shadow:none;background:#fef3c7"><b>Gói Vĩnh Viễn</b><br><span class="badge ok">Premium Forever</span><br>Không giới hạn</div>
+  </div>
   <table>
     <thead>
       <tr>
@@ -9973,7 +10035,7 @@ ADMIN_HTML = """
         <td>{{s[5]}}</td>
         <td>{{s[6]}}</td>
         <td>{{s[7]}}</td>
-        <td><b>{{s[11]}} ngày {{s[12]}} giờ</b></td>
+        <td><b>{% if s[4] in ['sellerpro','lifetime','forever'] and s[8]=='premium' %}Premium Forever{% else %}{{s[11]}} ngày {{s[12]}} giờ{% endif %}</b></td>
         <td><span class="badge {% if s[8]=='premium' and s[11]>0 %}ok{% elif s[8] in ['expired','cancelled'] %}danger{% endif %}">{{s[8]}}</span></td>
         <td>
           <form method="post" action="/admin/subscription_action" style="display:inline">
