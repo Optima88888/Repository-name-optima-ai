@@ -9982,6 +9982,118 @@ ADMIN_HTML = """
 })();
 </script>
 <!-- /FINAL PATCH 20260610 -->
+
+
+<!-- HOTFIX 20260611: force device ID under logo + mobile CTV next to download -->
+<style id="mkt-device-mobile-ctv-hotfix-css">
+  .sidebar .mkt-device-id-hotfix{
+    display:block!important; visibility:visible!important; opacity:1!important;
+    margin:12px 0 14px!important; padding:10px 12px!important;
+    border:1px solid rgba(59,130,246,.35)!important; border-radius:16px!important;
+    background:linear-gradient(135deg,rgba(15,23,42,.96),rgba(30,41,59,.88))!important;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 12px 28px rgba(2,6,23,.22)!important;
+    color:#dbeafe!important; font-family:'Manrope','Inter',Arial,sans-serif!important;
+  }
+  .sidebar .mkt-device-id-hotfix .mkt-dev-label{
+    font-size:11px!important; font-weight:900!important; letter-spacing:.08em!important;
+    text-transform:uppercase!important; color:#93c5fd!important; margin-bottom:5px!important;
+  }
+  .sidebar .mkt-device-id-hotfix .mkt-dev-value{
+    display:inline-flex!important; align-items:center!important; gap:7px!important;
+    font-size:13px!important; font-weight:1000!important; color:#fff!important;
+    word-break:break-all!important; line-height:1.2!important;
+  }
+  .sidebar .mkt-device-id-hotfix .mkt-dev-value:before{
+    content:""!important; width:9px!important; height:9px!important; border-radius:999px!important;
+    background:#22c55e!important; box-shadow:0 0 0 4px rgba(34,197,94,.16),0 0 14px rgba(34,197,94,.8)!important;
+    flex:0 0 9px!important;
+  }
+  #mktMobileCtvQuickRestore,#mktMobileCtvQuick,#mobileCtvQuickBtn{
+    visibility:visible!important; opacity:1!important; pointer-events:auto!important;
+  }
+  @media(max-width:768px){
+    #mktMobileQuickActionsRestore,#mktMobileQuickActions{
+      display:flex!important; visibility:visible!important; opacity:1!important;
+      position:fixed!important; left:10px!important; top:calc(env(safe-area-inset-top,0px) + 10px)!important;
+      z-index:2147483646!important; gap:7px!important; align-items:center!important;
+    }
+    #mktMobileQuickActionsRestore button,#mktMobileQuickActions button{
+      display:inline-flex!important; visibility:visible!important; opacity:1!important; pointer-events:auto!important;
+    }
+    #mktMobileCtvQuickRestore{
+      min-height:42px!important; min-width:54px!important; padding:8px 12px!important; border:0!important;
+      border-radius:999px!important; cursor:pointer!important; align-items:center!important; justify-content:center!important;
+      gap:7px!important; color:#fff!important; font-size:13px!important; font-weight:1000!important;
+      background:linear-gradient(135deg,#16a34a,#22c55e,#84cc16)!important;
+      box-shadow:0 12px 26px rgba(2,6,23,.25)!important;
+      -webkit-tap-highlight-color:transparent!important;
+    }
+    #mktMobileCtvQuickRestore:before{
+      content:""!important; width:9px!important; height:9px!important; border-radius:50%!important;
+      background:#dcfce7!important; box-shadow:0 0 10px rgba(220,252,231,.9)!important;
+    }
+  }
+  @media(min-width:769px){#mktMobileCtvQuickRestore{display:none!important}}
+</style>
+<script id="mkt-device-mobile-ctv-hotfix-js">
+(function(){
+  'use strict';
+  function q(s,r){return (r||document).querySelector(s)}
+  function mobile(){return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent||'') || window.innerWidth<=768}
+  function device(){
+    var id='';
+    try{id=localStorage.getItem('mkt_device_id')||''}catch(e){}
+    if(!id){
+      id='MKT-'+new Date().toISOString().slice(0,10).replaceAll('-','')+'-'+Math.random().toString(16).slice(2,8).toUpperCase();
+      try{localStorage.setItem('mkt_device_id',id)}catch(e){}
+    }
+    document.cookie='mkt_device_id='+encodeURIComponent(id)+'; path=/; max-age='+(60*60*24*365*5)+'; SameSite=Lax';
+    return String(id).toUpperCase();
+  }
+  function ensureDeviceUnderLogo(){
+    var side=q('.sidebar')||q('aside.sidebar'); if(!side) return;
+    var logo=q('.logo',side); if(!logo) return;
+    var box=q('#mktDeviceIdHotfix');
+    if(!box){
+      box=document.createElement('div'); box.id='mktDeviceIdHotfix'; box.className='mkt-device-id-hotfix';
+      box.innerHTML='<div class="mkt-dev-label">ID thiết bị</div><div class="mkt-dev-value" id="mktDeviceIdHotfixValue"></div>';
+      logo.insertAdjacentElement('afterend',box);
+    }
+    var val=q('#mktDeviceIdHotfixValue'); if(val) val.textContent=device();
+    var old=q('#sidebarDeviceId'); if(old) old.textContent=device();
+  }
+  function openCTV(e){
+    if(e){e.preventDefault();e.stopPropagation();}
+    try{if(typeof window.openModule==='function'){window.openModule('affiliate_center'); return false;}}catch(_e){}
+    location.hash='affiliate_center';
+    var sec=q('#affiliate_center')||q('[data-module="affiliate_center"]')||q('.affiliate-center');
+    if(sec&&sec.scrollIntoView) setTimeout(function(){sec.scrollIntoView({behavior:'smooth',block:'start'});},80);
+    return false;
+  }
+  window.mktOpenCTVQuickHotfix=openCTV;
+  function ensureMobileCtv(){
+    if(!mobile()) return;
+    var box=q('#mktMobileQuickActionsRestore')||q('#mktMobileQuickActions');
+    if(!box){
+      box=document.createElement('div'); box.id='mktMobileQuickActionsRestore';
+      box.innerHTML='<button type="button" id="mktMobileInstallQuickRestore" onclick="return showInstallGuide&&showInstallGuide()"><span class="dot"></span><span class="txt"><b>GPT MKT</b><span class="mkt-install-sub">Tải xuống</span></span></button>';
+      document.body.appendChild(box);
+    }
+    var ctv=q('#mktMobileCtvQuickRestore');
+    if(!ctv){
+      ctv=document.createElement('button'); ctv.type='button'; ctv.id='mktMobileCtvQuickRestore'; ctv.textContent='CTV';
+      box.appendChild(ctv);
+    }
+    ctv.onclick=openCTV;
+    ctv.style.display='inline-flex'; ctv.style.visibility='visible'; ctv.style.opacity='1'; ctv.style.pointerEvents='auto';
+  }
+  function boot(){ensureDeviceUnderLogo(); ensureMobileCtv();}
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',boot); else boot();
+  setTimeout(boot,300); setTimeout(boot,1000); setTimeout(boot,2200);
+  window.addEventListener('resize',function(){setTimeout(boot,100)});
+})();
+</script>
+
 </body></html>
 """
 
