@@ -4659,7 +4659,7 @@ const premiumPlans = {
     locked:["AI Messenger", "CRM Kanban", "AI Marketing Director", "AI Video", "AI Image", "AI Kinh Doanh", "AI Giọng Nói", "AI Livestream"]
   },
   monthly:{
-    title:"🚀 GÓI 1 THÁNG",
+    title:"GÓI 1 THÁNG",
     price:"159.000đ",
     amount:"159000",
     package:"1THANG",
@@ -4887,7 +4887,7 @@ function closeLockedFeature(){
 <div class="v2-topbar">
   <div class="v2-brand-row">
     <div>
-      <div class="v2-brand-title">🚀 Mkt Automation Pro V5</div>
+      <div class="v2-brand-title">Mkt Automation Pro V5</div>
       <div class="v2-brand-sub">AI Marketing • Facebook • CRM • Automation</div>
     </div>
     <div class="v2-status-pill">Online</div>
