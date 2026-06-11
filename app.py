@@ -13606,6 +13606,220 @@ except Exception as _mkt_after_error:
 
 
 
+# ============================================================
+# LIVE ACTIVITY BAR V2 + NOTIFICATION CENTER V2
+# Giữ nguyên giao diện hiện tại, chỉ chèn thêm hiệu ứng premium.
+# ============================================================
+_MKT_LIVE_NOTIFY_V2_ADDON = r"""
+<!-- MKT LIVE ACTIVITY + NOTIFICATION CENTER V2 20260611 -->
+<style id="mkt-live-notify-v2-css">
+  #mktLivePremiumBarV2{
+    position:fixed!important;top:14px!important;left:50%!important;transform:translateX(-50%)!important;
+    z-index:2147483600!important;min-width:min(640px,calc(100vw - 26px))!important;max-width:calc(100vw - 26px)!important;
+    display:flex!important;align-items:center!important;justify-content:center!important;gap:10px!important;
+    padding:11px 18px!important;border-radius:999px!important;background:rgba(255,255,255,.96)!important;
+    color:#172554!important;border:1px solid rgba(99,102,241,.26)!important;
+    box-shadow:0 18px 50px rgba(2,6,23,.22)!important;font-weight:1000!important;backdrop-filter:blur(14px)!important;
+    letter-spacing:.1px!important;
+  }
+  #mktLivePremiumBarV2 .mkt-live-dot-v2{
+    width:17px!important;height:17px!important;border-radius:999px!important;background:#22c55e!important;
+    box-shadow:0 0 0 8px rgba(34,197,94,.14),0 0 18px rgba(34,197,94,.65)!important;flex:0 0 auto!important;
+  }
+  #mktLivePremiumTextV2{white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;font-size:14px!important;max-width:100%!important;}
+  #mktLivePremiumBarV2.mkt-live-fade-v2{animation:mktLiveFadeV2 .55s ease both!important;}
+  @keyframes mktLiveFadeV2{0%{opacity:.25;transform:translateX(-50%) translateY(-6px)}100%{opacity:1;transform:translateX(-50%) translateY(0)}}
+
+  #mktNotifyBellV2{
+    position:fixed!important;right:22px!important;top:76px!important;z-index:2147483601!important;
+    width:54px!important;height:54px!important;border-radius:999px!important;border:1px solid rgba(255,255,255,.18)!important;
+    background:linear-gradient(135deg,#111827,#312e81 58%,#7c3aed)!important;color:#fff!important;
+    display:flex!important;align-items:center!important;justify-content:center!important;font-size:23px!important;
+    box-shadow:0 18px 48px rgba(2,6,23,.36),0 0 0 1px rgba(96,165,250,.22)!important;cursor:pointer!important;
+  }
+  #mktNotifyBellV2 .mkt-notify-count-v2{
+    position:absolute!important;right:-4px!important;top:-6px!important;background:#ef4444!important;color:#fff!important;
+    border-radius:999px!important;min-width:22px!important;height:22px!important;padding:0 6px!important;display:flex!important;
+    align-items:center!important;justify-content:center!important;font-size:11px!important;font-weight:1000!important;border:2px solid #fff!important;
+    box-shadow:0 0 18px rgba(239,68,68,.65)!important;
+  }
+  #mktNotifyBellV2.mkt-notify-pulse-v2{animation:mktNotifyPulseV2 1.2s ease!important;}
+  #mktNotifyBellV2.mkt-notify-shake-v2{animation:mktNotifyShakeV2 .75s ease!important;}
+  @keyframes mktNotifyPulseV2{0%{box-shadow:0 18px 48px rgba(2,6,23,.36),0 0 0 0 rgba(239,68,68,.65)}50%{box-shadow:0 18px 48px rgba(2,6,23,.36),0 0 0 14px rgba(239,68,68,.18);background:linear-gradient(135deg,#991b1b,#ef4444)!important}100%{box-shadow:0 18px 48px rgba(2,6,23,.36),0 0 0 0 rgba(239,68,68,0)}}
+  @keyframes mktNotifyShakeV2{0%,100%{transform:translateX(0) rotate(0)}15%{transform:translateX(-3px) rotate(-8deg)}30%{transform:translateX(3px) rotate(8deg)}45%{transform:translateX(-3px) rotate(-6deg)}60%{transform:translateX(3px) rotate(6deg)}75%{transform:translateX(-2px) rotate(-3deg)}}
+
+  #mktNotifyPanelV2{
+    position:fixed!important;right:22px!important;top:138px!important;z-index:2147483601!important;width:min(380px,calc(100vw - 32px))!important;
+    display:none!important;background:#fff!important;color:#0f172a!important;border-radius:22px!important;border:1px solid rgba(148,163,184,.25)!important;
+    box-shadow:0 26px 76px rgba(2,6,23,.34)!important;overflow:hidden!important;
+  }
+  #mktNotifyPanelV2.mkt-show-v2{display:block!important;}
+  #mktNotifyPanelV2 h3{margin:0!important;padding:16px 18px!important;background:linear-gradient(135deg,#eff6ff,#eef2ff)!important;font-size:17px!important;color:#1e3a8a!important;font-weight:1000!important;}
+  #mktNotifyPanelV2 .mkt-note-v2{padding:13px 18px!important;border-top:1px solid #e5e7eb!important;font-size:13px!important;line-height:1.42!important;}
+  #mktNotifyPanelV2 .mkt-note-v2 b{display:block!important;margin-bottom:3px!important;color:#111827!important;}
+  #mktNotifyPanelV2 .mkt-note-v2 small{color:#64748b!important;font-weight:700!important;}
+  @media(max-width:900px){
+    #mktLivePremiumBarV2{top:10px!important;padding:9px 12px!important;min-width:calc(100vw - 22px)!important;}
+    #mktLivePremiumTextV2{font-size:12px!important;}
+    #mktNotifyBellV2{top:auto!important;bottom:88px!important;right:18px!important;width:50px!important;height:50px!important;}
+    #mktNotifyPanelV2{top:auto!important;bottom:146px!important;right:14px!important;}
+  }
+</style>
+<script id="mkt-live-notify-v2-js">
+(function(){
+  if(window.__MKT_LIVE_NOTIFY_V2__) return;
+  window.__MKT_LIVE_NOTIFY_V2__ = true;
+  function q(s,r){return (r||document).querySelector(s)}
+  function pick(a){return a[Math.floor(Math.random()*a.length)]}
+  var liveItems = [
+    '💎 Minh K*** vừa nâng cấp Gói 1 năm',
+    '💎 Bảo N*** vừa kết nối 12 Fanpage',
+    '👑 Khánh D*** vừa kích hoạt Omni Channel',
+    '⭐ Thành N*** vừa mở khóa AI Messenger',
+    '💰 Trần T*** vừa nhận 1.250.000đ hoa hồng CTV',
+    '🎉 Huỳnh L*** vừa gia hạn Premium Forever',
+    '💎 Nguyễn H*** vừa nâng cấp Gói 6 tháng',
+    '🚀 Phạm T*** vừa kết nối 8 Group Facebook',
+    '👑 Lê Q*** vừa kích hoạt CRM Kanban',
+    '⭐ Võ M*** vừa mở khóa Marketing AI',
+    '💰 Đặng K*** vừa nhận 850.000đ hoa hồng CTV',
+    '🎉 Trần V*** vừa gia hạn Gói 3 tháng',
+    '💎 Hoàng P*** vừa nâng cấp Gói 1 tháng',
+    '🚀 Bùi N*** vừa kết nối 15 Fanpage',
+    '👑 Phan T*** vừa kích hoạt AI Comment',
+    '⭐ Nguyễn D*** vừa mở khóa AI Studio',
+    '💰 Lý H*** vừa nhận 2.300.000đ hoa hồng tháng',
+    '🎉 Đỗ M*** vừa gia hạn Gói 6 tháng',
+    '💎 Huỳnh Q*** vừa nâng cấp Premium Forever',
+    '🚀 Võ T*** vừa kết nối TikTok Shop',
+    '👑 Trương H*** vừa kích hoạt Auto Inbox',
+    '⭐ Nguyễn K*** vừa mở khóa Group Finder Pro',
+    '💰 Lê T*** vừa nhận 1.850.000đ doanh thu CTV',
+    '🎉 Phạm A*** vừa gia hạn Gói 1 năm',
+    '💎 Bảo L*** vừa nâng cấp Seller Pro',
+    '🎉 Khách hàng mới đăng ký tài khoản Premium',
+    '👑 Premium kích hoạt thành công cho khách mới',
+    '💰 CTV vừa có doanh thu mới',
+    '⚠️ Một gói Premium sắp hết hạn',
+    '🚀 Khách hàng vừa gia hạn gói',
+    '⭐ Omni Channel vừa được kích hoạt',
+    '👥 827 khách hàng đang sử dụng Premium'
+  ];
+  var notifyItems = [
+    ['🎉 Khách hàng mới đăng ký','Một khách hàng mới vừa tạo yêu cầu nâng cấp Premium.'],
+    ['👑 Premium kích hoạt thành công','Tài khoản khách đã được mở khóa tính năng Premium.'],
+    ['💰 CTV vừa có doanh thu','Hệ thống ghi nhận hoa hồng CTV mới.'],
+    ['⚠️ Gói Premium sắp hết hạn','Có khách cần được nhắc gia hạn gói.'],
+    ['🚀 Khách hàng vừa gia hạn gói','Thời hạn Premium đã được cộng thêm.'],
+    ['⭐ Omni Channel vừa được kích hoạt','Một tài khoản vừa mở khóa đăng đa kênh.']
+  ];
+  var lastLive = -1, badge = 5;
+  function ensureLive(){
+    var old = q('#mktLivePremiumBarHard'); if(old) old.style.display='none';
+    var bar = q('#mktLivePremiumBarV2');
+    if(!bar){
+      bar = document.createElement('div');
+      bar.id = 'mktLivePremiumBarV2';
+      bar.innerHTML = '<i class="mkt-live-dot-v2"></i><span id="mktLivePremiumTextV2">👥 827 khách hàng đang sử dụng Premium</span>';
+      document.body.appendChild(bar);
+    }
+    return bar;
+  }
+  function rotateLive(){
+    var bar = ensureLive();
+    var txt = q('#mktLivePremiumTextV2');
+    if(!txt) return;
+    var idx = Math.floor(Math.random()*liveItems.length);
+    if(idx === lastLive) idx = (idx + 1) % liveItems.length;
+    lastLive = idx;
+    txt.textContent = liveItems[idx];
+    bar.classList.remove('mkt-live-fade-v2');
+    void bar.offsetWidth;
+    bar.classList.add('mkt-live-fade-v2');
+  }
+  function renderNotes(){
+    var list = notifyItems.map(function(n){return '<div class="mkt-note-v2"><b>'+n[0]+'</b>'+n[1]+'<br><small>Vừa cập nhật</small></div>';}).join('');
+    return '<h3>🔔 Notification Center</h3>'+list;
+  }
+  function ensureBell(){
+    var old = q('#mktNotifyBellHard'); if(old) old.style.display='none';
+    var oldPanel = q('#mktNotifyPanelHard'); if(oldPanel) oldPanel.style.display='none';
+    var bell = q('#mktNotifyBellV2');
+    if(!bell){
+      bell = document.createElement('button');
+      bell.type = 'button';
+      bell.id = 'mktNotifyBellV2';
+      bell.innerHTML = '🔔<span class="mkt-notify-count-v2">5</span>';
+      document.body.appendChild(bell);
+    }
+    var panel = q('#mktNotifyPanelV2');
+    if(!panel){
+      panel = document.createElement('div');
+      panel.id = 'mktNotifyPanelV2';
+      panel.innerHTML = renderNotes();
+      document.body.appendChild(panel);
+    }
+    bell.onclick = function(e){
+      e.preventDefault();
+      panel.classList.toggle('mkt-show-v2');
+    };
+    return bell;
+  }
+  function pulseBell(){
+    var bell = ensureBell();
+    var count = q('.mkt-notify-count-v2', bell);
+    badge += pick([-1,1,1,0]);
+    if(badge < 3) badge = 5;
+    if(badge > 9) badge = 6;
+    if(count) count.textContent = badge;
+    bell.classList.remove('mkt-notify-pulse-v2','mkt-notify-shake-v2');
+    void bell.offsetWidth;
+    bell.classList.add('mkt-notify-pulse-v2','mkt-notify-shake-v2');
+  }
+  function boot(){
+    ensureLive(); rotateLive();
+    ensureBell(); pulseBell();
+    setInterval(rotateLive, 6500);
+    setInterval(pulseBell, 5000);
+  }
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
+})();
+</script>
+<!-- mkt-hard-enterprise-front-js compatibility marker -->
+<!-- /MKT LIVE ACTIVITY + NOTIFICATION CENTER V2 20260611 -->
+"""
+
+def _mkt_live_notify_v2_after_request(response):
+    try:
+        if request.path.startswith('/admin') or request.path.startswith('/api') or request.path.startswith('/healthz'):
+            return response
+        ctype = response.headers.get('Content-Type','')
+        if 'text/html' not in ctype.lower():
+            return response
+        data = response.get_data(as_text=True)
+        if 'mkt-live-notify-v2-js' in data:
+            return response
+        if '</body>' in data:
+            data = data.replace('</body>', _MKT_LIVE_NOTIFY_V2_ADDON + '</body>', 1)
+        else:
+            data += _MKT_LIVE_NOTIFY_V2_ADDON
+        response.set_data(data)
+        response.headers['Content-Length'] = str(len(response.get_data()))
+    except Exception as e:
+        print('Live Notify V2 inject skipped:', e)
+    return response
+
+try:
+    if not getattr(app, '_mkt_live_notify_v2_installed', False):
+        app.after_request(_mkt_live_notify_v2_after_request)
+        app._mkt_live_notify_v2_installed = True
+except Exception as _mkt_live_notify_v2_error:
+    print('Live Notify V2 after_request install skipped:', _mkt_live_notify_v2_error)
+# ============================================================
+# /LIVE ACTIVITY BAR V2 + NOTIFICATION CENTER V2
+# ============================================================
+
+
 if __name__ == "__main__":
     try:
         threading.Thread(target=ensure_content_50k_library, daemon=True).start()
