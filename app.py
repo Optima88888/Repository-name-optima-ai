@@ -1633,8 +1633,8 @@ def get_free_status(username=None):
     hours = max(0, (total_seconds % 86400) // 3600)
     percent = max(0, min(100, int((total_seconds / (3 * 86400)) * 100))) if package_name == "trial" else 100
 
-    allowed_features = ["Quản lý Fanpage", "Quản lý Group", "AI Comment"]
-    locked_features = ["AI Messenger", "CRM Kanban", "AI Marketing Director", "Omni Channel", "Auto Comment", "Auto Inbox", "AI Content Studio", "AI Viral Content", "AI Landing Page", "AI Video", "AI Voice", "Group Finder Pro", "Group Posting Pro", "AI Livestream"]
+    allowed_features = ["Đăng bài Facebook", "Quản lý Fanpage", "Group Center", "Token Fanpage"]
+    locked_features = ["AI Comment", "AI Messenger", "CRM Kanban", "AI Marketing Director", "Omni Channel", "Auto Comment", "Auto Inbox", "AI Content Studio", "AI Viral Content", "AI Landing Page", "AI Video", "AI Voice", "Group Finder Pro", "Group Posting Pro", "AI Livestream", "Analytics", "Automation", "CTV Hoa Hồng"]
 
     return {
         "package_name": package_name,
@@ -1648,7 +1648,7 @@ def get_free_status(username=None):
         "is_trial": package_name == "trial",
         "is_expired": status == "expired",
         "label": "🎁 Dùng thử miễn phí 3 ngày" if status != "expired" else "🔒 Dùng thử đã hết hạn",
-        "note": "Dùng thử chỉ mở: Quản lý Fanpage • Quản lý Group • AI Comment",
+        "note": "Dùng thử chỉ mở: Đăng bài Facebook • Quản lý Fanpage • Group Center • Token Fanpage",
         "allowed_features": allowed_features,
         "locked_features": locked_features
     }
@@ -12249,6 +12249,114 @@ ADMIN_HTML = """
   window.checkPremiumStatusRealtime=poll;
 })();
 </script>
+
+
+
+<!-- PREMIUM CONVERSION LOCK V2: Trial chỉ mở 4 chức năng, các menu còn lại dẫn về bảng giá; Premium duyệt realtime thì tự mở khóa -->
+<style id="premium-conversion-lock-v2-css">
+  .mkt-dot-tag.trial{background:rgba(34,197,94,.14)!important;color:#86efac!important;border:1px solid rgba(34,197,94,.35)!important;box-shadow:0 0 14px rgba(34,197,94,.35)!important}
+  .mkt-dot-tag.trial i{background:#22c55e!important;box-shadow:0 0 12px #22c55e!important}
+  .mkt-dot-tag.locked-premium{background:rgba(250,204,21,.14)!important;color:#fde68a!important;border:1px solid rgba(250,204,21,.42)!important;box-shadow:0 0 16px rgba(250,204,21,.28)!important}
+  .mkt-dot-tag.locked-premium i{background:#facc15!important;box-shadow:0 0 12px #facc15!important}
+  .mkt-dot-tag.active-premium{background:rgba(59,130,246,.16)!important;color:#bfdbfe!important;border:1px solid rgba(96,165,250,.42)!important;box-shadow:0 0 16px rgba(59,130,246,.28)!important}
+  .mkt-dot-tag.active-premium i{background:#60a5fa!important;box-shadow:0 0 12px #60a5fa!important}
+  .mkt-premium-locked-menu{position:relative!important;opacity:.92!important}
+  .mkt-premium-locked-menu .v2-nav-text:after{content:' 🔒';font-size:11px;color:#facc15}
+  .premium-active .mkt-premium-locked-menu .v2-nav-text:after{content:''!important}
+  #mktPremiumLockToast{position:fixed;right:22px;top:22px;z-index:1000000;width:min(420px,calc(100vw - 28px));display:none;background:linear-gradient(135deg,#07111f,#172554 55%,#312e81);color:#fff;border:1px solid rgba(250,204,21,.45);border-radius:22px;box-shadow:0 28px 80px rgba(2,6,23,.50);padding:18px 18px 16px;animation:mktLockPop .22s ease-out}
+  #mktPremiumLockToast b{display:block;font-size:18px;color:#facc15;margin-bottom:6px;line-height:1.25}
+  #mktPremiumLockToast p{margin:0 0 10px;color:#e5e7eb;font-size:14px;line-height:1.45}
+  #mktPremiumLockToast .mkt-lock-list{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:10px 0 12px;color:#bbf7d0;font-size:12.5px;font-weight:800}
+  #mktPremiumLockToast .mkt-lock-cta{display:inline-flex;align-items:center;gap:8px;border:0;border-radius:999px;padding:10px 14px;background:linear-gradient(135deg,#f59e0b,#facc15);color:#111827;font-weight:1000;cursor:pointer;box-shadow:0 12px 28px rgba(245,158,11,.28)}
+  @keyframes mktLockPop{from{transform:translateY(-8px);opacity:0}to{transform:translateY(0);opacity:1}}
+  @media(max-width:700px){#mktPremiumLockToast{left:14px;right:14px;top:14px;width:auto}.mkt-lock-list{grid-template-columns:1fr!important}}
+</style>
+<script id="premium-conversion-lock-v2-js">
+(function(){
+  'use strict';
+  var FREE_MODULES={dashboard:1,post:1,fanpage_manager:1,group_suite:1,page_center_total:1,premium:1};
+  var FREE_LABELS={post:1,fanpage_manager:1,group_suite:1,page_center_total:1};
+  var premiumActive=false;
+  function q(s){return document.querySelector(s)}
+  function qa(s){return Array.prototype.slice.call(document.querySelectorAll(s))}
+  function cleanId(v){return String(v||'').replace(/^#/,'').trim()}
+  function isFree(id){id=cleanId(id);return !!FREE_MODULES[id]}
+  function getModuleFromLink(a){return cleanId(a && (a.getAttribute('data-module') || a.getAttribute('href')))}
+  function setTag(a,kind,text){
+    var tag=a.querySelector('.mkt-dot-tag,.v2-nav-tag');
+    if(!tag){tag=document.createElement('span');tag.className='mkt-dot-tag';tag.innerHTML='<i></i><span></span>';a.appendChild(tag)}
+    tag.classList.remove('pro','premium','trial','locked-premium','active-premium');
+    tag.classList.add(kind);
+    var label=tag.querySelector('span'); if(label) label.textContent=text; else tag.textContent=text;
+  }
+  function applyMenuState(){
+    qa('.v2-nav-link[href^="#"]').forEach(function(a){
+      var id=getModuleFromLink(a); if(!id || id==='dashboard') return;
+      a.classList.remove('mkt-premium-locked-menu');
+      if(premiumActive){
+        if(id!=='premium') setTag(a,'active-premium','Active');
+        return;
+      }
+      if(FREE_LABELS[id]){
+        setTag(a,'trial','Trial');
+      }else if(id!=='premium'){
+        a.classList.add('mkt-premium-locked-menu');
+        setTag(a,'locked-premium','Premium');
+      }
+    });
+  }
+  function showPremiumSection(featureName){
+    var id='premium';
+    try{history.replaceState(null,'','#premium')}catch(e){location.hash='premium'}
+    qa('#dashboard,.module-section,.app-module-section').forEach(function(el){el.classList.remove('active-module');el.style.display='none'});
+    var p=q('#premium')||q('[data-module-section="premium"]')||q('#pricing')||q('#premiumSection');
+    if(p){p.style.display='block';p.classList.add('active-module')}
+    qa('.v2-nav-link').forEach(function(a){a.classList.toggle('active',getModuleFromLink(a)==='premium')});
+    showToast(featureName);
+    setTimeout(function(){try{(p||document.body).scrollIntoView({behavior:'smooth',block:'start'})}catch(e){}},80);
+  }
+  function showToast(featureName){
+    var t=q('#mktPremiumLockToast');
+    if(!t){t=document.createElement('div');t.id='mktPremiumLockToast';document.body.appendChild(t)}
+    t.innerHTML='<b>👑 Nâng cấp Premium để sử dụng</b>'+
+      '<p>Tính năng <b style="display:inline;color:#fff;font-size:14px">'+String(featureName||'này').replace(/[<>]/g,'')+'</b> thuộc gói Premium. Chọn gói và thanh toán, Admin duyệt xong hệ thống sẽ tự mở khóa realtime.</p>'+
+      '<div class="mkt-lock-list"><span>✓ AI Messenger</span><span>✓ CRM Kanban</span><span>✓ Marketing AI</span><span>✓ Omni Channel</span><span>✓ AI Studio</span><span>✓ CTV Hoa Hồng</span></div>'+
+      '<button class="mkt-lock-cta" type="button">Xem bảng giá & thanh toán →</button>';
+    t.style.display='block';
+    var btn=t.querySelector('button'); if(btn) btn.onclick=function(){showPremiumSection(featureName)};
+    clearTimeout(window.__mktPremiumLockToastTimer);
+    window.__mktPremiumLockToastTimer=setTimeout(function(){t.style.display='none'},9000);
+  }
+  function intercept(e){
+    var a=e.target && e.target.closest && e.target.closest('.v2-nav-link[href^="#"]');
+    if(!a) return;
+    var id=getModuleFromLink(a);
+    if(!id || premiumActive || isFree(id)) return;
+    e.preventDefault(); e.stopPropagation(); if(e.stopImmediatePropagation)e.stopImmediatePropagation();
+    var name=(a.querySelector('.v2-nav-text')||a).textContent||'Premium';
+    showPremiumSection(name.trim());
+    return false;
+  }
+  async function refreshPremium(){
+    try{
+      var id=(localStorage.getItem('mkt_device_id')||'').trim();
+      if(!id && window.checkPremiumStatusRealtime){window.checkPremiumStatusRealtime();}
+      id=(localStorage.getItem('mkt_device_id')||'').trim();
+      if(!id) return applyMenuState();
+      var r=await fetch('/api/premium_status?device_id='+encodeURIComponent(id),{cache:'no-store'});
+      var d=await r.json();
+      premiumActive=!!(d&&d.premium);
+      document.documentElement.classList.toggle('premium-active',premiumActive);
+      document.body.classList.toggle('premium-active',premiumActive);
+      applyMenuState();
+    }catch(err){applyMenuState();}
+  }
+  window.addEventListener('click',intercept,true);
+  document.addEventListener('DOMContentLoaded',function(){applyMenuState();refreshPremium();setInterval(refreshPremium,5000);});
+  window.mktApplyPremiumConversionLock=applyMenuState;
+})();
+</script>
+<!-- /PREMIUM CONVERSION LOCK V2 -->
 
 </body></html>
 """
