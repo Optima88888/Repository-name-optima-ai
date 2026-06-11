@@ -7802,46 +7802,117 @@ function dropKanban(ev){ ev.preventDefault(); const col=ev.currentTarget; if(dra
   window.openModule=showSection;
   window.visibleSection=showSection;
   document.addEventListener('click',function(e){var a=e.target.closest&&e.target.closest('.v2-nav-link[href^="#"],.app-quick-card[onclick],.module-card[onclick]');if(!a||a.classList.contains('app-quick-card')||a.classList.contains('module-card'))return;var id=a.getAttribute('data-module')||a.getAttribute('href');e.preventDefault();e.stopPropagation();if(e.stopImmediatePropagation)e.stopImmediatePropagation();return showSection(id)},true);
-  function ensureSheet(){var old=qs('#mktInstallSheetBackdrop');if(old)return old;var wrap=document.createElement('div');wrap.id='mktInstallSheetBackdrop';wrap.className='mkt-install-sheet-backdrop';wrap.innerHTML='<div class="mkt-install-sheet" role="dialog" aria-modal="true">
+  function ensureSheet(){var old=qs('#mktInstallSheetBackdrop');if(old)return old;var wrap=document.createElement('div');wrap.id='mktInstallSheetBackdrop';wrap.className='mkt-install-sheet-backdrop';wrap.innerHTML='<div class="mkt-install-sheet" role="dialog" aria-modal="true"><h3>📱 Cài GPTMini.Pro vào điện thoại</h3><p id="mktInstallGuideText"></p><div class="mkt-install-actions"><button type="button" class="mkt-install-now" id="mktInstallNowBtn">Cài ngay</button><button type="button" class="mkt-install-close" id="mktInstallCloseBtn">Đóng</button></div></div>';document.body.appendChild(wrap);qs('#mktInstallCloseBtn',wrap).addEventListener('click',function(){wrap.classList.remove('show')});wrap.addEventListener('click',function(e){if(e.target===wrap)wrap.classList.remove('show')});qs('#mktInstallNowBtn',wrap).addEventListener('click',runInstall);return wrap}
+  function guideText(){if(deferredPrompt)return 'Bấm <b>Cài ngay</b>, sau đó chọn <b>Cài đặt</b> để đưa GPTMini.Pro ra màn hình chính.'; if(isIOS)return '<b>iPhone Safari:</b><br>1. Bấm nút <b>Chia sẻ</b> ở thanh dưới.<br>2. Chọn <b>Thêm vào màn hình chính</b>.<br>3. Bấm <b>Thêm</b>.'; if(isAndroid)return '<b>Android Chrome:</b><br>Nếu chưa hiện popup cài đặt, bấm menu <b>⋮</b> góc phải trình duyệt → chọn <b>Cài đặt ứng dụng</b> hoặc <b>Thêm vào màn hình chính</b>.'; return 'Mở website trên điện thoại bằng Chrome Android hoặc Safari iPhone để cài vào màn hình chính.'}
+  function openGuide(){var w=ensureSheet();qs('#mktInstallGuideText',w).innerHTML=guideText();qs('#mktInstallNowBtn',w).textContent=deferredPrompt?'Cài ngay':'Đã hiểu';w.classList.add('show')}
+  async function runInstall(e){if(e){e.preventDefault();e.stopPropagation()}if(standalone()){document.body.classList.add('mkt-app-installed');return false}if(deferredPrompt){try{deferredPrompt.prompt();await deferredPrompt.userChoice}catch(_e){}deferredPrompt=null;window.__mktDeferredPrompt=null;var w=qs('#mktInstallSheetBackdrop');if(w)w.classList.remove('show');return false}openGuide();return false}
+  function buildMobileInstall(){if(!isMobile||standalone()){document.body.classList.add('mkt-app-installed');return}if(qs('#mktMobileInstallMenu'))return;var sidebar=qs('.sidebar')||qs('aside')||qs('nav');if(!sidebar)return;var item=document.createElement('button');item.type='button';item.id='mktMobileInstallMenu';item.className='mkt-mobile-install-menu';item.innerHTML='<span class="mkt-install-phone-icon">📱</span><span><b>Cài ứng dụng</b><small>Bấm để thêm vào màn hình điện thoại</small></span>';var nav=qs('.mkt-clean-nav',sidebar)||qs('.nav',sidebar);if(nav)nav.insertBefore(item,nav.firstChild);else sidebar.appendChild(item);item.addEventListener('click',runInstall,true)}
+  window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();deferredPrompt=e;window.__mktDeferredPrompt=e;var t=qs('#mktMobileInstallMenu small');if(t)t.textContent='Bấm để cài nhanh trên Android'});
+  window.addEventListener('appinstalled',function(){deferredPrompt=null;window.__mktDeferredPrompt=null;document.body.classList.add('mkt-app-installed')});
+  function boot(){qsa('.v2-nav-link').forEach(function(a){a.removeAttribute('onclick');a.style.pointerEvents='auto';a.style.cursor='pointer'});buildMobileInstall();showSection((location.hash||'#dashboard').replace('#','')||'dashboard');if('serviceWorker' in navigator){navigator.serviceWorker.register('/service-worker.js',{scope:'/'}).catch(function(err){console.log('Service worker lỗi:',err)})}}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();setTimeout(boot,600);setTimeout(boot,1800);window.mktOpenInstallGuide=openGuide;
+})();
+</script>
+
+
 <!-- FINAL MOBILE APP INSTALL 20260610: phone-only download button in mobile menu + floating shortcut -->
 
 
 <!-- MOBILE PWA TOP DOWNLOAD FINAL 20260610: top blue GPTMini download button + mobile responsive fix -->
 <style id="mkt-mobile-top-download-final-css">
-  
-<script>
-function showInstallGuide(){
-  alert("Cách cài App Mini:\\n\\nAndroid Chrome: bấm dấu 3 chấm → Thêm vào màn hình chính.\\n\\niPhone Safari: bấm Chia sẻ → Thêm vào MH chính.\\n\\nSau đó mở Mkt Automation Pro như một app trên điện thoại.");
-}
+  /* Dọn toàn bộ nút tải cũ để không còn nút nổi dưới màn hình */
+  #mktInstallFloat,#mktInstallPanel,#mktPhoneInstallFloat,#mktPhoneInstallEntry,#mktMobileInstallMenu,
+  .app-install-card,.app-install-banner,.v2-install-box,.mkt-mobile-install-menu{display:none!important;visibility:hidden!important;pointer-events:none!important;}
 
+  #mktTopDownloadBar{display:none!important;}
+  #mktTopInstallSheet{position:fixed!important;inset:0!important;z-index:2147483646!important;display:none!important;align-items:flex-end!important;justify-content:center!important;background:rgba(2,6,23,.62)!important;backdrop-filter:blur(8px)!important;}
+  #mktTopInstallSheet.show{display:flex!important;}
+  .mkt-top-install-box{width:min(430px,100vw)!important;background:#fff!important;color:#0f172a!important;border-radius:24px 24px 0 0!important;padding:20px 18px 18px!important;box-shadow:0 -24px 70px rgba(15,23,42,.42)!important;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif!important;}
+  .mkt-top-install-box h3{margin:0 0 8px!important;font-size:20px!important;line-height:1.15!important;font-weight:1000!important;color:#0f172a!important;}
+  .mkt-top-install-box p{margin:8px 0!important;font-size:14px!important;line-height:1.55!important;color:#334155!important;font-weight:760!important;}
+  .mkt-top-install-actions{display:flex!important;gap:10px!important;margin-top:15px!important;}
+  .mkt-top-install-actions button{flex:1!important;border:0!important;border-radius:999px!important;padding:13px 14px!important;font-size:14px!important;font-weight:1000!important;cursor:pointer!important;}
+  #mktTopInstallNow{color:#fff!important;background:linear-gradient(135deg,#2563eb,#7c3aed)!important;box-shadow:0 12px 28px rgba(37,99,235,.28)!important;}
+  #mktTopInstallClose{color:#334155!important;background:#e5e7eb!important;}
 
-let deferredInstallPrompt = null;
-window.addEventListener('beforeinstallprompt', function(e){
-  e.preventDefault();
-  deferredInstallPrompt = e;
-});
+  @media(max-width:900px){
+    html,body{width:100%!important;max-width:100%!important;overflow-x:hidden!important;}
+    body:not(.mkt-app-installed){padding-top:58px!important;}
+    body:not(.mkt-app-installed) #mktTopDownloadBar{
+      display:flex!important;position:fixed!important;left:10px!important;right:10px!important;top:calc(8px + env(safe-area-inset-top,0px))!important;z-index:2147483000!important;
+      align-items:center!important;justify-content:center!important;gap:9px!important;border:0!important;border-radius:999px!important;padding:13px 16px!important;
+      color:#fff!important;background:linear-gradient(135deg,#0ea5e9,#2563eb,#7c3aed)!important;box-shadow:0 16px 38px rgba(37,99,235,.42), inset 0 1px 0 rgba(255,255,255,.22)!important;
+      font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif!important;font-size:15px!important;font-weight:1000!important;letter-spacing:.01em!important;cursor:pointer!important;
+      visibility:visible!important;pointer-events:auto!important;
+    }
+    #mktTopDownloadBar .mkt-dl-dot{width:10px!important;height:10px!important;border-radius:999px!important;background:#34d399!important;box-shadow:0 0 0 5px rgba(52,211,153,.18),0 0 14px rgba(52,211,153,.85)!important;flex:0 0 10px!important;}
+    #mktTopDownloadBar small{font-size:12px!important;font-weight:900!important;opacity:.94!important;}
+
+    /* Sửa giao diện điện thoại: bỏ layout desktop 3 cột để nội dung không bị bóp nhỏ */
+    .layout{display:block!important;width:100%!important;max-width:100%!important;margin:0!important;padding:10px!important;}
+    .sidebar{position:relative!important;top:auto!important;width:100%!important;height:auto!important;max-height:none!important;margin:0 0 12px!important;border-radius:18px!important;padding:14px!important;}
+    .rightbar{display:none!important;}
+    .main{width:100%!important;max-width:100%!important;min-width:0!important;}
+    .panel,.top-hero,section{max-width:100%!important;}
+    .app-quick-grid{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:10px!important;}
+    .app-quick-card{min-width:0!important;padding:14px!important;border-radius:18px!important;}
+    .app-quick-card h3,.app-quick-card b{font-size:14px!important;line-height:1.2!important;}
+    .app-quick-card p{font-size:12px!important;line-height:1.35!important;}
+    .floating-bot{display:none!important;visibility:hidden!important;pointer-events:none!important;}
+  }
+</style>
+<script id="mkt-mobile-top-download-final-js">
+(function(){
+  'use strict';
+  var deferredPrompt = window.__mktDeferredPrompt || null;
+  var ua = navigator.userAgent || '';
+  var isIOS = /iphone|ipad|ipod/i.test(ua);
+  var isAndroid = /android/i.test(ua);
+  function qs(s,r){return (r||document).querySelector(s)}
+  function mobile(){return isIOS || isAndroid || (window.matchMedia && window.matchMedia('(max-width:900px)').matches)}
+  function standalone(){return (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone === true}
+  function ensureBar(){
+    if(!mobile() || standalone()){document.body.classList.add('mkt-app-installed');return null;}
+    var old=qs('#mktTopDownloadBar'); if(old) return old;
+    var btn=document.createElement('button'); btn.type='button'; btn.id='mktTopDownloadBar';
+    btn.innerHTML='<span class="mkt-dl-dot"></span><span>GPTMini</span><small>Tải xuống</small>';
+    btn.addEventListener('click',runInstall,true);
+    document.body.appendChild(btn);
+    return btn;
+  }
+  function ensureSheet(){
+    var old=qs('#mktTopInstallSheet'); if(old) return old;
+    var wrap=document.createElement('div'); wrap.id='mktTopInstallSheet';
+    wrap.innerHTML='<div class="mkt-top-install-box" role="dialog" aria-modal="true"><h3>📱 Cài GPTMini.Pro</h3><p id="mktTopInstallText"></p><div class="mkt-top-install-actions"><button type="button" id="mktTopInstallNow">Cài ngay</button><button type="button" id="mktTopInstallClose">Đóng</button></div></div>';
+    document.body.appendChild(wrap);
+    qs('#mktTopInstallClose',wrap).addEventListener('click',function(){wrap.classList.remove('show')});
+    wrap.addEventListener('click',function(e){if(e.target===wrap)wrap.classList.remove('show')});
+    qs('#mktTopInstallNow',wrap).addEventListener('click',runInstall);
+    return wrap;
+  }
+  function guide(){
+    if(deferredPrompt) return 'Bấm <b>Cài ngay</b>, sau đó chọn <b>Cài đặt</b>. Ứng dụng sẽ tự xuất hiện ngoài màn hình điện thoại.';
+    if(isIOS) return 'iPhone không cho website tự cài bằng 1 chạm. Cách nhanh nhất:<br><b>Safari → Chia sẻ → Thêm vào màn hình chính → Thêm</b>.';
+    if(isAndroid) return 'Nếu chưa bật popup cài đặt: mở bằng <b>Chrome</b> → bấm menu <b>⋮</b> → chọn <b>Cài đặt ứng dụng</b> hoặc <b>Thêm vào màn hình chính</b>.';
+    return 'Mở website trên điện thoại bằng Chrome Android hoặc Safari iPhone để cài app.';
+  }
+  function openGuide(){var w=ensureSheet(); qs('#mktTopInstallText',w).innerHTML=guide(); qs('#mktTopInstallNow',w).textContent=deferredPrompt?'Cài ngay':'Đã hiểu'; w.classList.add('show')}
+  async function runInstall(e){
+    if(e){e.preventDefault();e.stopPropagation();if(e.stopImmediatePropagation)e.stopImmediatePropagation();}
+    if(standalone()){document.body.classList.add('mkt-app-installed');return false;}
+    if(deferredPrompt){try{deferredPrompt.prompt(); await deferredPrompt.userChoice;}catch(_e){} deferredPrompt=null; window.__mktDeferredPrompt=null; var w=qs('#mktTopInstallSheet'); if(w)w.classList.remove('show'); return false;}
+    openGuide(); return false;
+  }
+  window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();deferredPrompt=e;window.__mktDeferredPrompt=e;ensureBar();});
+  window.addEventListener('appinstalled',function(){deferredPrompt=null;window.__mktDeferredPrompt=null;document.body.classList.add('mkt-app-installed')});
+  window.mktTopInstall=runInstall;
+  function boot(){ensureBar(); if('serviceWorker' in navigator){navigator.serviceWorker.register('/service-worker.js',{scope:'/'}).catch(function(err){console.log('Service worker lỗi:',err);});}}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();
+  setTimeout(boot,500); setTimeout(boot,1600); setTimeout(boot,3500);
+})();
 </script>
 
 
-
-
-<script>
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', function(){
-    navigator.serviceWorker.register('/sw.js').catch(function(err){
-      console.log('Service worker registration failed:', err);
-    });
-  });
-}
-</script>
-
-
-
-
-<script>
-function showInstallGuide(){
-  alert("Cách cài App Mini:\\n\\nAndroid Chrome: bấm dấu 3 chấm → Thêm vào màn hình chính.\\n\\niPhone Safari: bấm Chia sẻ → Thêm vào MH chính.\\n\\nSau đó mở Mkt Automation Pro V2 như một app.");
-}
 
 <!-- FINAL MOBILE QUICK ACTIONS 20260610: compact left GPTMini download + CTV, fixed click PWA -->
 <style id="mkt-mobile-quick-actions-final-css">
@@ -8331,14 +8402,26 @@ CONTENT_TARGET_TOTAL = 50000
 
 
 def content_db():
-    return sqlite3.connect(CONTENT_DB)
+    conn = sqlite3.connect(CONTENT_DB, timeout=30, check_same_thread=False)
+    try:
+        conn.execute("PRAGMA journal_mode=WAL;")
+        conn.execute("PRAGMA busy_timeout=30000;")
+    except Exception:
+        pass
+    return conn
 
 
 def ensure_content_50k_library():
-    """Tạo kho content SQLite 50.000+ mẫu một lần, không làm nặng app.py.
-    Dữ liệu được sinh theo ngành, loại nội dung, mục tiêu và giọng văn để khách có kho dùng nhanh kể cả khi AI/API bận.
+    """Bản ổn định Render: không tự nạp 50.000 content để tránh khóa SQLite.
+    Chỉ đảm bảo bảng content_items tồn tại và trả về số mẫu hiện có.
     """
-    conn = content_db(); c = conn.cursor()
+    conn = content_db()
+    try:
+        conn.execute("PRAGMA journal_mode=WAL;")
+        conn.execute("PRAGMA busy_timeout=30000;")
+    except Exception:
+        pass
+    c = conn.cursor()
     c.execute("""
         CREATE TABLE IF NOT EXISTS content_items (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -8355,74 +8438,8 @@ def ensure_content_50k_library():
     c.execute("CREATE INDEX IF NOT EXISTS idx_content_filter ON content_items(industry_key, content_type, goal, tone)")
     c.execute("SELECT COUNT(*) FROM content_items")
     total = int(c.fetchone()[0] or 0)
-    if total >= CONTENT_TARGET_TOTAL:
-        conn.close(); return total
-
-    now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    industries = list(INDUSTRY_LABELS.items()) or [('spa','Spa')]
-    types = list(CONTENT_TYPE_LABELS.keys()) if 'CONTENT_TYPE_LABELS' in globals() else ['facebook','tiktok','group','comment','hook','cta','calendar','combo']
-    goals = list(CONTENT_GOAL_LABELS.keys()) if 'CONTENT_GOAL_LABELS' in globals() else ['inbox','trust','sale','viral','remarketing']
-    tones = list(CONTENT_TONE_LABELS.keys()) if 'CONTENT_TONE_LABELS' in globals() else ['gan_gui','chuyen_nghiep','cao_cap','viral','manh']
-    hooks = [
-        'Khách không mua không hẳn vì giá, đôi khi vì nội dung chưa chạm đúng nhu cầu.',
-        'Một thông điệp rõ ràng có thể giúp khách hiểu nhanh lý do nên inbox.',
-        'Nội dung tốt không cần dài, chỉ cần đúng vấn đề khách đang gặp.',
-        'Muốn tăng chuyển đổi, hãy nói đúng nỗi đau và lợi ích thật.',
-        'Bài viết đầu tiên có thể quyết định khách có tin tưởng hay không.',
-        'Đừng đăng cho có, hãy đăng để khách muốn hỏi thêm.',
-        'Sản phẩm tốt cần cách kể chuyện đủ rõ để khách hành động.',
-        'Muốn tiết kiệm chi phí quảng cáo, hãy tối ưu nội dung trước.',
-        'Một câu mở đầu đúng insight có thể kéo inbox tốt hơn.',
-        'Khách cần thấy giá trị trước khi họ quyết định mua.'
-    ]
-    ctas = [
-        'Inbox để được tư vấn giải pháp phù hợp.', 'Nhắn tin ngay để nhận thông tin chi tiết.',
-        'Để lại nhu cầu, đội ngũ hỗ trợ sẽ tư vấn nhanh.', 'Liên hệ hôm nay để được gợi ý phương án phù hợp.',
-        'Gửi tin nhắn để nhận báo giá và ưu đãi mới nhất.', 'Kết nối ngay để được hỗ trợ chi tiết.'
-    ]
-    comments = ['Quan tâm, tư vấn giúp mình.', 'Cho mình xin thông tin chi tiết.', 'Inbox mình bảng giá nhé.', 'Mẫu này phù hợp, tư vấn thêm giúp mình.', 'Có ưu đãi hôm nay không?']
-
-    rows=[]
-    start_id=total
-    i=start_id
-    while i < CONTENT_TARGET_TOTAL:
-        industry_key, industry_label = industries[i % len(industries)]
-        ctype = types[(i // len(industries)) % len(types)]
-        goal = goals[(i // 7) % len(goals)]
-        tone = tones[(i // 11) % len(tones)]
-        seed_list = CONTENT_LIBRARY.get(industry_key) or CONTENT_LIBRARY.get('spa', ['Giải pháp phù hợp giúp khách hàng tăng hiệu quả công việc.'])
-        seed = seed_list[i % len(seed_list)]
-        hook = hooks[i % len(hooks)]
-        cta = ctas[(i * 3) % len(ctas)]
-        comment = comments[(i * 5) % len(comments)]
-        day = (i % 30) + 1
-        tag = f"#{industry_key.replace('_','')} #Marketing #KinhDoanhOnline"
-        type_label = CONTENT_TYPE_LABELS.get(ctype, ctype) if 'CONTENT_TYPE_LABELS' in globals() else ctype
-        goal_label = CONTENT_GOAL_LABELS.get(goal, goal) if 'CONTENT_GOAL_LABELS' in globals() else goal
-        tone_label = CONTENT_TONE_LABELS.get(tone, tone) if 'CONTENT_TONE_LABELS' in globals() else tone
-        if ctype == 'hook':
-            content = f"Hook {i+1}: {hook}"
-        elif ctype == 'cta':
-            content = f"CTA {i+1}: {cta}"
-        elif ctype == 'comment':
-            content = f"Comment {i+1}: {comment}"
-        elif ctype == 'calendar':
-            content = f"Ngày {day}: Chủ đề {industry_label}. Mở đầu: {hook} Mục tiêu: {goal_label}. CTA: {cta}"
-        elif ctype == 'combo':
-            content = f"Combo {i+1}:\nHook: {hook}\nContent: {seed}\nCTA: {cta}\nComment gợi ý: {comment}\nHashtag: {tag}"
-        else:
-            content = f"{type_label} {i+1}: {hook}\n\n{seed}\n\nGiọng văn: {tone_label}. Mục tiêu: {goal_label}.\n\n{cta}\n{tag}"
-        rows.append((industry_key, industry_label, ctype, goal, tone, f'{type_label} {i+1}', content, now))
-        i += 1
-        if len(rows) >= 1000:
-            c.executemany("""INSERT INTO content_items(industry_key,industry_label,content_type,goal,tone,title,content,created_at) VALUES(?,?,?,?,?,?,?,?)""", rows)
-            conn.commit(); rows=[]
-    if rows:
-        c.executemany("""INSERT INTO content_items(industry_key,industry_label,content_type,goal,tone,title,content,created_at) VALUES(?,?,?,?,?,?,?,?)""", rows)
-        conn.commit()
-    c.execute('SELECT COUNT(*) FROM content_items')
-    total = int(c.fetchone()[0] or 0)
-    conn.close(); return total
+    conn.close()
+    return total
 
 
 def query_content_50k(selected_industry, content_type='facebook', goal='inbox', tone='gan_gui', count=100):
@@ -13542,3 +13559,177 @@ if __name__ == "__main__":
     threading.Thread(target=scheduler_loop, daemon=True).start()
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port, debug=False)
+
+# =========================================================
+# FINAL MOBILE INSTALL CLEAN MODE
+# Mục tiêu: xóa/ẩn toàn bộ giao diện tải app cũ trên điện thoại,
+# chỉ giữ hướng dẫn cài app gọn bằng alert + service worker chuẩn /sw.js.
+# Đặt vào đầu danh sách after_request để hàm này chạy CUỐI cùng.
+# =========================================================
+_MKT_SIMPLE_INSTALL_FINAL = r'''
+<style id="mkt-simple-install-final-css">
+  /* Ẩn toàn bộ popup/nút tải app cũ để không hiện nội dung dài cho khách */
+  #mktTopDownloadBar,
+  #mktTopInstallSheet,
+  #mktInstallSheet,
+  #mktInstallPanel,
+  #mktDownloadAppV130,
+  #mktPhoneInstallFloat,
+  #mktPhoneInstallEntry,
+  #mktMobileInstallMenu,
+  #mktMobileInstallQuick,
+  #mktMobileInstallQuickRestore,
+  #installAppBtn,
+  .mkt-mobile-install-menu,
+  .mkt-mobile-download-v130,
+  .mkt-install-old,
+  .mkt-install-sheet,
+  .install-app-btn,
+  .app-install-card,
+  .app-install-banner,
+  .v2-install-box{
+    display:none!important;
+    visibility:hidden!important;
+    opacity:0!important;
+    pointer-events:none!important;
+  }
+
+  @media(max-width:768px){
+    #gptminiSimpleInstallBtn{
+      position:fixed!important;
+      left:12px!important;
+      bottom:calc(14px + env(safe-area-inset-bottom,0px))!important;
+      z-index:2147483646!important;
+      border:0!important;
+      border-radius:999px!important;
+      padding:10px 14px!important;
+      min-height:44px!important;
+      display:inline-flex!important;
+      align-items:center!important;
+      gap:8px!important;
+      background:linear-gradient(135deg,#2563eb,#7c3aed)!important;
+      color:#fff!important;
+      font-family:system-ui,-apple-system,"Segoe UI",Arial,sans-serif!important;
+      font-size:13px!important;
+      font-weight:900!important;
+      box-shadow:0 14px 30px rgba(37,99,235,.35)!important;
+      cursor:pointer!important;
+    }
+    #gptminiSimpleInstallBtn .dot{
+      width:9px!important;height:9px!important;border-radius:50%!important;
+      background:#22c55e!important;box-shadow:0 0 0 4px rgba(34,197,94,.20),0 0 12px rgba(34,197,94,.85)!important;
+    }
+    body.gptmini-standalone #gptminiSimpleInstallBtn{display:none!important;}
+  }
+  @media(min-width:769px){#gptminiSimpleInstallBtn{display:none!important;}}
+</style>
+<script id="mkt-simple-install-final-js">
+(function(){
+  'use strict';
+
+  var deferredInstallPrompt = null;
+  window.deferredInstallPrompt = null;
+
+  function isStandalone(){
+    return window.matchMedia('(display-mode: standalone)').matches ||
+           window.navigator.standalone === true;
+  }
+
+  function showInstallGuide(){
+    alert("Cách cài App Mini:\n\nAndroid Chrome: bấm dấu 3 chấm → Thêm vào màn hình chính.\n\niPhone Safari: bấm Chia sẻ → Thêm vào MH chính.\n\nSau đó mở Gptmini như một app trên điện thoại.");
+    return false;
+  }
+
+  window.showInstallGuide = showInstallGuide;
+  window.openInstallGuide = showInstallGuide;
+  window.runMktInstallPrompt = showInstallGuide;
+  window.mktTopInstall = showInstallGuide;
+
+  window.addEventListener('beforeinstallprompt', function(e){
+    e.preventDefault();
+    deferredInstallPrompt = e;
+    window.deferredInstallPrompt = e;
+  });
+
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function(){
+      navigator.serviceWorker.register('/sw.js').catch(function(err){
+        console.log('Service worker registration failed:', err);
+      });
+    });
+  }
+
+  function removeOldInstallUi(){
+    var selectors = [
+      '#mktTopDownloadBar','#mktTopInstallSheet','#mktInstallSheet','#mktInstallPanel',
+      '#mktDownloadAppV130','#mktPhoneInstallFloat','#mktPhoneInstallEntry','#mktMobileInstallMenu',
+      '#mktMobileInstallQuick','#mktMobileInstallQuickRestore','#installAppBtn',
+      '.mkt-mobile-install-menu','.mkt-mobile-download-v130','.mkt-install-old','.mkt-install-sheet',
+      '.install-app-btn','.app-install-card','.app-install-banner','.v2-install-box'
+    ];
+    selectors.forEach(function(sel){
+      document.querySelectorAll(sel).forEach(function(el){
+        try{ el.remove(); }catch(_e){ el.style.display='none'; }
+      });
+    });
+    if(isStandalone()) document.body.classList.add('gptmini-standalone');
+  }
+
+  function ensureSimpleButton(){
+    if(!/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || '')) return;
+    if(isStandalone()) return;
+    removeOldInstallUi();
+    if(document.getElementById('gptminiSimpleInstallBtn')) return;
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.id = 'gptminiSimpleInstallBtn';
+    btn.innerHTML = '<span class="dot"></span><span>GPTMini</span><small style="font-weight:800;opacity:.9">Cài App</small>';
+    btn.onclick = showInstallGuide;
+    document.body.appendChild(btn);
+  }
+
+  document.addEventListener('click', function(e){
+    var target = e.target.closest && e.target.closest('#gptminiSimpleInstallBtn,[onclick*="showInstallGuide"],[data-install-app],[data-mkt-install-app]');
+    if(!target) return;
+    e.preventDefault();
+    e.stopPropagation();
+    if(e.stopImmediatePropagation) e.stopImmediatePropagation();
+    return showInstallGuide();
+  }, true);
+
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', ensureSimpleButton);
+  else ensureSimpleButton();
+  window.addEventListener('load', ensureSimpleButton);
+  setTimeout(ensureSimpleButton, 600);
+  setTimeout(ensureSimpleButton, 1600);
+  setTimeout(removeOldInstallUi, 2600);
+})();
+</script>
+'''
+
+
+def _mkt_simple_install_final_response(response):
+    try:
+        path = request.path or ""
+        if path.startswith('/admin') or path.startswith('/api') or path.startswith('/healthz'):
+            return response
+        ctype = response.headers.get('Content-Type', '')
+        if 'text/html' not in ctype.lower():
+            return response
+        data = response.get_data(as_text=True)
+        # Loại bỏ các bản simple cũ nếu reload nhiều lần trên Render.
+        data = data.replace(_MKT_SIMPLE_INSTALL_FINAL, '')
+        if '</body>' in data:
+            data = data.replace('</body>', _MKT_SIMPLE_INSTALL_FINAL + '</body>', 1)
+        else:
+            data += _MKT_SIMPLE_INSTALL_FINAL
+        response.set_data(data)
+        response.headers['Content-Length'] = str(len(response.get_data()))
+    except Exception:
+        pass
+    return response
+
+try:
+    app.after_request_funcs.setdefault(None, []).insert(0, _mkt_simple_install_final_response)
+except Exception:
+    pass
