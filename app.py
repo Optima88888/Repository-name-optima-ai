@@ -1918,6 +1918,16 @@ def approve_premium_request(request_id, status='Đã duyệt', admin_note=''):
                 last_renewal_notice_at='',
                 updated_at=excluded.updated_at
         """, (device_id, phone, email, package_key, package_name, start_date, end_dt.strftime("%Y-%m-%d %H:%M:%S"), 'premium', '', now, now))
+        c.execute("""
+            CREATE TABLE IF NOT EXISTS notifications (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                title TEXT,
+                detail TEXT,
+                level TEXT DEFAULT 'info',
+                status TEXT DEFAULT 'new',
+                created_at TEXT
+            )
+        """)
         c.execute("""INSERT INTO notifications(title,detail,level,status,created_at) VALUES(?,?,?,?,?)""",
                   ("Đã kích hoạt Premium Subscription Center V2", f"{device_id} - {package_name} - cộng {plan_days} ngày - hạn đến {end_dt.strftime('%Y-%m-%d %H:%M')}", "success", "new", now))
         ensure_user_notification_table(c)
@@ -13102,8 +13112,14 @@ def api_premium_status_realtime():
         'unlocked_features': unlocked_features
     })
 
-if __name__ == "__main__":
+# Auto bootstrap database when deployed with gunicorn/Render.
+# This prevents /admin/premium_action from failing when tables are missing.
+try:
     init_db()
+except Exception as _db_bootstrap_err:
+    print("Database bootstrap error:", _db_bootstrap_err)
+
+if __name__ == "__main__":
     try:
         threading.Thread(target=ensure_content_50k_library, daemon=True).start()
     except Exception as e:
