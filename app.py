@@ -11166,7 +11166,7 @@ ADMIN_HTML = """
     user-select:none!important;
   }
   #mktMobileBackBtn.show{display:inline-flex!important;align-items:center!important;gap:6px!important;}
-  @media(min-width:769px){#mktMobileBackBtn{display:none!important;}}
+  @media(min-width:769px){ #mktMobileBackBtn{display:none!important;} }
 </style>
 <script id="mkt-mobile-back-final-js">
 (function(){
