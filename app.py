@@ -1024,7 +1024,7 @@ Yêu cầu:
     return safe_ai_generate(prompt, fallback)
 
 def ai_plan_30_days(industry, goal):
-    if not client:
+    if not get_active_gemini_key():
         # fallback không tốn AI
         lines = []
         base = CONTENT_LIBRARY.get(industry, CONTENT_LIBRARY["spa"])
@@ -1401,7 +1401,7 @@ def get_analytics_summary():
 
 def generate_many_contents(idea, count, style="bán hàng tự nhiên", length="80"):
     count = max(1, min(int(count), 50))
-    if not client:
+    if not get_active_gemini_key():
         base = [
             f"{idea} - Giải pháp phù hợp cho khách hàng đang cần tối ưu công việc. Inbox để được tư vấn.",
             f"Bạn đang cần {idea}? Hãy chọn giải pháp ổn định, dễ dùng và được hỗ trợ nhanh.",
@@ -1439,7 +1439,7 @@ def smart_schedule_times(start_time, count, gap_minutes):
 def ai_spin_content(content):
     if not content:
         return ""
-    if client:
+    if get_active_gemini_key():
         prompt = f"""
 Viết lại content sau khác khoảng 70-80% nhưng giữ ý chính, giọng tự nhiên, không cam kết quá đà.
 Thêm CTA riêng và hashtag riêng.
@@ -7999,7 +7999,129 @@ CONTENT_TONE_LABELS = {
     "manh": "Bán hàng mạnh"
 }
 
-CONTENT_OPEN_LIMITS = [50, 100, 200, 500]
+CONTENT_OPEN_LIMITS = [50, 100, 200, 500, 1000, 5000]
+CONTENT_DB = "content_library_50000.db"
+CONTENT_TARGET_TOTAL = 50000
+
+
+def content_db():
+    return sqlite3.connect(CONTENT_DB)
+
+
+def ensure_content_50k_library():
+    """Tạo kho content SQLite 50.000+ mẫu một lần, không làm nặng app.py.
+    Dữ liệu được sinh theo ngành, loại nội dung, mục tiêu và giọng văn để khách có kho dùng nhanh kể cả khi AI/API bận.
+    """
+    conn = content_db(); c = conn.cursor()
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS content_items (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            industry_key TEXT,
+            industry_label TEXT,
+            content_type TEXT,
+            goal TEXT,
+            tone TEXT,
+            title TEXT,
+            content TEXT,
+            created_at TEXT
+        )
+    """)
+    c.execute("CREATE INDEX IF NOT EXISTS idx_content_filter ON content_items(industry_key, content_type, goal, tone)")
+    c.execute("SELECT COUNT(*) FROM content_items")
+    total = int(c.fetchone()[0] or 0)
+    if total >= CONTENT_TARGET_TOTAL:
+        conn.close(); return total
+
+    now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    industries = list(INDUSTRY_LABELS.items()) or [('spa','Spa')]
+    types = list(CONTENT_TYPE_LABELS.keys()) if 'CONTENT_TYPE_LABELS' in globals() else ['facebook','tiktok','group','comment','hook','cta','calendar','combo']
+    goals = list(CONTENT_GOAL_LABELS.keys()) if 'CONTENT_GOAL_LABELS' in globals() else ['inbox','trust','sale','viral','remarketing']
+    tones = list(CONTENT_TONE_LABELS.keys()) if 'CONTENT_TONE_LABELS' in globals() else ['gan_gui','chuyen_nghiep','cao_cap','viral','manh']
+    hooks = [
+        'Khách không mua không hẳn vì giá, đôi khi vì nội dung chưa chạm đúng nhu cầu.',
+        'Một thông điệp rõ ràng có thể giúp khách hiểu nhanh lý do nên inbox.',
+        'Nội dung tốt không cần dài, chỉ cần đúng vấn đề khách đang gặp.',
+        'Muốn tăng chuyển đổi, hãy nói đúng nỗi đau và lợi ích thật.',
+        'Bài viết đầu tiên có thể quyết định khách có tin tưởng hay không.',
+        'Đừng đăng cho có, hãy đăng để khách muốn hỏi thêm.',
+        'Sản phẩm tốt cần cách kể chuyện đủ rõ để khách hành động.',
+        'Muốn tiết kiệm chi phí quảng cáo, hãy tối ưu nội dung trước.',
+        'Một câu mở đầu đúng insight có thể kéo inbox tốt hơn.',
+        'Khách cần thấy giá trị trước khi họ quyết định mua.'
+    ]
+    ctas = [
+        'Inbox để được tư vấn giải pháp phù hợp.', 'Nhắn tin ngay để nhận thông tin chi tiết.',
+        'Để lại nhu cầu, đội ngũ hỗ trợ sẽ tư vấn nhanh.', 'Liên hệ hôm nay để được gợi ý phương án phù hợp.',
+        'Gửi tin nhắn để nhận báo giá và ưu đãi mới nhất.', 'Kết nối ngay để được hỗ trợ chi tiết.'
+    ]
+    comments = ['Quan tâm, tư vấn giúp mình.', 'Cho mình xin thông tin chi tiết.', 'Inbox mình bảng giá nhé.', 'Mẫu này phù hợp, tư vấn thêm giúp mình.', 'Có ưu đãi hôm nay không?']
+
+    rows=[]
+    start_id=total
+    i=start_id
+    while i < CONTENT_TARGET_TOTAL:
+        industry_key, industry_label = industries[i % len(industries)]
+        ctype = types[(i // len(industries)) % len(types)]
+        goal = goals[(i // 7) % len(goals)]
+        tone = tones[(i // 11) % len(tones)]
+        seed_list = CONTENT_LIBRARY.get(industry_key) or CONTENT_LIBRARY.get('spa', ['Giải pháp phù hợp giúp khách hàng tăng hiệu quả công việc.'])
+        seed = seed_list[i % len(seed_list)]
+        hook = hooks[i % len(hooks)]
+        cta = ctas[(i * 3) % len(ctas)]
+        comment = comments[(i * 5) % len(comments)]
+        day = (i % 30) + 1
+        tag = f"#{industry_key.replace('_','')} #Marketing #KinhDoanhOnline"
+        type_label = CONTENT_TYPE_LABELS.get(ctype, ctype) if 'CONTENT_TYPE_LABELS' in globals() else ctype
+        goal_label = CONTENT_GOAL_LABELS.get(goal, goal) if 'CONTENT_GOAL_LABELS' in globals() else goal
+        tone_label = CONTENT_TONE_LABELS.get(tone, tone) if 'CONTENT_TONE_LABELS' in globals() else tone
+        if ctype == 'hook':
+            content = f"Hook {i+1}: {hook}"
+        elif ctype == 'cta':
+            content = f"CTA {i+1}: {cta}"
+        elif ctype == 'comment':
+            content = f"Comment {i+1}: {comment}"
+        elif ctype == 'calendar':
+            content = f"Ngày {day}: Chủ đề {industry_label}. Mở đầu: {hook} Mục tiêu: {goal_label}. CTA: {cta}"
+        elif ctype == 'combo':
+            content = f"Combo {i+1}:\nHook: {hook}\nContent: {seed}\nCTA: {cta}\nComment gợi ý: {comment}\nHashtag: {tag}"
+        else:
+            content = f"{type_label} {i+1}: {hook}\n\n{seed}\n\nGiọng văn: {tone_label}. Mục tiêu: {goal_label}.\n\n{cta}\n{tag}"
+        rows.append((industry_key, industry_label, ctype, goal, tone, f'{type_label} {i+1}', content, now))
+        i += 1
+        if len(rows) >= 1000:
+            c.executemany("""INSERT INTO content_items(industry_key,industry_label,content_type,goal,tone,title,content,created_at) VALUES(?,?,?,?,?,?,?,?)""", rows)
+            conn.commit(); rows=[]
+    if rows:
+        c.executemany("""INSERT INTO content_items(industry_key,industry_label,content_type,goal,tone,title,content,created_at) VALUES(?,?,?,?,?,?,?,?)""", rows)
+        conn.commit()
+    c.execute('SELECT COUNT(*) FROM content_items')
+    total = int(c.fetchone()[0] or 0)
+    conn.close(); return total
+
+
+def query_content_50k(selected_industry, content_type='facebook', goal='inbox', tone='gan_gui', count=100):
+    try:
+        count = max(10, min(int(count or 100), 5000))
+        ensure_content_50k_library()
+        conn = content_db(); c = conn.cursor()
+        c.execute("""
+            SELECT content FROM content_items
+            WHERE industry_key=? AND content_type=? AND goal=? AND tone=?
+            ORDER BY id ASC LIMIT ?
+        """, (selected_industry, content_type, goal, tone, count))
+        rows = [r[0] for r in c.fetchall()]
+        if len(rows) < count:
+            c.execute("""
+                SELECT content FROM content_items
+                WHERE industry_key=? AND content_type=?
+                ORDER BY id ASC LIMIT ?
+            """, (selected_industry, content_type, count-len(rows)))
+            rows += [r[0] for r in c.fetchall()]
+        conn.close()
+        return rows
+    except Exception as e:
+        print('content 50k query error:', e)
+        return []
 
 
 def _industry_name(industry_key):
@@ -8032,14 +8154,18 @@ def _content_seed(industry_key):
 
 
 def current_library(selected_industry, content_type="facebook", goal="inbox", tone="gan_gui", count=100):
-    """Kho Content Center nâng cấp.
-    Không hardcode 50.000 dòng trong app.py để tránh nặng file; hệ thống sinh động theo ngành, loại nội dung, mục tiêu và giọng văn.
+    """Kho Content Center 50.000+ dùng SQLite.
+    Ưu tiên đọc content_library_50000.db; nếu DB chưa sẵn sàng thì fallback bằng bộ sinh local cũ.
     """
     try:
         count = int(count or 100)
     except Exception:
         count = 100
-    count = max(10, min(count, 500))
+    count = max(10, min(count, 5000))
+
+    db_items = query_content_50k(selected_industry, content_type, goal, tone, count)
+    if db_items:
+        return db_items[:count]
 
     industry = _industry_name(selected_industry)
     goal_text = _goal_phrase(goal)
@@ -8051,38 +8177,10 @@ def current_library(selected_industry, content_type="facebook", goal="inbox", to
         "Nếu bài đăng nhiều lượt xem nhưng ít inbox, hãy kiểm tra lại câu mở đầu.",
         "Một nội dung đúng insight có thể tiết kiệm rất nhiều chi phí quảng cáo.",
         "Đừng đăng cho có, hãy đăng để khách hiểu vì sao họ cần bạn.",
-        "Sản phẩm tốt cần một cách kể chuyện đủ rõ để khách muốn hỏi thêm.",
-        "Muốn tăng chuyển đổi, hãy bắt đầu từ nỗi đau thật của khách hàng.",
-        "Nội dung bán hàng hiệu quả không cần dài, chỉ cần đúng vấn đề.",
-        "Bài viết đầu tiên khách đọc có thể quyết định họ có inbox hay không.",
-        "Đừng để khách rời đi chỉ vì thông điệp chưa đủ rõ.",
-        "Một caption tốt có thể biến người xem thành khách hàng tiềm năng."
+        "Sản phẩm tốt cần một cách kể chuyện đủ rõ để khách muốn hỏi thêm."
     ]
-    ctas = [
-        "Inbox để được tư vấn giải pháp phù hợp.",
-        "Nhắn tin ngay để nhận thông tin chi tiết.",
-        "Để lại nhu cầu, đội ngũ hỗ trợ sẽ tư vấn nhanh.",
-        "Liên hệ hôm nay để được gợi ý phương án phù hợp.",
-        "Muốn mình tư vấn kỹ hơn, hãy gửi tin nhắn ngay.",
-        "Nhận báo giá và hướng dẫn chi tiết qua inbox.",
-        "Đăng ký tư vấn để bắt đầu tối ưu ngay hôm nay.",
-        "Bạn cần mẫu phù hợp hơn? Inbox để được hỗ trợ.",
-        "Gửi tin nhắn để nhận ưu đãi mới nhất.",
-        "Kết nối ngay để không bỏ lỡ cơ hội phù hợp."
-    ]
-    comments = [
-        "Quan tâm, tư vấn giúp mình.",
-        "Cho mình xin thông tin chi tiết.",
-        "Mẫu này phù hợp, inbox giúp mình nhé.",
-        "Mình muốn xem thêm bảng giá.",
-        "Tư vấn thêm cho mình với.",
-        "Có ưu đãi hôm nay không shop?",
-        "Mình cần giải pháp phù hợp hơn.",
-        "Cho mình xin hướng dẫn cụ thể.",
-        "Nội dung hay, mình quan tâm.",
-        "Inbox mình thông tin nhé."
-    ]
-
+    ctas = ["Inbox để được tư vấn giải pháp phù hợp.", "Nhắn tin ngay để nhận thông tin chi tiết.", "Để lại nhu cầu, đội ngũ hỗ trợ sẽ tư vấn nhanh."]
+    comments = ["Quan tâm, tư vấn giúp mình.", "Cho mình xin thông tin chi tiết.", "Inbox mình thông tin nhé."]
     templates = []
     for i in range(count):
         seed = seeds[i % len(seeds)]
@@ -8091,32 +8189,14 @@ def current_library(selected_industry, content_type="facebook", goal="inbox", to
         comment = comments[(i * 2) % len(comments)]
         day = (i % 30) + 1
         tag = f"#{selected_industry.replace('_','')} #Marketing #KinhDoanhOnline"
-        if content_type == "hook":
-            text = f"Hook {i+1}: {hook}"
-        elif content_type == "cta":
-            text = f"CTA {i+1}: {cta}"
-        elif content_type == "comment":
-            text = f"Comment {i+1}: {comment}"
-        elif content_type == "calendar":
-            text = f"Ngày {day}: {hook} Chủ đề: {industry}. Mục tiêu: {goal_text}. CTA: {cta}"
-        elif content_type == "tiktok":
-            text = f"TikTok {i+1}: {hook} {seed} Kết video bằng lời kêu gọi: {cta} {tag}"
-        elif content_type == "group":
-            text = f"Group {i+1}: Chia sẻ thật cho anh/chị đang quan tâm {industry}: {seed} Nội dung viết theo hướng {tone_text}, mục tiêu {goal_text}. {cta}"
-        elif content_type == "combo":
-            kind = i % 5
-            if kind == 0:
-                text = f"Content {i+1}: {hook} {seed} {cta} {tag}"
-            elif kind == 1:
-                text = f"Hook {i+1}: {hook}"
-            elif kind == 2:
-                text = f"CTA {i+1}: {cta}"
-            elif kind == 3:
-                text = f"Comment {i+1}: {comment}"
-            else:
-                text = f"Lịch ngày {day}: Đăng bài về {industry}, nhấn mạnh {goal_text}. Gợi ý mở đầu: {hook}"
-        else:
-            text = f"Facebook {i+1}: {hook}\n\n{seed}\n\nPhong cách: {tone_text}. Mục tiêu: {goal_text}.\n\n{cta}\n{tag}"
+        if content_type == "hook": text = f"Hook {i+1}: {hook}"
+        elif content_type == "cta": text = f"CTA {i+1}: {cta}"
+        elif content_type == "comment": text = f"Comment {i+1}: {comment}"
+        elif content_type == "calendar": text = f"Ngày {day}: {hook} Chủ đề: {industry}. Mục tiêu: {goal_text}. CTA: {cta}"
+        elif content_type == "tiktok": text = f"TikTok {i+1}: {hook} {seed} Kết video bằng lời kêu gọi: {cta} {tag}"
+        elif content_type == "group": text = f"Group {i+1}: Chia sẻ thật cho anh/chị đang quan tâm {industry}: {seed} Nội dung viết theo hướng {tone_text}, mục tiêu {goal_text}. {cta}"
+        elif content_type == "combo": text = f"Combo {i+1}:\nHook: {hook}\nContent: {seed}\nCTA: {cta}\nComment: {comment}\nHashtag: {tag}"
+        else: text = f"Facebook {i+1}: {hook}\n\n{seed}\n\nPhong cách: {tone_text}. Mục tiêu: {goal_text}.\n\n{cta}\n{tag}"
         templates.append(text)
     return templates
 
@@ -11198,6 +11278,23 @@ def api_device_status():
         return jsonify({"ok": True, "device_id": device_id, "premium": False, "notice": notice})
     return jsonify({"ok": True, "device_id": device_id, "premium": True, "package_name": sub[4], "end_date": sub[6], "status": sub[7], "notice": notice})
 
+
+@app.route("/api/gemini_key/status")
+def api_gemini_key_status_route():
+    return jsonify({"success": True, "device_id": get_device_id(), **user_ai_key_status()})
+
+
+@app.route("/api/content_50k_stats")
+def api_content_50k_stats_route():
+    total = ensure_content_50k_library()
+    return jsonify({"success": True, "total": total, "database": CONTENT_DB})
+
+
+@app.route("/api/dashboard_ceo")
+def api_dashboard_ceo_route():
+    return jsonify({"success": True, "stats": admin_ceo_stats()})
+
+
 @app.route("/healthz")
 def healthz_route():
     return jsonify({"ok": True, "app": APP_TITLE, "pages": len(get_pages_dynamic())})
@@ -11801,6 +11898,10 @@ def api_device_id_route():
 
 if __name__ == "__main__":
     init_db()
+    try:
+        threading.Thread(target=ensure_content_50k_library, daemon=True).start()
+    except Exception as e:
+        print('content library init skipped:', e)
     threading.Thread(target=scheduler_loop, daemon=True).start()
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port, debug=False)
