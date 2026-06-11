@@ -314,7 +314,7 @@ INDUSTRY_LABELS = {
 }
 
 def init_db():
-    conn = sqlite3.connect(DB)
+    conn = sqlite3.connect(DB, timeout=30, check_same_thread=False)
     c = conn.cursor()
     c.execute("""
     CREATE TABLE IF NOT EXISTS posts (
@@ -763,7 +763,13 @@ def init_db():
     conn.close()
 
 def db():
-    return sqlite3.connect(DB)
+    conn = sqlite3.connect(DB, timeout=30, check_same_thread=False)
+    try:
+        conn.execute("PRAGMA journal_mode=WAL;")
+        conn.execute("PRAGMA busy_timeout=30000;")
+    except Exception:
+        pass
+    return conn
 
 
 def get_pages_dynamic():
@@ -1254,7 +1260,7 @@ def export_csv():
 def add_crm(name, phone, zalo, source, note):
     if not name and not phone and not zalo:
         return
-    conn = sqlite3.connect(DB)
+    conn = sqlite3.connect(DB, timeout=30, check_same_thread=False)
     c = conn.cursor()
     c.execute("""
     INSERT INTO crm(name,phone,zalo,source,note,created_at)
@@ -1264,7 +1270,7 @@ def add_crm(name, phone, zalo, source, note):
     conn.close()
 
 def get_crm(limit=30):
-    conn = sqlite3.connect(DB)
+    conn = sqlite3.connect(DB, timeout=30, check_same_thread=False)
     c = conn.cursor()
     c.execute("SELECT id,name,phone,zalo,source,note,created_at FROM crm ORDER BY id DESC LIMIT ?", (limit,))
     rows = c.fetchall()
@@ -1273,7 +1279,7 @@ def get_crm(limit=30):
 
 
 def save_token_check(page_name, page_id, status, detail):
-    conn = sqlite3.connect(DB)
+    conn = sqlite3.connect(DB, timeout=30, check_same_thread=False)
     c = conn.cursor()
     c.execute("""
     INSERT INTO token_checks(page_name,page_id,status,detail,checked_at)
@@ -1283,7 +1289,7 @@ def save_token_check(page_name, page_id, status, detail):
     conn.close()
 
 def get_latest_token_checks(limit=30):
-    conn = sqlite3.connect(DB)
+    conn = sqlite3.connect(DB, timeout=30, check_same_thread=False)
     c = conn.cursor()
     c.execute("""
     SELECT page_name,page_id,status,detail,checked_at
@@ -1337,7 +1343,7 @@ def check_all_page_tokens():
 def add_page_cluster(name, page_names, note):
     if not name:
         return
-    conn = sqlite3.connect(DB)
+    conn = sqlite3.connect(DB, timeout=30, check_same_thread=False)
     c = conn.cursor()
     c.execute("""
     INSERT OR REPLACE INTO page_clusters(name,page_names,note,created_at)
@@ -1347,7 +1353,7 @@ def add_page_cluster(name, page_names, note):
     conn.close()
 
 def get_page_clusters():
-    conn = sqlite3.connect(DB)
+    conn = sqlite3.connect(DB, timeout=30, check_same_thread=False)
     c = conn.cursor()
     c.execute("SELECT id,name,page_names,note,created_at FROM page_clusters ORDER BY id DESC")
     rows = c.fetchall()
@@ -1355,7 +1361,7 @@ def get_page_clusters():
     return rows
 
 def get_analytics_summary():
-    conn = sqlite3.connect(DB)
+    conn = sqlite3.connect(DB, timeout=30, check_same_thread=False)
     c = conn.cursor()
 
     def one(query, params=()):
@@ -1576,7 +1582,7 @@ def export_pdf_report():
         width, height = A4
         y = height - 40
         c.setFont("Helvetica-Bold", 14)
-        c.drawString(40, y, "GPTMini.Pro - Report")
+        c.drawString(40, y, "Gptmini - Trợ Lý AI Marketing Đa Kênh - Report")
         y -= 30
         c.setFont("Helvetica", 9)
         for r in rows[:80]:
@@ -1592,7 +1598,7 @@ def export_pdf_report():
     except Exception:
         txt_path = os.path.join(REPORT_DIR, "report_posts_pdf_fallback.txt")
         with open(txt_path, "w", encoding="utf-8") as f:
-            f.write("GPTMini.Pro Report\n\n")
+            f.write("Gptmini - Trợ Lý AI Marketing Đa Kênh Report\n\n")
             for r in rows:
                 f.write(f"ID {r[0]} | Page: {r[1]} | Status: {r[3]} | Campaign: {r[7]} | Time: {r[9]}\n")
         return txt_path
@@ -1617,7 +1623,7 @@ def get_free_status(username=None):
     username = username or get_trial_identity()
     now = datetime.datetime.now()
 
-    conn = sqlite3.connect(DB)
+    conn = sqlite3.connect(DB, timeout=30, check_same_thread=False)
     c = conn.cursor()
     c.execute("""
     CREATE TABLE IF NOT EXISTS users_trial (
@@ -7558,201 +7564,6 @@ function dropKanban(ev){ ev.preventDefault(); const col=ev.currentTarget; if(dra
 </script>
 <!-- /CTV FINAL VISIBILITY PATCH -->
 
-
-  function selectedKey(){
-    return normKey(window.mktSelectedPlanKey || window.currentPremiumPlanKey || localStorage.getItem('mkt_selected_plan_key')) || 'monthly';
-  }
-
-  window.refreshPaymentContent=function(){
-    var p=plan(selectedKey());
-    var content=payContent(p);
-
-    var pc=q('#payContent'); 
-    if(pc) pc.textContent=content;
-
-    var qr=q('#payQr'); 
-    if(qr){
-      qr.src='https://img.vietqr.io/image/970405-8888363382629-compact2.png?amount='+
-        encodeURIComponent(p.amount)+
-        '&addInfo='+encodeURIComponent(content)+
-        '&accountName='+encodeURIComponent('NGUYEN DANG THI XUAN');
-    }
-
-    var price=q('#payPlanPrice'); 
-    if(price) price.textContent=Number(p.amount).toLocaleString('vi-VN')+' VNĐ';
-  };
-
-  window.openPayment=function(k){
-    k=setKey(k || selectedKey());
-    var p=plan(k);
-
-    var modal=q('#paymentModal'); 
-    if(!modal) return false;
-
-    var title=q('#payPlanTitle'); 
-    if(title) title.textContent=p.title;
-
-    var desc=q('#payPlanDesc'); 
-    if(desc) desc.textContent=p.desc || 'Vui lòng nhập số điện thoại và Gmail để được duyệt nâng cấp.';
-
-    var price=q('#payPlanPrice'); 
-    if(price) price.textContent=Number(p.amount).toLocaleString('vi-VN')+' VNĐ';
-
-    var device=q('#payDeviceId'); 
-    if(device) device.value=getDevice();
-
-    window.refreshPaymentContent();
-    modal.style.display='flex';
-    return false;
-  };
-
-  document.addEventListener('click',function(e){
-    var b=e.target.closest && e.target.closest('button,a');
-    if(!b) return;
-
-    var text=String(b.innerText || b.textContent || '');
-    var k=keyFromNode(b);
-
-    if(k) setKey(k);
-
-    if(/nâng cấp|thanh toán|kích hoạt|mở khóa/i.test(text)){
-      if(k){
-        e.preventDefault();
-        e.stopPropagation();
-        if(e.stopImmediatePropagation) e.stopImmediatePropagation();
-        return window.openPayment(k);
-      }
-    }
-  },true);
-
-  document.addEventListener('input',function(e){
-    if(e.target && /payPhone|payEmail/.test(e.target.id || '')){
-      window.refreshPaymentContent();
-    }
-  },true);
-
-  qa('[data-plan]').forEach(function(btn){
-    var k=normKey(btn.dataset.plan);
-    if(k){
-      btn.onclick=function(e){
-        e.preventDefault();
-        e.stopPropagation();
-        return window.openPayment(k);
-      };
-    }
-  });
-
-  getDevice();
-})();
-</script>
-
-  function fillPayment(k){
-    k=setKey(k);
-    var p=plan(k);
-    var title=q('#payPlanTitle'); if(title) title.textContent=p.title;
-    var desc=q('#payPlanDesc'); if(desc) desc.textContent=p.desc;
-    var price=q('#payPlanPrice'); if(price) price.textContent=Number(p.amount).toLocaleString('vi-VN')+' VNĐ';
-    var device=q('#payDeviceId'); if(device) device.value=getDevice();
-    var content=payContent(p);
-    var pc=q('#payContent'); if(pc) pc.textContent=content;
-    var qr=q('#payQr');
-    if(qr){
-      qr.src='https://img.vietqr.io/image/970405-8888363382629-compact2.png?amount='+encodeURIComponent(p.amount)+'&addInfo='+encodeURIComponent(content)+'&accountName='+encodeURIComponent('NGUYEN DANG THI XUAN');
-    }
-    var locked=q('#payLocked'); if(locked) locked.innerHTML='';
-    var notice=q('#paymentNotice'); if(notice) notice.style.display='none';
-    return p;
-  }
-
-  window.refreshPaymentContent=function(){fillPayment(window.currentPremiumPlanKey||'monthly');};
-  window.openPayment=function(planKey){
-    var k=setKey(planKey||window.mktSelectedPlanKey||'monthly');
-    fillPayment(k);
-    var modal=q('#paymentModal');
-    if(modal) modal.style.display='flex';
-    var z=q('#paymentModal .payment-actions a:not(.light)');
-    if(z){z.textContent='Zalo hỗ trợ: 036 338 2629'; z.href='https://zalo.me/0363382629'; z.target='_blank';}
-    var done=q('#paymentModal .payment-actions .light');
-    if(done){done.textContent='Gửi yêu cầu admin duyệt'; done.removeAttribute('href'); done.onclick=function(e){e.preventDefault(); return window.submitPremiumRequest();};}
-    var primary=q('#paymentModal .primary');
-    if(primary){primary.textContent='Gửi yêu cầu kích hoạt'; primary.onclick=function(e){e.preventDefault(); return window.submitPremiumRequest();};}
-    return false;
-  };
-
-  window.submitPremiumRequest=function(){
-    var k=setKey(window.mktSelectedPlanKey||window.currentPremiumPlanKey||'monthly');
-    var p=fillPayment(k);
-    var phone=(q('#payPhone')&&q('#payPhone').value.trim())||'';
-    var email=(q('#payEmail')&&q('#payEmail').value.trim())||'';
-    if(!phone||!email){
-      if(typeof window.showPaymentNotice==='function') window.showPaymentNotice('Vui lòng nhập số điện thoại và Gmail để được duyệt nâng cấp tự động lên gói Premium sau khi thanh toán xong.');
-      else alert('Vui lòng nhập số điện thoại và Gmail.');
-      return false;
-    }
-    fetch('/premium_request',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({device_id:getDevice(),phone:phone,email:email,package_key:k})})
-      .then(function(r){return r.json();})
-      .then(function(data){
-        var pc=q('#payContent'); if(pc) pc.textContent=(data&&data.payment_note)||payContent(p);
-        var msg=(data&&data.ok)?('Đã gửi yêu cầu '+p.title+' về web admin. Số tiền: '+p.price+'.'):((data&&data.message)||'Chưa gửi được yêu cầu, vui lòng thử lại.');
-        if(typeof window.showPaymentNotice==='function') window.showPaymentNotice(msg); else alert(msg);
-      })
-      .catch(function(){
-        if(typeof window.showPaymentNotice==='function') window.showPaymentNotice('Kết nối chậm, vui lòng thử lại hoặc gửi Zalo hỗ trợ.');
-      });
-    return false;
-  };
-
-  var oldDetail=window.mktOpenPlanDetail;
-  window.mktOpenPlanDetail=function(k){
-    k=setKey(k||window.mktSelectedPlanKey||'monthly');
-    var r=false;
-    if(typeof oldDetail==='function'){
-      try{r=oldDetail(k);}catch(e){}
-    }
-    setTimeout(function(){
-      var p=plan(k);
-      var note=q('#mktPlanNote');
-      if(note){note.innerHTML='ID thiết bị: <b>'+getDevice()+'</b><br>Gói đang chọn: <b>'+p.title+'</b><br><span style="color:#64748b">Số tiền: <b>'+p.price+'</b>. Vui lòng nhập số điện thoại và Gmail để được duyệt nâng cấp tự động lên gói Premium sau khi thanh toán xong.</span>';}
-      var mini=q('.mktPlanMini'); if(mini) mini.textContent='Gói đang chọn: '+p.title+' - '+p.price;
-      var pay=q('#mktPlanPay'); if(pay){pay.onclick=function(e){e.preventDefault(); e.stopPropagation(); var ov=q('#mktPlanOverlay'); if(ov) ov.style.display='none'; return window.openPayment(k);};}
-    },80);
-    return r;
-  };
-
-  function bindPlanCards(){
-    qa('.premium-plan,.v4-plan,.price-card,.plan-card,.pricing-card').forEach(function(card){
-      var k=keyFromText(card.innerText||card.textContent||'');
-      if(k){
-        card.setAttribute('data-plan',k);
-        qa('button,a',card).forEach(function(btn){
-          if(/nâng cấp|mở khóa|đăng ký|thanh toán|kích hoạt|xem chi tiết/i.test(btn.innerText||btn.textContent||'')) btn.setAttribute('data-plan',k);
-        });
-      }
-    });
-  }
-  document.addEventListener('click',function(e){
-    var btn=e.target.closest&&e.target.closest('button,a');
-    if(!btn) return;
-    var txt=btn.innerText||btn.textContent||'';
-    if(!/nâng cấp|mở khóa|đăng ký|thanh toán|kích hoạt|xem chi tiết|gửi yêu cầu/i.test(txt) && btn.id!=='mktPlanPay') return;
-    var k=keyFromNode(btn)||window.mktSelectedPlanKey||window.currentPremiumPlanKey||'monthly';
-    setKey(k);
-    if(btn.id==='mktPlanPay'){
-      e.preventDefault(); e.stopPropagation(); if(e.stopImmediatePropagation)e.stopImmediatePropagation();
-      var ov=q('#mktPlanOverlay'); if(ov) ov.style.display='none';
-      return window.openPayment(k);
-    }
-    if(/nâng cấp|mở khóa|đăng ký|thanh toán|kích hoạt/i.test(txt)) fillPayment(k);
-  },true);
-  document.addEventListener('input',function(e){if(e.target&&(/payPhone|payEmail/.test(e.target.id||''))) fillPayment(window.currentPremiumPlanKey||'monthly');},true);
-  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',bindPlanCards); else bindPlanCards();
-  setTimeout(bindPlanCards,500); setTimeout(bindPlanCards,1500);
-})();
-</script>
-
-
-
-
 <script id="mkt-premium-benefit-modal-v1">
 (function(){
   'use strict';
@@ -9868,7 +9679,7 @@ def admin_ceo_stats():
         "top_ctv": [], "package_rows": []
     }
 
-    conn = sqlite3.connect(DB)
+    conn = sqlite3.connect(DB, timeout=30, check_same_thread=False)
     c = conn.cursor()
 
     def one(sql, params=()):
@@ -10675,6 +10486,7 @@ body{background:linear-gradient(135deg,#f8fafc,#eef2ff)!important}
   document.addEventListener('input',function(e){if(e.target&&(/payPhone|payEmail/.test(e.target.id||''))) window.refreshPaymentContent();},true);
   getDevice();
 })();
+</script>
 <script id="mkt-price-detail-final-js">
 (function(){
   'use strict';
@@ -10747,88 +10559,6 @@ body{background:linear-gradient(135deg,#f8fafc,#eef2ff)!important}
     }
   }, true);
 
-})();
-</script>  function payContent(p){
-    var phone=(q('#payPhone')&&q('#payPhone').value.trim())||'';
-    var email=(q('#payEmail')&&q('#payEmail').value.trim())||'';
-    return deviceId();
-  }
-  function fill(k){
-    k=setPlan(k); var p=getPlan(k);
-    var t=q('#payPlanTitle'); if(t) t.textContent=p.title;
-    var d=q('#payPlanDesc'); if(d) d.textContent=p.desc;
-    var pr=q('#payPlanPrice'); if(pr) pr.textContent=Number(p.amount).toLocaleString('vi-VN')+' VNĐ';
-    var dev=q('#payDeviceId'); if(dev) dev.value=deviceId();
-    var content=payContent(p);
-    var pc=q('#payContent'); if(pc) pc.textContent=content;
-    var qr=q('#payQr'); if(qr) qr.src='https://img.vietqr.io/image/970405-8888363382629-compact2.png?amount='+encodeURIComponent(p.amount)+'&addInfo='+encodeURIComponent(content)+'&accountName='+encodeURIComponent('NGUYEN DANG THI XUAN');
-    var lock=q('#payLocked'); if(lock) lock.innerHTML='';
-    return p;
-  }
-  window.refreshPaymentContent=function(){fill(window.mktPaymentPlanKey||window.mktSelectedPlanKey||window.currentPremiumPlanKey||'monthly')};
-  window.openPayment=function(planKey){
-    var k=normKey(planKey)||normKey(window.mktPaymentPlanKey)||normKey(window.mktSelectedPlanKey)||normKey(window.currentPremiumPlanKey)||'monthly';
-    fill(k);
-    var modal=q('#paymentModal'); if(modal) modal.style.display='flex';
-    var primary=q('#paymentModal .primary'); if(primary){primary.textContent='Gửi yêu cầu kích hoạt'; primary.onclick=function(e){e.preventDefault(); return window.submitPremiumRequest();};}
-    var light=q('#paymentModal .payment-actions .light'); if(light){light.textContent='Gửi yêu cầu admin duyệt'; light.removeAttribute('href'); light.onclick=function(e){e.preventDefault(); return window.submitPremiumRequest();};}
-    return false;
-  };
-  var previousDetail=window.mktOpenPlanDetail;
-  window.mktOpenPlanDetail=function(k){
-    k=setPlan(k||window.mktPaymentPlanKey||'monthly');
-    var ret=false; if(typeof previousDetail==='function'){try{ret=previousDetail(k)}catch(e){}}
-    setTimeout(function(){
-      setPlan(k); var p=getPlan(k);
-      var note=q('#mktPlanNote');
-      if(note) note.innerHTML='ID thiết bị: <b>'+deviceId()+'</b><br>Gói đang chọn: <b>'+p.title+'</b><br><span style="color:#64748b">Số tiền: <b>'+p.price+'</b>. Vui lòng nhập số điện thoại và Gmail để được duyệt nâng cấp tự động lên gói Premium sau khi thanh toán xong.</span>';
-      var mini=q('.mktPlanMini'); if(mini) mini.textContent='Gói đang chọn: '+p.title+' - '+p.price;
-      var pay=q('#mktPlanPay'); if(pay){pay.setAttribute('data-plan',k); pay.onclick=function(e){e.preventDefault(); e.stopPropagation(); if(e.stopImmediatePropagation)e.stopImmediatePropagation(); var ov=q('#mktPlanOverlay'); if(ov) ov.style.display='none'; return window.openPayment(k);};}
-    },100);
-    return ret;
-  };
-  window.submitPremiumRequest=function(){
-    var k=setPlan(window.mktPaymentPlanKey||window.mktSelectedPlanKey||window.currentPremiumPlanKey||'monthly');
-    var p=fill(k);
-    var phone=(q('#payPhone')&&q('#payPhone').value.trim())||'';
-    var email=(q('#payEmail')&&q('#payEmail').value.trim())||'';
-    if(!phone||!email){ if(typeof window.showPaymentNotice==='function') window.showPaymentNotice('Vui lòng nhập số điện thoại và Gmail để được duyệt nâng cấp tự động lên gói Premium sau khi thanh toán xong.'); else alert('Vui lòng nhập số điện thoại và Gmail.'); return false; }
-    fetch('/premium_request',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({device_id:deviceId(),phone:phone,email:email,package_key:k})})
-      .then(function(r){return r.json()}).then(function(data){
-        if(data&&data.payment_note){var pc=q('#payContent'); if(pc) pc.textContent=data.payment_note;}
-        var msg=(data&&data.ok)?('Đã gửi yêu cầu '+p.title+' về web admin. Số tiền: '+p.price+'.'):((data&&data.message)||'Chưa gửi được yêu cầu, vui lòng thử lại.');
-        if(typeof window.showPaymentNotice==='function') window.showPaymentNotice(msg); else alert(msg);
-      }).catch(function(){if(typeof window.showPaymentNotice==='function') window.showPaymentNotice('Kết nối chậm, vui lòng thử lại hoặc gửi Zalo hỗ trợ.');});
-    return false;
-  };
-  function bindCards(){
-    qa('.premium-plan,.v4-plan,.price-card,.pricing-card,.plan-card').forEach(function(card){
-      var k=keyFromText(card.innerText||card.textContent||'');
-      if(!k) return;
-      card.setAttribute('data-plan',k);
-      qa('button,a',card).forEach(function(b){b.setAttribute('data-plan',k);});
-    });
-  }
-  document.addEventListener('click',function(e){
-    var b=e.target.closest&&e.target.closest('button,a'); if(!b) return;
-    var k=keyFromNode(b);
-    if(k) setPlan(k);
-    var text=norm(b.innerText||b.textContent||'');
-    var isPay=b.id==='mktPlanPay'||/nang cap|mo khoa|dang ky|thanh toan|kich hoat|da thanh toan|gui yeu cau/.test(text)||/openPayment\(/i.test(String(b.getAttribute('onclick')||''));
-    if(b.id==='mktPlanPay'){
-      e.preventDefault(); e.stopPropagation(); if(e.stopImmediatePropagation)e.stopImmediatePropagation();
-      var ov=q('#mktPlanOverlay'); if(ov) ov.style.display='none';
-      return window.openPayment(k||window.mktPaymentPlanKey||window.mktSelectedPlanKey||'monthly');
-    }
-    if(isPay && k){
-      e.preventDefault(); e.stopPropagation(); if(e.stopImmediatePropagation)e.stopImmediatePropagation();
-      return window.openPayment(k);
-    }
-  },true);
-  document.addEventListener('input',function(e){if(e.target&&(/payPhone|payEmail/.test(e.target.id||''))) window.refreshPaymentContent();},true);
-  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',bindCards); else bindCards();
-  setTimeout(bindCards,300); setTimeout(bindCards,1000); setTimeout(bindCards,2500);
-  deviceId();
 })();
 </script>
 
@@ -13878,10 +13608,8 @@ except Exception as _mkt_live_notify_v2_error:
 
 
 if __name__ == "__main__":
-    try:
-        threading.Thread(target=ensure_content_50k_library, daemon=True).start()
-    except Exception as e:
-        print('content library init skipped:', e)
+    # Đã tắt auto nạp kho 50k content khi khởi động để tránh lỗi SQLite database is locked trên Render.
+    # Khi cần nạp thủ công, dùng route /admin_content_50k_seed trong khu vực quản trị.
     threading.Thread(target=scheduler_loop, daemon=True).start()
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port, debug=False)
