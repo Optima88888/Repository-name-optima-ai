@@ -7639,10 +7639,8 @@ button[aria-label="CTV"]{
     #mktMobileCtvLiveBtn .mkt-ctv-live-ico{font-size:16px!important;line-height:1!important}
     @keyframes mktCtvLiveFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
   }
- @media (min-width:769px){
-  #mktMobileCtvLiveBtn{
-    display:none!important;
-  }
+  @media(min-width:769px){
+  #mktMobileCtvLiveBtn{display:none!important}
 }
 
   .mkt-live-support-status{
@@ -10208,10 +10206,8 @@ ADMIN_HTML = """
       background:#dcfce7!important; box-shadow:0 0 10px rgba(220,252,231,.9)!important;
     }
   }
-@media (min-width:769px){
-  #mktMobileCtvQuickRestore{
-    display:none!important;
-  }
+  @media(min-width:769px){
+  #mktMobileCtvQuickRestore{display:none!important}
 }
 </style>
 <script id="mkt-device-mobile-ctv-hotfix-js">
@@ -10365,6 +10361,139 @@ ADMIN_HTML = """
 })();
 </script>
 <!-- /FINAL HOTFIX 20260611B -->
+
+
+<!-- FINAL FIX 20260611C: Compact mobile CTV inside phone UI + robust open. Giữ nguyên giao diện gốc. -->
+<style id="mkt-compact-mobile-ctv-final-css">
+  @media(max-width:768px){
+    /* Không dùng thanh CTV dài tràn ngang màn hình */
+    #mktPhoneCtvDockFinal,
+    #mktMobileCtvLiveBtn,
+    #mobileCtvQuickBtn{
+      display:none!important;
+      visibility:hidden!important;
+      pointer-events:none!important;
+    }
+
+    #mktMobileQuickActionsRestore,
+    #mktMobileQuickActions{
+      display:flex!important;
+      align-items:flex-start!important;
+      justify-content:flex-start!important;
+      gap:8px!important;
+      position:fixed!important;
+      left:16px!important;
+      right:auto!important;
+      top:calc(env(safe-area-inset-top,0px) + 48px)!important;
+      bottom:auto!important;
+      width:auto!important;
+      max-width:calc(100vw - 32px)!important;
+      height:auto!important;
+      z-index:2147483646!important;
+      background:transparent!important;
+      box-shadow:none!important;
+      border:0!important;
+      padding:0!important;
+      overflow:visible!important;
+      pointer-events:auto!important;
+    }
+
+    #mktMobileCtvQuickRestore{
+      display:inline-flex!important;
+      visibility:visible!important;
+      opacity:1!important;
+      pointer-events:auto!important;
+      position:fixed!important;
+      left:22px!important;
+      top:calc(env(safe-area-inset-top,0px) + 116px)!important;
+      right:auto!important;
+      bottom:auto!important;
+      width:92px!important;
+      max-width:92px!important;
+      min-width:92px!important;
+      height:38px!important;
+      min-height:38px!important;
+      padding:0 12px!important;
+      margin:0!important;
+      border:0!important;
+      border-radius:999px!important;
+      align-items:center!important;
+      justify-content:center!important;
+      gap:6px!important;
+      color:#fff!important;
+      background:linear-gradient(135deg,#16a34a,#22c55e)!important;
+      box-shadow:0 10px 24px rgba(22,163,74,.32)!important;
+      font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif!important;
+      font-size:13px!important;
+      font-weight:1000!important;
+      line-height:1!important;
+      letter-spacing:.01em!important;
+      white-space:nowrap!important;
+      overflow:hidden!important;
+      cursor:pointer!important;
+      transform:none!important;
+      -webkit-tap-highlight-color:transparent!important;
+      animation:mktCompactCtvPulse 3.6s ease-in-out infinite!important;
+    }
+    #mktMobileCtvQuickRestore::before{
+      content:""!important;
+      width:8px!important;
+      height:8px!important;
+      min-width:8px!important;
+      border-radius:999px!important;
+      background:#dcfce7!important;
+      box-shadow:0 0 0 5px rgba(220,252,231,.18),0 0 12px rgba(220,252,231,.9)!important;
+    }
+    #mktMobileCtvQuickRestore::after{
+      content:""!important;
+      display:none!important;
+    }
+    @keyframes mktCompactCtvPulse{
+      0%,100%{transform:translateY(0)!important;filter:brightness(1)!important;}
+      50%{transform:translateY(-2px)!important;filter:brightness(1.06)!important;}
+    }
+  }
+  @media(min-width:769px){
+    #mktMobileCtvQuickRestore{display:none!important;}
+  }
+</style>
+<script id="mkt-compact-mobile-ctv-final-js">
+(function(){
+  'use strict';
+  function q(s,r){return (r||document).querySelector(s)}
+  function openCtv(e){
+    if(e){e.preventDefault();e.stopPropagation();if(e.stopImmediatePropagation)e.stopImmediatePropagation();}
+    try{ if(typeof window.openAffiliateCenter==='function'){ window.openAffiliateCenter(); return false; } }catch(_e){}
+    try{ if(typeof window.openModule==='function'){ window.openModule('affiliate_center'); return false; } }catch(_e){}
+    try{
+      location.hash='affiliate_center';
+      var link=q('a[href="#affiliate_center"],a[data-module="affiliate_center"],[data-aff-menu="1"]');
+      if(link){ link.click(); return false; }
+      var sec=q('#affiliateCenterSection,#affiliate_center,[data-module-section="affiliate_center"]');
+      if(sec){sec.style.display='block';sec.scrollIntoView({behavior:'smooth',block:'start'});return false;}
+    }catch(_e){}
+    return false;
+  }
+  function ensureCompactCtv(){
+    var wrap=q('#mktMobileQuickActionsRestore')||q('#mktMobileQuickActions');
+    if(!wrap){wrap=document.createElement('div');wrap.id='mktMobileQuickActionsRestore';document.body.appendChild(wrap);}
+    var btn=q('#mktMobileCtvQuickRestore');
+    if(!btn){btn=document.createElement('button');btn.type='button';btn.id='mktMobileCtvQuickRestore';wrap.appendChild(btn);}
+    btn.innerHTML='🤝 <span>CTV</span>';
+    btn.onclick=openCtv;
+    btn.setAttribute('aria-label','Mở đăng ký cộng tác viên');
+    btn.setAttribute('title','Đăng ký CTV');
+  }
+  window.mktOpenCompactCtv=openCtv;
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',ensureCompactCtv);else ensureCompactCtv();
+  setTimeout(ensureCompactCtv,300);setTimeout(ensureCompactCtv,1000);setTimeout(ensureCompactCtv,2500);
+  document.addEventListener('click',function(e){
+    var btn=e.target.closest('#mktMobileCtvQuickRestore,.mkt-phone-ctv,#mobileCtvQuickBtn,#mktMobileCtvLiveBtn');
+    if(btn) return openCtv(e);
+  },true);
+})();
+</script>
+<!-- /FINAL FIX 20260611C -->
 
 </body></html>
 """
