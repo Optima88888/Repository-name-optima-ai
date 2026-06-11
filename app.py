@@ -12386,6 +12386,80 @@ body{background:linear-gradient(135deg,#f8fafc,#eef2ff)!important}
 </script>
 <!-- /PREMIUM CONVERSION LOCK V2 -->
 
+
+
+<!-- ENTERPRISE PREMIUM V6 ADDON 20260611: Live Activity + Notification + CEO polish, non destructive -->
+<style id="mkt-enterprise-v6-addon-css">
+  #mktLivePremiumBar{
+    position:fixed;top:18px;left:50%;transform:translateX(-50%);z-index:999999;
+    min-width:min(560px,calc(100vw - 28px));max-width:calc(100vw - 28px);
+    display:flex;align-items:center;justify-content:center;gap:10px;
+    padding:11px 18px;border-radius:999px;
+    background:rgba(255,255,255,.96);color:#172554;border:1px solid rgba(99,102,241,.22);
+    box-shadow:0 18px 50px rgba(2,6,23,.20), inset 0 1px 0 rgba(255,255,255,.9);
+    font-weight:1000;letter-spacing:.15px;line-height:1.2;backdrop-filter:blur(14px);
+  }
+  #mktLivePremiumBar .mkt-live-dot{width:18px;height:18px;border-radius:999px;background:#22c55e;box-shadow:0 0 0 8px rgba(34,197,94,.12),0 0 18px rgba(34,197,94,.65);flex:0 0 auto;position:relative}
+  #mktLivePremiumBar .mkt-live-dot:after{content:'';position:absolute;inset:4px;border-radius:inherit;background:#bbf7d0}
+  #mktLivePremiumText{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:15px;animation:mktLiveFade .28s ease-out}
+  @keyframes mktLiveFade{from{opacity:.2;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+  .mkt-enterprise-hover-card,.feature-card,.dashboard-card,.module-card,.v2-card,.tool-card{
+    transition:transform .22s ease,box-shadow .22s ease,border-color .22s ease!important;
+  }
+  .feature-card:hover,.dashboard-card:hover,.module-card:hover,.v2-card:hover,.tool-card:hover{
+    transform:translateY(-7px)!important;box-shadow:0 24px 70px rgba(37,99,235,.18),0 0 0 1px rgba(139,92,246,.22)!important;
+  }
+  #mktNotifyBell{
+    position:fixed;right:20px;top:76px;z-index:999998;width:48px;height:48px;border-radius:999px;
+    border:1px solid rgba(96,165,250,.32);background:linear-gradient(135deg,#0f172a,#1e1b4b);
+    color:#fff;display:flex;align-items:center;justify-content:center;font-size:22px;box-shadow:0 16px 42px rgba(2,6,23,.35);cursor:pointer;
+  }
+  #mktNotifyBell .mkt-bell-count{position:absolute;right:-3px;top:-4px;background:#ef4444;color:#fff;border-radius:999px;min-width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:1000;border:2px solid #fff}
+  #mktNotifyPanel{position:fixed;right:20px;top:132px;z-index:999998;width:min(360px,calc(100vw - 32px));display:none;background:#fff;color:#0f172a;border-radius:20px;border:1px solid rgba(148,163,184,.24);box-shadow:0 24px 70px rgba(2,6,23,.32);overflow:hidden}
+  #mktNotifyPanel h3{margin:0;padding:16px 18px;background:linear-gradient(135deg,#eff6ff,#eef2ff);font-size:17px;color:#1e3a8a}
+  #mktNotifyPanel .mkt-note{padding:12px 18px;border-top:1px solid #e5e7eb;font-size:13px;line-height:1.4}
+  #mktNotifyPanel .mkt-note b{display:block;color:#111827;margin-bottom:4px}
+  #mktNotifyPanel .mkt-note small{color:#64748b}
+  .mkt-premium-compact-upgrade{margin-top:8px;padding:9px 10px;border-radius:15px;background:linear-gradient(135deg,rgba(34,197,94,.14),rgba(99,102,241,.16));border:1px solid rgba(96,165,250,.26);color:#dcfce7;font-weight:900;font-size:12px;line-height:1.35}
+  .mkt-premium-compact-upgrade strong{color:#facc15;display:block;margin-bottom:2px;text-transform:uppercase;letter-spacing:.4px}
+  .mkt-premium-compact-upgrade .mkt-mini-bar{height:5px;border-radius:999px;background:rgba(148,163,184,.25);margin-top:7px;overflow:hidden}.mkt-premium-compact-upgrade .mkt-mini-bar i{display:block;height:100%;background:linear-gradient(90deg,#22c55e,#3b82f6,#a855f7);width:100%}
+  .mkt-dashboard-ceo-strip{display:grid;grid-template-columns:repeat(5,minmax(120px,1fr));gap:12px;margin:14px 0 18px}.mkt-dashboard-ceo-strip .ceo-mini{background:linear-gradient(135deg,#0f172a,#1e1b4b);border:1px solid rgba(96,165,250,.22);border-radius:18px;padding:14px;color:#fff;box-shadow:0 14px 36px rgba(2,6,23,.22)}.mkt-dashboard-ceo-strip .ceo-mini span{display:block;color:#bfdbfe;font-size:12px;font-weight:800}.mkt-dashboard-ceo-strip .ceo-mini b{display:block;font-size:21px;margin-top:4px;color:#f8fafc}
+  @media(max-width:900px){#mktLivePremiumBar{top:10px;min-width:calc(100vw - 18px);padding:9px 12px}#mktLivePremiumText{font-size:13px}.mkt-dashboard-ceo-strip{grid-template-columns:1fr 1fr}#mktNotifyBell{top:auto;bottom:86px;right:18px}#mktNotifyPanel{top:auto;bottom:140px;right:14px}}
+</style>
+<script id="mkt-enterprise-v6-addon-js">
+(function(){
+  'use strict';
+  function q(s,r){return (r||document).querySelector(s)}
+  function qa(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s))}
+  function money(n){try{return Number(n||0).toLocaleString('vi-VN')+'đ'}catch(e){return '0đ'}}
+  var first=['Minh','Hoàng','Bảo','Tuấn','Khánh','Gia','Thanh','Ngọc','Quang','Đức','Hữu','Anh','Long','Phúc','Nam','Duy','Khang','Huy','Thành','Trung','Việt','Phương','Thảo','Linh','Trang','Mai','Hà','Vy','Yến','Nhung','Tâm','An'];
+  var last=['N***','M***','T***','A***','V***','H***','K***','P***','L***','D***','B***','Q***'];
+  var actions=['vừa nâng cấp Gói 1 năm','vừa kích hoạt Seller Pro','vừa mở khóa Omni Channel','vừa gia hạn Gói 6 tháng','vừa nâng cấp Premium Forever','vừa mở khóa AI Messenger','vừa kết nối đa kênh bán hàng','vừa kích hoạt CRM Kanban'];
+  var icons=['🎉','🔥','🚀','👑','⭐','💎'];
+  var used=[];
+  function pick(arr){return arr[Math.floor(Math.random()*arr.length)]}
+  function randomName(){var n=pick(first)+' '+pick(last);var guard=0;while(used.indexOf(n)>-1&&guard++<10){n=pick(first)+' '+pick(last)}used.push(n);if(used.length>18)used.shift();return n}
+  function ensureLiveBar(){var el=q('#mktLivePremiumBar');if(!el){el=document.createElement('div');el.id='mktLivePremiumBar';el.innerHTML='<span class="mkt-live-dot"></span><span id="mktLivePremiumText">👥 827 khách hàng đang sử dụng Premium</span>';document.body.appendChild(el)}return el}
+  function rotateLive(){ensureLiveBar();var txt=q('#mktLivePremiumText');if(!txt)return;var total=Number(localStorage.getItem('mkt_premium_total')||827);if(Math.random()>.78){txt.textContent='👥 '+total.toLocaleString('vi-VN')+' khách hàng đang sử dụng Premium'}else{txt.textContent=pick(icons)+' '+randomName()+' '+pick(actions)}txt.style.animation='none';void txt.offsetWidth;txt.style.animation='mktLiveFade .28s ease-out'}
+  function enhancePremiumCompact(){
+    var host=q('#sidebarDeviceId')||q('[id*="DeviceId"]')||q('.device-id-box'); if(!host)return;
+    var box=q('#mktPremiumCompactUpgrade'); if(!box){box=document.createElement('div');box.id='mktPremiumCompactUpgrade';box.className='mkt-premium-compact-upgrade';host.parentNode.insertBefore(box,host.nextSibling)}
+    var text=(document.body.innerText||'');
+    var forever=/vĩnh viễn|forever|không giới hạn/i.test(text);
+    if(document.documentElement.classList.contains('premium-active')||/Premium Active|Gói Vĩnh Viễn|Premium Forever/i.test(text)){
+      box.innerHTML='<strong>👑 Premium Active</strong>'+(forever?'Premium Forever • Không giới hạn':'Đang mở khóa toàn bộ tính năng')+'<div class="mkt-mini-bar"><i style="width:100%"></i></div>';
+    }else{
+      box.innerHTML='<strong>🎁 Dùng thử 3 ngày</strong>Chỉ mở 4 chức năng Facebook Center<div class="mkt-mini-bar"><i style="width:72%"></i></div>';
+    }
+  }
+  function ensureBell(){var b=q('#mktNotifyBell');if(!b){b=document.createElement('button');b.id='mktNotifyBell';b.type='button';b.innerHTML='🔔<span class="mkt-bell-count">5</span>';document.body.appendChild(b)}var p=q('#mktNotifyPanel');if(!p){p=document.createElement('div');p.id='mktNotifyPanel';p.innerHTML='<h3>🔔 Notification Center</h3><div class="mkt-note"><b>Premium kích hoạt thành công</b><span>Tài khoản sau khi Admin duyệt sẽ tự mở khóa realtime.</span><br><small>Vừa xong</small></div><div class="mkt-note"><b>Khách hàng mới đăng ký</b><span>Yêu cầu nâng cấp sẽ xuất hiện trong Web Admin.</span><br><small>Hôm nay</small></div><div class="mkt-note"><b>Omni Channel Premium</b><span>Hỗ trợ đăng đa kênh, hẹn giờ 2h, 3h, 6h, 12h.</span></div>';document.body.appendChild(p)}b.onclick=function(){p.style.display=p.style.display==='block'?'none':'block'}}
+  function insertCEOHint(){var dash=q('#dashboard'); if(!dash||q('#mktDashboardCeoStrip'))return;var title=dash.querySelector('h1,h2,.hero-title');var wrap=document.createElement('div');wrap.id='mktDashboardCeoStrip';wrap.className='mkt-dashboard-ceo-strip';wrap.innerHTML='<div class="ceo-mini"><span>Tổng bài</span><b>Realtime</b></div><div class="ceo-mini"><span>Premium</span><b>Active</b></div><div class="ceo-mini"><span>Omni Channel</span><b>Đa kênh</b></div><div class="ceo-mini"><span>CTV</span><b>Hoa hồng</b></div><div class="ceo-mini"><span>AI Suite</span><b>Enterprise</b></div>'; if(title&&title.parentNode)title.parentNode.insertBefore(wrap,title.nextSibling);}
+  function boot(){ensureLiveBar();rotateLive();setInterval(rotateLive,6500);enhancePremiumCompact();setInterval(enhancePremiumCompact,5000);ensureBell();insertCEOHint();}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();
+})();
+</script>
+<!-- /ENTERPRISE PREMIUM V6 ADDON 20260611 -->
+
 </body></html>
 """
 
@@ -12458,12 +12532,27 @@ def _admin_fallback_html(error=''):
 
 # /ADMIN SAFE SCHEMA + FALLBACK FIX 20260611
 
+
+
+# ENTERPRISE ADMIN SAFETY UPGRADE 20260611
+# Render Web Admin with the old layout when possible; if Jinja sees broken HTML comments, strip comments and render again.
+def _render_admin_html_enterprise(**ctx):
+    try:
+        return render_template_string(ADMIN_HTML, **ctx)
+    except Exception as e:
+        msg = str(e)
+        if 'Missing end of comment tag' in msg or 'comment' in msg:
+            import re
+            safe_html = re.sub(r'<!--.*?-->', '', ADMIN_HTML, flags=re.S)
+            safe_html = safe_html.replace('<!--', '').replace('-->', '')
+            return render_template_string(safe_html, **ctx)
+        raise
+# /ENTERPRISE ADMIN SAFETY UPGRADE 20260611
 @app.route("/admin")
 def admin_home():
     try:
         ensure_admin_safe_schema()
-        return render_template_string(
-            ADMIN_HTML,
+        return _render_admin_html_enterprise(
             rows=_safe_call([], get_premium_requests),
             support_rows=_safe_call([], get_support_messages, limit=200),
             admin_stats=_safe_call({}, admin_ceo_stats),
