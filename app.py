@@ -22,7 +22,7 @@ except Exception:
 
 load_dotenv()
 
-APP_TITLE = "Gptmini - Trợ Lý AI Marketing Đa Kênh"
+APP_TITLE = "Gptmini – Trợ Lý AI Marketing Đa Kênh"
 DB = "marketing_automation_pro_v11.db"
 UPLOAD_DIR = "uploads"
 REPORT_DIR = "reports"
@@ -1582,7 +1582,7 @@ def export_pdf_report():
         width, height = A4
         y = height - 40
         c.setFont("Helvetica-Bold", 14)
-        c.drawString(40, y, "Gptmini - Trợ Lý AI Marketing Đa Kênh - Report")
+        c.drawString(40, y, "Gptmini – Trợ Lý AI Marketing Đa Kênh - Report")
         y -= 30
         c.setFont("Helvetica", 9)
         for r in rows[:80]:
@@ -1598,7 +1598,7 @@ def export_pdf_report():
     except Exception:
         txt_path = os.path.join(REPORT_DIR, "report_posts_pdf_fallback.txt")
         with open(txt_path, "w", encoding="utf-8") as f:
-            f.write("Gptmini - Trợ Lý AI Marketing Đa Kênh Report\n\n")
+            f.write("Gptmini – Trợ Lý AI Marketing Đa Kênh Report\n\n")
             for r in rows:
                 f.write(f"ID {r[0]} | Page: {r[1]} | Status: {r[3]} | Campaign: {r[7]} | Time: {r[9]}\n")
         return txt_path
@@ -2768,21 +2768,21 @@ HTML = r"""
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Gptmini - Trợ Lý AI Marketing Đa Kênh</title>
-<meta name="title" content="Gptmini - Trợ Lý AI Marketing Đa Kênh">
-<meta name="description" content="Nền tảng AI Marketing Automation giúp quản lý Fanpage, Group, AI Comment, AI Messenger, CRM Kanban, Content AI và Automation bán hàng đa kênh.">
+<title>Gptmini – Trợ Lý AI Marketing Đa Kênh</title>
+<meta name="title" content="Gptmini – Trợ Lý AI Marketing Đa Kênh">
+<meta name="description" content="Gptmini là nền tảng AI Marketing Đa Kênh giúp tạo content, đăng Fanpage, quản lý Group, CRM và Automation bán hàng.">
 <meta name="robots" content="index,follow,max-image-preview:large">
 <meta property="og:type" content="website">
-<meta property="og:site_name" content="GPTMini.Pro">
-<meta property="og:title" content="Gptmini - Trợ Lý AI Marketing Đa Kênh">
-<meta property="og:description" content="Giải pháp AI Marketing Automation dành cho cá nhân, shop online và doanh nghiệp.">
+<meta property="og:site_name" content="Gptmini">
+<meta property="og:title" content="Gptmini – Trợ Lý AI Marketing Đa Kênh">
+<meta property="og:description" content="Gptmini là nền tảng AI Marketing Đa Kênh giúp tạo content, đăng Fanpage, quản lý Group, CRM và Automation bán hàng.">
 <meta property="og:url" content="https://gptmini.pro/">
 <meta name="twitter:card" content="summary_large_image">
 
 <meta name="theme-color" content="#2563eb">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="GPTMini.Pro">
+<meta name="apple-mobile-web-app-title" content="Gptmini">
 <link rel="canonical" href="https://gptmini.pro/">
 <link rel="manifest" href="/manifest.json">
 <link rel="apple-touch-icon" href="/static/icon-192.png">
@@ -12497,9 +12497,9 @@ def api_templates():
 def pwa_manifest():
     resp = jsonify({
         "id": "/",
-        "name": "Gptmini - Trợ Lý AI Marketing Đa Kênh",
+        "name": "Gptmini – Trợ Lý AI Marketing Đa Kênh",
         "short_name": "GPTMini.Pro",
-        "description": "Công cụ AI Marketing Automation cho Fanpage, Group, Content, CRM và bán hàng đa kênh.",
+        "description": "Gptmini là nền tảng AI Marketing Đa Kênh giúp tạo content, đăng Fanpage, quản lý Group, CRM và Automation bán hàng.",
         "start_url": "/?source=pwa",
         "scope": "/",
         "display": "standalone",
