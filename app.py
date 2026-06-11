@@ -4844,7 +4844,12 @@ function closeLockedFeature(){
 
 <div class="layout">
 <aside class="sidebar">
-  <div class="logo">Marketing<br>Automation Pro</div>
+  <div class="logo">Marketing<br>Automation Pro
+    <div id="mktDeviceInlineFinal" style="display:block!important;margin-top:12px;padding:9px 10px;border-radius:14px;background:rgba(15,23,42,.88);border:1px solid rgba(59,130,246,.45);font-size:12px!important;line-height:1.25!important;font-weight:900!important;color:#dbeafe!important;letter-spacing:0!important;text-transform:none!important;box-shadow:0 10px 26px rgba(2,6,23,.22);">
+      <span style="display:inline-block;width:8px;height:8px;border-radius:999px;background:#22c55e;box-shadow:0 0 12px #22c55e;margin-right:6px;vertical-align:middle"></span>
+      ID máy: <b id="mktDeviceInlineFinalValue" style="color:#fff;font-weight:1000">{{ device_id }}</b>
+    </div>
+  </div>
   <div class="v2-side-card device-premium-card" style="margin-top:12px;background:linear-gradient(135deg,#111827,#1e293b);border:1px solid rgba(250,204,21,.45)">
     <b>🖥 ID thiết bị</b><br>
     <div class="device-id-row">
@@ -10093,6 +10098,99 @@ ADMIN_HTML = """
   window.addEventListener('resize',function(){setTimeout(boot,100)});
 })();
 </script>
+
+
+
+<!-- FINAL HOTFIX 20260611B: ID máy luôn hiện + nút CTV điện thoại cạnh Tải xuống -->
+<style id="mkt-final-device-ctv-20260611b-css">
+  #mktDeviceInlineFinal,#mktDeviceInlineFinal *{visibility:visible!important;opacity:1!important;pointer-events:auto!important;}
+  #mktDeviceInlineFinal{display:block!important;position:relative!important;z-index:50!important;}
+  #mktPhoneCtvDockFinal{display:none!important;}
+  @media(max-width:900px){
+    body{padding-bottom:92px!important;}
+    #mktMobileActionDock,#mktMobileQuickActionsRestore,#mktMobileQuickActions,#mktTopDownloadBar,#mktDownloadAppV130,.mkt-mobile-download-v130,#mobileCtvQuickBtn,#mktMobileCtvQuickRestore{display:none!important;visibility:hidden!important;pointer-events:none!important;}
+    #mktPhoneCtvDockFinal{
+      display:flex!important;visibility:visible!important;opacity:1!important;pointer-events:auto!important;
+      position:fixed!important;left:10px!important;bottom:calc(12px + env(safe-area-inset-bottom,0px))!important;
+      z-index:2147483647!important;gap:7px!important;align-items:center!important;justify-content:flex-start!important;
+      padding:7px!important;border-radius:22px!important;background:rgba(2,6,23,.92)!important;
+      border:1px solid rgba(148,163,184,.28)!important;box-shadow:0 18px 54px rgba(0,0,0,.42),inset 0 1px 0 rgba(255,255,255,.08)!important;
+      backdrop-filter:blur(14px)!important;max-width:calc(100vw - 90px)!important;
+    }
+    #mktPhoneCtvDockFinal button{
+      display:inline-flex!important;visibility:visible!important;opacity:1!important;pointer-events:auto!important;
+      min-width:61px!important;height:48px!important;border:0!important;border-radius:16px!important;padding:7px 8px!important;
+      flex-direction:column!important;align-items:center!important;justify-content:center!important;gap:2px!important;
+      color:#fff!important;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif!important;
+      font-size:11px!important;font-weight:1000!important;line-height:1.05!important;white-space:nowrap!important;cursor:pointer!important;
+      box-shadow:0 10px 24px rgba(2,6,23,.28)!important;-webkit-tap-highlight-color:transparent!important;
+    }
+    #mktPhoneCtvDockFinal button em{font-style:normal!important;font-size:17px!important;line-height:1!important;}
+    #mktPhoneCtvDockFinal .mkt-phone-gpt{background:linear-gradient(135deg,#2563eb,#7c3aed)!important;}
+    #mktPhoneCtvDockFinal .mkt-phone-download{background:linear-gradient(135deg,#0ea5e9,#2563eb)!important;}
+    #mktPhoneCtvDockFinal .mkt-phone-ctv{background:linear-gradient(135deg,#16a34a,#22c55e,#65a30d)!important;}
+  }
+</style>
+<script id="mkt-final-device-ctv-20260611b-js">
+(function(){
+  'use strict';
+  function q(s,r){return (r||document).querySelector(s)}
+  function getDevice(){
+    var id='';
+    try{id=localStorage.getItem('mkt_device_id')||'';}catch(e){}
+    if(!id){var m=document.cookie.match(/(?:^|; )mkt_device_id=([^;]+)/); if(m) id=decodeURIComponent(m[1]);}
+    if(!id && typeof window.getOrCreateDeviceId==='function'){try{id=window.getOrCreateDeviceId()||'';}catch(e){}}
+    if(!id){id='MKT-'+new Date().toISOString().slice(0,10).replaceAll('-','')+'-'+Math.random().toString(16).slice(2,8).toUpperCase();}
+    id=String(id).toUpperCase();
+    try{localStorage.setItem('mkt_device_id',id);}catch(e){}
+    document.cookie='mkt_device_id='+encodeURIComponent(id)+'; path=/; max-age='+(60*60*24*365*5)+'; SameSite=Lax';
+    return id;
+  }
+  function forceDeviceVisible(){
+    var id=getDevice();
+    var inline=q('#mktDeviceInlineFinalValue'); if(inline) inline.textContent=id;
+    var old=q('#sidebarDeviceId'); if(old) old.textContent=id;
+    var logo=q('.sidebar .logo')||q('.logo');
+    if(logo && !q('#mktDeviceInlineFinal')){
+      var box=document.createElement('div');
+      box.id='mktDeviceInlineFinal';
+      box.setAttribute('style','display:block!important;margin-top:12px;padding:9px 10px;border-radius:14px;background:rgba(15,23,42,.88);border:1px solid rgba(59,130,246,.45);font-size:12px!important;line-height:1.25!important;font-weight:900!important;color:#dbeafe!important;letter-spacing:0!important;text-transform:none!important;box-shadow:0 10px 26px rgba(2,6,23,.22);');
+      box.innerHTML='<span style="display:inline-block;width:8px;height:8px;border-radius:999px;background:#22c55e;box-shadow:0 0 12px #22c55e;margin-right:6px;vertical-align:middle"></span>ID máy: <b id="mktDeviceInlineFinalValue" style="color:#fff;font-weight:1000">'+id+'</b>';
+      logo.appendChild(box);
+    }
+  }
+  function openInstall(e){
+    if(e){e.preventDefault();e.stopPropagation();}
+    if(typeof window.showInstallGuide==='function') return window.showInstallGuide();
+    if(typeof window.openInstallGuide==='function') return window.openInstallGuide();
+    alert('Android: Chrome → menu ⋮ → Cài đặt ứng dụng / Thêm vào màn hình chính.\n\niPhone: Safari → Chia sẻ → Thêm vào Màn hình chính.');
+    return false;
+  }
+  function openCTV(e){
+    if(e){e.preventDefault();e.stopPropagation();}
+    try{ if(typeof window.openModule==='function'){ window.openModule('affiliate_center'); return false; } }catch(_e){}
+    location.hash='affiliate_center';
+    var link=q('[data-module="affiliate_center"]')||q('a[href="#affiliate_center"]');
+    if(link){try{link.click();}catch(_e){}}
+    return false;
+  }
+  function ensureDock(){
+    var dock=q('#mktPhoneCtvDockFinal');
+    if(!dock){
+      dock=document.createElement('div'); dock.id='mktPhoneCtvDockFinal';
+      dock.innerHTML='<button type="button" class="mkt-phone-gpt"><em>📱</em><span>GPT MKT</span></button><button type="button" class="mkt-phone-download"><em>⬇️</em><span>Tải xuống</span></button><button type="button" class="mkt-phone-ctv"><em>🤝</em><span>CTV</span></button>';
+      document.body.appendChild(dock);
+    }
+    q('.mkt-phone-gpt',dock).onclick=function(e){e.preventDefault();window.scrollTo({top:0,behavior:'smooth'});return false;};
+    q('.mkt-phone-download',dock).onclick=openInstall;
+    q('.mkt-phone-ctv',dock).onclick=openCTV;
+  }
+  function boot(){forceDeviceVisible();ensureDock();}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();
+  setTimeout(boot,200);setTimeout(boot,800);setTimeout(boot,1800);setTimeout(boot,3200);
+})();
+</script>
+<!-- /FINAL HOTFIX 20260611B -->
 
 </body></html>
 """
