@@ -9931,6 +9931,24 @@ ADMIN_HTML = """
 .progress-wrap{height:12px;background:#e5e7eb;border-radius:999px;overflow:hidden}
 .progress-fill{height:100%;background:linear-gradient(90deg,#2563eb,#7c3aed,#22c55e);border-radius:999px}
 @media(max-width:1000px){.ceo-grid{grid-template-columns:repeat(2,1fr)}.admin-two{grid-template-columns:1fr}}
+
+/* ADMIN COMPLETE PREMIUM UI FIX 20260611 */
+body{background:linear-gradient(135deg,#f8fafc,#eef2ff)!important}
+.wrap{max-width:1320px!important}
+.card{border:1px solid rgba(148,163,184,.25)!important;box-shadow:0 18px 50px rgba(15,23,42,.10)!important}
+.top{background:linear-gradient(135deg,#0f172a,#1e1b4b,#312e81);color:white;border-radius:22px;padding:22px;box-shadow:0 18px 50px rgba(79,70,229,.22)}
+.top h1{color:#fff}.top p{color:#dbeafe}.top a{color:#bfdbfe;font-weight:900}
+.admin-tabs{position:sticky;top:0;z-index:50;background:rgba(248,250,252,.92);backdrop-filter:blur(16px);padding:12px;border-radius:0 0 20px 20px}
+.admin-tabs a{background:linear-gradient(135deg,#eef2ff,#dbeafe);border:1px solid #c7d2fe;box-shadow:0 8px 22px rgba(37,99,235,.08)}
+.admin-tabs a:hover{transform:translateY(-1px);box-shadow:0 14px 28px rgba(37,99,235,.14)}
+.ceo-card{position:relative;overflow:hidden}.ceo-card:after{content:'';position:absolute;right:-35px;top:-35px;width:85px;height:85px;border-radius:999px;background:rgba(99,102,241,.10)}
+#premiumRequests table,#premiumSubscriptionCenter table,#adminAffiliateBlock table{background:white;border-radius:14px;overflow:hidden}
+#premiumRequests th,#premiumSubscriptionCenter th,#adminAffiliateBlock th{background:#eef2ff;color:#0f172a;font-weight:900}
+.approve{background:linear-gradient(135deg,#16a34a,#22c55e)!important;box-shadow:0 8px 18px rgba(34,197,94,.18)}
+.reject{background:linear-gradient(135deg,#ef4444,#f97316)!important;box-shadow:0 8px 18px rgba(239,68,68,.18)}
+.badge.ok{background:#dcfce7!important;color:#166534!important}.badge.danger{background:#fee2e2!important;color:#991b1b!important}
+.admin-pill{background:linear-gradient(135deg,#ecfeff,#dbeafe)!important;border:1px solid #bae6fd}
+@media(max-width:760px){body{padding:10px}.ceo-grid{grid-template-columns:1fr!important}.top{display:block}.card{padding:12px;overflow:auto}.admin-tabs{overflow:auto;white-space:nowrap;display:flex;flex-wrap:nowrap}}
 </style>
 
 <style id="chat-device-menu-fix">
@@ -12279,7 +12297,7 @@ ADMIN_HTML = """
   #mktPremiumLockToast .mkt-lock-list{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:10px 0 12px;color:#bbf7d0;font-size:12.5px;font-weight:800}
   #mktPremiumLockToast .mkt-lock-cta{display:inline-flex;align-items:center;gap:8px;border:0;border-radius:999px;padding:10px 14px;background:linear-gradient(135deg,#f59e0b,#facc15);color:#111827;font-weight:1000;cursor:pointer;box-shadow:0 12px 28px rgba(245,158,11,.28)}
   @keyframes mktLockPop{from{transform:translateY(-8px);opacity:0}to{transform:translateY(0);opacity:1}}
-  @media(max-width:700px){#mktPremiumLockToast{left:14px;right:14px;top:14px;width:auto}.mkt-lock-list{grid-template-columns:1fr!important}}
+  @media(max-width:700px){ #mktPremiumLockToast{left:14px;right:14px;top:14px;width:auto}.mkt-lock-list{grid-template-columns:1fr!important}}
 </style>
 <script id="premium-conversion-lock-v2-js">
 (function(){
