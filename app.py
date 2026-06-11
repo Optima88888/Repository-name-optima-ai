@@ -683,6 +683,49 @@ def init_db():
         updated_at TEXT
     )
     """)
+
+    # V17 Omni Channel Center - quản lý đa kênh an toàn, không thay đổi menu cũ
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS omni_channels (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        device_id TEXT,
+        channel_type TEXT,
+        channel_name TEXT,
+        credential_1 TEXT,
+        credential_2 TEXT,
+        credential_3 TEXT,
+        status TEXT DEFAULT 'active',
+        note TEXT,
+        created_at TEXT,
+        updated_at TEXT
+    )
+    """)
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS omni_posts (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        device_id TEXT,
+        title TEXT,
+        content TEXT,
+        media_path TEXT,
+        selected_channels TEXT,
+        schedule_time TEXT,
+        status TEXT DEFAULT 'Chờ xử lý',
+        result_message TEXT,
+        created_at TEXT
+    )
+    """)
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS omni_logs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        device_id TEXT,
+        channel_type TEXT,
+        action TEXT,
+        status TEXT,
+        detail TEXT,
+        created_at TEXT
+    )
+    """)
+
     conn.commit()
     conn.close()
 
@@ -4990,6 +5033,9 @@ function closeLockedFeature(){
   <a class="v2-nav-link mkt-menu-premium" href="#creative_center" data-module="creative_center"><span class="v2-nav-text">AI Image / Video</span><span class="mkt-dot-tag premium"><i></i><span>Premium</span></span></a>
   <a class="v2-nav-link mkt-menu-premium" href="#ai_studio" data-module="ai_studio"><span class="v2-nav-text">AI Studio</span><span class="mkt-dot-tag premium"><i></i><span>Premium</span></span></a>
 
+  <div class="v2-nav-title">ĐA KÊNH</div>
+  <a class="v2-nav-link mkt-menu-premium" href="#omni_channel_center" data-module="omni_channel_center"><span class="v2-nav-text">🌐 Omni Channel Center</span><span class="mkt-dot-tag premium"><i></i><span>Premium</span></span></a>
+
   <div class="v2-nav-title">HỆ THỐNG</div>
   <a class="v2-nav-link" href="#analytics" data-module="analytics"><span class="v2-nav-text">Analytics</span></a>
   <a class="v2-nav-link" href="#automation_center" data-module="automation_center"><span class="v2-nav-text">Automation</span></a>
@@ -5013,6 +5059,11 @@ function closeLockedFeature(){
     <div class="app-ico">🤖</div>
     <b>Tạo Content AI</b>
     <span>Viết bài, caption, ý tưởng quảng cáo và nội dung bán hàng.</span>
+  </div>
+  <div class="app-quick-card" onclick="return openModule('omni_channel_center')">
+    <div class="app-ico">🌐</div>
+    <b>Omni Channel Center</b>
+    <span>Kết nối Facebook, TikTok, Instagram, YouTube, Telegram và Zalo OA.</span>
   </div>
   <div class="app-quick-card" onclick="return openModule('fanpage_manager')">
     <div class="app-ico">📄</div>
@@ -5403,6 +5454,109 @@ function closeLockedFeature(){
   <h3>Customer Care</h3>
   <form method="post" action="/customer_task"><div class="grid"><input name="customer_name" placeholder="Tên khách"><input name="due_date" type="date"></div><textarea name="task" rows="2" placeholder="Lịch chăm sóc / nhắc lịch"></textarea><button>Tạo nhắc lịch</button></form>
   {% for t in customer_tasks %}<div class="history">{{ t[1] }} | {{ t[2] }} | Hạn: {{ t[3] }} | {{ t[4] }}</div>{% endfor %}
+</section>
+
+
+
+<section class="panel module-section" id="omni_channel_center">
+  <div class="section-open-note">Bạn đang mở: Omni Channel Center.</div>
+  <h2>🌐 Omni Channel Center</h2>
+  <p class="small">Một nơi quản lý toàn bộ kênh: Facebook Page, Facebook Group, TikTok, TikTok Shop, Instagram, YouTube, Telegram và Zalo OA. Khách kết nối kênh một lần, lần sau chỉ cần chọn kênh để đăng.</p>
+
+  <div class="v4-pricing-stats">
+    <div><b>{{ omni_stats.total_channels }}</b><span>Kênh đã lưu</span></div>
+    <div><b>{{ omni_stats.active_channels }}</b><span>Kênh hoạt động</span></div>
+    <div><b>{{ omni_stats.total_posts }}</b><span>Hàng chờ đã tạo</span></div>
+    <div><b>{{ omni_stats.pending_posts }}</b><span>Đang chờ xử lý</span></div>
+  </div>
+
+  <div class="premium-center" style="margin-top:16px">
+    <h3>1. Kết nối kênh</h3>
+    <p class="small">Thông tin được lưu theo ID thiết bị. Token/cookie được rút gọn khi hiển thị để an toàn hơn.</p>
+    <div class="v3-feature-grid">
+      {% for ch in omni_supported_channels %}
+      <div class="v3-feature-card">
+        <h3>{{ ch.icon }} {{ ch.name }}</h3>
+        <p class="small">{{ ch.hint }}</p>
+        {% if omni_channel_map.get(ch.type) %}
+          <div class="history" style="background:#ecfdf5;border-color:#bbf7d0;color:#065f46">
+            Đã kết nối: <b>{{ omni_channel_map.get(ch.type)[0][2] }}</b><br>
+            Trạng thái: {{ omni_channel_map.get(ch.type)[0][6] }}
+          </div>
+        {% else %}
+          <div class="history" style="background:#fff7ed;border-color:#fed7aa;color:#9a3412">Chưa kết nối</div>
+        {% endif %}
+        <form method="post" action="/omni_save_channel">
+          <input type="hidden" name="channel_type" value="{{ ch.type }}">
+          <input name="channel_name" placeholder="{{ ch.f1 }}">
+          <input name="credential_1" placeholder="{{ ch.f2 }}">
+          <input name="credential_2" placeholder="{{ ch.f3 }}">
+          <input name="credential_3" placeholder="Ghi chú / token phụ nếu có">
+          <button type="submit">Lưu kết nối</button>
+        </form>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="premium-center" style="margin-top:16px">
+    <h3>2. Tạo nội dung đa kênh bằng AI</h3>
+    <form method="post" action="/omni_ai_content">
+      <div class="grid">
+        <input name="product" placeholder="Sản phẩm / dịch vụ">
+        <input name="offer" placeholder="Ưu đãi hiện tại">
+      </div>
+      <div class="grid">
+        <input name="audience" placeholder="Tệp khách hàng mục tiêu">
+        <input name="goal" placeholder="Mục tiêu: inbox, đơn hàng, thương hiệu">
+      </div>
+      <button type="submit">Tạo bộ nội dung đa kênh</button>
+    </form>
+  </div>
+
+  <div class="premium-center" style="margin-top:16px">
+    <h3>3. Đăng đa kênh / tạo hàng chờ</h3>
+    <form method="post" action="/omni_publish" enctype="multipart/form-data">
+      <input name="title" placeholder="Tiêu đề chiến dịch / tiêu đề video">
+      <textarea name="content" rows="6" placeholder="Nội dung cần đăng hoặc mô tả video"></textarea>
+      <div class="grid">
+        <input type="file" name="media" accept="image/*,video/mp4,video/quicktime">
+        <input type="datetime-local" name="schedule_time">
+      </div>
+      <h3>Chọn kênh cần đăng</h3>
+      <div class="page-list">
+        {% for ch in omni_supported_channels %}
+        <label class="page-item">
+          <input type="checkbox" name="selected_channels" value="{{ ch.type }}">
+          {{ ch.icon }} {{ ch.name }}
+          {% if omni_channel_map.get(ch.type) %}
+            <br><span class="small">Đã kết nối: {{ omni_channel_map.get(ch.type)[0][2] }}</span>
+          {% else %}
+            <br><span class="small">Chưa kết nối</span>
+          {% endif %}
+        </label>
+        {% endfor %}
+      </div>
+      <button type="submit">🚀 Đăng đa kênh</button>
+      <p class="small">Giai đoạn hiện tại tạo hàng chờ và lưu lịch an toàn. Kết nối API chính thức từng kênh có thể bật sau để đăng tự động thật.</p>
+    </form>
+  </div>
+
+  <div class="premium-center" style="margin-top:16px">
+    <h3>4. Kênh đã kết nối</h3>
+    {% for c in omni_channels %}
+      <div class="history"><b>{{ c[2] }}</b> • {{ c[1] }} • {{ c[6] }} • {{ c[8] }}<br><span class="small">Thông tin kết nối: {{ c[3] }} | {{ c[4] }} | {{ c[5] }}</span></div>
+    {% else %}
+      <div class="history">Chưa có kênh nào được lưu.</div>
+    {% endfor %}
+
+    <h3 style="margin-top:18px">5. Hàng chờ đăng gần nhất</h3>
+    {% for p in omni_posts %}
+      <div class="history"><b>{{ p[1] }}</b> • {{ p[6] }} • {{ p[8] }}<br>{{ p[2][:180] }}<br><span class="small">Kênh: {{ p[4] }} | Lịch: {{ p[5] }}</span></div>
+    {% else %}
+      <div class="history">Chưa có hàng chờ đăng đa kênh.</div>
+    {% endfor %}
+  </div>
 </section>
 
 <section class="panel module-section" id="automation_center">
@@ -8201,6 +8355,256 @@ def current_library(selected_industry, content_type="facebook", goal="inbox", to
     return templates
 
 
+
+# ===== V17 OMNI CHANNEL CENTER =====
+OMNI_SUPPORTED_CHANNELS = [
+    {
+        "type": "facebook_page",
+        "icon": "📘",
+        "name": "Facebook Page",
+        "f1": "Tên Page",
+        "f2": "Page ID",
+        "f3": "Page Token",
+        "hint": "Dùng cho đăng bài Fanpage và quản lý nội dung Page."
+    },
+    {
+        "type": "facebook_group",
+        "icon": "👥",
+        "name": "Facebook Group",
+        "f1": "Tên Group",
+        "f2": "Group ID",
+        "f3": "Page/User Token",
+        "hint": "Dùng cho đăng bài Group hợp lệ theo quyền tài khoản."
+    },
+    {
+        "type": "tiktok",
+        "icon": "🎵",
+        "name": "TikTok",
+        "f1": "Tên tài khoản TikTok",
+        "f2": "Cookie / Access Token",
+        "f3": "Ghi chú tài khoản",
+        "hint": "Lưu thông tin kết nối để dùng cho lịch đăng video TikTok."
+    },
+    {
+        "type": "tiktok_shop",
+        "icon": "🛒",
+        "name": "TikTok Shop",
+        "f1": "Tên Shop",
+        "f2": "Shop ID",
+        "f3": "Access Token",
+        "hint": "Dùng cho nội dung bán hàng và video sản phẩm TikTok Shop."
+    },
+    {
+        "type": "instagram",
+        "icon": "📸",
+        "name": "Instagram",
+        "f1": "Tên tài khoản",
+        "f2": "Instagram Business ID",
+        "f3": "Access Token",
+        "hint": "Dùng cho Reels, post và caption Instagram."
+    },
+    {
+        "type": "youtube",
+        "icon": "▶️",
+        "name": "YouTube",
+        "f1": "Tên kênh YouTube",
+        "f2": "Channel ID",
+        "f3": "OAuth / Token",
+        "hint": "Dùng cho YouTube Shorts và mô tả SEO video."
+    },
+    {
+        "type": "telegram",
+        "icon": "✈️",
+        "name": "Telegram",
+        "f1": "Tên kênh/nhóm",
+        "f2": "Bot Token",
+        "f3": "Channel ID / Group ID",
+        "hint": "Dùng cho đăng nội dung tự động lên kênh Telegram."
+    },
+    {
+        "type": "zalo_oa",
+        "icon": "💬",
+        "name": "Zalo OA",
+        "f1": "Tên OA",
+        "f2": "OA ID",
+        "f3": "Access Token",
+        "hint": "Dùng cho broadcast nội dung và chăm sóc khách hàng Zalo OA."
+    },
+]
+
+def ensure_omni_tables():
+    conn = db()
+    c = conn.cursor()
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS omni_channels (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        device_id TEXT,
+        channel_type TEXT,
+        channel_name TEXT,
+        credential_1 TEXT,
+        credential_2 TEXT,
+        credential_3 TEXT,
+        status TEXT DEFAULT 'active',
+        note TEXT,
+        created_at TEXT,
+        updated_at TEXT
+    )
+    """)
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS omni_posts (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        device_id TEXT,
+        title TEXT,
+        content TEXT,
+        media_path TEXT,
+        selected_channels TEXT,
+        schedule_time TEXT,
+        status TEXT DEFAULT 'Chờ xử lý',
+        result_message TEXT,
+        created_at TEXT
+    )
+    """)
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS omni_logs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        device_id TEXT,
+        channel_type TEXT,
+        action TEXT,
+        status TEXT,
+        detail TEXT,
+        created_at TEXT
+    )
+    """)
+    conn.commit()
+    conn.close()
+
+def save_omni_channel(channel_type, channel_name, credential_1="", credential_2="", credential_3="", note=""):
+    ensure_omni_tables()
+    device_id = get_device_id()
+    now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    channel_type = (channel_type or "").strip()
+    channel_name = (channel_name or "").strip()
+    credential_1 = (credential_1 or "").strip()
+    credential_2 = (credential_2 or "").strip()
+    credential_3 = (credential_3 or "").strip()
+    note = (note or "").strip()
+    if not channel_type or not channel_name:
+        return False
+    conn = db()
+    c = conn.cursor()
+    c.execute("""
+        SELECT id FROM omni_channels
+        WHERE device_id=? AND channel_type=? AND channel_name=?
+        LIMIT 1
+    """, (device_id, channel_type, channel_name))
+    row = c.fetchone()
+    if row:
+        c.execute("""
+            UPDATE omni_channels
+            SET credential_1=?, credential_2=?, credential_3=?, status='active', note=?, updated_at=?
+            WHERE id=?
+        """, (credential_1, credential_2, credential_3, note, now, row[0]))
+    else:
+        c.execute("""
+            INSERT INTO omni_channels(device_id,channel_type,channel_name,credential_1,credential_2,credential_3,status,note,created_at,updated_at)
+            VALUES(?,?,?,?,?,?,?,?,?,?)
+        """, (device_id, channel_type, channel_name, credential_1, credential_2, credential_3, "active", note, now, now))
+    c.execute("""
+        INSERT INTO omni_logs(device_id,channel_type,action,status,detail,created_at)
+        VALUES(?,?,?,?,?,?)
+    """, (device_id, channel_type, "save_channel", "success", f"Đã lưu kênh {channel_name}", now))
+    conn.commit()
+    conn.close()
+    return True
+
+def get_omni_channels(limit=100):
+    ensure_omni_tables()
+    conn = db()
+    c = conn.cursor()
+    c.execute("""
+        SELECT id,channel_type,channel_name,
+               CASE WHEN credential_1!='' THEN substr(credential_1,1,8)||'...' ELSE '' END,
+               CASE WHEN credential_2!='' THEN substr(credential_2,1,8)||'...' ELSE '' END,
+               CASE WHEN credential_3!='' THEN substr(credential_3,1,8)||'...' ELSE '' END,
+               status,note,updated_at
+        FROM omni_channels
+        WHERE device_id=? AND COALESCE(status,'active')!='deleted'
+        ORDER BY id DESC
+        LIMIT ?
+    """, (get_device_id(), int(limit)))
+    rows = c.fetchall()
+    conn.close()
+    return rows
+
+def get_omni_channel_map():
+    data = {}
+    for row in get_omni_channels(200):
+        data.setdefault(row[1], []).append(row)
+    return data
+
+def get_omni_posts(limit=30):
+    ensure_omni_tables()
+    conn = db()
+    c = conn.cursor()
+    c.execute("""
+        SELECT id,title,content,media_path,selected_channels,schedule_time,status,result_message,created_at
+        FROM omni_posts
+        WHERE device_id=?
+        ORDER BY id DESC
+        LIMIT ?
+    """, (get_device_id(), int(limit)))
+    rows = c.fetchall()
+    conn.close()
+    return rows
+
+def get_omni_stats():
+    ensure_omni_tables()
+    conn = db()
+    c = conn.cursor()
+    device_id = get_device_id()
+    def one(q, params=()):
+        try:
+            c.execute(q, params)
+            r = c.fetchone()
+            return r[0] if r and r[0] is not None else 0
+        except Exception:
+            return 0
+    total_channels = one("SELECT COUNT(*) FROM omni_channels WHERE device_id=? AND COALESCE(status,'active')!='deleted'", (device_id,))
+    active_channels = one("SELECT COUNT(*) FROM omni_channels WHERE device_id=? AND status='active'", (device_id,))
+    total_posts = one("SELECT COUNT(*) FROM omni_posts WHERE device_id=?", (device_id,))
+    pending_posts = one("SELECT COUNT(*) FROM omni_posts WHERE device_id=? AND status!='Đã xử lý'", (device_id,))
+    conn.close()
+    return {
+        "total_channels": int(total_channels or 0),
+        "active_channels": int(active_channels or 0),
+        "total_posts": int(total_posts or 0),
+        "pending_posts": int(pending_posts or 0),
+    }
+
+def create_omni_post(title, content, selected_channels, schedule_time="", media_path=""):
+    ensure_omni_tables()
+    device_id = get_device_id()
+    now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    selected_channels = selected_channels or []
+    status = "Đã lưu lịch" if schedule_time else "Chờ xử lý"
+    result = "Đã tạo hàng chờ đa kênh. Hệ thống sẽ xử lý theo từng kênh đã kết nối."
+    conn = db()
+    c = conn.cursor()
+    c.execute("""
+        INSERT INTO omni_posts(device_id,title,content,media_path,selected_channels,schedule_time,status,result_message,created_at)
+        VALUES(?,?,?,?,?,?,?,?,?)
+    """, (device_id, title, content, media_path, ",".join(selected_channels), schedule_time, status, result, now))
+    post_id = c.lastrowid
+    for ch in selected_channels:
+        c.execute("""
+            INSERT INTO omni_logs(device_id,channel_type,action,status,detail,created_at)
+            VALUES(?,?,?,?,?,?)
+        """, (device_id, ch, "create_post_queue", "queued", f"Đã tạo hàng chờ bài #{post_id}", now))
+    conn.commit()
+    conn.close()
+    return post_id
+
+
 def render(content="", message="", ok=True, selected_industry="spa", analysis="", plan="", content_type="facebook", content_goal="inbox", content_tone="gan_gui", content_count=100):
     score = score_content(content) if content else 0
     warnings = policy_check(content) if content else []
@@ -8216,7 +8620,7 @@ def render(content="", message="", ok=True, selected_industry="spa", analysis=""
         content_open_limits=CONTENT_OPEN_LIMITS, selected_content_count=int(content_count or 100),
         library_items=library_items, locked_count=max(0, 50000 - len(library_items)),
         score=score, warnings=warnings, token_warning=token_warning,
-        analysis=analysis, plan=plan, v3=v3_ceo_summary(), pipeline_rows=get_pipeline_leads(), customer_tasks=get_customer_tasks(), notifications=get_notifications(), fb_groups=get_fb_groups(), group_schedules=get_group_schedules(), comment_leads=get_comment_leads(), messenger_scripts=get_messenger_scripts(), success_assets=get_success_assets(), group_finder_results=get_group_finder_results(), group_finder_stats=get_group_finder_stats(), group_join_queue=get_group_join_queue(), group_uid_files=get_group_uid_files(), group_post_results=get_group_post_results(), group_post_queue=get_group_post_queue(), page_comment_queue=get_page_comment_queue(), page_comment_logs=get_page_comment_logs(), page_comment_stats=get_page_comment_stats(), page_token_rows=get_page_token_rows(), page_group_memberships=get_page_group_memberships(), renewal_notice=get_renewal_notice(), device_id=get_device_id(), is_device_premium=bool(get_device_subscription()), user_ai_key_status=user_ai_key_status()
+        analysis=analysis, plan=plan, v3=v3_ceo_summary(), pipeline_rows=get_pipeline_leads(), customer_tasks=get_customer_tasks(), notifications=get_notifications(), fb_groups=get_fb_groups(), group_schedules=get_group_schedules(), comment_leads=get_comment_leads(), messenger_scripts=get_messenger_scripts(), success_assets=get_success_assets(), group_finder_results=get_group_finder_results(), group_finder_stats=get_group_finder_stats(), group_join_queue=get_group_join_queue(), group_uid_files=get_group_uid_files(), group_post_results=get_group_post_results(), group_post_queue=get_group_post_queue(), page_comment_queue=get_page_comment_queue(), page_comment_logs=get_page_comment_logs(), page_comment_stats=get_page_comment_stats(), page_token_rows=get_page_token_rows(), page_group_memberships=get_page_group_memberships(), renewal_notice=get_renewal_notice(), device_id=get_device_id(), is_device_premium=bool(get_device_subscription()), user_ai_key_status=user_ai_key_status(), omni_supported_channels=OMNI_SUPPORTED_CHANNELS, omni_channels=get_omni_channels(), omni_channel_map=get_omni_channel_map(), omni_posts=get_omni_posts(), omni_stats=get_omni_stats()
     )
 
 @app.route("/")
@@ -8270,6 +8674,109 @@ def save_gemini_key_route():
 def remove_gemini_key_route():
     remove_user_gemini_key()
     return render(message="Đã xóa API Gemini riêng của thiết bị này. Hệ thống sẽ quay lại dùng API hệ thống hoặc chế độ dự phòng.", ok=True)
+
+
+
+@app.route("/omni_save_channel", methods=["POST"])
+def omni_save_channel_route():
+    channel_type = request.form.get("channel_type", "").strip()
+    channel_name = request.form.get("channel_name", "").strip()
+    credential_1 = request.form.get("credential_1", "").strip()
+    credential_2 = request.form.get("credential_2", "").strip()
+    credential_3 = request.form.get("credential_3", "").strip()
+    note = request.form.get("note", "").strip()
+    if not channel_type or not channel_name:
+        return render(message="Vui lòng nhập tên kênh cần kết nối.", ok=False)
+    ok = save_omni_channel(channel_type, channel_name, credential_1, credential_2, credential_3, note)
+    if ok:
+        return render(message="Đã lưu kênh vào Omni Channel Center. Lần sau khách chỉ cần chọn kênh để đăng.", ok=True)
+    return render(message="Chưa lưu được kênh. Vui lòng kiểm tra lại thông tin.", ok=False)
+
+
+@app.route("/omni_publish", methods=["POST"])
+def omni_publish_route():
+    title = request.form.get("title", "").strip()
+    content = request.form.get("content", "").strip()
+    schedule_time = request.form.get("schedule_time", "").strip()
+    selected_channels = request.form.getlist("selected_channels")
+    media_path = ""
+    try:
+        media_path = save_upload(request.files.get("media"))
+    except Exception:
+        media_path = ""
+    if not title and not content:
+        return render(message="Vui lòng nhập tiêu đề hoặc nội dung cần đăng đa kênh.", ok=False)
+    if not selected_channels:
+        return render(message="Vui lòng chọn ít nhất một kênh cần đăng.", ok=False)
+    create_omni_post(title, content, selected_channels, schedule_time, media_path)
+    return render(message="Đã tạo hàng chờ đăng đa kênh trong Omni Channel Center.", ok=True)
+
+
+@app.route("/omni_ai_content", methods=["POST"])
+def omni_ai_content_route():
+    product = request.form.get("product", "").strip()
+    offer = request.form.get("offer", "").strip()
+    audience = request.form.get("audience", "").strip()
+    goal = request.form.get("goal", "tăng inbox").strip()
+    if not product:
+        return render(message="Vui lòng nhập sản phẩm hoặc dịch vụ cần tạo nội dung đa kênh.", ok=False)
+    prompt = f"""
+Bạn là chuyên gia Omni Channel Marketing.
+Hãy tạo bộ nội dung đa kênh bằng tiếng Việt cho:
+
+Sản phẩm/dịch vụ: {product}
+Ưu đãi: {offer}
+Tệp khách hàng: {audience}
+Mục tiêu: {goal}
+
+Trả về đúng các mục:
+1. Facebook Page Post
+2. Facebook Group Post
+3. TikTok Caption
+4. TikTok Shop Caption
+5. Instagram Caption
+6. YouTube Shorts Title + Description
+7. Telegram Post
+8. Zalo OA Message
+9. Hashtag gợi ý
+10. CTA chốt khách
+
+Yêu cầu: tự nhiên, dễ dùng, không cam kết quá đà, không spam.
+"""
+    fallback = f"""
+1. Facebook Page Post
+{product} đang có ưu đãi {offer}. Inbox để được tư vấn chi tiết.
+
+2. Facebook Group Post
+Anh/chị nào đang cần {product}, em gửi thông tin tham khảo. Phù hợp cho {audience}.
+
+3. TikTok Caption
+{product} - giải pháp phù hợp cho khách đang cần tối ưu. Nhắn tin để nhận tư vấn.
+
+4. TikTok Shop Caption
+Sản phẩm/dịch vụ phù hợp nhu cầu thực tế. Xem ngay và nhắn tin để được hỗ trợ.
+
+5. Instagram Caption
+Một lựa chọn đáng tham khảo cho khách hàng đang cần {product}. Liên hệ để biết thêm chi tiết.
+
+6. YouTube Shorts Title + Description
+Title: {product} có phù hợp với bạn không?
+Description: Video ngắn giới thiệu lợi ích, ưu đãi và cách nhận tư vấn.
+
+7. Telegram Post
+{product} | Ưu đãi: {offer}. Liên hệ để được hỗ trợ nhanh.
+
+8. Zalo OA Message
+Chào anh/chị, bên em đang có thông tin về {product}. Anh/chị cần tư vấn có thể phản hồi tin nhắn này.
+
+9. Hashtag gợi ý
+#Marketing #KinhDoanhOnline #BanHang
+
+10. CTA chốt khách
+Nhắn tin ngay để được tư vấn gói phù hợp.
+""".strip()
+    content = safe_ai_generate(prompt, fallback=fallback)
+    return render(content=content, message="Đã tạo bộ nội dung đa kênh bằng AI.", ok=True)
 
 
 @app.route("/content_center_ai", methods=["POST"])
