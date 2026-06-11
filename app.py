@@ -5382,23 +5382,7 @@ function closeLockedFeature(){
   </div>
 </section>
 
-<section class="panel module-section" id="marketing_director">
-  <div class="section-open-note">Bạn đang mở: AI Marketing Director.</div>
-  <h2>🧠 AI Marketing Director</h2>
-  <p class="small">Trợ lý giám đốc Marketing: phân tích sản phẩm, tệp khách hàng, content, quảng cáo, phễu bán hàng, KPI và kế hoạch triển khai 30 ngày.</p>
-  <div class="v3-feature-grid">
-    <div class="v3-feature-card"><h3>Đầu vào cần nhập</h3><ul><li>Sản phẩm/dịch vụ đang bán</li><li>Khách hàng mục tiêu</li><li>Giá/ưu đãi hiện tại</li><li>Mục tiêu: inbox, đơn hàng, thương hiệu</li></ul></div>
-    <div class="v3-feature-card"><h3>Kết quả AI trả về</h3><ul><li>30 content Facebook/TikTok</li><li>10 mẫu quảng cáo</li><li>5 kịch bản chốt sale</li><li>Kế hoạch 30 ngày và KPI</li></ul></div>
-  </div>
-  <form method="post" action="/v3_ai_tool">
-    <input type="hidden" name="tool" value="marketing_director">
-    <textarea name="topic" rows="4" placeholder="Ví dụ: Tôi bán proxy Việt Nam cho người chạy Facebook Ads, giá từ 80k/tháng, mục tiêu tăng inbox và chốt khách qua Zalo."></textarea>
-    <textarea name="extra" rows="3" placeholder="Thông tin thêm: ngân sách ads, khu vực, ưu đãi, số Zalo, đối thủ, điểm mạnh sản phẩm..."></textarea>
-    <button>🧠 Tạo kế hoạch Marketing Director</button>
-    <button type="button" class="secondary" onclick="return openModule('ai_studio')">Mở AI Studio</button>
-    <button type="button" class="secondary" onclick="return openModule('crm_sales')">Mở CRM Kanban</button>
-  </form>
-</section>
+<section class="panel module-section" id="marketing_director" style="display:none!important"></section>
 
 <section class="panel module-section" id="crm_sales">
   <div class="section-open-note">Bạn đang mở: CRM Sales V3.</div>
@@ -11019,6 +11003,63 @@ ADMIN_HTML = """
 })();
 </script>
 
+
+
+<!-- CLEAN FIX: CTV menu open + remove AI Marketing Director content -->
+<style id="mkt-clean-ctv-open-fix-style">
+  #marketing_director{display:none!important;visibility:hidden!important;height:0!important;overflow:hidden!important;padding:0!important;margin:0!important;border:0!important;box-shadow:none!important}
+  #affiliateAdminSection{display:none!important}
+  #affiliateCenterSection.mkt-ctv-show{display:block!important;visibility:visible!important;opacity:1!important;position:relative!important;z-index:20!important}
+  [data-aff-menu="1"]{display:flex!important;visibility:visible!important;opacity:1!important;pointer-events:auto!important}
+</style>
+<script id="mkt-clean-ctv-open-fix-js">
+(function(){
+  function q(s){return document.querySelector(s)}
+  function qa(s){return Array.prototype.slice.call(document.querySelectorAll(s))}
+  function hideCustomerModules(){
+    qa('main section,.module-section,.app-module-section').forEach(function(el){
+      if(el.id!=='affiliateCenterSection'){
+        el.classList.remove('active-module');
+        el.style.display='none';
+      }
+    });
+    var admin=q('#affiliateAdminSection');
+    if(admin) admin.style.display='none';
+  }
+  window.openAffiliateCenter=function(){
+    var sec=q('#affiliateCenterSection');
+    if(!sec){alert('Chưa tìm thấy giao diện CTV Hoa Hồng.');return false;}
+    hideCustomerModules();
+    sec.style.display='block';
+    sec.classList.add('mkt-ctv-show','ctv-active');
+    qa('.v2-nav-link').forEach(function(a){a.classList.remove('active')});
+    qa('[data-module="affiliate_center"],a[href="#affiliate_center"],[data-aff-menu="1"]').forEach(function(a){a.classList.add('active')});
+    try{ if(history && history.replaceState) history.replaceState(null,'','#affiliate_center'); }catch(e){}
+    try{ if(window.affiliateLoadMe) window.affiliateLoadMe(); }catch(e){}
+    setTimeout(function(){try{sec.scrollIntoView({behavior:'smooth',block:'start'});}catch(e){window.scrollTo(0,0)}},80);
+    return false;
+  };
+  var previousOpen=window.openModule;
+  window.openModule=function(moduleId){
+    if(moduleId==='affiliate_center' || moduleId==='ctv' || moduleId==='affiliate') return window.openAffiliateCenter();
+    if(moduleId==='affiliate_admin') return false;
+    if(moduleId==='marketing_director') return false;
+    if(typeof previousOpen==='function') return previousOpen.apply(this,arguments);
+    return true;
+  };
+  function bindCtv(){
+    qa('[data-module="affiliate_center"],a[href="#affiliate_center"],[data-aff-menu="1"],#mobileCtvQuickBtn').forEach(function(el){
+      el.style.pointerEvents='auto';
+      el.onclick=function(ev){ if(ev) ev.preventDefault(); return window.openAffiliateCenter(); };
+    });
+    qa('a[href="#affiliate_admin"],[onclick*="affiliate_admin"],#affiliateAdminSection').forEach(function(el){el.style.display='none'});
+    if(location.hash==='#affiliate_center') setTimeout(window.openAffiliateCenter,150);
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',bindCtv); else bindCtv();
+  setTimeout(bindCtv,600); setTimeout(bindCtv,1600); setTimeout(bindCtv,3000);
+})();
+</script>
+<!-- /CLEAN FIX -->
 </body></html>
 """
 
