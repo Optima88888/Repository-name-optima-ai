@@ -7639,7 +7639,11 @@ button[aria-label="CTV"]{
     #mktMobileCtvLiveBtn .mkt-ctv-live-ico{font-size:16px!important;line-height:1!important}
     @keyframes mktCtvLiveFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
   }
-  @media(min-width:769px){#mktMobileCtvLiveBtn{display:none!important}}
+ @media (min-width:769px){
+  #mktMobileCtvLiveBtn{
+    display:none!important;
+  }
+}
 
   .mkt-live-support-status{
     display:flex!important;align-items:center!important;gap:7px!important;margin-top:4px!important;
@@ -10204,7 +10208,11 @@ ADMIN_HTML = """
       background:#dcfce7!important; box-shadow:0 0 10px rgba(220,252,231,.9)!important;
     }
   }
-  @media(min-width:769px){#mktMobileCtvQuickRestore{display:none!important}}
+@media (min-width:769px){
+  #mktMobileCtvQuickRestore{
+    display:none!important;
+  }
+}
 </style>
 <script id="mkt-device-mobile-ctv-hotfix-js">
 (function(){
