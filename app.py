@@ -5520,8 +5520,23 @@ function closeLockedFeature(){
       <input name="title" placeholder="Tiêu đề chiến dịch / tiêu đề video">
       <textarea name="content" rows="6" placeholder="Nội dung cần đăng hoặc mô tả video"></textarea>
       <div class="grid">
-        <input type="file" name="media" accept="image/*,video/mp4,video/quicktime">
-        <input type="datetime-local" name="schedule_time">
+        <div>
+          <label class="small" style="display:block;margin-bottom:8px;font-weight:800;color:#1f2a44">📎 Ảnh / Video đăng đa kênh</label>
+          <input type="file" name="media" accept="image/*,video/mp4,video/quicktime">
+        </div>
+        <div>
+          <label class="small" style="display:block;margin-bottom:8px;font-weight:800;color:#1f2a44">⏰ Thời gian hẹn giờ đăng</label>
+          <input type="datetime-local" id="omni_schedule_time" name="schedule_time" onchange="updateOmniSchedulePreview()">
+          <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px">
+            <button type="button" class="secondary" style="padding:8px 12px;font-size:13px" onclick="setOmniSchedule(15)">+15 phút</button>
+            <button type="button" class="secondary" style="padding:8px 12px;font-size:13px" onclick="setOmniSchedule(30)">+30 phút</button>
+            <button type="button" class="secondary" style="padding:8px 12px;font-size:13px" onclick="setOmniSchedule(60)">+1 giờ</button>
+            <button type="button" class="secondary" style="padding:8px 12px;font-size:13px" onclick="setOmniSchedule(1440)">Ngày mai</button>
+          </div>
+          <div id="omni_schedule_preview" class="history" style="margin-top:10px;background:#eff6ff;border-color:#bfdbfe;color:#1e3a8a">
+            ⏰ Chưa chọn thời gian hẹn giờ.
+          </div>
+        </div>
       </div>
       <h3>Chọn kênh cần đăng</h3>
       <div class="page-list">
@@ -5538,8 +5553,37 @@ function closeLockedFeature(){
         {% endfor %}
       </div>
       <button type="submit">🚀 Đăng đa kênh</button>
-      <p class="small">Giai đoạn hiện tại tạo hàng chờ và lưu lịch an toàn. Kết nối API chính thức từng kênh có thể bật sau để đăng tự động thật.</p>
+      <p class="small">Nếu chọn thời gian hẹn giờ, hệ thống sẽ lưu vào hàng chờ đăng theo lịch. Nếu bỏ trống, bài sẽ ở trạng thái chờ xử lý.</p>
     </form>
+    <script>
+      function padOmniTime(n){ return String(n).padStart(2,'0'); }
+      function toOmniDatetimeLocal(d){
+        return d.getFullYear() + '-' + padOmniTime(d.getMonth()+1) + '-' + padOmniTime(d.getDate()) + 'T' + padOmniTime(d.getHours()) + ':' + padOmniTime(d.getMinutes());
+      }
+      function setOmniSchedule(minutes){
+        var input = document.getElementById('omni_schedule_time');
+        if(!input){ return; }
+        var d = new Date();
+        d.setMinutes(d.getMinutes() + Number(minutes || 0));
+        input.value = toOmniDatetimeLocal(d);
+        updateOmniSchedulePreview();
+      }
+      function updateOmniSchedulePreview(){
+        var input = document.getElementById('omni_schedule_time');
+        var box = document.getElementById('omni_schedule_preview');
+        if(!input || !box){ return; }
+        if(!input.value){
+          box.innerHTML = '⏰ Chưa chọn thời gian hẹn giờ.';
+          return;
+        }
+        var d = new Date(input.value);
+        if(isNaN(d.getTime())){
+          box.innerHTML = '⚠️ Thời gian hẹn giờ chưa hợp lệ.';
+          return;
+        }
+        box.innerHTML = '✅ Đã chọn lịch đăng: <b>' + d.toLocaleString('vi-VN') + '</b>';
+      }
+    </script>
   </div>
 
   <div class="premium-center" style="margin-top:16px">
@@ -8709,6 +8753,8 @@ def omni_publish_route():
     if not selected_channels:
         return render(message="Vui lòng chọn ít nhất một kênh cần đăng.", ok=False)
     create_omni_post(title, content, selected_channels, schedule_time, media_path)
+    if schedule_time:
+        return render(message=f"Đã lưu lịch đăng đa kênh lúc {schedule_time}. Hệ thống đã đưa vào hàng chờ Omni Channel Center.", ok=True)
     return render(message="Đã tạo hàng chờ đăng đa kênh trong Omni Channel Center.", ok=True)
 
 
