@@ -14,6 +14,7 @@ import csv
 import random
 import io
 import shutil
+import re
 
 try:
     import openpyxl
@@ -66,6 +67,81 @@ def robots_txt():
         "Allow: /\n",
         mimetype="text/plain"
     )
+
+
+# CLEANUP: remove all mobile app install / PWA download code from rendered pages
+# Reason: mobile install/download scripts caused broken overlays on phone UI.
+@app.after_request
+def strip_mobile_install_code(response):
+    try:
+        ctype = response.headers.get("Content-Type", "")
+        if "text/html" not in ctype.lower():
+            return response
+        html = response.get_data(as_text=True)
+
+        # Remove manifest / apple mobile tags
+        html = re.sub(r'<link\s+rel=["\']manifest["\'][^>]*>\s*', '', html, flags=re.I)
+        html = re.sub(r'<link\s+rel=["\']apple-touch-icon["\'][^>]*>\s*', '', html, flags=re.I)
+        html = re.sub(r'<meta\s+name=["\']apple-mobile-web-app[^>]*>\s*', '', html, flags=re.I)
+
+        install_words = (
+            'beforeinstallprompt',
+            'serviceworker',
+            'showinstallguide',
+            'mktopendinstallguide',
+            'mktopeninstallguide',
+            'runmktinstallprompt',
+            'mktdeferredinstallprompt',
+            'deferredinstallprompt',
+            'mktinstall',
+            'installapp',
+            'downloadapp',
+            'pwa',
+            'thêm vào màn hình chính',
+            'cài đặt ứng dụng',
+            'cài app',
+            'tải xuống',
+            'mobile download',
+            'mobile install'
+        )
+
+        def is_install_block(block):
+            low = block.lower()
+            return any(w in low for w in install_words)
+
+        # Remove full script/style blocks that contain install/PWA/download logic
+        html = re.sub(
+            r'<script\b[^>]*>[\s\S]*?</script>',
+            lambda m: '' if is_install_block(m.group(0)) else m.group(0),
+            html,
+            flags=re.I
+        )
+        html = re.sub(
+            r'<style\b[^>]*>[\s\S]*?</style>',
+            lambda m: '' if is_install_block(m.group(0)) else m.group(0),
+            html,
+            flags=re.I
+        )
+
+        # Remove standalone comments related to mobile install/download/PWA
+        html = re.sub(r'<!--[\s\S]*?(?:install|download|pwa|tải xuống|cài app|màn hình chính)[\s\S]*?-->\s*', '', html, flags=re.I)
+
+        # Remove known install/download elements if any static HTML remains
+        ids = [
+            'mktTopDownloadBar','mktTopInstallSheet','mktInstallSheet','mktInstallPanel',
+            'mktDownloadAppV130','mktPhoneInstallFloat','mktPhoneInstallEntry',
+            'mktMobileInstallMenu','mktMobileInstallQuick','mktMobileInstallQuickRestore',
+            'installAppBtn','gptMktInstallFinal','gptMktInstallSheetFinal',
+            'gptminiSimpleInstallBtn'
+        ]
+        for _id in ids:
+            html = re.sub(r'<[^>]+id=["\']' + re.escape(_id) + r'["\'][\s\S]*?</[^>]+>', '', html, flags=re.I)
+
+        response.set_data(html)
+        response.headers["Content-Length"] = str(len(response.get_data()))
+    except Exception:
+        pass
+    return response
 
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "").strip()
@@ -2780,13 +2856,7 @@ HTML = r"""
 <meta name="twitter:card" content="summary_large_image">
 
 <meta name="theme-color" content="#2563eb">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Gptmini">
 <link rel="canonical" href="https://gptmini.pro/">
-<link rel="manifest" href="/manifest.json">
-<link rel="apple-touch-icon" href="/static/icon-192.png">
-
 <style>
 :root{
   --blue:#2563EB;
@@ -12493,64 +12563,12 @@ def api_templates():
     return jsonify(current_library(industry, content_type, content_goal, content_tone, content_count))
 
 
-@app.get("/manifest.json")
-def pwa_manifest():
-    resp = jsonify({
-        "id": "/",
-        "name": "Gptmini – Trợ Lý AI Marketing Đa Kênh",
-        "short_name": "GPTMini.Pro",
-        "description": "Gptmini là nền tảng AI Marketing Đa Kênh giúp tạo content, đăng Fanpage, quản lý Group, CRM và Automation bán hàng.",
-        "start_url": "/?source=pwa",
-        "scope": "/",
-        "display": "standalone",
-        "display_override": ["standalone", "minimal-ui", "browser"],
-        "background_color": "#ffffff",
-        "theme_color": "#2563eb",
-        "orientation": "portrait",
-        "prefer_related_applications": False,
-        "icons": [
-            {"src": "/static/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable"},
-            {"src": "/static/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"}
-        ]
-    })
-    resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
-    return resp
 
-@app.get("/sw.js")
-def pwa_sw():
-    js = """
-const CACHE_NAME = "gptmini-pwa-v3";
-const urlsToCache = [
-  "/",
-  "/manifest.json"
-];
-
-self.addEventListener("install", event => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => cache.addAll(urlsToCache)).catch(() => Promise.resolve())
-  );
-  self.skipWaiting();
-});
-
-self.addEventListener("activate", event => {
-  event.waitUntil(self.clients.claim());
-});
-
-self.addEventListener("fetch", event => {
-  event.respondWith(
-    fetch(event.request).catch(() => caches.match(event.request))
-  );
-});
-"""
-    return app.response_class(js, mimetype="application/javascript")
 
 @app.get("/favicon.ico")
 def favicon_icon():
     return static_icon_192()
 
-@app.get("/service-worker.js")
-def pwa_service_worker():
-    return pwa_sw()
 
 @app.get("/static/icon-192.png")
 def static_icon_192():
@@ -13560,124 +13578,3 @@ if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port, debug=False)
 
-# =========================================================
-# FINAL MOBILE INSTALL CLEAN MODE
-# Mục tiêu: loại bỏ toàn bộ nút/giao diện tải xuống trên điện thoại.
-# Chỉ giữ hàm showInstallGuide() + beforeinstallprompt + service worker /sw.js.
-# Giữ nguyên giao diện, menu, nội dung và các cài đặt còn lại.
-# =========================================================
-_MKT_SIMPLE_INSTALL_FINAL = r'''
-<style id="mkt-simple-install-final-css">
-  /* Ẩn toàn bộ nút/popup tải app trên điện thoại, không tạo nút mới */
-  #gptminiSimpleInstallBtn,
-  #mktTopDownloadBar,
-  #mktTopInstallSheet,
-  #mktInstallSheet,
-  #mktInstallPanel,
-  #mktDownloadAppV130,
-  #mktPhoneInstallFloat,
-  #mktPhoneInstallEntry,
-  #mktMobileInstallMenu,
-  #mktMobileInstallQuick,
-  #mktMobileInstallQuickRestore,
-  #installAppBtn,
-  [data-install-app],
-  [data-mkt-install-app],
-  .mkt-mobile-install-menu,
-  .mkt-mobile-download-v130,
-  .mkt-install-old,
-  .mkt-install-sheet,
-  .install-app-btn,
-  .app-install-card,
-  .app-install-banner,
-  .v2-install-box{
-    display:none!important;
-    visibility:hidden!important;
-    opacity:0!important;
-    pointer-events:none!important;
-  }
-</style>
-
-<script id="mkt-simple-install-final-js">
-function showInstallGuide(){
-  alert("Cách cài App Mini:\\n\\nAndroid Chrome: bấm dấu 3 chấm → Thêm vào màn hình chính.\\n\\niPhone Safari: bấm Chia sẻ → Thêm vào MH chính.\\n\\nSau đó mở Mkt Automation Pro như một app trên điện thoại.");
-}
-
-let deferredInstallPrompt = null;
-window.addEventListener('beforeinstallprompt', function(e){
-  e.preventDefault();
-  deferredInstallPrompt = e;
-});
-</script>
-
-<script id="mkt-simple-install-sw-js">
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', function(){
-    navigator.serviceWorker.register('/sw.js').catch(function(err){
-      console.log('Service worker registration failed:', err);
-    });
-  });
-}
-</script>
-
-<script id="mkt-simple-install-guide-override-js">
-function showInstallGuide(){
-  alert("Cách cài App Mini:\\n\\nAndroid Chrome: bấm dấu 3 chấm → Thêm vào màn hình chính.\\n\\niPhone Safari: bấm Chia sẻ → Thêm vào MH chính.\\n\\nSau đó mở Mkt Automation Pro V2 như một app.");
-}
-
-(function(){
-  function removeInstallButtons(){
-    var selectors = [
-      '#gptminiSimpleInstallBtn','#mktTopDownloadBar','#mktTopInstallSheet','#mktInstallSheet',
-      '#mktInstallPanel','#mktDownloadAppV130','#mktPhoneInstallFloat','#mktPhoneInstallEntry',
-      '#mktMobileInstallMenu','#mktMobileInstallQuick','#mktMobileInstallQuickRestore','#installAppBtn',
-      '[data-install-app]','[data-mkt-install-app]',
-      '.mkt-mobile-install-menu','.mkt-mobile-download-v130','.mkt-install-old','.mkt-install-sheet',
-      '.install-app-btn','.app-install-card','.app-install-banner','.v2-install-box'
-    ];
-    selectors.forEach(function(sel){
-      document.querySelectorAll(sel).forEach(function(el){
-        try{ el.remove(); }catch(e){ el.style.display='none'; }
-      });
-    });
-  }
-  if(document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', removeInstallButtons);
-  } else {
-    removeInstallButtons();
-  }
-  window.addEventListener('load', removeInstallButtons);
-  setTimeout(removeInstallButtons, 600);
-  setTimeout(removeInstallButtons, 1600);
-  setTimeout(removeInstallButtons, 3000);
-})();
-</script>
-'''
-
-
-def _mkt_simple_install_final_response(response):
-    try:
-        path = request.path or ""
-        if path.startswith('/admin') or path.startswith('/api') or path.startswith('/healthz'):
-            return response
-        ctype = response.headers.get('Content-Type', '')
-        if 'text/html' not in ctype.lower():
-            return response
-        data = response.get_data(as_text=True)
-        # Chỉ giữ một bản code cài app đơn giản cuối cùng.
-        if 'mkt-simple-install-final-css' in data:
-            return response
-        if '</body>' in data:
-            data = data.replace('</body>', _MKT_SIMPLE_INSTALL_FINAL + '</body>', 1)
-        else:
-            data += _MKT_SIMPLE_INSTALL_FINAL
-        response.set_data(data)
-        response.headers['Content-Length'] = str(len(response.get_data()))
-    except Exception:
-        pass
-    return response
-
-try:
-    app.after_request_funcs.setdefault(None, []).insert(0, _mkt_simple_install_final_response)
-except Exception:
-    pass
