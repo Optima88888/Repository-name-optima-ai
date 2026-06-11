@@ -1815,6 +1815,11 @@ def get_premium_requests(limit=100):
 
 
 def approve_premium_request(request_id, status='Đã duyệt', admin_note=''):
+    """Premium Subscription Center V2.
+    Admin duyệt gói nào thì thiết bị được kích hoạt đúng gói đó.
+    Nếu khách đang Premium còn hạn, hệ thống cộng thêm ngày từ ngày hết hạn hiện tại;
+    nếu đã hết hạn/chưa có gói thì tính từ thời điểm duyệt.
+    """
     now_dt = datetime.datetime.now()
     now = now_dt.strftime("%Y-%m-%d %H:%M:%S")
     conn = db(); c = conn.cursor()
@@ -1825,8 +1830,10 @@ def approve_premium_request(request_id, status='Đã duyệt', admin_note=''):
     device_id, phone, email, package_key, package_name = row
     package_key = normalize_package_key(package_key)
     plan = PREMIUM_PACKAGES.get(package_key, PREMIUM_PACKAGES['monthly'])
+    package_name = plan.get('name') or package_name or 'Premium'
+    plan_days = int(plan.get('days', 30) or 30)
+
     if status == 'Đã duyệt':
-        end_dt = now_dt + datetime.timedelta(days=int(plan.get('days', 30)))
         c.execute("""
             CREATE TABLE IF NOT EXISTS device_subscriptions (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1835,15 +1842,35 @@ def approve_premium_request(request_id, status='Đã duyệt', admin_note=''):
                 created_at TEXT, updated_at TEXT
             )
         """)
+        c.execute("SELECT start_date,end_date,status FROM device_subscriptions WHERE device_id=?", (device_id,))
+        current = c.fetchone()
+        base_dt = now_dt
+        start_date = now
+        if current:
+            try:
+                current_end = datetime.datetime.strptime(current[1], "%Y-%m-%d %H:%M:%S")
+                if current[2] == 'premium' and current_end > now_dt:
+                    base_dt = current_end
+                    start_date = current[0] or now
+            except Exception:
+                base_dt = now_dt
+        end_dt = base_dt + datetime.timedelta(days=plan_days)
         c.execute("""
             INSERT INTO device_subscriptions(device_id,phone,email,package_key,package_name,start_date,end_date,status,last_renewal_notice_at,created_at,updated_at)
             VALUES(?,?,?,?,?,?,?,?,?,?,?)
             ON CONFLICT(device_id) DO UPDATE SET
-                phone=excluded.phone,email=excluded.email,package_key=excluded.package_key,package_name=excluded.package_name,
-                start_date=excluded.start_date,end_date=excluded.end_date,status='premium',updated_at=excluded.updated_at
-        """, (device_id, phone, email, package_key, package_name, now, end_dt.strftime("%Y-%m-%d %H:%M:%S"), 'premium', '', now, now))
+                phone=excluded.phone,
+                email=excluded.email,
+                package_key=excluded.package_key,
+                package_name=excluded.package_name,
+                start_date=excluded.start_date,
+                end_date=excluded.end_date,
+                status='premium',
+                last_renewal_notice_at='',
+                updated_at=excluded.updated_at
+        """, (device_id, phone, email, package_key, package_name, start_date, end_dt.strftime("%Y-%m-%d %H:%M:%S"), 'premium', '', now, now))
         c.execute("""INSERT INTO notifications(title,detail,level,status,created_at) VALUES(?,?,?,?,?)""",
-                  ("Đã kích hoạt Premium", f"{device_id} - {package_name} - hạn đến {end_dt.strftime('%Y-%m-%d')}", "success", "new", now))
+                  ("Đã kích hoạt Premium Subscription Center V2", f"{device_id} - {package_name} - cộng {plan_days} ngày - hạn đến {end_dt.strftime('%Y-%m-%d %H:%M')}", "success", "new", now))
     c.execute("UPDATE premium_upgrade_requests SET status=?, admin_note=?, approved_at=? WHERE id=?", (status, admin_note, now, request_id))
     if status == 'Đã duyệt':
         try:
@@ -1851,7 +1878,6 @@ def approve_premium_request(request_id, status='Đã duyệt', admin_note=''):
         except Exception as _affiliate_err:
             print('Affiliate commission error:', _affiliate_err)
     conn.commit(); conn.close(); return True
-
 
 def get_device_subscription(device_id=None):
     device_id = (device_id or get_device_id()).strip().upper()
@@ -5674,6 +5700,72 @@ function closeLockedFeature(){
       </div>
       <button type="submit">Tạo bộ nội dung đa kênh</button>
     </form>
+  </div>
+
+  <div class="premium-center omni-premium-v2" style="margin-top:16px;border:1px solid rgba(250,204,21,.48);background:linear-gradient(135deg,#020617,#111827);color:#e5e7eb;box-shadow:0 18px 45px rgba(2,6,23,.28)">
+    <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap">
+      <div>
+        <div style="display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;background:#facc15;color:#111827;font-weight:1000;font-size:12px">👑 OMNICHANNEL PREMIUM</div>
+        <h3 style="color:#fff;margin-top:10px">Đăng 1 lần — phủ toàn bộ tài khoản đa kênh</h3>
+        <p class="small" style="color:#cbd5e1">Chọn tất cả tài khoản/kênh đã kết nối, nhập nhiều nội dung mỗi dòng là một bài, hẹn giờ 2 giờ / 3 giờ hoặc tùy chỉnh. Hệ thống lưu hàng chờ theo ID thiết bị Premium.</p>
+      </div>
+      <div style="min-width:220px;padding:12px;border-radius:16px;background:rgba(15,23,42,.9);border:1px solid rgba(148,163,184,.24)">
+        <b>Gói hiện tại</b><br>
+        {% if subscription_view.active %}
+          <span style="color:#facc15;font-weight:1000">{{ subscription_view.package_name }}</span><br>
+          <span class="small" style="color:#86efac">Còn {{ subscription_view.days_left }} ngày {{ subscription_view.hours_left }} giờ</span>
+        {% else %}
+          <span style="color:#fb923c;font-weight:1000">Chưa kích hoạt Premium</span><br>
+          <span class="small" style="color:#cbd5e1">Bấm nâng cấp để mở đăng không giới hạn.</span>
+        {% endif %}
+      </div>
+    </div>
+    <form method="post" action="/omni_publish_premium" enctype="multipart/form-data" style="margin-top:14px">
+      <input name="title" placeholder="Tên chiến dịch Omnichannel Premium" style="background:#0f172a;color:#fff;border-color:#334155">
+      <textarea name="content" rows="7" placeholder="Nhập nhiều nội dung, mỗi dòng là 1 bài. Ví dụ:&#10;Bài 1...&#10;Bài 2...&#10;Bài 3..." style="background:#0f172a;color:#fff;border-color:#334155"></textarea>
+      <div class="grid">
+        <div>
+          <label class="small" style="display:block;margin-bottom:8px;font-weight:900;color:#facc15">📎 Ảnh / Video</label>
+          <input type="file" name="media" accept="image/*,video/mp4,video/quicktime" style="background:#0f172a;color:#fff;border-color:#334155">
+        </div>
+        <div>
+          <label class="small" style="display:block;margin-bottom:8px;font-weight:900;color:#facc15">⏰ Hẹn giờ Premium</label>
+          <input type="datetime-local" id="omni_premium_schedule_time" name="schedule_time" style="background:#0f172a;color:#fff;border-color:#334155">
+          <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px">
+            <button type="button" class="secondary" onclick="setOmniPremiumSchedule(120)">+2 giờ</button>
+            <button type="button" class="secondary" onclick="setOmniPremiumSchedule(180)">+3 giờ</button>
+            <button type="button" class="secondary" onclick="setOmniPremiumSchedule(360)">+6 giờ</button>
+            <button type="button" class="secondary" onclick="setOmniPremiumSchedule(720)">+12 giờ</button>
+          </div>
+        </div>
+      </div>
+      <div class="grid">
+        <input name="gap_seconds" value="60" placeholder="Giãn cách mỗi bài/kênh: 60 giây" style="background:#0f172a;color:#fff;border-color:#334155">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <button type="button" class="secondary" onclick="omniPremiumSelectAll(true)">Chọn tất cả tài khoản</button>
+          <button type="button" class="secondary" onclick="omniPremiumSelectAll(false)">Bỏ chọn</button>
+        </div>
+      </div>
+      <h3 style="color:#fff">Tài khoản/kênh đã kết nối</h3>
+      <div class="page-list" id="omniPremiumAccountList">
+        {% for c in omni_channels %}
+        <label class="page-item" style="background:#0f172a;color:#e5e7eb;border-color:#334155">
+          <input type="checkbox" name="selected_channels" value="channel:{{ c[0] }}" class="omni-premium-check">
+          🚀 {{ c[2] }} <span class="small">• {{ c[1] }} • {{ c[6] }}</span>
+        </label>
+        {% else %}
+        <div class="history" style="background:#111827;border-color:#334155;color:#cbd5e1">Chưa có tài khoản/kênh nào. Hãy lưu kết nối ở mục 1 trước.</div>
+        {% endfor %}
+      </div>
+      <button type="submit" style="background:linear-gradient(135deg,#facc15,#f97316);color:#111827;font-weight:1000">🚀 Đăng không giới hạn tài khoản đa kênh</button>
+      <p class="small" style="color:#cbd5e1">Lưu ý an toàn: hệ thống tạo hàng chờ có giãn cách, không spam cùng lúc. Khi cần kết nối API thật từng nền tảng, dùng token chính chủ và tuân thủ chính sách từng kênh.</p>
+    </form>
+    <script>
+      function omniPad(n){return String(n).padStart(2,'0')}
+      function omniLocal(d){return d.getFullYear()+'-'+omniPad(d.getMonth()+1)+'-'+omniPad(d.getDate())+'T'+omniPad(d.getHours())+':'+omniPad(d.getMinutes())}
+      function setOmniPremiumSchedule(minutes){var i=document.getElementById('omni_premium_schedule_time'); if(!i)return; var d=new Date(); d.setMinutes(d.getMinutes()+Number(minutes||0)); i.value=omniLocal(d)}
+      function omniPremiumSelectAll(v){document.querySelectorAll('.omni-premium-check').forEach(function(x){x.checked=!!v})}
+    </script>
   </div>
 
   <div class="premium-center" style="margin-top:16px">
@@ -12031,6 +12123,11 @@ ADMIN_HTML = """
 </script>
 <!-- /MOBILE BACK BUTTON FINAL -->
 
+
+<style id="premium-subscription-omni-v2-css">
+  .omni-premium-v2 input::placeholder,.omni-premium-v2 textarea::placeholder{color:#94a3b8!important}
+  .omni-premium-v2 .secondary{background:#1e293b!important;color:#e5e7eb!important;border:1px solid #334155!important}
+</style>
 </body></html>
 """
 
@@ -12685,6 +12782,68 @@ def affiliate_pretty_link(slug):
     return resp
 
 
+
+
+# PREMIUM SUBSCRIPTION CENTER V2 + OMNICHANNEL PREMIUM UPGRADE
+# Giữ nguyên toàn bộ menu/nội dung cũ. Khối này chỉ bổ sung chế độ đăng đa kênh không giới hạn theo gói Premium.
+def create_omni_post_premium(title, raw_content, selected_channels, schedule_time="", media_path="", gap_seconds=60):
+    ensure_omni_tables()
+    device_id = get_device_id()
+    sub = get_subscription_view(device_id)
+    if not sub.get('active'):
+        return {"ok": False, "message": "Tính năng Omnichannel Premium chỉ mở khi thiết bị đã được kích hoạt Premium."}
+    selected_channels = [str(x).strip() for x in (selected_channels or []) if str(x).strip()]
+    if not selected_channels:
+        return {"ok": False, "message": "Vui lòng chọn ít nhất một tài khoản/kênh cần đăng."}
+    contents = [x.strip() for x in (raw_content or '').splitlines() if x.strip()]
+    if not contents and raw_content.strip():
+        contents = [raw_content.strip()]
+    if not contents:
+        return {"ok": False, "message": "Vui lòng nhập nội dung cần đăng. Mỗi dòng có thể là một bài riêng."}
+    try:
+        gap_seconds = max(30, min(3600, int(gap_seconds or 60)))
+    except Exception:
+        gap_seconds = 60
+    now = datetime.datetime.now()
+    created_at = now.strftime("%Y-%m-%d %H:%M:%S")
+    try:
+        base_schedule = datetime.datetime.strptime((schedule_time or '').replace('T',' '), "%Y-%m-%d %H:%M") if schedule_time else None
+    except Exception:
+        base_schedule = None
+    conn = db(); c = conn.cursor()
+    total_jobs = 0
+    for i, content in enumerate(contents):
+        planned_time = ''
+        if base_schedule:
+            planned_time = (base_schedule + datetime.timedelta(seconds=i * gap_seconds)).strftime("%Y-%m-%d %H:%M")
+        job_title = title or ("Omnichannel Premium #" + str(i + 1))
+        result = f"Omnichannel Premium: {len(selected_channels)} tài khoản/kênh, giãn cách {gap_seconds} giây."
+        c.execute("""
+            INSERT INTO omni_posts(device_id,title,content,media_path,selected_channels,schedule_time,status,result_message,created_at)
+            VALUES(?,?,?,?,?,?,?,?,?)
+        """, (device_id, job_title, content, media_path, json.dumps(selected_channels, ensure_ascii=False), planned_time, 'Đã lưu lịch Premium' if planned_time else 'Chờ xử lý Premium', result, created_at))
+        total_jobs += len(selected_channels)
+    c.execute("""
+        INSERT INTO omni_logs(device_id,channel_type,action,status,detail,created_at)
+        VALUES(?,?,?,?,?,?)
+    """, (device_id, 'omni_premium', 'create_unlimited_jobs', 'success', f"Đã tạo {len(contents)} bài x {len(selected_channels)} kênh = {total_jobs} lượt đăng", created_at))
+    conn.commit(); conn.close()
+    return {"ok": True, "message": f"Đã tạo {len(contents)} bài cho {len(selected_channels)} tài khoản/kênh. Tổng lượt đăng dự kiến: {total_jobs}."}
+
+@app.route("/omni_publish_premium", methods=["POST"])
+def omni_publish_premium_route():
+    title = request.form.get("title", "").strip()
+    content = request.form.get("content", "").strip()
+    schedule_time = request.form.get("schedule_time", "").strip()
+    gap_seconds = request.form.get("gap_seconds", "60").strip()
+    selected_channels = request.form.getlist("selected_channels")
+    media_path = ""
+    try:
+        media_path = save_upload(request.files.get("media"))
+    except Exception:
+        media_path = ""
+    result = create_omni_post_premium(title, content, selected_channels, schedule_time, media_path, gap_seconds)
+    return render(message=result.get('message','Đã xử lý Omnichannel Premium.'), ok=bool(result.get('ok')))
 
 @app.route("/api/device_id")
 def api_device_id_route():
