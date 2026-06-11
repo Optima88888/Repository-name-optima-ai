@@ -5171,55 +5171,25 @@ function closeLockedFeature(){
 <div class="layout">
 <aside class="sidebar">
   <div class="logo">Marketing<br>Automation Pro
-    <div id="mktDeviceInlineFinal" style="display:block!important;margin-top:12px;padding:9px 10px;border-radius:14px;background:rgba(15,23,42,.88);border:1px solid rgba(59,130,246,.45);font-size:12px!important;line-height:1.25!important;font-weight:900!important;color:#dbeafe!important;letter-spacing:0!important;text-transform:none!important;box-shadow:0 10px 26px rgba(2,6,23,.22);">
-      <span style="display:inline-block;width:8px;height:8px;border-radius:999px;background:#22c55e;box-shadow:0 0 12px #22c55e;margin-right:6px;vertical-align:middle"></span>
-      ID máy: <b id="mktDeviceInlineFinalValue" style="color:#fff;font-weight:1000">{{ device_id }}</b>
+    <div id="mktDeviceInlineFinal" style="display:block!important;margin-top:12px;padding:10px 12px;border-radius:14px;background:rgba(15,23,42,.88);border:1px solid rgba(59,130,246,.45);font-size:12px!important;line-height:1.35!important;font-weight:900!important;color:#dbeafe!important;letter-spacing:0!important;text-transform:none!important;box-shadow:0 10px 26px rgba(2,6,23,.22);">
+      <div>
+        <span style="display:inline-block;width:8px;height:8px;border-radius:999px;background:#22c55e;box-shadow:0 0 12px #22c55e;margin-right:6px;vertical-align:middle"></span>
+        ID máy: <b id="mktDeviceInlineFinalValue" style="color:#fff;font-weight:1000">{{ device_id }}</b>
+      </div>
+      <div style="margin-top:7px;color:#22c55e;font-weight:1000">
+        {% if subscription_view.active %}
+          👑 {{ subscription_view.package_name }}<br>
+          ⏳ Còn lại: {{ subscription_view.remaining_label }}
+        {% elif subscription_view.status == 'expired' %}
+          🔒 Premium đã hết hạn
+        {% else %}
+          🎁 Dùng thử: còn {{ free_status.days }} ngày {{ free_status.hours }} giờ
+        {% endif %}
+      </div>
+      <div style="height:5px;background:rgba(255,255,255,.12);border-radius:999px;margin-top:8px;overflow:hidden">
+        <span style="display:block;height:100%;width:{% if subscription_view.active %}{{ subscription_view.percent_left }}{% else %}{{ free_status.percent }}{% endif %}%;background:linear-gradient(90deg,#2563eb,#22c55e,#a855f7);border-radius:999px"></span>
+      </div>
     </div>
-  </div>
-  <div class="v2-side-card device-premium-card" style="margin-top:12px;background:linear-gradient(135deg,#111827,#1e293b);border:1px solid rgba(250,204,21,.45)">
-    <b>🖥 ID thiết bị</b><br>
-    <div class="device-id-row">
-      <span id="sidebarDeviceId">{{ device_id }}</span>
-      {% if is_device_premium %}
-      <span class="premium-glow-badge">PREMIUM</span>
-      {% endif %}
-    </div>
-    <small id="sidebarPremiumStatus">
-      {% if subscription_view.active %}
-        👑 Gói hiện tại: <b style="color:#facc15">{{ subscription_view.package_name }}</b><br>
-        ⏳ Còn lại: <b style="color:#22c55e">{{ subscription_view.remaining_label }}</b><br>
-        📅 Hết hạn: {{ subscription_view.end_date }}
-        <div style="height:7px;background:rgba(255,255,255,.12);border-radius:999px;margin-top:8px;overflow:hidden">
-          <span style="display:block;height:100%;width:{{ subscription_view.percent_left }}%;background:linear-gradient(90deg,#22c55e,#facc15);border-radius:999px"></span>
-        </div>
-      {% elif subscription_view.status == 'expired' %}
-        Trạng thái: <b style="color:#f97316">Premium đã hết hạn</b><br>
-        Gói cũ: {{ subscription_view.package_name }}
-      {% else %}
-        Trạng thái: {{ free_status.label }}
-      {% endif %}
-    </small>
-  </div>
-  {% if renewal_notice %}
-  <div class="v2-side-card" style="background:#fff7ed;color:#7c2d12;border:1px solid #fed7aa">
-    <b>⏰ Sắp hết hạn Premium</b><br>
-    Gói {{ renewal_notice.package_name }} còn {{ renewal_notice.remaining_days }} ngày. Vui lòng gia hạn để không gián đoạn.
-  </div>
-  {% endif %}
-  <div class="v2-side-card" style="margin-top:12px;background:linear-gradient(135deg,#020617,#111827);border:1px solid rgba(250,204,21,.45);color:#e5e7eb">
-    <b>👑 Premium Subscription Center</b><br>
-    {% if subscription_view.active %}
-      <small>Gói: <b style="color:#facc15">{{ subscription_view.package_name }}</b></small><br>
-      <small>Còn lại: <b style="color:#22c55e">{{ subscription_view.remaining_label }}</b></small><br>
-      <small>Kích hoạt: {{ subscription_view.start_date }}</small><br>
-      <small>Hết hạn: {{ subscription_view.end_date }}</small>
-    {% elif subscription_view.status == 'expired' %}
-      <small><b style="color:#fb923c">Gói {{ subscription_view.package_name }} đã hết hạn.</b></small><br>
-      <small>Bấm gia hạn để tiếp tục sử dụng đầy đủ.</small>
-    {% else %}
-      <small>Chưa kích hoạt gói Premium.</small><br>
-      <small>Chọn gói và gửi yêu cầu thanh toán để admin duyệt.</small>
-    {% endif %}
   </div>
 
 <div class="nav mkt-saas-nav mkt-clean-nav">
@@ -5257,40 +5227,6 @@ function closeLockedFeature(){
 
 <section class="top-hero" id="dashboard">
   <h1>Mkt Automation Pro V5 Seller AI Suite</h1>
-
-  <div id="premiumCenterV2Top" style="margin:16px 0 20px;padding:20px;border-radius:24px;background:linear-gradient(135deg,#020617,#111827 55%,#312e81);border:1px solid rgba(250,204,21,.45);box-shadow:0 22px 60px rgba(2,6,23,.28);color:#e5e7eb">
-    <div style="display:flex;justify-content:space-between;gap:14px;align-items:flex-start;flex-wrap:wrap">
-      <div>
-        <div style="display:inline-flex;align-items:center;gap:8px;padding:7px 12px;border-radius:999px;background:linear-gradient(135deg,#facc15,#f59e0b);color:#111827;font-weight:1000;font-size:12px;letter-spacing:.3px">👑 PREMIUM CENTER V2</div>
-        <h2 style="margin:12px 0 6px;color:#fff;font-size:26px">Premium Subscription Center V2</h2>
-        <p style="margin:0;color:#cbd5e1;font-weight:700">Kích hoạt tự động theo gói Admin đã duyệt, tự tính ngày còn lại và tự mở khóa tính năng Premium.</p>
-      </div>
-      <div style="min-width:250px;background:rgba(15,23,42,.82);border:1px solid rgba(148,163,184,.25);padding:14px;border-radius:18px">
-        <b style="color:#facc15">ID Máy</b><br>
-        <span style="font-size:20px;font-weight:1000;color:#fff">{{ subscription_view.device_id }}</span>
-      </div>
-    </div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-top:16px">
-      <div style="background:rgba(15,23,42,.72);border:1px solid rgba(148,163,184,.22);border-radius:18px;padding:14px"><small style="color:#94a3b8;font-weight:900">Gói hiện tại</small><br><b style="color:#facc15;font-size:18px">{% if subscription_view.active %}{{ subscription_view.package_name }}{% else %}Chưa kích hoạt Premium{% endif %}</b></div>
-      <div style="background:rgba(15,23,42,.72);border:1px solid rgba(148,163,184,.22);border-radius:18px;padding:14px"><small style="color:#94a3b8;font-weight:900">Ngày kích hoạt</small><br><b style="color:#fff">{{ subscription_view.start_date or '---' }}</b></div>
-      <div style="background:rgba(15,23,42,.72);border:1px solid rgba(148,163,184,.22);border-radius:18px;padding:14px"><small style="color:#94a3b8;font-weight:900">Ngày hết hạn</small><br><b style="color:#fff">{% if subscription_view.is_forever %}Không giới hạn{% else %}{{ subscription_view.end_date or '---' }}{% endif %}</b></div>
-      <div style="background:rgba(15,23,42,.72);border:1px solid rgba(148,163,184,.22);border-radius:18px;padding:14px"><small style="color:#94a3b8;font-weight:900">Còn lại</small><br><b style="color:#22c55e;font-size:18px">{{ subscription_view.remaining_label }}</b></div>
-    </div>
-    <div style="margin-top:14px;height:12px;background:rgba(255,255,255,.12);border-radius:999px;overflow:hidden">
-      <span style="display:block;height:100%;width:{{ subscription_view.percent_left }}%;background:linear-gradient(90deg,#22c55e,#facc15,#a855f7);border-radius:999px"></span>
-    </div>
-    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:14px">
-      <button type="button" onclick="openPayment('monthly')" style="border:0;border-radius:12px;padding:10px 14px;font-weight:1000;background:#2563eb;color:#fff">🔄 Gia Hạn 1 Tháng</button>
-      <button type="button" onclick="openPayment('quarterly')" style="border:0;border-radius:12px;padding:10px 14px;font-weight:1000;background:#4f46e5;color:#fff">🔄 Gia Hạn 3 Tháng</button>
-      <button type="button" onclick="openPayment('halfyear')" style="border:0;border-radius:12px;padding:10px 14px;font-weight:1000;background:#7c3aed;color:#fff">🔄 Gia Hạn 6 Tháng</button>
-      <button type="button" onclick="openPayment('yearly')" style="border:0;border-radius:12px;padding:10px 14px;font-weight:1000;background:#f59e0b;color:#111827">🔄 Gia Hạn 1 Năm</button>
-    </div>
-    {% if subscription_view.active %}
-    <div style="margin-top:14px;display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;color:#bbf7d0;font-weight:800;font-size:13px">
-      <span>✓ AI Messenger</span><span>✓ CRM Kanban</span><span>✓ AI Marketing Director</span><span>✓ Omni Channel</span><span>✓ Auto Comment</span><span>✓ Auto Inbox</span><span>✓ AI Content Studio</span><span>✓ AI Viral Content</span><span>✓ AI Landing Page</span><span>✓ AI Video</span><span>✓ AI Voice</span><span>✓ Group Finder Pro</span><span>✓ Group Posting Pro</span>
-    </div>
-    {% endif %}
-  </div>
 
 <div class="app-quick-grid">
   <div class="app-quick-card" onclick="return openModule('post')">
