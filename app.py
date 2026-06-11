@@ -672,6 +672,17 @@ def init_db():
         created_at TEXT
     )
     """)
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS user_ai_keys (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        device_id TEXT UNIQUE,
+        provider TEXT DEFAULT 'gemini',
+        api_key TEXT,
+        status TEXT DEFAULT 'active',
+        created_at TEXT,
+        updated_at TEXT
+    )
+    """)
     conn.commit()
     conn.close()
 
@@ -930,49 +941,53 @@ def policy_check(content):
     return warnings
 
 
+AI_FALLBACK_NOTICE = (
+    "Trợ lý AI đang tạm thời được chuyển sang chế độ xử lý dự phòng. "
+    "Anh/chị vẫn có thể sử dụng bản nội dung mẫu bên dưới, sau đó thử tạo lại sau ít phút "
+    "hoặc liên hệ bộ phận hỗ trợ để được ưu tiên kiểm tra."
+)
+
+AI_BUSY_NOTICE = (
+    "Trợ lý AI đang có lượng yêu cầu cao nên phản hồi có thể chậm hơn bình thường. "
+    "Vui lòng thử lại sau ít phút. Khách hàng Premium sẽ được ưu tiên xử lý ổn định hơn."
+)
+
 def friendly_ai_error(error):
     raw = str(error)
     low = raw.lower()
 
     if "429" in raw or "resource_exhausted" in low or "quota" in low or "rate-limit" in low or "rate limit" in low:
-        return (
-            "Hệ thống AI đang quá tải hoặc đã đạt giới hạn xử lý tạm thời. "
-            "Vui lòng thử lại sau ít phút. Nếu anh/chị cần sử dụng ổn định hơn, "
-            "vui lòng nâng cấp Premium để được ưu tiên hỗ trợ và hạn chế gián đoạn."
-        )
+        return AI_BUSY_NOTICE
 
-    if "api_key" in low or "invalid" in low or "permission" in low or "unauthorized" in low:
-        return (
-            "Hệ thống AI chưa được cấu hình đầy đủ hoặc khóa API chưa hợp lệ. "
-            "Vui lòng liên hệ kỹ thuật để được kiểm tra và kích hoạt lại."
-        )
+    if "api_key" in low or "invalid" in low or "permission" in low or "unauthorized" in low or "credential" in low:
+        return AI_FALLBACK_NOTICE
 
     if "timeout" in low or "connection" in low or "network" in low:
         return (
-            "Kết nối AI đang chậm hoặc mạng tạm thời không ổn định. "
-            "Vui lòng thử lại sau ít phút."
+            "Kết nối AI đang chậm hơn bình thường. Vui lòng thử lại sau ít phút; "
+            "nội dung mẫu bên dưới vẫn có thể dùng làm bản nháp."
         )
 
     return (
-        "Hệ thống AI đang bận xử lý. Vui lòng thử lại sau ít phút "
+        "Trợ lý AI đang tạm thời bận xử lý. Vui lòng thử lại sau ít phút "
         "hoặc liên hệ Zalo 036 338 2629 để được hỗ trợ nhanh."
     )
 
 def safe_ai_generate(prompt, fallback=""):
-    if not client:
+    active_key = get_active_gemini_key()
+    if not active_key:
         if fallback:
-            return fallback
-        return (
-            "Hệ thống AI chưa được kích hoạt. Vui lòng kiểm tra GEMINI_API_KEY "
-            "trong file .env hoặc liên hệ kỹ thuật để được hỗ trợ."
-        )
+            return fallback + "\n\n" + AI_FALLBACK_NOTICE
+        return AI_FALLBACK_NOTICE
     try:
+        genai.configure(api_key=active_key)
         model = genai.GenerativeModel("gemini-1.5-flash")
         res = model.generate_content(prompt)
-        return (res.text or "").strip()
+        text = (res.text or "").strip()
+        return text or (fallback + "\n\n" + AI_FALLBACK_NOTICE if fallback else AI_FALLBACK_NOTICE)
     except Exception as e:
         if fallback:
-            return fallback + "\\n\\n" + friendly_ai_error(e)
+            return fallback + "\n\n" + friendly_ai_error(e)
         return friendly_ai_error(e)
 
 def generate_content(idea, style="gần gũi", length="120", variants=1):
@@ -1616,6 +1631,88 @@ def get_device_id():
     if not raw.startswith("MKT-"):
         raw = "MKT-" + ''.join(ch for ch in raw if ch.isalnum())[:10]
     return raw[:32]
+
+
+
+def ensure_user_ai_key_table():
+    conn = db(); c = conn.cursor()
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS user_ai_keys (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            device_id TEXT UNIQUE,
+            provider TEXT DEFAULT 'gemini',
+            api_key TEXT,
+            status TEXT DEFAULT 'active',
+            created_at TEXT,
+            updated_at TEXT
+        )
+    """)
+    conn.commit(); conn.close()
+
+
+def save_user_gemini_key(api_key, device_id=None):
+    api_key = (api_key or '').strip()
+    if not api_key:
+        return False
+    device_id = (device_id or get_device_id()).strip().upper()
+    now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    ensure_user_ai_key_table()
+    conn = db(); c = conn.cursor()
+    c.execute("""
+        INSERT INTO user_ai_keys(device_id,provider,api_key,status,created_at,updated_at)
+        VALUES(?,?,?,?,?,?)
+        ON CONFLICT(device_id) DO UPDATE SET
+            api_key=excluded.api_key,
+            status='active',
+            updated_at=excluded.updated_at
+    """, (device_id, 'gemini', api_key, 'active', now, now))
+    conn.commit(); conn.close()
+    return True
+
+
+def remove_user_gemini_key(device_id=None):
+    device_id = (device_id or get_device_id()).strip().upper()
+    ensure_user_ai_key_table()
+    conn = db(); c = conn.cursor()
+    c.execute("UPDATE user_ai_keys SET status='deleted', api_key='', updated_at=? WHERE device_id=?", (datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'), device_id))
+    conn.commit(); conn.close()
+    return True
+
+
+def get_user_gemini_key(device_id=None):
+    try:
+        device_id = (device_id or get_device_id()).strip().upper()
+        ensure_user_ai_key_table()
+        conn = db(); c = conn.cursor()
+        c.execute("SELECT api_key FROM user_ai_keys WHERE device_id=? AND status='active' LIMIT 1", (device_id,))
+        row = c.fetchone(); conn.close()
+        return (row[0] or '').strip() if row else ''
+    except Exception:
+        return ''
+
+
+def get_active_gemini_key():
+    user_key = ''
+    try:
+        if request:
+            user_key = get_user_gemini_key()
+    except Exception:
+        user_key = ''
+    return user_key or GEMINI_API_KEY
+
+
+def mask_api_key(api_key):
+    api_key = (api_key or '').strip()
+    if not api_key:
+        return ''
+    if len(api_key) <= 12:
+        return api_key[:4] + '...' 
+    return api_key[:6] + '...' + api_key[-4:]
+
+
+def user_ai_key_status():
+    key = get_user_gemini_key()
+    return {'has_key': bool(key), 'masked': mask_api_key(key), 'source': 'API riêng của thiết bị' if key else ('API hệ thống' if GEMINI_API_KEY else 'Chế độ dự phòng')}
 
 
 def normalize_package_key(package_key):
@@ -5459,6 +5556,18 @@ Content 3..."></textarea>
 <section class="panel module-section" id="studio">
   <div class="section-open-note">Bạn đang mở: AI Content Studio.</div>
   <h2>AI Content Studio</h2>
+  <div class="lock-card" style="margin-bottom:14px">
+    <h3>🔑 API Gemini riêng cho thiết bị này</h3>
+    <p class="small">Khách hàng có thể nhập API Gemini riêng. Hệ thống sẽ ưu tiên dùng API riêng của máy này để tạo content trực tiếp, không phụ thuộc token hệ thống.</p>
+    <p class="small"><b>Trạng thái:</b> {{ user_ai_key_status.source }}{% if user_ai_key_status.has_key %} • {{ user_ai_key_status.masked }}{% endif %}</p>
+    <form method="post" action="/save_gemini_key" style="margin-top:10px">
+      <input type="password" name="gemini_api_key" placeholder="Dán API Gemini riêng của khách hàng vào đây">
+      <div class="grid">
+        <button type="submit">Lưu API cho máy này</button>
+        <button type="submit" formaction="/remove_gemini_key" class="secondary">Xóa API riêng</button>
+      </div>
+    </form>
+  </div>
   <form method="post" action="/generate">
     <textarea name="idea" rows="4" placeholder="Nhập ý tưởng: spa trị nám, proxy chạy ads, nha khoa niềng răng, bất động sản căn hộ..."></textarea>
     <div class="grid">
@@ -5482,32 +5591,113 @@ Content 3..."></textarea>
 </section>
 
 <section class="panel module-section" id="library">
-  <div class="section-open-note">Bạn đang mở: Kho Content 50.000+.</div>
-  <h2>Kho Content 10.000+ Dùng Thử</h2>
-  <p class="small">Bản demo nạp sẵn một số mẫu. Sau này có thể import 10.000 content thật từ JSON/CSV.</p>
-  <form method="get" action="/">
-    <select name="industry">
-      {% for key,label in industry_labels.items() %}
-      <option value="{{ key }}" {% if selected_industry==key %}selected{% endif %}>{{ label }}</option>
-      {% endfor %}
-    </select>
-    <button type="submit">Xem mẫu content</button>
+  <div class="section-open-note">Bạn đang mở: Kho Content AI nâng cấp.</div>
+  <h2>📚 Content Center 50.000+</h2>
+  <p class="small">Giữ nguyên giao diện hiện tại, chỉ nâng cấp phần Content: lọc theo ngành, loại nội dung, mục tiêu, giọng văn và mở hàng loạt mẫu dùng ngay.</p>
+
+  <div class="lock-card" style="margin-top:12px;margin-bottom:14px">
+    <h3>⚡ Tạo content trực tiếp bằng Gemini riêng</h3>
+    <p class="small">Nhập API Gemini riêng ở AI Content Studio, sau đó nhập chủ đề tại đây để AI tạo hàng loạt content theo bộ lọc hiện tại.</p>
+    <form method="post" action="/content_center_ai">
+      <input name="topic" placeholder="Nhập chủ đề: proxy Việt Nam, spa trị nám, nha khoa niềng răng...">
+      <div class="grid">
+        <select name="industry">
+          {% for key,label in industry_labels.items() %}
+          <option value="{{ key }}" {% if selected_industry==key %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+        <select name="content_type">
+          {% for key,label in content_type_labels.items() %}
+          <option value="{{ key }}" {% if selected_content_type==key %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+        <select name="content_goal">
+          {% for key,label in content_goal_labels.items() %}
+          <option value="{{ key }}" {% if selected_content_goal==key %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+        <select name="content_tone">
+          {% for key,label in content_tone_labels.items() %}
+          <option value="{{ key }}" {% if selected_content_tone==key %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+        <select name="ai_count">
+          <option value="10">Tạo 10 mẫu</option>
+          <option value="30" selected>Tạo 30 mẫu</option>
+          <option value="50">Tạo 50 mẫu</option>
+        </select>
+      </div>
+      <button type="submit">Tạo content bằng AI riêng</button>
+    </form>
+  </div>
+
+  <form method="get" action="#library">
+    <div class="grid">
+      <select name="industry">
+        {% for key,label in industry_labels.items() %}
+        <option value="{{ key }}" {% if selected_industry==key %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+      <select name="content_type">
+        {% for key,label in content_type_labels.items() %}
+        <option value="{{ key }}" {% if selected_content_type==key %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+      <select name="content_goal">
+        {% for key,label in content_goal_labels.items() %}
+        <option value="{{ key }}" {% if selected_content_goal==key %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+      <select name="content_tone">
+        {% for key,label in content_tone_labels.items() %}
+        <option value="{{ key }}" {% if selected_content_tone==key %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+      <select name="content_count">
+        {% for n in content_open_limits %}
+        <option value="{{ n }}" {% if selected_content_count==n %}selected{% endif %}>Mở {{ n }} mẫu</option>
+        {% endfor %}
+      </select>
+    </div>
+    <button type="submit">⚡ Mở kho content</button>
+    <button type="button" class="secondary" onclick="copyAllContentCenter()">Copy tất cả mẫu đang mở</button>
   </form>
-  <div class="library-grid">
+
+  <div class="v4-trust-grid" style="margin-top:14px">
+    <div class="v4-trust-card"><b>50.000+</b><span>Content theo ngành</span></div>
+    <div class="v4-trust-card"><b>{{ library_items|length }}</b><span>Mẫu đang mở</span></div>
+    <div class="v4-trust-card"><b>{{ locked_count }}</b><span>Mẫu Premium còn lại</span></div>
+  </div>
+
+  <div class="library-grid" id="contentCenterGrid">
     {% for item in library_items %}
-    <div class="template-card">
+    <div class="template-card content-center-item">
       <div id="tpl{{ loop.index }}">{{ item }}</div>
       <button onclick="copyText('tpl{{ loop.index }}')">Copy content</button>
     </div>
     {% endfor %}
   </div>
+
   <div class="lock-card" style="margin-top:16px">
-    <h3>Khóa Premium</h3>
-    <p>Bạn đang xem 10 content miễn phí đầu tiên.</p>
-    <p>Còn lại khoảng 490 content/ngành cần nâng cấp Premium để mở khóa.</p>
+    <h3>Kho Premium nâng cấp</h3>
+    <p>Bạn đang xem {{ library_items|length }} mẫu theo bộ lọc hiện tại.</p>
+    <p>Premium mở toàn bộ Content Center: Facebook, TikTok, Group, Comment Viral, Hook, CTA, Lịch 30 ngày và Combo Marketing.</p>
     <button onclick="openPremiumPopup()">Xem bảng giá Premium</button>
   </div>
+
+  <textarea id="contentCenterAllText" style="position:absolute;left:-9999px;top:-9999px">{% for item in library_items %}{{ item }}
+
+{% endfor %}</textarea>
+  <script>
+    function copyAllContentCenter(){
+      var el=document.getElementById('contentCenterAllText');
+      if(!el)return;
+      el.select();
+      try{document.execCommand('copy');alert('Đã copy toàn bộ content đang mở.')}catch(e){alert('Không copy được, vui lòng copy từng mẫu.')}
+    }
+  </script>
 </section>
+
 
 <section class="panel module-section" id="fanpage">
   <div class="section-open-note">Bạn đang mở: AI Phân tích Fanpage.</div>
@@ -7798,29 +7988,190 @@ button[aria-label="CTV"]{
 </html>
 """
 
-def current_library(selected_industry):
-    return CONTENT_LIBRARY.get(selected_industry, CONTENT_LIBRARY["spa"])
+CONTENT_TYPE_LABELS = {
+    "facebook": "Content Facebook",
+    "tiktok": "Content TikTok",
+    "group": "Content Group",
+    "comment": "Comment Viral",
+    "hook": "Hook Viral",
+    "cta": "CTA Chốt Đơn",
+    "calendar": "Lịch Content 30 Ngày",
+    "combo": "Combo Marketing"
+}
 
-def render(content="", message="", ok=True, selected_industry="spa", analysis="", plan=""):
+CONTENT_GOAL_LABELS = {
+    "inbox": "Tăng inbox",
+    "trust": "Tăng niềm tin",
+    "sale": "Chốt đơn",
+    "viral": "Tăng tương tác",
+    "remarketing": "Chăm sóc lại"
+}
+
+CONTENT_TONE_LABELS = {
+    "gan_gui": "Gần gũi",
+    "chuyen_nghiep": "Chuyên nghiệp",
+    "cao_cap": "Cao cấp",
+    "viral": "Viral ngắn",
+    "manh": "Bán hàng mạnh"
+}
+
+CONTENT_OPEN_LIMITS = [50, 100, 200, 500]
+
+
+def _industry_name(industry_key):
+    return INDUSTRY_LABELS.get(industry_key, industry_key.replace('_', ' ').title())
+
+
+def _goal_phrase(goal):
+    return {
+        "inbox": "kéo khách nhắn tin và để lại nhu cầu",
+        "trust": "tăng niềm tin trước khi khách ra quyết định",
+        "sale": "thúc đẩy khách hành động ngay",
+        "viral": "tăng tương tác tự nhiên cho bài đăng",
+        "remarketing": "chăm sóc lại khách đã từng quan tâm"
+    }.get(goal, "tăng hiệu quả bán hàng")
+
+
+def _tone_phrase(tone):
+    return {
+        "gan_gui": "gần gũi, dễ hiểu",
+        "chuyen_nghiep": "chuyên nghiệp, rõ lợi ích",
+        "cao_cap": "cao cấp, tinh tế",
+        "viral": "ngắn gọn, cuốn hút",
+        "manh": "mạnh mẽ, tập trung chuyển đổi"
+    }.get(tone, "tự nhiên")
+
+
+def _content_seed(industry_key):
+    base = CONTENT_LIBRARY.get(industry_key) or CONTENT_LIBRARY.get("spa", [])
+    return base if base else ["Giải pháp phù hợp giúp khách hàng tiết kiệm thời gian và tăng hiệu quả công việc."]
+
+
+def current_library(selected_industry, content_type="facebook", goal="inbox", tone="gan_gui", count=100):
+    """Kho Content Center nâng cấp.
+    Không hardcode 50.000 dòng trong app.py để tránh nặng file; hệ thống sinh động theo ngành, loại nội dung, mục tiêu và giọng văn.
+    """
+    try:
+        count = int(count or 100)
+    except Exception:
+        count = 100
+    count = max(10, min(count, 500))
+
+    industry = _industry_name(selected_industry)
+    goal_text = _goal_phrase(goal)
+    tone_text = _tone_phrase(tone)
+    seeds = _content_seed(selected_industry)
+
+    hooks = [
+        "Khách không mua không hẳn vì giá, đôi khi vì nội dung chưa chạm đúng nhu cầu.",
+        "Nếu bài đăng nhiều lượt xem nhưng ít inbox, hãy kiểm tra lại câu mở đầu.",
+        "Một nội dung đúng insight có thể tiết kiệm rất nhiều chi phí quảng cáo.",
+        "Đừng đăng cho có, hãy đăng để khách hiểu vì sao họ cần bạn.",
+        "Sản phẩm tốt cần một cách kể chuyện đủ rõ để khách muốn hỏi thêm.",
+        "Muốn tăng chuyển đổi, hãy bắt đầu từ nỗi đau thật của khách hàng.",
+        "Nội dung bán hàng hiệu quả không cần dài, chỉ cần đúng vấn đề.",
+        "Bài viết đầu tiên khách đọc có thể quyết định họ có inbox hay không.",
+        "Đừng để khách rời đi chỉ vì thông điệp chưa đủ rõ.",
+        "Một caption tốt có thể biến người xem thành khách hàng tiềm năng."
+    ]
+    ctas = [
+        "Inbox để được tư vấn giải pháp phù hợp.",
+        "Nhắn tin ngay để nhận thông tin chi tiết.",
+        "Để lại nhu cầu, đội ngũ hỗ trợ sẽ tư vấn nhanh.",
+        "Liên hệ hôm nay để được gợi ý phương án phù hợp.",
+        "Muốn mình tư vấn kỹ hơn, hãy gửi tin nhắn ngay.",
+        "Nhận báo giá và hướng dẫn chi tiết qua inbox.",
+        "Đăng ký tư vấn để bắt đầu tối ưu ngay hôm nay.",
+        "Bạn cần mẫu phù hợp hơn? Inbox để được hỗ trợ.",
+        "Gửi tin nhắn để nhận ưu đãi mới nhất.",
+        "Kết nối ngay để không bỏ lỡ cơ hội phù hợp."
+    ]
+    comments = [
+        "Quan tâm, tư vấn giúp mình.",
+        "Cho mình xin thông tin chi tiết.",
+        "Mẫu này phù hợp, inbox giúp mình nhé.",
+        "Mình muốn xem thêm bảng giá.",
+        "Tư vấn thêm cho mình với.",
+        "Có ưu đãi hôm nay không shop?",
+        "Mình cần giải pháp phù hợp hơn.",
+        "Cho mình xin hướng dẫn cụ thể.",
+        "Nội dung hay, mình quan tâm.",
+        "Inbox mình thông tin nhé."
+    ]
+
+    templates = []
+    for i in range(count):
+        seed = seeds[i % len(seeds)]
+        hook = hooks[i % len(hooks)]
+        cta = ctas[(i * 3) % len(ctas)]
+        comment = comments[(i * 2) % len(comments)]
+        day = (i % 30) + 1
+        tag = f"#{selected_industry.replace('_','')} #Marketing #KinhDoanhOnline"
+        if content_type == "hook":
+            text = f"Hook {i+1}: {hook}"
+        elif content_type == "cta":
+            text = f"CTA {i+1}: {cta}"
+        elif content_type == "comment":
+            text = f"Comment {i+1}: {comment}"
+        elif content_type == "calendar":
+            text = f"Ngày {day}: {hook} Chủ đề: {industry}. Mục tiêu: {goal_text}. CTA: {cta}"
+        elif content_type == "tiktok":
+            text = f"TikTok {i+1}: {hook} {seed} Kết video bằng lời kêu gọi: {cta} {tag}"
+        elif content_type == "group":
+            text = f"Group {i+1}: Chia sẻ thật cho anh/chị đang quan tâm {industry}: {seed} Nội dung viết theo hướng {tone_text}, mục tiêu {goal_text}. {cta}"
+        elif content_type == "combo":
+            kind = i % 5
+            if kind == 0:
+                text = f"Content {i+1}: {hook} {seed} {cta} {tag}"
+            elif kind == 1:
+                text = f"Hook {i+1}: {hook}"
+            elif kind == 2:
+                text = f"CTA {i+1}: {cta}"
+            elif kind == 3:
+                text = f"Comment {i+1}: {comment}"
+            else:
+                text = f"Lịch ngày {day}: Đăng bài về {industry}, nhấn mạnh {goal_text}. Gợi ý mở đầu: {hook}"
+        else:
+            text = f"Facebook {i+1}: {hook}\n\n{seed}\n\nPhong cách: {tone_text}. Mục tiêu: {goal_text}.\n\n{cta}\n{tag}"
+        templates.append(text)
+    return templates
+
+
+def render(content="", message="", ok=True, selected_industry="spa", analysis="", plan="", content_type="facebook", content_goal="inbox", content_tone="gan_gui", content_count=100):
     score = score_content(content) if content else 0
     warnings = policy_check(content) if content else []
     token_warning = ""
+    library_items = current_library(selected_industry, content_type, content_goal, content_tone, content_count)
     return render_template_string(
         HTML, title=APP_TITLE, pages=get_pages_dynamic(), content=content, message=message, ok=ok,
         history=get_history(), campaigns=get_campaigns(), s=get_stats(), crm_rows=get_crm(), token_report=token_manager_report(), token_checks=get_latest_token_checks(), clusters=get_page_clusters(), analytics=get_analytics_summary(), free_status=get_free_status(),
         industry_labels=INDUSTRY_LABELS, selected_industry=selected_industry,
-        library_items=current_library(selected_industry)[:10], locked_count=max(0, 500 - len(current_library(selected_industry)[:10])),
+        content_type_labels=CONTENT_TYPE_LABELS, selected_content_type=content_type,
+        content_goal_labels=CONTENT_GOAL_LABELS, selected_content_goal=content_goal,
+        content_tone_labels=CONTENT_TONE_LABELS, selected_content_tone=content_tone,
+        content_open_limits=CONTENT_OPEN_LIMITS, selected_content_count=int(content_count or 100),
+        library_items=library_items, locked_count=max(0, 50000 - len(library_items)),
         score=score, warnings=warnings, token_warning=token_warning,
-        analysis=analysis, plan=plan, v3=v3_ceo_summary(), pipeline_rows=get_pipeline_leads(), customer_tasks=get_customer_tasks(), notifications=get_notifications(), fb_groups=get_fb_groups(), group_schedules=get_group_schedules(), comment_leads=get_comment_leads(), messenger_scripts=get_messenger_scripts(), success_assets=get_success_assets(), group_finder_results=get_group_finder_results(), group_finder_stats=get_group_finder_stats(), group_join_queue=get_group_join_queue(), group_uid_files=get_group_uid_files(), group_post_results=get_group_post_results(), group_post_queue=get_group_post_queue(), page_comment_queue=get_page_comment_queue(), page_comment_logs=get_page_comment_logs(), page_comment_stats=get_page_comment_stats(), page_token_rows=get_page_token_rows(), page_group_memberships=get_page_group_memberships(), renewal_notice=get_renewal_notice(), device_id=get_device_id(), is_device_premium=bool(get_device_subscription())
+        analysis=analysis, plan=plan, v3=v3_ceo_summary(), pipeline_rows=get_pipeline_leads(), customer_tasks=get_customer_tasks(), notifications=get_notifications(), fb_groups=get_fb_groups(), group_schedules=get_group_schedules(), comment_leads=get_comment_leads(), messenger_scripts=get_messenger_scripts(), success_assets=get_success_assets(), group_finder_results=get_group_finder_results(), group_finder_stats=get_group_finder_stats(), group_join_queue=get_group_join_queue(), group_uid_files=get_group_uid_files(), group_post_results=get_group_post_results(), group_post_queue=get_group_post_queue(), page_comment_queue=get_page_comment_queue(), page_comment_logs=get_page_comment_logs(), page_comment_stats=get_page_comment_stats(), page_token_rows=get_page_token_rows(), page_group_memberships=get_page_group_memberships(), renewal_notice=get_renewal_notice(), device_id=get_device_id(), is_device_premium=bool(get_device_subscription()), user_ai_key_status=user_ai_key_status()
     )
 
 @app.route("/")
 def home():
     selected_industry = request.args.get("industry", "spa")
+    content_type = request.args.get("content_type", "facebook")
+    content_goal = request.args.get("content_goal", "inbox")
+    content_tone = request.args.get("content_tone", "gan_gui")
+    content_count = request.args.get("content_count", "100")
     ref_code = current_affiliate_code()
     if ref_code:
         record_affiliate_click(ref_code)
-    resp = app.make_response(render(selected_industry=selected_industry))
+    resp = app.make_response(render(
+        selected_industry=selected_industry,
+        content_type=content_type,
+        content_goal=content_goal,
+        content_tone=content_tone,
+        content_count=content_count
+    ))
     if ref_code:
         try:
             resp.set_cookie('affiliate_code', ref_code, max_age=60*60*24*90)
@@ -7841,6 +8192,58 @@ def generate():
         return render(content=content, message="Đã tạo nội dung bằng Gemini Flash.", ok=True)
     except Exception as e:
         return render(message="Lỗi Gemini: " + str(e), ok=False)
+
+@app.route("/save_gemini_key", methods=["POST"])
+def save_gemini_key_route():
+    key = request.form.get("gemini_api_key", "").strip()
+    if not key:
+        return render(message="Vui lòng nhập API Gemini trước khi lưu.", ok=False)
+    save_user_gemini_key(key)
+    return render(message="Đã lưu API Gemini riêng cho thiết bị này. Từ bây giờ hệ thống sẽ ưu tiên dùng API riêng để tạo content trực tiếp.", ok=True)
+
+
+@app.route("/remove_gemini_key", methods=["POST"])
+def remove_gemini_key_route():
+    remove_user_gemini_key()
+    return render(message="Đã xóa API Gemini riêng của thiết bị này. Hệ thống sẽ quay lại dùng API hệ thống hoặc chế độ dự phòng.", ok=True)
+
+
+@app.route("/content_center_ai", methods=["POST"])
+def content_center_ai_route():
+    topic = request.form.get("topic", "").strip()
+    selected_industry = request.form.get("industry", "spa")
+    content_type = request.form.get("content_type", "facebook")
+    content_goal = request.form.get("content_goal", "inbox")
+    content_tone = request.form.get("content_tone", "gan_gui")
+    try:
+        ai_count = max(1, min(int(request.form.get("ai_count", "30")), 50))
+    except Exception:
+        ai_count = 30
+    if not topic:
+        return render(message="Vui lòng nhập chủ đề cần tạo content.", ok=False, selected_industry=selected_industry, content_type=content_type, content_goal=content_goal, content_tone=content_tone)
+    label_type = CONTENT_TYPE_LABELS.get(content_type, content_type)
+    label_goal = CONTENT_GOAL_LABELS.get(content_goal, content_goal)
+    label_tone = CONTENT_TONE_LABELS.get(content_tone, content_tone)
+    prompt = f"""
+Bạn là Marketing Director AI cho chủ shop/doanh nghiệp nhỏ.
+Hãy tạo {ai_count} mẫu {label_type} bằng tiếng Việt.
+
+Chủ đề: {topic}
+Ngành: {_industry_name(selected_industry)}
+Mục tiêu: {label_goal}
+Giọng văn: {label_tone}
+
+Yêu cầu:
+- Mỗi mẫu khác nhau, dùng được ngay.
+- Tự nhiên, chuyên nghiệp, không cam kết quá đà.
+- Có CTA phù hợp nếu là content bán hàng.
+- Không dùng nội dung gây spam.
+- Đánh số rõ từng mẫu.
+"""
+    fallback = "\n\n".join(current_library(selected_industry, content_type, content_goal, content_tone, ai_count))
+    content = safe_ai_generate(prompt, fallback=fallback)
+    return render(content=content, message="Đã tạo content bằng AI. Nếu máy này đã lưu API Gemini riêng, hệ thống đã ưu tiên dùng API riêng của thiết bị.", ok=True, selected_industry=selected_industry, content_type=content_type, content_goal=content_goal, content_tone=content_tone, content_count=max(ai_count, 50))
+
 
 @app.route("/analyze_fanpage", methods=["POST"])
 def analyze_route():
@@ -8164,7 +8567,7 @@ def v3_ai_tool_route():
     if not topic:
         return render(message="Vui lòng nhập nội dung cần AI xử lý.", ok=False)
     prompt = v3_ai_tool_prompt(tool, topic, extra)
-    result = safe_ai_generate(prompt, fallback=f"Bản demo cho {topic}:\n\n- 30 content\n- 10 quảng cáo\n- Tệp khách hàng mục tiêu\n- CTA và kế hoạch triển khai\n\nVui lòng cấu hình GEMINI_API_KEY để dùng AI đầy đủ.")
+    result = safe_ai_generate(prompt, fallback=f"Bản nội dung mẫu cho {topic}:\n\n- 30 content gợi ý\n- 10 mẫu quảng cáo\n- Tệp khách hàng mục tiêu\n- CTA và kế hoạch triển khai\n\nTrợ lý AI đang tạm thời xử lý bằng chế độ dự phòng. Anh/chị có thể dùng bản mẫu này trước và thử tạo lại sau ít phút.")
     return render(content=result, message="Đã tạo nội dung bằng AI Studio V3.", ok=True)
 
 @app.route("/pipeline", methods=["POST"])
@@ -10705,7 +11108,11 @@ def export_pdf_route():
 @app.route("/api/templates")
 def api_templates():
     industry = request.args.get("industry", "spa")
-    return jsonify(current_library(industry))
+    content_type = request.args.get("content_type", "facebook")
+    content_goal = request.args.get("content_goal", "inbox")
+    content_tone = request.args.get("content_tone", "gan_gui")
+    content_count = request.args.get("content_count", "100")
+    return jsonify(current_library(industry, content_type, content_goal, content_tone, content_count))
 
 
 @app.get("/manifest.json")
