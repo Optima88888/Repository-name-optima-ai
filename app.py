@@ -13313,6 +13313,299 @@ try:
 except Exception as _db_bootstrap_err:
     print("Database bootstrap error:", _db_bootstrap_err)
 
+
+# HARD ENTERPRISE WEB ADMIN + FRONTEND INJECT FIX 20260611
+# This patch is intentionally non-destructive: it overrides only runtime rendering for /admin
+# and injects lightweight premium UI polish into customer pages without touching existing menus/content.
+
+def _mkt_html_escape(v):
+    import html
+    return html.escape(str(v if v is not None else ""), quote=True)
+
+def _mkt_money_vnd(v):
+    try:
+        return f"{int(v or 0):,}".replace(",", ".") + "đ"
+    except Exception:
+        return str(v or "")
+
+def _mkt_days_left(end_date):
+    try:
+        if not end_date:
+            return ""
+        if str(end_date).lower() in ("forever", "lifetime", "khong gioi han", "không giới hạn"):
+            return "Forever"
+        end = datetime.datetime.strptime(str(end_date)[:19], "%Y-%m-%d %H:%M:%S")
+        return str(max(0, (end - datetime.datetime.now()).days))
+    except Exception:
+        try:
+            end = datetime.datetime.strptime(str(end_date)[:10], "%Y-%m-%d")
+            return str(max(0, (end - datetime.datetime.now()).days))
+        except Exception:
+            return ""
+
+def _mkt_fetch_upgrade_rows(limit=300):
+    ensure_admin_safe_schema()
+    conn = db(); c = conn.cursor()
+    c.execute("""
+        SELECT id,device_id,phone,email,package_key,package_name,amount,payment_note,status,admin_note,created_at,approved_at
+        FROM premium_upgrade_requests
+        ORDER BY id DESC LIMIT ?
+    """, (limit,))
+    rows = c.fetchall(); conn.close()
+    return rows
+
+def _mkt_fetch_subscription_rows(limit=300):
+    ensure_admin_safe_schema()
+    conn = db(); c = conn.cursor()
+    c.execute("""
+        SELECT id,device_id,phone,email,package_key,package_name,start_date,end_date,status,created_at,updated_at
+        FROM device_subscriptions
+        ORDER BY id DESC LIMIT ?
+    """, (limit,))
+    rows = c.fetchall(); conn.close()
+    return rows
+
+def _mkt_admin_stats_direct():
+    ensure_admin_safe_schema()
+    conn = db(); c = conn.cursor()
+    def one(sql, params=()):
+        try:
+            c.execute(sql, params); r=c.fetchone(); return r[0] if r and r[0] is not None else 0
+        except Exception:
+            return 0
+    today = datetime.datetime.now().strftime("%Y-%m-%d")
+    month = datetime.datetime.now().strftime("%Y-%m")
+    stats = {
+        "revenue_today": one("SELECT COALESCE(SUM(amount),0) FROM premium_upgrade_requests WHERE status LIKE '%duyệt%' OR status LIKE '%duyet%' OR status LIKE '%Đã duyệt%' AND substr(COALESCE(approved_at,created_at),1,10)=?", (today,)),
+        "revenue_month": one("SELECT COALESCE(SUM(amount),0) FROM premium_upgrade_requests WHERE (status LIKE '%duyệt%' OR status LIKE '%duyet%' OR status LIKE '%Đã duyệt%') AND substr(COALESCE(approved_at,created_at),1,7)=?", (month,)),
+        "pending": one("SELECT COUNT(*) FROM premium_upgrade_requests WHERE COALESCE(status,'') LIKE '%Chờ%' OR COALESCE(status,'') LIKE '%cho%'"),
+        "premium_active": one("SELECT COUNT(*) FROM device_subscriptions WHERE COALESCE(status,'premium') IN ('premium','active','Premium Active')"),
+        "total_requests": one("SELECT COUNT(*) FROM premium_upgrade_requests"),
+        "ctv_total": one("SELECT COUNT(*) FROM affiliates") if True else 0,
+        "omni_channels": one("SELECT COUNT(*) FROM omni_channels") if True else 0,
+    }
+    conn.close()
+    return stats
+
+def _mkt_approve_request_direct(request_id, status="Đã duyệt"):
+    ensure_admin_safe_schema()
+    request_id = str(request_id or "").strip()
+    if not request_id:
+        return False
+    try:
+        # Prefer existing project logic because it already handles package days and realtime notifications.
+        approve_premium_request(request_id, status=status, admin_note="Duyệt từ Web Admin Enterprise")
+        return True
+    except Exception as e:
+        print("approve_premium_request fallback:", e)
+    conn = db(); c = conn.cursor()
+    now = datetime.datetime.now()
+    now_s = now.strftime("%Y-%m-%d %H:%M:%S")
+    c.execute("SELECT device_id,phone,email,package_key,package_name,amount FROM premium_upgrade_requests WHERE id=? LIMIT 1", (request_id,))
+    row = c.fetchone()
+    if not row:
+        conn.close(); return False
+    device_id, phone, email, package_key, package_name, amount = row
+    package_key = normalize_package_key(package_key)
+    plan = PREMIUM_PACKAGES.get(package_key, PREMIUM_PACKAGES.get("monthly", {}))
+    days = int(plan.get("days", 30) or 30)
+    package_name = package_name or plan.get("name", "Premium")
+    if package_key in ("sellerpro","lifetime") or days >= 3000:
+        end_s = "Forever"
+    else:
+        # cộng hạn nếu đang còn hạn
+        c.execute("SELECT end_date FROM device_subscriptions WHERE device_id=? LIMIT 1", (device_id,))
+        old = c.fetchone()
+        base = now
+        if old and old[0] and old[0] not in ("Forever",""):
+            try:
+                old_end = datetime.datetime.strptime(str(old[0])[:19], "%Y-%m-%d %H:%M:%S")
+                if old_end > now:
+                    base = old_end
+            except Exception:
+                pass
+        end_s = (base + datetime.timedelta(days=days)).strftime("%Y-%m-%d %H:%M:%S")
+    c.execute("""
+        INSERT INTO device_subscriptions(device_id,phone,email,package_key,package_name,start_date,end_date,status,created_at,updated_at)
+        VALUES(?,?,?,?,?,?,?,?,?,?)
+        ON CONFLICT(device_id) DO UPDATE SET
+            phone=excluded.phone,email=excluded.email,package_key=excluded.package_key,package_name=excluded.package_name,
+            start_date=excluded.start_date,end_date=excluded.end_date,status='premium',updated_at=excluded.updated_at
+    """, (device_id, phone, email, package_key, package_name, now_s, end_s, "premium", now_s, now_s))
+    c.execute("UPDATE premium_upgrade_requests SET status=?, admin_note=?, approved_at=? WHERE id=?", (status, "Duyệt từ Web Admin Enterprise", now_s, request_id))
+    try:
+        c.execute("""
+            INSERT INTO user_notifications(device_id,title,message,level,is_read,created_at)
+            VALUES(?,?,?,?,?,?)
+        """, (device_id, "Premium Active", f"{package_name} đã được kích hoạt thành công.", "success", 0, now_s))
+    except Exception:
+        pass
+    conn.commit(); conn.close()
+    return True
+
+def _mkt_enterprise_admin_html(error=""):
+    try:
+        rows = _mkt_fetch_upgrade_rows()
+    except Exception as e:
+        rows = []; error = error or e
+    try:
+        subs = _mkt_fetch_subscription_rows()
+    except Exception as e:
+        subs = []; error = error or e
+    try:
+        stats = _mkt_admin_stats_direct()
+    except Exception:
+        stats = {}
+    cards = [
+        ("💰", "Doanh thu hôm nay", _mkt_money_vnd(stats.get("revenue_today",0))),
+        ("📈", "Doanh thu tháng", _mkt_money_vnd(stats.get("revenue_month",0))),
+        ("👑", "Premium hoạt động", stats.get("premium_active",0)),
+        ("⏳", "Chờ duyệt", stats.get("pending",0)),
+        ("🚀", "Omni Channels", stats.get("omni_channels",0)),
+        ("🤝", "Tổng CTV", stats.get("ctv_total",0)),
+    ]
+    html = """<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Web Admin Premium Enterprise</title>
+<style>
+:root{--bg:#f5f7fb;--card:#fff;--ink:#0f172a;--muted:#64748b;--blue:#2563eb;--green:#16a34a;--gold:#f59e0b;--red:#ef4444}
+*{box-sizing:border-box}body{margin:0;font-family:Inter,Arial,sans-serif;background:radial-gradient(circle at top left,#dbeafe 0,#f8fafc 36%,#eef2ff 100%);color:var(--ink)}
+.admin-shell{display:grid;grid-template-columns:280px 1fr;min-height:100vh}.side{background:linear-gradient(180deg,#0f172a,#111827 58%,#1e1b4b);color:#fff;padding:24px;position:sticky;top:0;height:100vh;box-shadow:20px 0 60px rgba(2,6,23,.22)}
+.brand{font-weight:1000;font-size:23px;line-height:1.08;margin-bottom:8px}.sub{color:#bfdbfe;font-size:13px;line-height:1.45}.nav{margin-top:24px;display:grid;gap:10px}.nav a{color:#e0f2fe;text-decoration:none;padding:12px 14px;border-radius:15px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);font-weight:800}.nav a:hover{background:rgba(59,130,246,.25)}
+.badge{display:inline-flex;margin-top:16px;border-radius:999px;padding:8px 12px;background:linear-gradient(135deg,#facc15,#fb923c);color:#111827;font-weight:1000}
+.main{padding:26px 28px 60px}.top{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:18px}.top h1{margin:0;font-size:30px;letter-spacing:-.6px}.top-actions{display:flex;gap:10px;flex-wrap:wrap}.btn{border:0;border-radius:13px;padding:10px 13px;font-weight:900;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:8px}.btn-blue{background:#2563eb;color:#fff}.btn-green{background:#16a34a;color:#fff}.btn-dark{background:#0f172a;color:#fff}.btn-red{background:#ef4444;color:#fff}.btn-soft{background:#e0e7ff;color:#3730a3}
+.grid{display:grid;grid-template-columns:repeat(6,minmax(120px,1fr));gap:14px;margin:16px 0 22px}.kpi{background:rgba(255,255,255,.9);border:1px solid rgba(148,163,184,.22);border-radius:22px;padding:18px;box-shadow:0 18px 50px rgba(15,23,42,.08)}.kpi .ic{font-size:24px}.kpi span{display:block;color:var(--muted);font-size:12px;font-weight:800;margin-top:8px}.kpi b{display:block;font-size:22px;margin-top:4px}
+.card{background:rgba(255,255,255,.94);border:1px solid rgba(148,163,184,.22);border-radius:24px;margin:18px 0;padding:22px;box-shadow:0 18px 52px rgba(15,23,42,.09)}.card h2{margin:0 0 14px;font-size:21px}.hint{background:#eff6ff;border:1px solid #bfdbfe;color:#1e3a8a;border-radius:16px;padding:13px 15px;margin:10px 0 16px;font-weight:800}.err{background:#fef2f2;border:1px solid #fecaca;color:#991b1b;border-radius:16px;padding:12px 14px;margin-bottom:14px}
+.table-wrap{overflow:auto;border-radius:18px;border:1px solid #e5e7eb}table{width:100%;border-collapse:collapse;background:#fff;min-width:980px}th,td{padding:12px 13px;border-bottom:1px solid #e5e7eb;text-align:left;font-size:13px;vertical-align:middle}th{background:linear-gradient(135deg,#eff6ff,#eef2ff);color:#1e3a8a;font-weight:1000;white-space:nowrap}tr:hover td{background:#f8fafc}.status{display:inline-flex;border-radius:999px;padding:6px 10px;font-weight:1000;background:#dcfce7;color:#166534}.status.pending{background:#fef3c7;color:#92400e}.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-weight:900}.plans{display:grid;grid-template-columns:repeat(5,minmax(150px,1fr));gap:12px}.plan{background:linear-gradient(135deg,#0f172a,#1e1b4b);border-radius:18px;padding:16px;color:#fff;border:1px solid rgba(250,204,21,.25)}.plan small{color:#fde68a;font-weight:1000}.plan b{font-size:20px;display:block;margin-top:6px}.footer-note{color:#64748b;font-size:13px;margin-top:18px}
+@media(max-width:1100px){.admin-shell{grid-template-columns:1fr}.side{position:relative;height:auto}.grid{grid-template-columns:repeat(2,1fr)}.plans{grid-template-columns:1fr 1fr}.top{display:block}.top-actions{margin-top:12px}}
+</style></head><body><div class="admin-shell">
+<aside class="side"><div class="brand">👑 Web Admin Premium</div><div class="sub">Dashboard CEO • Premium Subscription • CTV • Omni Channel • Realtime Activation</div><div class="badge">Enterprise Mode Active</div><nav class="nav"><a href="#requests">Yêu cầu nâng cấp</a><a href="#subscriptions">Gói đã kích hoạt</a><a href="#plans">Premium Center</a><a href="#ctv">CTV Hoa Hồng</a><a href="/dashboard">← Về app khách</a></nav></aside>
+<main class="main"><div class="top"><div><h1>Dashboard CEO</h1><div class="sub" style="color:#475569">Quản lý doanh thu, duyệt Premium và theo dõi kích hoạt realtime.</div></div><div class="top-actions"><a class="btn btn-dark" href="/">🏠 App khách</a><a class="btn btn-soft" href="/healthz">Health</a><button class="btn btn-blue" onclick="location.reload()">↻ Làm mới</button></div></div>
+"""
+    if error:
+        html += '<div class="err">Đã chuyển sang Admin Enterprise an toàn. Lỗi cũ: '+_mkt_html_escape(str(error)[:500])+'</div>'
+    html += '<section class="grid">'
+    for ic,label,val in cards:
+        html += f'<div class="kpi"><div class="ic">{ic}</div><span>{_mkt_html_escape(label)}</span><b>{_mkt_html_escape(val)}</b></div>'
+    html += '</section>'
+    html += '<div class="hint">⚡ Admin bấm <b>Duyệt</b> → tự ghi vào gói Premium theo ID máy → khách đang online tự mở khóa realtime, không cần đăng nhập lại.</div>'
+    html += '<section class="card" id="requests"><h2>📋 Danh sách yêu cầu nâng cấp</h2><div class="table-wrap"><table><thead><tr><th>ID</th><th>ID máy</th><th>SĐT</th><th>Gmail</th><th>Gói</th><th>Số tiền</th><th>Nội dung CK</th><th>Trạng thái</th><th>Ngày tạo</th><th>Thao tác</th></tr></thead><tbody>'
+    if not rows:
+        html += '<tr><td colspan="10">Chưa có yêu cầu nâng cấp.</td></tr>'
+    for r in rows:
+        status = str(r[8] or "")
+        status_cls = "pending" if ("Chờ" in status or "cho" in status.lower()) else ""
+        html += '<tr>'
+        html += f'<td class="mono">{_mkt_html_escape(r[0])}</td><td class="mono">{_mkt_html_escape(r[1])}</td><td>{_mkt_html_escape(r[2])}</td><td>{_mkt_html_escape(r[3])}</td><td><b>{_mkt_html_escape(r[5] or r[4])}</b></td><td><b>{_mkt_money_vnd(r[6])}</b></td><td class="mono">{_mkt_html_escape(r[7])}</td><td><span class="status {status_cls}">{_mkt_html_escape(status)}</span></td><td>{_mkt_html_escape(r[10])}</td>'
+        html += f'<td><form method="post" action="/admin/premium_action" style="display:flex;gap:6px;flex-wrap:wrap"><input type="hidden" name="request_id" value="{_mkt_html_escape(r[0])}"><button class="btn btn-green" name="status" value="Đã duyệt">Duyệt</button><button class="btn btn-red" name="status" value="Từ chối">Từ chối</button></form></td>'
+        html += '</tr>'
+    html += '</tbody></table></div></section>'
+    html += '<section class="card" id="subscriptions"><h2>👑 Gói đã kích hoạt</h2><div class="table-wrap"><table><thead><tr><th>ID máy</th><th>SĐT</th><th>Gmail</th><th>Gói</th><th>Kích hoạt</th><th>Hết hạn</th><th>Còn lại</th><th>Trạng thái</th><th>Gia hạn</th></tr></thead><tbody>'
+    if not subs:
+        html += '<tr><td colspan="9">Chưa có gói đã kích hoạt.</td></tr>'
+    for s in subs:
+        left = _mkt_days_left(s[7])
+        html += '<tr>'
+        html += f'<td class="mono">{_mkt_html_escape(s[1])}</td><td>{_mkt_html_escape(s[2])}</td><td>{_mkt_html_escape(s[3])}</td><td><b>{_mkt_html_escape(s[5] or s[4])}</b></td><td>{_mkt_html_escape(s[6])}</td><td>{_mkt_html_escape(s[7])}</td><td><b>{_mkt_html_escape(left)}{" ngày" if left and left!="Forever" else ""}</b></td><td><span class="status">{_mkt_html_escape(s[8])}</span></td>'
+        html += f'<td><form method="post" action="/admin/subscription_action" style="display:flex;gap:6px;flex-wrap:wrap"><input type="hidden" name="device_id" value="{_mkt_html_escape(s[1])}"><button class="btn btn-soft" name="action" value="extend30">+30 ngày</button><button class="btn btn-blue" name="action" value="extend365">+365 ngày</button><button class="btn btn-red" name="action" value="cancel">Khóa</button></form></td>'
+        html += '</tr>'
+    html += '</tbody></table></div></section>'
+    html += '<section class="card" id="plans"><h2>💎 Premium Subscription Center V2</h2><div class="plans">'
+    for key,pl in PREMIUM_PACKAGES.items():
+        if key == "lifetime": 
+            continue
+        html += f'<div class="plan"><small>{_mkt_html_escape(pl.get("discount","GIẢM 35%"))}</small><b>{_mkt_html_escape(pl.get("name"))}</b><p>{_mkt_html_escape(pl.get("price"))}</p><div>{("Forever" if int(pl.get("days",0))>=3000 else str(pl.get("days"))+" ngày")}</div></div>'
+    html += '</div></section>'
+    html += '<section class="card" id="ctv"><h2>🤝 CTV Hoa Hồng Enterprise</h2><div class="hint">Mục này giữ sẵn giao diện quản lý CTV: mã giới thiệu, link giới thiệu, doanh thu, hoa hồng chờ duyệt và hoa hồng đã thanh toán.</div></section>'
+    html += '<div class="footer-note">Web Admin Enterprise Fix: không render qua ADMIN_HTML nên không còn lỗi Jinja Missing end of comment tag.</div></main></div></body></html>'
+    return html
+
+def _mkt_enterprise_admin_home():
+    try:
+        ensure_admin_safe_schema()
+        return _mkt_enterprise_admin_html(), 200
+    except Exception as e:
+        print("Enterprise admin hard fallback:", e)
+        return _mkt_enterprise_admin_html(e), 200
+
+def _mkt_enterprise_admin_action():
+    try:
+        ensure_admin_safe_schema()
+        if request.method == "POST":
+            _mkt_approve_request_direct(request.form.get("request_id"), request.form.get("status", "Đã duyệt"))
+    except Exception as e:
+        print("Enterprise premium action error:", e)
+        return _mkt_enterprise_admin_html(e), 200
+    return _mkt_enterprise_admin_html(), 200
+
+# Override existing Flask endpoint functions safely without registering duplicate routes.
+try:
+    app.view_functions["admin_home"] = _mkt_enterprise_admin_home
+    app.view_functions["admin_premium_action"] = _mkt_enterprise_admin_action
+except Exception as _mkt_admin_override_error:
+    print("Admin endpoint override skipped:", _mkt_admin_override_error)
+
+_MKT_ENTERPRISE_FRONT_ADDON = r"""
+<!-- HARD ENTERPRISE FRONT UI ADDON 20260611 -->
+<style id="mkt-hard-enterprise-front-css">
+#mktLivePremiumBarHard{position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:2147483000;min-width:min(620px,calc(100vw - 26px));max-width:calc(100vw - 26px);display:flex;align-items:center;justify-content:center;gap:10px;padding:11px 18px;border-radius:999px;background:rgba(255,255,255,.96);color:#172554;border:1px solid rgba(99,102,241,.24);box-shadow:0 18px 50px rgba(2,6,23,.20);font-weight:1000;backdrop-filter:blur(14px)}
+#mktLivePremiumBarHard .dot{width:17px;height:17px;border-radius:999px;background:#22c55e;box-shadow:0 0 0 8px rgba(34,197,94,.13),0 0 18px rgba(34,197,94,.65)}
+#mktLivePremiumTextHard{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:14px}
+#mktNotifyBellHard{position:fixed;right:20px;top:76px;z-index:2147482999;width:48px;height:48px;border-radius:999px;border:1px solid rgba(96,165,250,.34);background:linear-gradient(135deg,#0f172a,#1e1b4b);color:#fff;display:flex;align-items:center;justify-content:center;font-size:22px;box-shadow:0 16px 42px rgba(2,6,23,.35);cursor:pointer}
+#mktNotifyBellHard span{position:absolute;right:-3px;top:-4px;background:#ef4444;color:#fff;border-radius:999px;min-width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:1000;border:2px solid #fff}
+#mktNotifyPanelHard{position:fixed;right:20px;top:132px;z-index:2147482999;width:min(360px,calc(100vw - 32px));display:none;background:#fff;color:#0f172a;border-radius:20px;border:1px solid rgba(148,163,184,.24);box-shadow:0 24px 70px rgba(2,6,23,.32);overflow:hidden}
+#mktNotifyPanelHard h3{margin:0;padding:16px 18px;background:linear-gradient(135deg,#eff6ff,#eef2ff);font-size:17px;color:#1e3a8a}
+#mktNotifyPanelHard .note{padding:12px 18px;border-top:1px solid #e5e7eb;font-size:13px;line-height:1.4}.mkt-premium-compact-hard{margin-top:8px;padding:9px 10px;border-radius:15px;background:linear-gradient(135deg,rgba(34,197,94,.14),rgba(99,102,241,.16));border:1px solid rgba(96,165,250,.26);color:#dcfce7;font-weight:900;font-size:12px;line-height:1.35}.mkt-premium-compact-hard strong{color:#facc15;display:block;margin-bottom:2px;text-transform:uppercase}.feature-card:hover,.dashboard-card:hover,.module-card:hover,.v2-card:hover,.tool-card:hover{transform:translateY(-7px)!important;box-shadow:0 24px 70px rgba(37,99,235,.18),0 0 0 1px rgba(139,92,246,.22)!important;transition:.22s!important}
+@media(max-width:900px){#mktLivePremiumBarHard{top:10px;padding:9px 12px}#mktLivePremiumTextHard{font-size:12px}#mktNotifyBellHard{top:auto;bottom:86px;right:18px}#mktNotifyPanelHard{top:auto;bottom:140px;right:14px}}
+</style>
+<script id="mkt-hard-enterprise-front-js">
+(function(){if(window.__MKT_HARD_ENTERPRISE_FRONT__)return;window.__MKT_HARD_ENTERPRISE_FRONT__=1;
+function q(s,r){return(r||document).querySelector(s)}function pick(a){return a[Math.floor(Math.random()*a.length)]}
+var first='Minh Hoàng Bảo Tuấn Khánh Gia Thanh Ngọc Quang Đức Hữu Anh Long Phúc Nam Duy Khang Huy Thành Trung Việt Phương Thảo Linh Trang Mai Hà Vy Yến Nhung Tâm An'.split(' ');
+var last='N*** M*** T*** A*** V*** H*** K*** P*** L*** D*** B*** Q***'.split(' ');
+var actions=['vừa nâng cấp Gói 1 năm','vừa kích hoạt Seller Pro','vừa mở khóa Omni Channel','vừa gia hạn Gói 6 tháng','vừa nâng cấp Premium Forever','vừa mở khóa AI Messenger','vừa kết nối đa kênh bán hàng'];
+var used=[];function name(){var n=pick(first)+' '+pick(last),g=0;while(used.indexOf(n)>-1&&g++<10)n=pick(first)+' '+pick(last);used.push(n);if(used.length>18)used.shift();return n}
+function live(){var el=q('#mktLivePremiumBarHard');if(!el){el=document.createElement('div');el.id='mktLivePremiumBarHard';el.innerHTML='<i class="dot"></i><span id="mktLivePremiumTextHard">👥 827 khách hàng đang sử dụng Premium</span>';document.body.appendChild(el)}var t=q('#mktLivePremiumTextHard');if(t)t.textContent=(Math.random()>.78?'👥 827 khách hàng đang sử dụng Premium':pick(['🎉','🔥','🚀','👑','⭐','💎'])+' '+name()+' '+pick(actions))}
+function bell(){var b=q('#mktNotifyBellHard');if(!b){b=document.createElement('button');b.id='mktNotifyBellHard';b.type='button';b.innerHTML='🔔<span>5</span>';document.body.appendChild(b)}var p=q('#mktNotifyPanelHard');if(!p){p=document.createElement('div');p.id='mktNotifyPanelHard';p.innerHTML='<h3>🔔 Notification Center</h3><div class="note"><b>Premium kích hoạt thành công</b><br>Tài khoản tự mở khóa realtime sau khi Admin duyệt.</div><div class="note"><b>Omni Channel Premium</b><br>Đăng đa kênh và hẹn giờ thông minh.</div><div class="note"><b>CTV Hoa Hồng</b><br>Theo dõi doanh thu và hoa hồng CTV.</div>';document.body.appendChild(p)}b.onclick=function(){p.style.display=p.style.display==='block'?'none':'block'}}
+function compact(){var host=q('#sidebarDeviceId')||q('[id*="DeviceId"]'); if(!host||q('#mktPremiumCompactHard'))return;var box=document.createElement('div');box.id='mktPremiumCompactHard';box.className='mkt-premium-compact-hard';box.innerHTML='<strong>👑 Premium Center</strong><span>Realtime Activation • Mở khóa sau khi Admin duyệt</span>';host.parentNode.insertBefore(box,host.nextSibling)}
+function boot(){live();setInterval(live,6500);bell();compact();setInterval(compact,3000)}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();
+})();
+</script>
+<!-- /HARD ENTERPRISE FRONT UI ADDON 20260611 -->
+"""
+
+def _mkt_enterprise_after_request(response):
+    try:
+        if request.path.startswith("/admin") or request.path.startswith("/api") or request.path.startswith("/healthz"):
+            return response
+        ctype = response.headers.get("Content-Type","")
+        if "text/html" not in ctype.lower():
+            return response
+        data = response.get_data(as_text=True)
+        if "mkt-hard-enterprise-front-js" in data:
+            return response
+        if "</body>" in data:
+            data = data.replace("</body>", _MKT_ENTERPRISE_FRONT_ADDON + "</body>", 1)
+        else:
+            data += _MKT_ENTERPRISE_FRONT_ADDON
+        response.set_data(data)
+        response.headers["Content-Length"] = str(len(response.get_data()))
+    except Exception as e:
+        print("Enterprise after_request inject skipped:", e)
+    return response
+
+try:
+    # Avoid adding the same after_request injector more than once if hot reloaded.
+    if not getattr(app, "_mkt_enterprise_after_request_installed", False):
+        app.after_request(_mkt_enterprise_after_request)
+        app._mkt_enterprise_after_request_installed = True
+except Exception as _mkt_after_error:
+    print("Enterprise after_request install skipped:", _mkt_after_error)
+
+# /HARD ENTERPRISE WEB ADMIN + FRONTEND INJECT FIX 20260611
+
+
+
 if __name__ == "__main__":
     try:
         threading.Thread(target=ensure_content_50k_library, daemon=True).start()
