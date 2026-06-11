@@ -4947,6 +4947,11 @@ function closeLockedFeature(){
     <b>AI Marketing Director</b>
     <span>Lập kế hoạch 30 ngày, ads, content, funnel và KPI bán hàng.</span>
   </div>
+  <div class="app-quick-card" onclick="return openModule('affiliate_center')">
+    <div class="app-ico">🤝</div>
+    <b>CTV Hoa Hồng</b>
+    <span>Tạo mã CTV, link giới thiệu, theo dõi doanh thu và hoa hồng.</span>
+  </div>
   <div class="app-quick-card" onclick="location.href='#premium'">
     <div class="app-ico">💎</div>
     <b>Premium</b>
@@ -4991,6 +4996,7 @@ function closeLockedFeature(){
     <div class="module-card" onclick="return openModule('crm_sales')"><div class="icon">📋</div><h3>CRM Kanban</h3><p>Quản lý khách theo các cột: mới, tư vấn, báo giá, theo dõi, đã chốt.</p><span class="module-pill">Mở CRM</span></div>
     <div class="module-card" onclick="return openModule('marketing_director')"><div class="icon">🧠</div><h3>AI Marketing Director</h3><p>Lập kế hoạch 30 ngày, Ads, Content, Funnel, KPI và chiến lược tăng doanh thu.</p><span class="module-pill">Mở Marketing Director</span></div>
     <div class="module-card" onclick="return openModule('ai_studio')"><div class="icon">🎨</div><h3>AI Studio</h3><p>Gộp AI Facebook, AI Image, AI Video, AI Giọng Nói và AI Livestream vào một khu vực.</p><span class="module-pill">Mở AI Studio</span></div>
+    <div class="module-card" onclick="return openModule('affiliate_center')"><div class="icon">🤝</div><h3>CTV Hoa Hồng</h3><p>Tạo link giới thiệu, xem doanh thu, hoa hồng và lịch sử khách nâng cấp.</p><span class="module-pill">Mở CTV</span></div>
     <div class="module-card" onclick="return openModule('premium')"><div class="icon">💎</div><h3>Premium</h3><p>Mở khóa hạn mức cao hơn, module nâng cao và hỗ trợ ưu tiên.</p><span class="module-pill">Xem gói</span></div>
   </div>
 </section>
@@ -7683,16 +7689,11 @@ button[aria-label="CTV"]{
   }
   function ensureCtvBtn(){
     var btn=q('#mktMobileCtvLiveBtn');
-    if(!btn){
-      btn=document.createElement('button');
-      btn.id='mktMobileCtvLiveBtn';
-      btn.type='button';
-      btn.innerHTML='<span class="mkt-ctv-live-dot"></span><span class="mkt-ctv-live-ico">🤝</span><span>CTV</span>';
-      document.body.appendChild(btn);
-    }
-    btn.onclick=openCTV;
-    btn.style.display=mobile()?'flex':'none';
-    return btn;
+    if(btn && btn.parentNode) btn.parentNode.removeChild(btn);
+    qa('#mktMobileCtvQuick,#mktMobileCtvQuickRestore,#mobileCtvQuickBtn').forEach(function(el){
+      try{el.style.display='none';el.style.visibility='hidden';el.style.pointerEvents='none';}catch(e){}
+    });
+    return null;
   }
   function fixSendLabels(){
     qa('button,.mkt-fix-send,.bot-send-btn').forEach(function(el){
@@ -7770,6 +7771,28 @@ button[aria-label="CTV"]{
 })();
 </script>
 <!-- /FINAL PATCH 20260611 -->
+
+
+<!-- FINAL PATCH 20260611: CTV inside main menu only - no floating CTV on mobile -->
+<style id="mkt-ctv-inside-menu-only-final">
+  #mktMobileCtvLiveBtn,#mktMobileCtvQuick,#mktMobileCtvQuickRestore,#mobileCtvQuickBtn,button[aria-label="CTV"]{
+    display:none!important;visibility:hidden!important;opacity:0!important;pointer-events:none!important;
+  }
+  a[href="#affiliate_center"],a[data-module="affiliate_center"],[data-aff-menu="1"]{
+    cursor:pointer!important;pointer-events:auto!important;
+  }
+</style>
+<script id="mkt-ctv-inside-menu-only-final-js">
+(function(){
+  function qsa(s){return Array.prototype.slice.call(document.querySelectorAll(s))}
+  function hideFloatingCtv(){qsa('#mktMobileCtvLiveBtn,#mktMobileCtvQuick,#mktMobileCtvQuickRestore,#mobileCtvQuickBtn,button[aria-label="CTV"]').forEach(function(el){try{el.remove()}catch(e){el.style.display='none'}})}
+  function openCtv(){try{if(typeof window.openModule==='function') return window.openModule('affiliate_center')}catch(e){} location.hash='affiliate_center'; return false}
+  window.openCTVInsideMenu=openCtv;
+  document.addEventListener('click',function(e){var card=e.target.closest&&e.target.closest('[data-open-ctv],a[href="#affiliate_center"],[data-module="affiliate_center"],[data-aff-menu="1"]'); if(card){e.preventDefault();openCtv();}},true);
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',hideFloatingCtv);else hideFloatingCtv();
+  setInterval(hideFloatingCtv,1200);
+})();
+</script>
 
 </body>
 </html>
@@ -10494,6 +10517,28 @@ ADMIN_HTML = """
 })();
 </script>
 <!-- /FINAL FIX 20260611C -->
+
+
+<!-- FINAL PATCH 20260611: CTV inside main menu only - no floating CTV on mobile -->
+<style id="mkt-ctv-inside-menu-only-final">
+  #mktMobileCtvLiveBtn,#mktMobileCtvQuick,#mktMobileCtvQuickRestore,#mobileCtvQuickBtn,button[aria-label="CTV"]{
+    display:none!important;visibility:hidden!important;opacity:0!important;pointer-events:none!important;
+  }
+  a[href="#affiliate_center"],a[data-module="affiliate_center"],[data-aff-menu="1"]{
+    cursor:pointer!important;pointer-events:auto!important;
+  }
+</style>
+<script id="mkt-ctv-inside-menu-only-final-js">
+(function(){
+  function qsa(s){return Array.prototype.slice.call(document.querySelectorAll(s))}
+  function hideFloatingCtv(){qsa('#mktMobileCtvLiveBtn,#mktMobileCtvQuick,#mktMobileCtvQuickRestore,#mobileCtvQuickBtn,button[aria-label="CTV"]').forEach(function(el){try{el.remove()}catch(e){el.style.display='none'}})}
+  function openCtv(){try{if(typeof window.openModule==='function') return window.openModule('affiliate_center')}catch(e){} location.hash='affiliate_center'; return false}
+  window.openCTVInsideMenu=openCtv;
+  document.addEventListener('click',function(e){var card=e.target.closest&&e.target.closest('[data-open-ctv],a[href="#affiliate_center"],[data-module="affiliate_center"],[data-aff-menu="1"]'); if(card){e.preventDefault();openCtv();}},true);
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',hideFloatingCtv);else hideFloatingCtv();
+  setInterval(hideFloatingCtv,1200);
+})();
+</script>
 
 </body></html>
 """
