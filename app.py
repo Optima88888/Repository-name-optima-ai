@@ -22,7 +22,7 @@ except Exception:
 
 load_dotenv()
 
-APP_TITLE = "Marketing Automation Pro"
+APP_TITLE = "GPTMini.Pro - Công Cụ Marketing Automation Thông Minh"
 DB = "marketing_automation_pro_v11.db"
 UPLOAD_DIR = "uploads"
 REPORT_DIR = "reports"
@@ -2729,12 +2729,22 @@ HTML = r"""
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>{{ title }}</title>
+<title>GPTMini.Pro - Công Cụ Marketing Automation Thông Minh</title>
+<meta name="title" content="GPTMini.Pro - Công Cụ Marketing Automation Thông Minh">
+<meta name="description" content="Nền tảng AI Marketing Automation giúp quản lý Fanpage, Group, AI Comment, AI Messenger, CRM Kanban, Content AI và Automation bán hàng đa kênh.">
+<meta name="robots" content="index,follow,max-image-preview:large">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="GPTMini.Pro">
+<meta property="og:title" content="GPTMini.Pro - Công Cụ Marketing Automation Thông Minh">
+<meta property="og:description" content="Giải pháp AI Marketing Automation dành cho cá nhân, shop online và doanh nghiệp.">
+<meta property="og:url" content="https://gptmini.pro/">
+<meta name="twitter:card" content="summary_large_image">
 
 <meta name="theme-color" content="#2563eb">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="GPT MKT Pro">
+<meta name="apple-mobile-web-app-title" content="GPTMini.Pro">
+<link rel="canonical" href="https://gptmini.pro/">
 <link rel="manifest" href="/manifest.json">
 <link rel="apple-touch-icon" href="/static/icon-192.png">
 
@@ -7031,7 +7041,7 @@ if ('serviceWorker' in navigator) {
 
 <script>
 function showInstallGuide(){
-  alert("Cách cài App Mini:\\n\\nAndroid Chrome: bấm dấu 3 chấm → Thêm vào màn hình chính.\\n\\niPhone Safari: bấm Chia sẻ → Thêm vào MH chính.\\n\\nSau đó mở Mkt Automation Pro V2 như một app.");
+  alert("Cách cài App Mini:\\n\\nAndroid Chrome: bấm dấu 3 chấm → Thêm vào màn hình chính.\\n\\niPhone Safari: bấm Chia sẻ → Thêm vào MH chính.\\n\\nSau đó mở GPTMini.Pro như một app.");
 }
 (function(){
   function planKeyFromText(text){
@@ -7948,8 +7958,8 @@ function dropKanban(ev){ ev.preventDefault(); const col=ev.currentTarget; if(dra
   window.openModule=showSection;
   window.visibleSection=showSection;
   document.addEventListener('click',function(e){var a=e.target.closest&&e.target.closest('.v2-nav-link[href^="#"],.app-quick-card[onclick],.module-card[onclick]');if(!a||a.classList.contains('app-quick-card')||a.classList.contains('module-card'))return;var id=a.getAttribute('data-module')||a.getAttribute('href');e.preventDefault();e.stopPropagation();if(e.stopImmediatePropagation)e.stopImmediatePropagation();return showSection(id)},true);
-  function ensureSheet(){var old=qs('#mktInstallSheetBackdrop');if(old)return old;var wrap=document.createElement('div');wrap.id='mktInstallSheetBackdrop';wrap.className='mkt-install-sheet-backdrop';wrap.innerHTML='<div class="mkt-install-sheet" role="dialog" aria-modal="true"><h3>📱 Cài GPT MKT Pro vào điện thoại</h3><p id="mktInstallGuideText"></p><div class="mkt-install-actions"><button type="button" class="mkt-install-now" id="mktInstallNowBtn">Cài ngay</button><button type="button" class="mkt-install-close" id="mktInstallCloseBtn">Đóng</button></div></div>';document.body.appendChild(wrap);qs('#mktInstallCloseBtn',wrap).addEventListener('click',function(){wrap.classList.remove('show')});wrap.addEventListener('click',function(e){if(e.target===wrap)wrap.classList.remove('show')});qs('#mktInstallNowBtn',wrap).addEventListener('click',runInstall);return wrap}
-  function guideText(){if(deferredPrompt)return 'Bấm <b>Cài ngay</b>, sau đó chọn <b>Cài đặt</b> để đưa GPT MKT Pro ra màn hình chính.'; if(isIOS)return '<b>iPhone Safari:</b><br>1. Bấm nút <b>Chia sẻ</b> ở thanh dưới.<br>2. Chọn <b>Thêm vào màn hình chính</b>.<br>3. Bấm <b>Thêm</b>.'; if(isAndroid)return '<b>Android Chrome:</b><br>Nếu chưa hiện popup cài đặt, bấm menu <b>⋮</b> góc phải trình duyệt → chọn <b>Cài đặt ứng dụng</b> hoặc <b>Thêm vào màn hình chính</b>.'; return 'Mở website trên điện thoại bằng Chrome Android hoặc Safari iPhone để cài vào màn hình chính.'}
+  function ensureSheet(){var old=qs('#mktInstallSheetBackdrop');if(old)return old;var wrap=document.createElement('div');wrap.id='mktInstallSheetBackdrop';wrap.className='mkt-install-sheet-backdrop';wrap.innerHTML='<div class="mkt-install-sheet" role="dialog" aria-modal="true"><h3>📱 Cài GPTMini.Pro vào điện thoại</h3><p id="mktInstallGuideText"></p><div class="mkt-install-actions"><button type="button" class="mkt-install-now" id="mktInstallNowBtn">Cài ngay</button><button type="button" class="mkt-install-close" id="mktInstallCloseBtn">Đóng</button></div></div>';document.body.appendChild(wrap);qs('#mktInstallCloseBtn',wrap).addEventListener('click',function(){wrap.classList.remove('show')});wrap.addEventListener('click',function(e){if(e.target===wrap)wrap.classList.remove('show')});qs('#mktInstallNowBtn',wrap).addEventListener('click',runInstall);return wrap}
+  function guideText(){if(deferredPrompt)return 'Bấm <b>Cài ngay</b>, sau đó chọn <b>Cài đặt</b> để đưa GPTMini.Pro ra màn hình chính.'; if(isIOS)return '<b>iPhone Safari:</b><br>1. Bấm nút <b>Chia sẻ</b> ở thanh dưới.<br>2. Chọn <b>Thêm vào màn hình chính</b>.<br>3. Bấm <b>Thêm</b>.'; if(isAndroid)return '<b>Android Chrome:</b><br>Nếu chưa hiện popup cài đặt, bấm menu <b>⋮</b> góc phải trình duyệt → chọn <b>Cài đặt ứng dụng</b> hoặc <b>Thêm vào màn hình chính</b>.'; return 'Mở website trên điện thoại bằng Chrome Android hoặc Safari iPhone để cài vào màn hình chính.'}
   function openGuide(){var w=ensureSheet();qs('#mktInstallGuideText',w).innerHTML=guideText();qs('#mktInstallNowBtn',w).textContent=deferredPrompt?'Cài ngay':'Đã hiểu';w.classList.add('show')}
   async function runInstall(e){if(e){e.preventDefault();e.stopPropagation()}if(standalone()){document.body.classList.add('mkt-app-installed');return false}if(deferredPrompt){try{deferredPrompt.prompt();await deferredPrompt.userChoice}catch(_e){}deferredPrompt=null;window.__mktDeferredPrompt=null;var w=qs('#mktInstallSheetBackdrop');if(w)w.classList.remove('show');return false}openGuide();return false}
   function buildMobileInstall(){if(!isMobile||standalone()){document.body.classList.add('mkt-app-installed');return}if(qs('#mktMobileInstallMenu'))return;var sidebar=qs('.sidebar')||qs('aside')||qs('nav');if(!sidebar)return;var item=document.createElement('button');item.type='button';item.id='mktMobileInstallMenu';item.className='mkt-mobile-install-menu';item.innerHTML='<span class="mkt-install-phone-icon">📱</span><span><b>Cài ứng dụng</b><small>Bấm để thêm vào màn hình điện thoại</small></span>';var nav=qs('.mkt-clean-nav',sidebar)||qs('.nav',sidebar);if(nav)nav.insertBefore(item,nav.firstChild);else sidebar.appendChild(item);item.addEventListener('click',runInstall,true)}
@@ -7964,7 +7974,7 @@ function dropKanban(ev){ ev.preventDefault(); const col=ev.currentTarget; if(dra
 <!-- FINAL MOBILE APP INSTALL 20260610: phone-only download button in mobile menu + floating shortcut -->
 
 
-<!-- MOBILE PWA TOP DOWNLOAD FINAL 20260610: top blue GPT MKT download button + mobile responsive fix -->
+<!-- MOBILE PWA TOP DOWNLOAD FINAL 20260610: top blue GPTMini download button + mobile responsive fix -->
 <style id="mkt-mobile-top-download-final-css">
   /* Dọn toàn bộ nút tải cũ để không còn nút nổi dưới màn hình */
   #mktInstallFloat,#mktInstallPanel,#mktPhoneInstallFloat,#mktPhoneInstallEntry,#mktMobileInstallMenu,
@@ -8021,7 +8031,7 @@ function dropKanban(ev){ ev.preventDefault(); const col=ev.currentTarget; if(dra
     if(!mobile() || standalone()){document.body.classList.add('mkt-app-installed');return null;}
     var old=qs('#mktTopDownloadBar'); if(old) return old;
     var btn=document.createElement('button'); btn.type='button'; btn.id='mktTopDownloadBar';
-    btn.innerHTML='<span class="mkt-dl-dot"></span><span>GPT MKT</span><small>Tải xuống</small>';
+    btn.innerHTML='<span class="mkt-dl-dot"></span><span>GPTMini</span><small>Tải xuống</small>';
     btn.addEventListener('click',runInstall,true);
     document.body.appendChild(btn);
     return btn;
@@ -8029,7 +8039,7 @@ function dropKanban(ev){ ev.preventDefault(); const col=ev.currentTarget; if(dra
   function ensureSheet(){
     var old=qs('#mktTopInstallSheet'); if(old) return old;
     var wrap=document.createElement('div'); wrap.id='mktTopInstallSheet';
-    wrap.innerHTML='<div class="mkt-top-install-box" role="dialog" aria-modal="true"><h3>📱 Cài GPT MKT Pro</h3><p id="mktTopInstallText"></p><div class="mkt-top-install-actions"><button type="button" id="mktTopInstallNow">Cài ngay</button><button type="button" id="mktTopInstallClose">Đóng</button></div></div>';
+    wrap.innerHTML='<div class="mkt-top-install-box" role="dialog" aria-modal="true"><h3>📱 Cài GPTMini.Pro</h3><p id="mktTopInstallText"></p><div class="mkt-top-install-actions"><button type="button" id="mktTopInstallNow">Cài ngay</button><button type="button" id="mktTopInstallClose">Đóng</button></div></div>';
     document.body.appendChild(wrap);
     qs('#mktTopInstallClose',wrap).addEventListener('click',function(){wrap.classList.remove('show')});
     wrap.addEventListener('click',function(e){if(e.target===wrap)wrap.classList.remove('show')});
@@ -8060,7 +8070,7 @@ function dropKanban(ev){ ev.preventDefault(); const col=ev.currentTarget; if(dra
 
 
 
-<!-- FINAL MOBILE QUICK ACTIONS 20260610: compact left GPT MKT download + CTV, fixed click PWA -->
+<!-- FINAL MOBILE QUICK ACTIONS 20260610: compact left GPTMini download + CTV, fixed click PWA -->
 <style id="mkt-mobile-quick-actions-final-css">
   #mktMobileQuickActions{display:none!important;}
   @media(max-width:768px){
@@ -8158,7 +8168,7 @@ function dropKanban(ev){ ev.preventDefault(); const col=ev.currentTarget; if(dra
     var wrap=document.createElement('div');
     wrap.id='mktQuickInstallSheet';
     wrap.style.cssText='position:fixed!important;inset:0!important;z-index:2147483640!important;display:none!important;align-items:flex-end!important;justify-content:center!important;background:rgba(2,6,23,.58)!important;backdrop-filter:blur(8px)!important;';
-    wrap.innerHTML='<div style="width:min(430px,100vw);background:#fff;color:#0f172a;border-radius:24px 24px 0 0;padding:20px 18px 18px;box-shadow:0 -24px 70px rgba(15,23,42,.42);font-family:system-ui,-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif"><h3 style="margin:0 0 8px;font-size:20px;line-height:1.15;font-weight:1000;color:#0f172a">📱 Cài GPT MKT Pro</h3><p id="mktQuickInstallText" style="margin:8px 0;font-size:14px;line-height:1.55;color:#334155;font-weight:760"></p><div style="display:flex;gap:10px;margin-top:15px"><button type="button" id="mktQuickInstallNow" style="flex:1;border:0;border-radius:999px;padding:13px 14px;font-size:14px;font-weight:1000;cursor:pointer;color:#fff;background:linear-gradient(135deg,#2563eb,#7c3aed)">Cài ngay</button><button type="button" id="mktQuickInstallClose" style="flex:1;border:0;border-radius:999px;padding:13px 14px;font-size:14px;font-weight:1000;cursor:pointer;color:#334155;background:#e5e7eb">Đóng</button></div></div>';
+    wrap.innerHTML='<div style="width:min(430px,100vw);background:#fff;color:#0f172a;border-radius:24px 24px 0 0;padding:20px 18px 18px;box-shadow:0 -24px 70px rgba(15,23,42,.42);font-family:system-ui,-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif"><h3 style="margin:0 0 8px;font-size:20px;line-height:1.15;font-weight:1000;color:#0f172a">📱 Cài GPTMini.Pro</h3><p id="mktQuickInstallText" style="margin:8px 0;font-size:14px;line-height:1.55;color:#334155;font-weight:760"></p><div style="display:flex;gap:10px;margin-top:15px"><button type="button" id="mktQuickInstallNow" style="flex:1;border:0;border-radius:999px;padding:13px 14px;font-size:14px;font-weight:1000;cursor:pointer;color:#fff;background:linear-gradient(135deg,#2563eb,#7c3aed)">Cài ngay</button><button type="button" id="mktQuickInstallClose" style="flex:1;border:0;border-radius:999px;padding:13px 14px;font-size:14px;font-weight:1000;cursor:pointer;color:#334155;background:#e5e7eb">Đóng</button></div></div>';
     document.body.appendChild(wrap);
     qs('#mktQuickInstallClose',wrap).onclick=function(){wrap.style.display='none'};
     wrap.addEventListener('click',function(e){if(e.target===wrap)wrap.style.display='none'});
@@ -8169,7 +8179,7 @@ function dropKanban(ev){ ev.preventDefault(); const col=ev.currentTarget; if(dra
     var w=ensureSheet();
     var p=qs('#mktQuickInstallText',w);
     if(isIOS()){
-      p.innerHTML='<b>Trên iPhone:</b><br>1. Bấm nút <b>Chia sẻ</b> ở thanh dưới/trên trình duyệt.<br>2. Chọn <b>Thêm vào màn hình chính</b>.<br>3. Bấm <b>Thêm</b> để đưa GPT MKT ra màn hình.';
+      p.innerHTML='<b>Trên iPhone:</b><br>1. Bấm nút <b>Chia sẻ</b> ở thanh dưới/trên trình duyệt.<br>2. Chọn <b>Thêm vào màn hình chính</b>.<br>3. Bấm <b>Thêm</b> để đưa GPTMini ra màn hình.';
       var n=qs('#mktQuickInstallNow',w); if(n) n.textContent='Đã hiểu';
     }else{
       p.innerHTML='<b>Trên Android Chrome:</b><br>Bấm <b>Cài ngay</b>. Nếu chưa hiện popup, chọn menu <b>⋮</b> → <b>Thêm vào màn hình chính</b>.';
@@ -8182,7 +8192,7 @@ function dropKanban(ev){ ev.preventDefault(); const col=ev.currentTarget; if(dra
     if(standalone()){document.body.classList.add('mkt-app-installed');return false;}
     var dp = deferredPrompt || window.__mktDeferredPrompt;
     if(dp){
-      try{dp.prompt(); await dp.userChoice;}catch(_e){}
+      try{var choice=await (dp.prompt(), dp.userChoice); if(choice && choice.outcome && choice.outcome!=='accepted'){setTimeout(guide,300);}}catch(_e){setTimeout(guide,300);}
       deferredPrompt=null; window.__mktDeferredPrompt=null;
       var w=qs('#mktQuickInstallSheet'); if(w) w.style.display='none';
       return false;
@@ -8202,7 +8212,7 @@ function dropKanban(ev){ ev.preventDefault(); const col=ev.currentTarget; if(dra
     if(!isMobile() || standalone()){document.body.classList.add('mkt-app-installed');return;}
     var old=qs('#mktMobileQuickActions'); if(old) return;
     var box=document.createElement('div'); box.id='mktMobileQuickActions';
-    box.innerHTML='<button type="button" id="mktMobileInstallQuick" aria-label="Tải GPT MKT"><span class="mkt-q-dot"></span><span class="mkt-q-text"><span class="mkt-q-title">GPT MKT</span><span class="mkt-q-sub">Tải xuống</span></span></button>';
+    box.innerHTML='<button type="button" id="mktMobileInstallQuick" aria-label="Tải GPTMini"><span class="mkt-q-dot"></span><span class="mkt-q-text"><span class="mkt-q-title">GPTMini</span><span class="mkt-q-sub">Tải xuống</span></span></button>';
     document.body.appendChild(box);
     qs('#mktMobileInstallQuick',box).addEventListener('click',runInstall,true);
   }
@@ -8290,8 +8300,8 @@ button[aria-label="CTV"]{
   window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();window.mktDeferredInstallPrompt=e;window.__mktDeferredPrompt=e;var st=byId('installStatus');if(st)st.innerText='Thiết bị này đã sẵn sàng cài đặt ứng dụng.';},{capture:true});
   window.showInstallGuide=async function(){
     var st=byId('installStatus');
-    if(standalone()){if(st)st.innerText='App đã được cài đặt trên thiết bị này.';alert('Mkt Automation Pro đã được cài đặt trên thiết bị này.');return false;}
-    var title='Cài đặt Mkt Automation Pro';
+    if(standalone()){if(st)st.innerText='App đã được cài đặt trên thiết bị này.';alert('GPTMini.Pro đã được cài đặt trên thiết bị này.');return false;}
+    var title='Cài đặt GPTMini.Pro';
     var intro='✔ Dùng như app trên điện thoại\n✔ Không cần mở trình duyệt\n✔ Nhận thông báo nhanh\n✔ Truy cập chỉ 1 chạm';
     var dp=window.mktDeferredInstallPrompt||window.__mktDeferredPrompt;
     if(dp){
@@ -8303,9 +8313,9 @@ button[aria-label="CTV"]{
     if(st)st.innerText='Trình duyệt chưa bật hộp cài đặt tự động. Làm theo hướng dẫn vừa hiển thị.';
     alert(title+'\n\n'+intro+'\n\n'+msg);return false;
   };
-  window.addEventListener('appinstalled',function(){var st=byId('installStatus');if(st)st.innerText='Đã cài đặt Mkt Automation Pro thành công.';document.body.classList.add('mkt-app-installed')});
+  window.addEventListener('appinstalled',function(){var st=byId('installStatus');if(st)st.innerText='Đã cài đặt GPTMini.Pro thành công.';document.body.classList.add('mkt-app-installed')});
   function openCTV(){try{if(typeof window.openModule==='function'){window.openModule('affiliate_center');return false}}catch(e){} location.hash='affiliate_center';return false}
-  function buildMobileInstall(){if(!mobile()||standalone())return;if(byId('mktMobileQuickActionsRestore'))return;var box=document.createElement('div');box.id='mktMobileQuickActionsRestore';box.innerHTML='<button type="button" id="mktMobileInstallQuickRestore"><span class="dot"></span><span class="txt"><b>GPT MKT</b><span class="mkt-install-sub">Tải xuống</span></span></button>';document.body.appendChild(box);byId('mktMobileInstallQuickRestore').onclick=window.showInstallGuide;}
+  function buildMobileInstall(){if(!mobile()||standalone())return;if(byId('mktMobileQuickActionsRestore'))return;var box=document.createElement('div');box.id='mktMobileQuickActionsRestore';box.innerHTML='<button type="button" id="mktMobileInstallQuickRestore"><span class="dot"></span><span class="txt"><b>GPTMini</b><span class="mkt-install-sub">Tải xuống</span></span></button>';document.body.appendChild(box);byId('mktMobileInstallQuickRestore').onclick=window.showInstallGuide;}
   function bubble(type,text){var log=byId('mktFixSupportLog');if(!log)return;var div=document.createElement('div');div.className=type;div.innerText=text;log.appendChild(div);log.scrollTop=log.scrollHeight;}
   var lastId=0;
   async function poll(){try{var r=await fetch('/support_poll?device_id='+encodeURIComponent(deviceId())+'&after_id='+encodeURIComponent(lastId),{cache:'no-store'});var d=await r.json().catch(function(){return{messages:[]}});(d.messages||[]).forEach(function(m){var mid=Number(m.id)||0;if(mid<=lastId)return;lastId=mid;if(m.sender==='admin')bubble('ad',m.message);});}catch(e){}}
@@ -8503,6 +8513,14 @@ button[aria-label="CTV"]{
 })();
 </script>
 
+
+<style id="gptmini-mobile-clean-final">
+@media(max-width:768px){
+  body{background:#0f172a!important;}
+  .layout,.panel,.sidebar,.main,.rightbar,section{position:relative!important;z-index:2!important;}
+  pre:not(.keep-code),code:not(.keep-code){white-space:pre-wrap;word-break:break-word;}
+}
+</style>
 </body>
 </html>
 """
@@ -9744,7 +9762,7 @@ def support_auto_reply_text(message):
     if has_any(['tải', 'tai', 'cài', 'cai', 'app', 'ứng dụng', 'ung dung', 'iphone', 'android', 'pwa', 'màn hình chính', 'man hinh chinh']):
         return (
             "Em hướng dẫn nhanh phần tải app ạ.\n\n"
-            "Android: bấm nút GPT MKT / Tải xuống để cài ra màn hình chính.\n"
+            "Android: bấm nút GPTMini / Tải xuống để cài ra màn hình chính.\n"
             "iPhone: mở bằng Safari → bấm Chia sẻ → Thêm vào màn hình chính."
         )
 
@@ -11134,14 +11152,14 @@ body{background:linear-gradient(135deg,#f8fafc,#eef2ff)!important}
   }
 </style>
 
-<button type="button" class="mkt-mobile-download-v130" id="mktDownloadAppV130" aria-label="Tải GPT MKT">
+<button type="button" class="mkt-mobile-download-v130" id="mktDownloadAppV130" aria-label="Tải GPTMini">
   <span class="mkt-dot"></span>
-  <span>GPT MKT <small>Tải xuống</small></span>
+  <span>GPTMini <small>Tải xuống</small></span>
 </button>
 
 <div class="mkt-install-guide-v130" id="mktInstallGuideV130" aria-hidden="true">
   <div class="mkt-install-guide-box-v130">
-    <h3>Cài GPT MKT Pro vào điện thoại</h3>
+    <h3>Cài GPTMini.Pro vào điện thoại</h3>
     <p id="mktInstallIntroV130">Bấm cài để đưa ứng dụng ra màn hình chính.</p>
     <div class="mkt-install-steps-v130" id="mktInstallStepsV130"></div>
     <div class="mkt-install-guide-actions-v130">
@@ -11335,7 +11353,7 @@ body{background:linear-gradient(135deg,#f8fafc,#eef2ff)!important}
       if(steps) steps.innerHTML='1. Bấm biểu tượng <b>Chia sẻ</b> trên thanh trình duyệt.<br>2. Chọn <b>Thêm vào màn hình chính</b>.<br>3. Bấm <b>Thêm</b> để hoàn tất.';
       if(go) go.textContent='Đã hiểu';
     }else if(deferredPrompt){
-      if(intro) intro.textContent='Bấm Cài ngay để thêm GPT MKT Pro ra màn hình chính.';
+      if(intro) intro.textContent='Bấm Cài ngay để thêm GPTMini.Pro ra màn hình chính.';
       if(steps) steps.innerHTML='Sau khi cài, khách mở như app riêng, không cần vào trình duyệt.';
       if(go) go.textContent='Cài ngay';
     }else{
@@ -11400,7 +11418,7 @@ body{background:linear-gradient(135deg,#f8fafc,#eef2ff)!important}
 
 
 
-<!-- GPT MKT FINAL MOBILE INSTALL + SUPPORT CHAT OVERRIDE 20260610 -->
+<!-- GPTMini FINAL MOBILE INSTALL + SUPPORT CHAT OVERRIDE 20260610 -->
 <style id="gpt-mkt-final-mobile-chat-css">
   /* Ẩn các nút cài app cũ để tránh chồng click */
   #mktTopDownloadBar,#mktMobileInstallQuick,#mktPhoneInstallFloat,#mktPhoneInstallEntry,#mktMobileInstallMenu,
@@ -11489,15 +11507,15 @@ body{background:linear-gradient(135deg,#f8fafc,#eef2ff)!important}
   function ensureDock(){
     if(!byId('gptMktLeftDockFinal')){
       var dock=document.createElement('div');dock.id='gptMktLeftDockFinal';dock.className='gptmkt-left-dock-final';
-      dock.innerHTML='<button type="button" id="gptMktInstallFinal" class="gptmkt-install-btn-final" aria-label="Tải GPT MKT"><span class="gptmkt-install-dot-final"></span><span>GPT MKT<small>Tải xuống</small></span></button>';
+      dock.innerHTML='<button type="button" id="gptMktInstallFinal" class="gptmkt-install-btn-final" aria-label="Tải GPTMini"><span class="gptmkt-install-dot-final"></span><span>GPTMini<small>Tải xuống</small></span></button>';
       document.body.appendChild(dock);
     }
     if(!byId('gptMktChatFinal')){
-      var chat=document.createElement('button');chat.type='button';chat.id='gptMktChatFinal';chat.className='gptmkt-chat-btn-final';chat.setAttribute('aria-label','Mở GPT MKT Support');chat.innerHTML='🤖';document.body.appendChild(chat);
+      var chat=document.createElement('button');chat.type='button';chat.id='gptMktChatFinal';chat.className='gptmkt-chat-btn-final';chat.setAttribute('aria-label','Mở GPTMini Support');chat.innerHTML='🤖';document.body.appendChild(chat);
     }
     if(!byId('gptMktInstallSheetFinal')){
       var sheet=document.createElement('div');sheet.id='gptMktInstallSheetFinal';sheet.className='gptmkt-install-sheet-final';
-      sheet.innerHTML='<div class="gptmkt-install-box-final"><h3>📱 Cài GPT MKT vào điện thoại</h3><p id="gptMktInstallIntroFinal">Đưa app ra màn hình chính để khách mở nhanh như ứng dụng.</p><div class="gptmkt-install-steps-final" id="gptMktInstallStepsFinal"></div><div class="gptmkt-install-actions-final"><button type="button" id="gptMktInstallGoFinal">Cài ngay</button><button type="button" id="gptMktInstallCloseFinal">Đóng</button></div></div>';
+      sheet.innerHTML='<div class="gptmkt-install-box-final"><h3>📱 Cài GPTMini vào điện thoại</h3><p id="gptMktInstallIntroFinal">Đưa app ra màn hình chính để khách mở nhanh như ứng dụng.</p><div class="gptmkt-install-steps-final" id="gptMktInstallStepsFinal"></div><div class="gptmkt-install-actions-final"><button type="button" id="gptMktInstallGoFinal">Cài ngay</button><button type="button" id="gptMktInstallCloseFinal">Đóng</button></div></div>';
       document.body.appendChild(sheet);
     }
   }
@@ -11516,7 +11534,7 @@ body{background:linear-gradient(135deg,#f8fafc,#eef2ff)!important}
   }
   function greet(){
     var b=bodyBox(); if(!b || b.dataset.gptMktGreeted==='1') return; b.dataset.gptMktGreeted='1';
-    if(!b.innerHTML.trim()) appendMsg('ai','Xin chào 👋\nEm là GPT MKT Support. Anh/chị cần hỗ trợ tải app, kích hoạt Premium, thanh toán hay lỗi kỹ thuật ạ?');
+    if(!b.innerHTML.trim()) appendMsg('ai','Xin chào 👋\nEm là GPTMini Support. Anh/chị cần hỗ trợ tải app, kích hoạt Premium, thanh toán hay lỗi kỹ thuật ạ?');
   }
   function openChat(){var p=panel(); if(!p) return; p.classList.add('gptmkt-chat-open-final'); p.style.display='block'; p.style.opacity='1'; p.style.visibility='visible'; greet(); startPoll(); setTimeout(scrollBot,80)}
   function closeChat(){var p=panel(); if(!p) return; p.classList.remove('gptmkt-chat-open-final'); p.style.display='none'}
@@ -11526,11 +11544,11 @@ body{background:linear-gradient(135deg,#f8fafc,#eef2ff)!important}
   async function saveSupport(text){try{var r=await fetch('/support_send',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({device_id:deviceId(),sender:'user',message:text})});var d=await r.json().catch(function(){return{}});if(d.id){lastSupportId=Math.max(lastSupportId,Number(d.id)||0);localStorage.setItem('mkt_support_last_id',String(lastSupportId));}}catch(e){}}
   async function poll(){try{var r=await fetch('/support_poll?device_id='+encodeURIComponent(deviceId())+'&after_id='+encodeURIComponent(lastSupportId),{cache:'no-store'});var d=await r.json().catch(function(){return{messages:[]}});(d.messages||[]).forEach(function(m){var mid=Number(m.id)||0;if(mid<=lastSupportId)return;lastSupportId=mid;localStorage.setItem('mkt_support_last_id',String(lastSupportId));if(String(m.sender||'').toLowerCase()==='admin'){appendMsg('admin',m.message,mid);openChat();}})}catch(e){}}
   function startPoll(){if(pollTimer) return; poll(); pollTimer=setInterval(poll,3500)}
-  function localReply(text){var low=String(text||'').toLowerCase();if(low.indexOf('tải')>=0||low.indexOf('cài')>=0)return 'Anh/chị bấm nút GPT MKT bên trái để cài ra màn hình chính. Android có thể cài trực tiếp, iPhone làm theo hướng dẫn Chia sẻ → Thêm vào màn hình chính.'; if(low.indexOf('thanh toán')>=0||low.indexOf('qr')>=0)return 'Sau khi thanh toán, anh/chị gửi ID thiết bị + ảnh thanh toán + gói đăng ký. Nếu 5 phút chưa kích hoạt, liên hệ Zalo 036 338 2629.'; if(low.indexOf('premium')>=0||low.indexOf('gói')>=0)return 'Các gói hiện có: 1 tháng 259K, 3 tháng 490K, 6 tháng 790K, 1 năm 1.290K, Nhà bán hàng chuyên nghiệp 2.490K.'; return 'Em đã nhận tin nhắn. Admin sẽ phản hồi trực tiếp trong khung chat này ạ.'}
+  function localReply(text){var low=String(text||'').toLowerCase();if(low.indexOf('tải')>=0||low.indexOf('cài')>=0)return 'Anh/chị bấm nút GPTMini bên trái để cài ra màn hình chính. Android có thể cài trực tiếp, iPhone làm theo hướng dẫn Chia sẻ → Thêm vào màn hình chính.'; if(low.indexOf('thanh toán')>=0||low.indexOf('qr')>=0)return 'Sau khi thanh toán, anh/chị gửi ID thiết bị + ảnh thanh toán + gói đăng ký. Nếu 5 phút chưa kích hoạt, liên hệ Zalo 036 338 2629.'; if(low.indexOf('premium')>=0||low.indexOf('gói')>=0)return 'Các gói hiện có: 1 tháng 259K, 3 tháng 490K, 6 tháng 790K, 1 năm 1.290K, Nhà bán hàng chuyên nghiệp 2.490K.'; return 'Em đã nhận tin nhắn. Admin sẽ phản hồi trực tiếp trong khung chat này ạ.'}
   window.sendBotInput=function(){var input=inputBox(); if(!input || !input.value.trim()) return; var text=input.value.trim(); input.value=''; openChat(); appendMsg('user',text); saveSupport(text); setTimeout(function(){appendMsg('ai',localReply(text))},350)};
   window.botQuick=function(text){openChat(); var input=inputBox(); if(input){input.value=String(text||'')} window.sendBotInput()};
 
-  function setGuide(){var intro=byId('gptMktInstallIntroFinal'),steps=byId('gptMktInstallStepsFinal'),go=byId('gptMktInstallGoFinal'); if(ios()){if(intro)intro.textContent='iPhone cần thêm app thủ công bằng nút Chia sẻ của Safari.'; if(steps)steps.innerHTML='1. Mở bằng <b>Safari</b>.<br>2. Bấm nút <b>Chia sẻ</b>.<br>3. Chọn <b>Thêm vào màn hình chính</b> → <b>Thêm</b>.'; if(go)go.textContent='Đã hiểu';}else if(deferredPrompt && android()){if(intro)intro.textContent='Bấm Cài ngay để đưa GPT MKT ra màn hình chính.'; if(steps)steps.innerHTML='Sau khi cài, khách mở như app riêng, thao tác nhanh hơn trên điện thoại.'; if(go)go.textContent='Cài ngay';}else{if(intro)intro.textContent='Trình duyệt chưa bật popup cài tự động.'; if(steps)steps.innerHTML='Android Chrome: bấm menu <b>⋮</b> → <b>Thêm vào màn hình chính</b> hoặc <b>Cài đặt ứng dụng</b>.<br>iPhone Safari: <b>Chia sẻ</b> → <b>Thêm vào màn hình chính</b>.'; if(go)go.textContent='Đã hiểu';}}
+  function setGuide(){var intro=byId('gptMktInstallIntroFinal'),steps=byId('gptMktInstallStepsFinal'),go=byId('gptMktInstallGoFinal'); if(ios()){if(intro)intro.textContent='iPhone cần thêm app thủ công bằng nút Chia sẻ của Safari.'; if(steps)steps.innerHTML='1. Mở bằng <b>Safari</b>.<br>2. Bấm nút <b>Chia sẻ</b>.<br>3. Chọn <b>Thêm vào màn hình chính</b> → <b>Thêm</b>.'; if(go)go.textContent='Đã hiểu';}else if(deferredPrompt && android()){if(intro)intro.textContent='Bấm Cài ngay để đưa GPTMini ra màn hình chính.'; if(steps)steps.innerHTML='Sau khi cài, khách mở như app riêng, thao tác nhanh hơn trên điện thoại.'; if(go)go.textContent='Cài ngay';}else{if(intro)intro.textContent='Trình duyệt chưa bật popup cài tự động.'; if(steps)steps.innerHTML='Android Chrome: bấm menu <b>⋮</b> → <b>Thêm vào màn hình chính</b> hoặc <b>Cài đặt ứng dụng</b>.<br>iPhone Safari: <b>Chia sẻ</b> → <b>Thêm vào màn hình chính</b>.'; if(go)go.textContent='Đã hiểu';}}
   async function install(){if(standalone())return; if(deferredPrompt && android()){var dp=deferredPrompt; deferredPrompt=null; try{dp.prompt(); await dp.userChoice}catch(e){} return;} setGuide(); var s=byId('gptMktInstallSheetFinal'); if(s)s.classList.add('open')}
 
   window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();deferredPrompt=e;window.__gptMktDeferredPrompt=e});
@@ -11589,7 +11607,7 @@ body{background:linear-gradient(135deg,#f8fafc,#eef2ff)!important}
   #mktDeviceUnderLogo .mkt-device-dot{width:8px!important;height:8px!important;border-radius:999px!important;background:#22c55e!important;box-shadow:0 0 10px rgba(34,197,94,.9)!important;flex:0 0 8px!important;}
   #mktDeviceUnderLogo b{color:#fff!important;font-weight:1000!important;letter-spacing:.01em!important;}
 
-  /* Cụm nút điện thoại gọn: GPT MKT / Tải xuống / CTV */
+  /* Cụm nút điện thoại gọn: GPTMini / Tải xuống / CTV */
   #mktMobileActionDock{display:none!important;}
   @media(max-width:768px){
     /* Ẩn các nút CTV/tải xuống nổi lẻ để không bị trùng, chỉ giữ dock này */
@@ -11668,7 +11686,7 @@ body{background:linear-gradient(135deg,#f8fafc,#eef2ff)!important}
     if(!dock){
       dock=document.createElement('div');
       dock.id='mktMobileActionDock';
-      dock.innerHTML='<button type="button" class="mkt-dock-gpt"><span>📱</span><span>GPT MKT</span></button><button type="button" class="mkt-dock-download"><span>⬇️</span><span>Tải xuống</span></button><button type="button" class="mkt-dock-ctv"><span>🤝</span><span>CTV</span></button>';
+      dock.innerHTML='<button type="button" class="mkt-dock-gpt"><span>📱</span><span>GPTMini</span></button><button type="button" class="mkt-dock-download"><span>⬇️</span><span>Tải xuống</span></button><button type="button" class="mkt-dock-ctv"><span>🤝</span><span>CTV</span></button>';
       document.body.appendChild(dock);
     }
     qs('.mkt-dock-gpt',dock).onclick=function(e){e.preventDefault();window.scrollTo({top:0,behavior:'smooth'});return false;};
@@ -11776,7 +11794,7 @@ body{background:linear-gradient(135deg,#f8fafc,#eef2ff)!important}
     var box=q('#mktMobileQuickActionsRestore')||q('#mktMobileQuickActions');
     if(!box){
       box=document.createElement('div'); box.id='mktMobileQuickActionsRestore';
-      box.innerHTML='<button type="button" id="mktMobileInstallQuickRestore" onclick="return showInstallGuide&&showInstallGuide()"><span class="dot"></span><span class="txt"><b>GPT MKT</b><span class="mkt-install-sub">Tải xuống</span></span></button>';
+      box.innerHTML='<button type="button" id="mktMobileInstallQuickRestore" onclick="return showInstallGuide&&showInstallGuide()"><span class="dot"></span><span class="txt"><b>GPTMini</b><span class="mkt-install-sub">Tải xuống</span></span></button>';
       document.body.appendChild(box);
     }
     var ctv=q('#mktMobileCtvQuickRestore');
@@ -11873,7 +11891,7 @@ body{background:linear-gradient(135deg,#f8fafc,#eef2ff)!important}
     var dock=q('#mktPhoneCtvDockFinal');
     if(!dock){
       dock=document.createElement('div'); dock.id='mktPhoneCtvDockFinal';
-      dock.innerHTML='<button type="button" class="mkt-phone-gpt"><em>📱</em><span>GPT MKT</span></button><button type="button" class="mkt-phone-download"><em>⬇️</em><span>Tải xuống</span></button><button type="button" class="mkt-phone-ctv"><em>🤝</em><span>CTV</span></button>';
+      dock.innerHTML='<button type="button" class="mkt-phone-gpt"><em>📱</em><span>GPTMini</span></button><button type="button" class="mkt-phone-download"><em>⬇️</em><span>Tải xuống</span></button><button type="button" class="mkt-phone-ctv"><em>🤝</em><span>CTV</span></button>';
       document.body.appendChild(dock);
     }
     q('.mkt-phone-gpt',dock).onclick=function(e){e.preventDefault();window.scrollTo({top:0,behavior:'smooth'});return false;};
@@ -12768,25 +12786,31 @@ def api_templates():
 
 @app.get("/manifest.json")
 def pwa_manifest():
-    return jsonify({
-        "name": "GPT MKT Pro",
-        "short_name": "GPT MKT",
-        "start_url": "/",
+    resp = jsonify({
+        "id": "/",
+        "name": "GPTMini.Pro - Công Cụ Marketing Automation Thông Minh",
+        "short_name": "GPTMini.Pro",
+        "description": "Công cụ AI Marketing Automation cho Fanpage, Group, Content, CRM và bán hàng đa kênh.",
+        "start_url": "/?source=pwa",
         "scope": "/",
         "display": "standalone",
+        "display_override": ["standalone", "minimal-ui", "browser"],
         "background_color": "#ffffff",
         "theme_color": "#2563eb",
         "orientation": "portrait",
+        "prefer_related_applications": False,
         "icons": [
             {"src": "/static/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable"},
             {"src": "/static/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"}
         ]
     })
+    resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    return resp
 
 @app.get("/sw.js")
 def pwa_sw():
     js = """
-const CACHE_NAME = "gptmkt-v1";
+const CACHE_NAME = "gptmini-pwa-v3";
 const urlsToCache = [
   "/",
   "/manifest.json"
