@@ -7597,11 +7597,177 @@ button[aria-label="CTV"]{
   window.toggleSupportChat=function(){var p=byId('mktFixSupportPanel');if(!p)return;p.classList.toggle('open');poll();};
   window.quickSupportText=function(text){var b=byId('mktFixSupportMessage');if(b){b.value=text;b.focus();}};
   window.sendSupportMessage=async function(){var msg=(byId('mktFixSupportMessage')&&byId('mktFixSupportMessage').value.trim())||'';if(!msg){alert('Vui lòng nhập nội dung cần hỗ trợ.');return false;}bubble('me',msg);byId('mktFixSupportMessage').value='';var payload={device_id:deviceId(),sender:'user',message:msg,phone:(byId('mktFixSupportPhone')||{}).value||'',email:(byId('mktFixSupportEmail')||{}).value||''};try{var res=await fetch('/support_send',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});var data=await res.json().catch(function(){return{}});if(data.id)lastId=Math.max(lastId,Number(data.id)||0);var note=byId('mktFixSupportNote');if(note)note.innerText=data.message||'Đã gửi tin nhắn hỗ trợ.';}catch(e){var note2=byId('mktFixSupportNote');if(note2)note2.innerText='Chưa gửi được tin nhắn, vui lòng thử lại.';}poll();return false;};
-  function buildChat(){if(byId('mktFixSupportFloat'))return;var wrap=document.createElement('div');wrap.id='mktFixSupportFloat';wrap.innerHTML='<div id="mktFixSupportPanel"><div class="mkt-fix-head"><span>💬 Hỗ trợ trực tiếp</span><button type="button" class="mkt-fix-close" onclick="toggleSupportChat()">×</button></div><div class="mkt-fix-body"><div class="mkt-fix-menu"><button type="button" onclick="quickSupportText(\'Tôi cần kích hoạt Premium\')">👑 Premium</button><button type="button" onclick="quickSupportText(\'Tôi đã thanh toán cần hỗ trợ\')">💳 Thanh toán</button><button type="button" onclick="quickSupportText(\'Tôi bị lỗi đăng bài Fanpage\')">📣 Lỗi đăng</button></div><div id="mktFixSupportLog"><div class="ad">Admin sẵn sàng hỗ trợ. Anh/chị để lại SĐT/Email và nội dung cần xử lý.</div></div><input id="mktFixSupportPhone" placeholder="SĐT/Zalo của anh/chị"><input id="mktFixSupportEmail" placeholder="Email/Gmail"><textarea id="mktFixSupportMessage" placeholder="Nhập nội dung cần hỗ trợ..."></textarea><button class="mkt-fix-send" onclick="sendSupportMessage()">Gửi cho Admin</button><div class="mkt-fix-note" id="mktFixSupportNote">Tin nhắn sẽ hiển thị trong Web Admin để kỹ thuật trả lời.</div></div></div><button id="mktFixSupportBtn" type="button" title="AI Online" onclick="toggleSupportChat()"><span class="robot">🤖</span><span class="online"></span></button>';document.body.appendChild(wrap);}
+  function buildChat(){if(byId('mktFixSupportFloat'))return;var wrap=document.createElement('div');wrap.id='mktFixSupportFloat';wrap.innerHTML='<div id="mktFixSupportPanel"><div class="mkt-fix-head"><span>💬 Hỗ trợ trực tiếp</span><button type="button" class="mkt-fix-close" onclick="toggleSupportChat()">×</button></div><div class="mkt-fix-body"><div class="mkt-fix-menu"><button type="button" onclick="quickSupportText(\'Tôi cần kích hoạt Premium\')">👑 Premium</button><button type="button" onclick="quickSupportText(\'Tôi đã thanh toán cần hỗ trợ\')">💳 Thanh toán</button><button type="button" onclick="quickSupportText(\'Tôi bị lỗi đăng bài Fanpage\')">📣 Lỗi đăng</button></div><div id="mktFixSupportLog"><div class="ad">Admin sẵn sàng hỗ trợ. Anh/chị để lại SĐT/Email và nội dung cần xử lý.</div></div><input id="mktFixSupportPhone" placeholder="SĐT/Zalo của anh/chị"><input id="mktFixSupportEmail" placeholder="Email/Gmail"><textarea id="mktFixSupportMessage" placeholder="Nhập nội dung cần hỗ trợ..."></textarea><button class="mkt-fix-send" onclick="sendSupportMessage()">Gửi Tin Nhắn</button><div class="mkt-fix-note" id="mktFixSupportNote">Tin nhắn sẽ hiển thị trong Web Admin để kỹ thuật trả lời.</div></div></div><button id="mktFixSupportBtn" type="button" title="AI Online" onclick="toggleSupportChat()"><span class="robot">🤖</span><span class="online"></span></button>';document.body.appendChild(wrap);}
   function boot(){deviceId();buildMobileInstall();buildChat();setInterval(function(){var p=byId('mktFixSupportPanel');if(p&&p.classList.contains('open'))poll();},3000)}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();setTimeout(boot,700);setTimeout(boot,1800);
 })();
 </script>
+
+
+<!-- FINAL PATCH 20260611: Mobile CTV button + live support typing/online status. Giữ nguyên giao diện gốc. -->
+<style id="mkt-mobile-ctv-live-chat-final-css">
+  @media(max-width:768px){
+    #mktMobileCtvLiveBtn{
+      position:fixed!important;
+      left:12px!important;
+      bottom:146px!important;
+      z-index:2147483646!important;
+      display:flex!important;
+      align-items:center!important;
+      justify-content:center!important;
+      gap:7px!important;
+      min-height:42px!important;
+      padding:10px 14px!important;
+      border:0!important;
+      border-radius:999px!important;
+      color:#fff!important;
+      font-size:13px!important;
+      font-weight:1000!important;
+      letter-spacing:.01em!important;
+      background:linear-gradient(135deg,#16a34a,#22c55e,#84cc16)!important;
+      box-shadow:0 12px 30px rgba(22,163,74,.34)!important;
+      cursor:pointer!important;
+      touch-action:manipulation!important;
+      -webkit-tap-highlight-color:transparent!important;
+      animation:mktCtvLiveFloat 3.2s ease-in-out infinite!important;
+    }
+    #mktMobileCtvLiveBtn .mkt-ctv-live-dot{
+      width:9px!important;height:9px!important;border-radius:999px!important;
+      background:#dcfce7!important;box-shadow:0 0 0 6px rgba(220,252,231,.18),0 0 12px rgba(220,252,231,.85)!important;
+      flex:0 0 9px!important;
+    }
+    #mktMobileCtvLiveBtn .mkt-ctv-live-ico{font-size:16px!important;line-height:1!important}
+    @keyframes mktCtvLiveFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+  }
+  @media(min-width:769px){#mktMobileCtvLiveBtn{display:none!important}}
+
+  .mkt-live-support-status{
+    display:flex!important;align-items:center!important;gap:7px!important;margin-top:4px!important;
+    font-size:12px!important;font-weight:800!important;color:#dcfce7!important;line-height:1.25!important;
+  }
+  .mkt-live-support-status:before{
+    content:""!important;width:8px!important;height:8px!important;border-radius:999px!important;
+    background:#22c55e!important;box-shadow:0 0 0 4px rgba(34,197,94,.18),0 0 12px rgba(34,197,94,.8)!important;
+  }
+  .mkt-live-typing-row{
+    display:inline-flex!important;align-items:center!important;gap:7px!important;font-size:12px!important;font-weight:800!important;color:#64748b!important;margin-top:7px!important;
+  }
+  .mkt-live-typing-dots{display:inline-flex!important;gap:3px!important;align-items:center!important}
+  .mkt-live-typing-dots i{
+    width:6px!important;height:6px!important;border-radius:999px!important;background:#6366f1!important;display:block!important;
+    animation:mktLiveTypingDot 1.15s infinite ease-in-out!important;
+  }
+  .mkt-live-typing-dots i:nth-child(2){animation-delay:.16s!important}.mkt-live-typing-dots i:nth-child(3){animation-delay:.32s!important}
+  @keyframes mktLiveTypingDot{0%,80%,100%{opacity:.35;transform:translateY(0)}40%{opacity:1;transform:translateY(-3px)}}
+  .mkt-fix-send,.bot-send-btn,#botSendBtn,[onclick="sendSupportMessage()"],[onclick="sendBotInput()"]{font-weight:1000!important}
+</style>
+<script id="mkt-mobile-ctv-live-chat-final-js">
+(function(){
+  'use strict';
+  if(window.__mktMobileCtvLiveChatFinal) return;
+  window.__mktMobileCtvLiveChatFinal=true;
+  function q(s,r){return (r||document).querySelector(s)}
+  function qa(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s))}
+  function mobile(){return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent||'') || window.innerWidth<=768}
+  function openCTV(e){
+    if(e){e.preventDefault();e.stopPropagation();}
+    try{ if(typeof window.openModule==='function'){ window.openModule('affiliate_center'); return false; } }catch(_e){}
+    location.hash='affiliate_center';
+    var link=q('a[href="#affiliate_center"],a[data-module="affiliate_center"],[data-aff-menu="1"]');
+    if(link){try{link.click();}catch(_e){}}
+    var sec=q('#affiliateCenterSection,#affiliate_center,[data-module-section="affiliate_center"]');
+    if(sec&&sec.scrollIntoView) setTimeout(function(){sec.scrollIntoView({behavior:'smooth',block:'start'});},120);
+    return false;
+  }
+  function ensureCtvBtn(){
+    var btn=q('#mktMobileCtvLiveBtn');
+    if(!btn){
+      btn=document.createElement('button');
+      btn.id='mktMobileCtvLiveBtn';
+      btn.type='button';
+      btn.innerHTML='<span class="mkt-ctv-live-dot"></span><span class="mkt-ctv-live-ico">🤝</span><span>CTV</span>';
+      document.body.appendChild(btn);
+    }
+    btn.onclick=openCTV;
+    btn.style.display=mobile()?'flex':'none';
+    return btn;
+  }
+  function fixSendLabels(){
+    qa('button,.mkt-fix-send,.bot-send-btn').forEach(function(el){
+      var t=(el.textContent||'').trim().toLowerCase();
+      if(t==='gửi cho admin'||t==='gửi admin'||t==='gửi yêu cầu admin duyệt') el.textContent='Gửi Tin Nhắn';
+      if(t==='gửi'){
+        var p=el.closest('#mktFixSupportPanel,#floatingBotPanel,.support-chat,.chat-box');
+        if(p) el.textContent='Gửi Tin Nhắn';
+      }
+    });
+  }
+  function addOnlineStatus(){
+    var head=q('#mktFixSupportPanel .mkt-fix-head');
+    if(head && !q('.mkt-live-support-status',head)){
+      var st=document.createElement('div');
+      st.className='mkt-live-support-status';
+      st.textContent='Đang trực tuyến';
+      head.appendChild(st);
+    }
+    var oldHead=q('#floatingBotPanel .bot-head,#floatingBotPanel .bot-header,.bot-panel-header');
+    if(oldHead && !q('.mkt-live-support-status',oldHead)){
+      var st2=document.createElement('div');st2.className='mkt-live-support-status';st2.textContent='Đang trực tuyến';oldHead.appendChild(st2);
+    }
+  }
+  function showTypingOnce(){
+    var log=q('#mktFixSupportLog');
+    if(!log || log.getAttribute('data-live-typed')==='1') return;
+    log.setAttribute('data-live-typed','1');
+    var typing=document.createElement('div');
+    typing.className='ad mkt-live-typing-message';
+    typing.innerHTML='Nhân viên đang soạn tin <span class="mkt-live-typing-dots"><i></i><i></i><i></i></span>';
+    log.appendChild(typing);
+    log.scrollTop=log.scrollHeight;
+    setTimeout(function(){
+      if(typing && typing.parentNode){
+        typing.innerHTML='Xin chào anh/chị 👋<br>Em đang trực tuyến. Anh/chị cần hỗ trợ kích hoạt Premium, đăng ký CTV hoặc báo lỗi hệ thống thì nhắn em hỗ trợ ngay ạ.<div class="mkt-live-typing-row">Đang trực tuyến</div>';
+        log.scrollTop=log.scrollHeight;
+      }
+    },1400+Math.floor(Math.random()*900));
+  }
+  function hookChatOpen(){
+    var panel=q('#mktFixSupportPanel');
+    if(panel && panel.classList.contains('open')) showTypingOnce();
+    var old=q('#floatingBotPanel');
+    if(old && old.style.display==='block'){
+      var b=q('#floatingBotBody');
+      if(b && !b.getAttribute('data-live-typed')){
+        b.setAttribute('data-live-typed','1');
+        var div=document.createElement('div');
+        div.className='bot-msg admin';
+        div.innerHTML='Nhân viên đang soạn tin <span class="mkt-live-typing-dots"><i></i><i></i><i></i></span>';
+        b.appendChild(div); b.scrollTop=b.scrollHeight;
+        setTimeout(function(){div.innerHTML='<b>Hỗ trợ trực tuyến:</b><br>Xin chào anh/chị 👋<br>Em đang trực tuyến, anh/chị cần hỗ trợ gì ạ?';b.scrollTop=b.scrollHeight;},1500);
+      }
+    }
+  }
+  function boot(){ensureCtvBtn();fixSendLabels();addOnlineStatus();hookChatOpen();}
+  var oldToggle=window.toggleSupportChat;
+  window.toggleSupportChat=function(){
+    var ret;
+    if(typeof oldToggle==='function') ret=oldToggle.apply(this,arguments);
+    else {var p=q('#mktFixSupportPanel'); if(p) p.classList.toggle('open');}
+    setTimeout(function(){addOnlineStatus();fixSendLabels();showTypingOnce();},80);
+    return ret;
+  };
+  var oldBotToggle=window.toggleFloatingBot;
+  if(typeof oldBotToggle==='function'){
+    window.toggleFloatingBot=function(){var r=oldBotToggle.apply(this,arguments);setTimeout(function(){addOnlineStatus();fixSendLabels();hookChatOpen();},90);return r;};
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',boot); else boot();
+  window.addEventListener('resize',ensureCtvBtn);
+  document.addEventListener('click',function(e){setTimeout(function(){fixSendLabels();addOnlineStatus();hookChatOpen();},120);},true);
+  setInterval(boot,1600);
+  setTimeout(boot,300);setTimeout(boot,1200);setTimeout(boot,2600);
+})();
+</script>
+<!-- /FINAL PATCH 20260611 -->
 
 </body>
 </html>
