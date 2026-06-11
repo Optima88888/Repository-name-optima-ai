@@ -1655,12 +1655,12 @@ def get_free_status(username=None):
 
 
 PREMIUM_PACKAGES = {
-    "monthly": {"name": "Gói 1 tháng", "price": "259.000đ", "amount": 259000, "days": 30},
-    "quarterly": {"name": "Gói 3 tháng", "price": "490.000đ", "amount": 490000, "days": 90},
-    "halfyear": {"name": "Gói 6 tháng", "price": "790.000đ", "amount": 790000, "days": 180},
-    "yearly": {"name": "Gói 1 năm", "price": "1.290.000đ", "amount": 1290000, "days": 365},
-    "sellerpro": {"name": "Gói Vĩnh Viễn", "price": "2.490.000đ", "amount": 2490000, "days": 3650},
-    "lifetime": {"name": "Gói Vĩnh Viễn", "price": "2.490.000đ", "amount": 2490000, "days": 3650}
+    "monthly": {"name": "Gói 1 tháng", "price": "289.000đ", "old_price": "445.000đ", "discount": "GIẢM 35%", "amount": 289000, "days": 30},
+    "quarterly": {"name": "Gói 3 tháng", "price": "529.000đ", "old_price": "815.000đ", "discount": "GIẢM 35%", "amount": 529000, "days": 90},
+    "halfyear": {"name": "Gói 6 tháng", "price": "859.000đ", "old_price": "1.322.000đ", "discount": "GIẢM 35%", "amount": 859000, "days": 180},
+    "yearly": {"name": "Gói 1 năm", "price": "1.589.000đ", "old_price": "2.445.000đ", "discount": "GIẢM 35%", "amount": 1589000, "days": 365},
+    "sellerpro": {"name": "Gói Vĩnh Viễn", "price": "2.589.000đ", "old_price": "3.983.000đ", "discount": "GIẢM 35%", "amount": 2589000, "days": 3650},
+    "lifetime": {"name": "Gói Vĩnh Viễn", "price": "2.589.000đ", "old_price": "3.983.000đ", "discount": "GIẢM 35%", "amount": 2589000, "days": 3650}
 }
 
 
@@ -4703,8 +4703,10 @@ const premiumPlans = {
   },
   monthly:{
     title:"GÓI 1 THÁNG",
-    price:"259.000đ",
-    amount:"259000",
+    price:"289.000đ",
+    oldPrice:"445.000đ",
+    discount:"GIẢM 35%",
+    amount:"289000",
     package:"1THANG",
     desc:"Phù hợp người mới bắt đầu dùng hệ thống để quản lý Fanpage, Group và AI Comment.",
     benefits:["Quản lý Fanpage", "Quản lý Group", "AI Comment", "Đăng bài Facebook", "Lịch đăng cơ bản", "Token Manager", "Hỗ trợ cơ bản"],
@@ -4712,8 +4714,10 @@ const premiumPlans = {
   },
   quarterly:{
     title:"⭐ GÓI 3 THÁNG",
-    price:"490.000đ",
-    amount:"490000",
+    price:"529.000đ",
+    oldPrice:"815.000đ",
+    discount:"GIẢM 35%",
+    amount:"529000",
     package:"3THANG",
     desc:"Tối ưu cho shop đang bán hàng cần thêm Messenger AI và quản lý khách hàng.",
     benefits:["Toàn bộ gói 1 tháng", "AI Messenger", "CRM Kanban", "Kịch bản inbox", "Kịch bản chốt sale", "Quản lý khách hàng", "Ưu tiên hỗ trợ"],
@@ -4721,8 +4725,10 @@ const premiumPlans = {
   },
   halfyear:{
     title:"💎 GÓI 6 THÁNG",
-    price:"790.000đ",
-    amount:"790000",
+    price:"859.000đ",
+    oldPrice:"1.322.000đ",
+    discount:"GIẢM 35%",
+    amount:"859000",
     package:"6THANG",
     desc:"Mở thêm AI Marketing Director và các công cụ tạo nội dung nâng cao.",
     benefits:["Toàn bộ gói 3 tháng", "AI Marketing Director", "AI Image", "AI Video", "AI Kinh Doanh", "Content Studio", "Không giới hạn Fanpage/Group theo cấu hình"],
@@ -4730,8 +4736,10 @@ const premiumPlans = {
   },
   yearly:{
     title:"🔥 GÓI 1 NĂM",
-    price:"1.290.000đ",
-    amount:"1290000",
+    price:"1.589.000đ",
+    oldPrice:"2.445.000đ",
+    discount:"GIẢM 35%",
+    amount:"1589000",
     package:"1NAM",
     desc:"Gói phổ biến nhất cho người bán hàng muốn dùng đầy đủ công cụ AI Marketing trong 1 năm.",
     benefits:["Toàn bộ gói 6 tháng", "AI Giọng Nói", "AI Livestream", "AI Automation", "Kho content Premium", "Ưu tiên xử lý", "Cập nhật miễn phí trong thời gian sử dụng"],
@@ -4739,8 +4747,10 @@ const premiumPlans = {
   },
   lifetime:{
     title:"👑 GÓI NHÀ BÁN HÀNG CHUYÊN NGHIỆP",
-    price:"2.490.000đ",
-    amount:"2490000",
+    price:"2.589.000đ",
+    oldPrice:"3.983.000đ",
+    discount:"GIẢM 35%",
+    amount:"2589000",
     package:"NHABANHANGCHUYENNGHIEP",
     desc:"Gói cao nhất dành cho nhà bán hàng, agency và team kinh doanh muốn mở toàn bộ hệ thống.",
     benefits:["Toàn bộ tính năng Premium", "Không giới hạn AI theo cấu hình", "AI Marketing Director Pro", "CRM Pro", "AI Automation Pro", "AI Livestream", "AI Giọng Nói", "Export PDF/Excel", "Backup Database", "Ưu tiên hỗ trợ VIP", "Cập nhật trọn đời"],
@@ -4846,21 +4856,21 @@ function openLockedFeature(feature, plans){
          <div class="locked-recommend-card">
            <div class="rec-label">🚀 BẮT ĐẦU</div>
            <h3>Gói 1 tháng</h3>
-           <div class="rec-price">259.000đ</div>
+           <div class="rec-price">289.000đ</div>
            <p>Phù hợp để mở các công cụ quản lý cơ bản và dùng ổn định.</p>
            <button onclick="closeLockedFeature();openPayment('monthly')">Chọn gói 1 tháng</button>
          </div>
          <div class="locked-recommend-card featured">
            <div class="rec-label">⭐ PHỔ BIẾN</div>
            <h3>Gói 1 năm</h3>
-           <div class="rec-price">1.290.000đ</div>
+           <div class="rec-price">1.589.000đ</div>
            <p>Mở đầy đủ AI Marketing, CRM, Automation và công cụ bán hàng nâng cao.</p>
            <button onclick="closeLockedFeature();openPayment('yearly')">Xem gói 1 năm</button>
          </div>
          <div class="locked-recommend-card v4-gold-card" style="grid-column:1/-1">
            <div class="rec-label">👑 CAO NHẤT</div>
            <h3>Gói nhà bán hàng chuyên nghiệp</h3>
-           <div class="rec-price">2.490.000đ</div>
+           <div class="rec-price">2.589.000đ</div>
            <p>Mở toàn bộ tính năng cao cấp, hỗ trợ VIP và cập nhật trọn đời.</p>
            <button onclick="closeLockedFeature();openPayment('lifetime')">Mở gói chuyên nghiệp</button>
          </div>
@@ -5531,6 +5541,8 @@ function closeLockedFeature(){
             <button type="button" class="secondary" style="padding:8px 12px;font-size:13px" onclick="setOmniSchedule(15)">+15 phút</button>
             <button type="button" class="secondary" style="padding:8px 12px;font-size:13px" onclick="setOmniSchedule(30)">+30 phút</button>
             <button type="button" class="secondary" style="padding:8px 12px;font-size:13px" onclick="setOmniSchedule(60)">+1 giờ</button>
+            <button type="button" class="secondary" style="padding:8px 12px;font-size:13px" onclick="setOmniSchedule(120)">+2 giờ</button>
+            <button type="button" class="secondary" style="padding:8px 12px;font-size:13px" onclick="setOmniSchedule(180)">+3 giờ</button>
             <button type="button" class="secondary" style="padding:8px 12px;font-size:13px" onclick="setOmniSchedule(1440)">Ngày mai</button>
           </div>
           <div id="omni_schedule_preview" class="history" style="margin-top:10px;background:#eff6ff;border-color:#bfdbfe;color:#1e3a8a">
@@ -6113,9 +6125,9 @@ Tạo: {{ c[4] }}</div>
     <h3>Biến công cụ đăng bài thành trợ lý Marketing tự động</h3>
     <p>Khách không chỉ mua phần mềm, khách mua thời gian, nội dung, quy trình bán hàng và hệ thống hỗ trợ tăng tốc kinh doanh online.</p>
     <div class="v4-value-grid">
-      <div><b>259.000đ</b><span>Gói Khởi Động<br>chỉ 5.300đ/ngày</span></div>
-      <div><b>1.290.000đ</b><span>Gói 1 năm<br>phổ biến nhất</span></div>
-      <div><b>2.490.000đ</b><span>Gói trọn đời<br>không phí gia hạn</span></div>
+      <div><b>289.000đ</b><span>Gói Khởi Động<br>chỉ 5.300đ/ngày</span></div>
+      <div><b>1.589.000đ</b><span>Gói 1 năm<br>phổ biến nhất</span></div>
+      <div><b>2.589.000đ</b><span>Gói trọn đời<br>không phí gia hạn</span></div>
     </div>
     <p><b>Giá trị nhận được:</b> tiết kiệm thời gian viết content, quản lý Fanpage, CRM khách hàng, AI Sales Script, Marketing Director và kho Content 50.000+.</p>
     <button onclick="scrollToPricing()">Xem bảng giá chi tiết</button>
@@ -6245,6 +6257,11 @@ Thời gian tạo: {{ h[9] }}
     .compact-price-card:after{content:"";position:absolute;left:14px;right:14px;top:0;height:3px;border-radius:999px;background:linear-gradient(90deg,#2563eb,#f59e0b);opacity:.45}
     .compact-price-card:hover{transform:translateY(-5px);box-shadow:0 22px 46px rgba(15,23,42,.14);border-color:rgba(37,99,235,.22)}
     .compact-price-card .tag{display:inline-flex;padding:5px 10px;border-radius:999px;background:#f1f5f9;color:#334155;font-size:12px;font-weight:1000;margin-bottom:8px}
+    .discount-badge{position:absolute;top:12px;right:12px;display:inline-flex;align-items:center;justify-content:center;padding:6px 10px;border-radius:999px;background:linear-gradient(135deg,#facc15,#f59e0b);color:#111827;font-size:11px;font-weight:1000;box-shadow:0 10px 22px rgba(245,158,11,.28);border:1px solid rgba(255,237,150,.8);z-index:2}
+    .old-price{font-size:13px;font-weight:900;color:#94a3b8;text-decoration:line-through;text-decoration-thickness:2px;margin-top:4px}
+    .deal-note{font-size:12px;font-weight:900;color:#b45309;margin:4px 0 6px}
+    .compact-price-card.pro .old-price{color:rgba(255,255,255,.58)}
+    .compact-price-card.pro .deal-note{color:#fde68a}
     .compact-price-card h3{margin:2px 0 8px;font-size:19px;color:#111827;letter-spacing:-.02em}
     .compact-price-card .price{font-size:25px;font-weight:1000;color:#2563eb;margin-bottom:6px;letter-spacing:-.04em}
     .compact-price-card .sub{min-height:38px;margin:0 0 14px;color:#64748b;font-size:13px;line-height:1.35}
@@ -6293,9 +6310,12 @@ Thời gian tạo: {{ h[9] }}
 
     <div class="pricing-grid-5">
       <div class="compact-price-card" data-plan="monthly">
+        <span class="discount-badge">⚡ GIẢM 35%</span>
         <span class="tag">Cơ bản</span>
         <h3>Gói 1 Tháng</h3>
-        <div class="price">259.000đ</div>
+        <div class="old-price">445.000đ</div>
+        <div class="price">289.000đ</div>
+        <div class="deal-note">Giá ưu đãi hôm nay</div>
         <p class="sub">Dùng ngắn hạn, phù hợp người mới bắt đầu.</p>
         <div class="plan-actions">
           <button type="button" class="btn-upgrade" data-plan="monthly">Nâng cấp</button>
@@ -6304,9 +6324,12 @@ Thời gian tạo: {{ h[9] }}
       </div>
 
       <div class="compact-price-card" data-plan="quarterly">
+        <span class="discount-badge">⚡ GIẢM 35%</span>
         <span class="tag">Tiết kiệm</span>
         <h3>Gói 3 Tháng</h3>
-        <div class="price">490.000đ</div>
+        <div class="old-price">815.000đ</div>
+        <div class="price">529.000đ</div>
+        <div class="deal-note">Giá ưu đãi hôm nay</div>
         <p class="sub">Ổn định hơn cho shop nhỏ và cá nhân bán hàng.</p>
         <div class="plan-actions">
           <button type="button" class="btn-upgrade" data-plan="quarterly">Nâng cấp</button>
@@ -6315,9 +6338,12 @@ Thời gian tạo: {{ h[9] }}
       </div>
 
       <div class="compact-price-card" data-plan="halfyear">
+        <span class="discount-badge">⚡ GIẢM 35%</span>
         <span class="tag">Tăng trưởng</span>
         <h3>Gói 6 Tháng</h3>
-        <div class="price">790.000đ</div>
+        <div class="old-price">1.322.000đ</div>
+        <div class="price">859.000đ</div>
+        <div class="deal-note">Giá ưu đãi hôm nay</div>
         <p class="sub">Mở thêm CRM, Sales Bot và quản lý khách hàng.</p>
         <div class="plan-actions">
           <button type="button" class="btn-upgrade" data-plan="halfyear">Nâng cấp</button>
@@ -6326,9 +6352,12 @@ Thời gian tạo: {{ h[9] }}
       </div>
 
       <div class="compact-price-card popular" data-plan="yearly">
+        <span class="discount-badge">⚡ GIẢM 35%</span>
         <span class="tag">Tối ưu</span>
         <h3>Gói 1 Năm</h3>
-        <div class="price">1.290.000đ</div>
+        <div class="old-price">2.445.000đ</div>
+        <div class="price">1.589.000đ</div>
+        <div class="deal-note">Giá ưu đãi hôm nay</div>
         <p class="sub">Gói phổ biến, chi phí thấp cho sử dụng dài hạn.</p>
         <div class="plan-actions">
           <button type="button" class="btn-upgrade" data-plan="yearly">Nâng cấp</button>
@@ -6337,9 +6366,12 @@ Thời gian tạo: {{ h[9] }}
       </div>
 
       <div class="compact-price-card pro" data-plan="sellerpro">
+        <span class="discount-badge">⚡ GIẢM 35%</span>
         <span class="tag">Cao cấp</span>
-        <h3>Seller Pro</h3>
-        <div class="price">2.490.000đ</div>
+        <h3>Vĩnh Viễn</h3>
+        <div class="old-price">3.983.000đ</div>
+        <div class="price">2.589.000đ</div>
+        <div class="deal-note">Giá ưu đãi hôm nay</div>
         <p class="sub">Toàn bộ công cụ hiện tại, tương lai và ưu tiên hỗ trợ.</p>
         <div class="plan-actions">
           <button type="button" class="btn-upgrade" data-plan="sellerpro">Nâng cấp</button>
@@ -6356,7 +6388,7 @@ Thời gian tạo: {{ h[9] }}
       <div class="benefit-top">
         <span class="benefit-label" id="benefitLabel">PREMIUM</span>
         <h3 class="benefit-title" id="benefitTitle">Gói Premium</h3>
-        <div class="benefit-price" id="benefitPrice">259.000đ</div>
+        <div class="benefit-price" id="benefitPrice"><span style="text-decoration:line-through;color:#94a3b8;font-size:16px;margin-right:8px">445.000đ</span>289.000đ <span style="display:inline-flex;margin-left:8px;padding:4px 8px;border-radius:999px;background:#facc15;color:#111827;font-size:12px;font-weight:1000">⚡ GIẢM 35%</span></div>
         <p class="benefit-desc" id="benefitDesc"></p>
       </div>
       <div class="benefit-grid">
@@ -6385,7 +6417,7 @@ Thời gian tạo: {{ h[9] }}
     <div class="payment-body">
       <div class="qr-card">
         <h3>Quét mã QR để thanh toán</h3>
-        <img id="payQr" src="https://img.vietqr.io/image/970405-8888363382629-compact2.png?amount=259000&addInfo=PREMIUM%201THANG&accountName=NGUYEN%20DANG%20THI%20XUAN" alt="QR Agribank">
+        <img id="payQr" src="https://img.vietqr.io/image/970405-8888363382629-compact2.png?amount=289000&addInfo=PREMIUM%201THANG&accountName=NGUYEN%20DANG%20THI%20XUAN" alt="QR Agribank">
         <div class="bank-info">
           <b>Ngân hàng:</b> Agribank<br>
           <b>STK:</b> 8888363382629<br>
@@ -6396,7 +6428,7 @@ Thời gian tạo: {{ h[9] }}
 
       <div class="payment-detail">
         <h3>Số tiền cần thanh toán</h3>
-        <div class="pay-amount" id="payPlanPrice">259.000 VNĐ</div>
+        <div class="pay-amount" id="payPlanPrice">289.000 VNĐ</div>
 
         <h3>Thông tin kích hoạt</h3>
         <div class="payment-form-grid">
@@ -6809,15 +6841,15 @@ function dropKanban(ev){ ev.preventDefault(); const col=ev.currentTarget; if(dra
 (function(){
   'use strict';
   var plans={
-    monthly:{title:'Gói 1 tháng',price:'259.000đ',amount:'259000',desc:'Phù hợp người mới bắt đầu, shop nhỏ cần đăng bài, tạo content và quản lý Fanpage cơ bản.',benefits:['Đăng bài Facebook','Quản lý Fanpage','Quản lý Group','AI Comment','Tạo content cơ bản','Token Manager','Hỗ trợ kích hoạt theo ID thiết bị']},
-    quarterly:{title:'Gói 3 tháng',price:'490.000đ',amount:'490000',desc:'Tối ưu cho shop đang bán hàng cần dùng ổn định hơn và tiết kiệm hơn gói tháng.',benefits:['Toàn bộ gói 1 tháng','AI Messenger','CRM Kanban cơ bản','Kịch bản inbox','Lịch đăng nâng cao','Báo cáo cơ bản','Ưu tiên hỗ trợ']},
-    halfyear:{title:'Gói 6 tháng',price:'790.000đ',amount:'790000',desc:'Phù hợp shop cần CRM, chăm sóc khách và tối ưu quy trình bán hàng.',benefits:['Toàn bộ gói 3 tháng','CRM Pro','AI Sales Bot','Comment Manager','Auto Tag khách hàng','Quản lý khách hàng','Chuyển khách sang CRM']},
-    yearly:{title:'Gói 1 năm',price:'1.290.000đ',amount:'1290000',desc:'Gói phổ biến nhất cho nhà bán hàng muốn dùng đầy đủ công cụ AI Marketing trong 1 năm.',benefits:['Toàn bộ gói 6 tháng','AI Marketing Director','AI Ads Chuyên Gia','Kho Content Premium','Automation Marketing','Export báo cáo','Ưu tiên xử lý']},
-    sellerpro:{title:'Gói nhà bán hàng chuyên nghiệp',price:'2.490.000đ',amount:'2490000',desc:'Gói cao nhất cho nhà bán hàng chuyên nghiệp, mở toàn bộ hệ thống sau khi admin duyệt.',benefits:['Toàn bộ tính năng Premium','AI Image Center','AI Video Center','AI Voice Studio','Dashboard Enterprise','Export PDF / Excel','Backup Database','Ưu tiên hỗ trợ VIP']}
+    monthly:{title:'Gói 1 tháng',price:'289.000đ',oldPrice:'445.000đ',discount:'GIẢM 35%',amount:'289000',desc:'Phù hợp người mới bắt đầu, shop nhỏ cần đăng bài, tạo content và quản lý Fanpage cơ bản.',benefits:['Đăng bài Facebook','Quản lý Fanpage','Quản lý Group','AI Comment','Tạo content cơ bản','Token Manager','Hỗ trợ kích hoạt theo ID thiết bị']},
+    quarterly:{title:'Gói 3 tháng',price:'529.000đ',oldPrice:'815.000đ',discount:'GIẢM 35%',amount:'529000',desc:'Tối ưu cho shop đang bán hàng cần dùng ổn định hơn và tiết kiệm hơn gói tháng.',benefits:['Toàn bộ gói 1 tháng','AI Messenger','CRM Kanban cơ bản','Kịch bản inbox','Lịch đăng nâng cao','Báo cáo cơ bản','Ưu tiên hỗ trợ']},
+    halfyear:{title:'Gói 6 tháng',price:'859.000đ',oldPrice:'1.322.000đ',discount:'GIẢM 35%',amount:'859000',desc:'Phù hợp shop cần CRM, chăm sóc khách và tối ưu quy trình bán hàng.',benefits:['Toàn bộ gói 3 tháng','CRM Pro','AI Sales Bot','Comment Manager','Auto Tag khách hàng','Quản lý khách hàng','Chuyển khách sang CRM']},
+    yearly:{title:'Gói 1 năm',price:'1.589.000đ',oldPrice:'2.445.000đ',discount:'GIẢM 35%',amount:'1589000',desc:'Gói phổ biến nhất cho nhà bán hàng muốn dùng đầy đủ công cụ AI Marketing trong 1 năm.',benefits:['Toàn bộ gói 6 tháng','AI Marketing Director','AI Ads Chuyên Gia','Kho Content Premium','Automation Marketing','Export báo cáo','Ưu tiên xử lý']},
+    sellerpro:{title:'Gói nhà bán hàng chuyên nghiệp',price:'2.589.000đ',oldPrice:'3.983.000đ',discount:'GIẢM 35%',amount:'2589000',desc:'Gói cao nhất cho nhà bán hàng chuyên nghiệp, mở toàn bộ hệ thống sau khi admin duyệt.',benefits:['Toàn bộ tính năng Premium','AI Image Center','AI Video Center','AI Voice Studio','Dashboard Enterprise','Export PDF / Excel','Backup Database','Ưu tiên hỗ trợ VIP']}
   };
   plans.lifetime=plans.sellerpro;
   function norm(t){return String(t||'').toLowerCase();}
-  function keyFromText(t){t=norm(t); if(t.indexOf('1.959')>-1||t.indexOf('1959')>-1||t.indexOf('nhà bán')>-1||t.indexOf('seller')>-1||t.indexOf('trọn đời')>-1) return 'sellerpro'; if(t.indexOf('859')>-1||t.indexOf('1 năm')>-1) return 'yearly'; if(t.indexOf('559')>-1||t.indexOf('6 tháng')>-1) return 'halfyear'; if(t.indexOf('359')>-1||t.indexOf('3 tháng')>-1) return 'quarterly'; return 'monthly';}
+  function keyFromText(t){t=norm(t); if(t.indexOf('1.959')>-1||t.indexOf('1959')>-1||t.indexOf('nhà bán')>-1||t.indexOf('seller')>-1||t.indexOf('trọn đời')>-1) return 'sellerpro'; if(t.indexOf('1589')>-1||t.indexOf('1.589')>-1||t.indexOf('1 năm')>-1) return 'yearly'; if(t.indexOf('859')>-1||t.indexOf('6 tháng')>-1) return 'halfyear'; if(t.indexOf('529')>-1||t.indexOf('3 tháng')>-1) return 'quarterly'; return 'monthly';}
   function deviceId(){var m=document.cookie.match(/(?:^|; )mkt_device_id=([^;]+)/); if(m) return decodeURIComponent(m[1]); var id=localStorage.getItem('mkt_device_id'); if(!id){id='MKT-'+Math.random().toString(36).slice(2,8).toUpperCase()+Date.now().toString().slice(-4); localStorage.setItem('mkt_device_id',id);} document.cookie='mkt_device_id='+encodeURIComponent(id)+'; path=/; max-age=31536000; SameSite=Lax'; return id;}
   function ensureBox(){
     var o=document.getElementById('mktPlanOverlay'); if(o) return o;
@@ -6883,12 +6915,12 @@ function dropKanban(ev){ ev.preventDefault(); const col=ev.currentTarget; if(dra
     return id;
   }
   var plans=window.premiumPlans || {
-    monthly:{title:'Gói 1 tháng',price:'259.000đ',amount:'259000',package:'1THANG',desc:'Phù hợp người mới bắt đầu.'},
-    quarterly:{title:'Gói 3 tháng',price:'490.000đ',amount:'490000',package:'3THANG',desc:'Tối ưu hơn gói tháng.'},
-    halfyear:{title:'Gói 6 tháng',price:'790.000đ',amount:'790000',package:'6THANG',desc:'Mở CRM và Sales Bot.'},
-    yearly:{title:'Gói 1 năm',price:'1.290.000đ',amount:'1290000',package:'1NAM',desc:'Gói phổ biến nhất.'},
-    sellerpro:{title:'Gói nhà bán hàng chuyên nghiệp',price:'2.490.000đ',amount:'2490000',package:'NHABANHANGCHUYENNGHIEP',desc:'Gói cao nhất cho nhà bán hàng chuyên nghiệp.'},
-    lifetime:{title:'Gói nhà bán hàng chuyên nghiệp',price:'2.490.000đ',amount:'2490000',package:'NHABANHANGCHUYENNGHIEP',desc:'Gói cao nhất cho nhà bán hàng chuyên nghiệp.'}
+    monthly:{title:'Gói 1 tháng',price:'289.000đ',oldPrice:'445.000đ',discount:'GIẢM 35%',amount:'289000',package:'1THANG',desc:'Phù hợp người mới bắt đầu.'},
+    quarterly:{title:'Gói 3 tháng',price:'529.000đ',oldPrice:'815.000đ',discount:'GIẢM 35%',amount:'529000',package:'3THANG',desc:'Tối ưu hơn gói tháng.'},
+    halfyear:{title:'Gói 6 tháng',price:'859.000đ',oldPrice:'1.322.000đ',discount:'GIẢM 35%',amount:'859000',package:'6THANG',desc:'Mở CRM và Sales Bot.'},
+    yearly:{title:'Gói 1 năm',price:'1.589.000đ',oldPrice:'2.445.000đ',discount:'GIẢM 35%',amount:'1589000',package:'1NAM',desc:'Gói phổ biến nhất.'},
+    sellerpro:{title:'Gói nhà bán hàng chuyên nghiệp',price:'2.589.000đ',oldPrice:'3.983.000đ',discount:'GIẢM 35%',amount:'2589000',package:'NHABANHANGCHUYENNGHIEP',desc:'Gói cao nhất cho nhà bán hàng chuyên nghiệp.'},
+    lifetime:{title:'Gói nhà bán hàng chuyên nghiệp',price:'2.589.000đ',oldPrice:'3.983.000đ',discount:'GIẢM 35%',amount:'2589000',package:'NHABANHANGCHUYENNGHIEP',desc:'Gói cao nhất cho nhà bán hàng chuyên nghiệp.'}
   };
   plans.sellerpro=plans.sellerpro||plans.lifetime; plans.lifetime=plans.lifetime||plans.sellerpro;
   function plan(k){return plans[k]||plans.monthly;}
@@ -6910,7 +6942,7 @@ function dropKanban(ev){ ev.preventDefault(); const col=ev.currentTarget; if(dra
     if(!modal){return false;}
     var title=q('#payPlanTitle'); if(title) title.textContent=(p.title||'Gói Premium').replace(/^🚀 |^⭐ |^💎 |^🔥 |^👑 /,'');
     var desc=q('#payPlanDesc'); if(desc) desc.textContent='Nhập số điện thoại và Gmail để đăng ký kích hoạt. Nội dung chuyển khoản sẽ tự kèm ID thiết bị và gói đã chọn.';
-    var price=q('#payPlanPrice'); if(price) price.textContent=money(p.amount);
+    var price=q('#payPlanPrice'); if(price) price.innerHTML=(p.oldPrice?'<span style=\"text-decoration:line-through;color:#94a3b8;font-size:14px;margin-right:8px\">'+p.oldPrice+'</span> ':'') + money(p.amount) + ' <span style=\"display:inline-flex;margin-left:8px;padding:4px 8px;border-radius:999px;background:#facc15;color:#111827;font-size:12px;font-weight:1000\">⚡ GIẢM 35%</span>';
     var device=q('#payDeviceId'); if(device) device.value=getDevice();
     var benefits=q('#payBenefits'); if(benefits && p.benefits){benefits.innerHTML=p.benefits.map(function(x){return '<div>'+x+'</div>';}).join('');}
     var locked=q('#payLocked'); if(locked){locked.innerHTML=''; var h=locked.previousElementSibling; if(h) h.style.display='none';}
@@ -6962,12 +6994,12 @@ function dropKanban(ev){ ev.preventDefault(); const col=ev.currentTarget; if(dra
 (function(){
   'use strict';
   var PLAN_MAP={
-    monthly:{title:'Gói 1 tháng',amount:'259000',price:'259.000đ',code:'GOI1THANG'},
-    quarterly:{title:'Gói 3 tháng',amount:'490000',price:'490.000đ',code:'GOI3THANG'},
-    halfyear:{title:'Gói 6 tháng',amount:'790000',price:'790.000đ',code:'GOI6THANG'},
-    yearly:{title:'Gói 1 năm',amount:'1290000',price:'1.290.000đ',code:'GOI1NAM'},
-    sellerpro:{title:'Gói nhà bán hàng chuyên nghiệp',amount:'2490000',price:'2.490.000đ',code:'NHABANHANGPRO'},
-    lifetime:{title:'Gói nhà bán hàng chuyên nghiệp',amount:'2490000',price:'2.490.000đ',code:'NHABANHANGPRO'}
+    monthly:{title:'Gói 1 tháng',amount:'289000',price:'289.000đ',code:'GOI1THANG'},
+    quarterly:{title:'Gói 3 tháng',amount:'529000',price:'529.000đ',code:'GOI3THANG'},
+    halfyear:{title:'Gói 6 tháng',amount:'859000',price:'859.000đ',code:'GOI6THANG'},
+    yearly:{title:'Gói 1 năm',amount:'1589000',price:'1.589.000đ',code:'GOI1NAM'},
+    sellerpro:{title:'Gói nhà bán hàng chuyên nghiệp',amount:'2589000',price:'2.589.000đ',code:'NHABANHANGPRO'},
+    lifetime:{title:'Gói nhà bán hàng chuyên nghiệp',amount:'2589000',price:'2.589.000đ',code:'NHABANHANGPRO'}
   };
   function q(s,root){return (root||document).querySelector(s)}
   function qa(s,root){return Array.prototype.slice.call((root||document).querySelectorAll(s))}
@@ -7377,11 +7409,11 @@ function dropKanban(ev){ ev.preventDefault(); const col=ev.currentTarget; if(dra
 (function(){
   'use strict';
   var PLAN_BENEFITS={
-    monthly:{label:'CƠ BẢN',title:'Gói 1 tháng',price:'259.000đ',desc:'Phù hợp người mới bắt đầu muốn trải nghiệm Premium ngắn hạn và dùng các công cụ cốt lõi.',features:['AI Content Studio','Tạo content bán hàng nhanh','Đăng Fanpage cơ bản','Quản lý Fanpage','Quản lý Group','AI Comment','Token Manager cơ bản'],fit:['Chủ shop mới','Cá nhân kinh doanh online','Người mới làm nội dung','Người cần test hệ thống trước'],value:['Tiết kiệm thời gian viết bài mỗi ngày','Có nền tảng quản lý Fanpage/Group','Tạo nội dung đều hơn','Chi phí thấp để bắt đầu']},
-    quarterly:{label:'TIẾT KIỆM',title:'Gói 3 tháng',price:'490.000đ',desc:'Tối ưu hơn gói tháng, phù hợp shop nhỏ cần dùng ổn định và có thêm công cụ chăm sóc khách.',features:['Toàn bộ gói 1 tháng','AI Messenger','CRM Kanban cơ bản','Kịch bản inbox','Lịch đăng nâng cao','Báo cáo cơ bản','Ưu tiên hỗ trợ'],fit:['Shop nhỏ đang bán hàng','Người cần chăm sóc khách đều','Người chạy nội dung thường xuyên','CTV bán dịch vụ'],value:['Quy trình bán hàng rõ hơn','Giảm thời gian trả lời khách','Có kịch bản inbox sẵn','Tiết kiệm hơn so với mua từng tháng']},
-    halfyear:{label:'TĂNG TRƯỞNG',title:'Gói 6 tháng',price:'790.000đ',desc:'Phù hợp shop cần CRM, Sales Bot và quy trình gom khách để chăm sóc lâu dài.',features:['Toàn bộ gói 3 tháng','CRM Pro','AI Sales Bot','Comment Manager','Auto Tag khách hàng','Quản lý khách hàng','Chuyển khách sang CRM'],fit:['Shop có nhiều inbox/comment','Người cần gom khách về CRM','Đội sale nhỏ','Người muốn tối ưu chăm sóc khách'],value:['Không bỏ sót khách tiềm năng','Phân loại khách rõ ràng hơn','Chăm sóc khách có hệ thống','Tăng hiệu quả tư vấn và chốt đơn']},
-    yearly:{label:'PHỔ BIẾN NHẤT',title:'Gói 1 năm',price:'1.290.000đ',desc:'Gói phổ biến nhất cho nhà bán hàng muốn dùng đầy đủ công cụ AI Marketing trong 1 năm.',features:['Toàn bộ gói 6 tháng','AI Marketing Director','AI Ads Chuyên Gia','Kho Content Premium','Automation Marketing','Export báo cáo','Ưu tiên xử lý'],fit:['Shop bán hàng lâu dài','Người chạy quảng cáo','Agency nhỏ / CTV','Người cần hệ thống marketing đầy đủ'],value:['Chi phí thấp theo ngày','Có trợ lý AI định hướng marketing','Tối ưu nội dung và quảng cáo','Tiết kiệm chi phí thuê ngoài']},
-    sellerpro:{label:'VIP ENTERPRISE',title:'Gói nhà bán hàng chuyên nghiệp',price:'2.490.000đ',desc:'Gói cao nhất cho nhà bán hàng chuyên nghiệp, mở toàn bộ hệ thống hiện tại và các tính năng nâng cấp về sau.',features:['Toàn bộ tính năng Premium','AI Image Center','AI Video Center','AI Voice Studio','Dashboard Enterprise','Export PDF / Excel','Backup Database','Ưu tiên hỗ trợ VIP'],fit:['Nhà bán hàng chuyên nghiệp','Agency / đội marketing nhỏ','Người cần toàn bộ AI hiện tại và tương lai','Người muốn dùng lâu dài'],value:['Mở tối đa sức mạnh hệ thống','Giảm chi phí dùng nhiều công cụ rời','Quản lý dữ liệu chuyên nghiệp hơn','Được ưu tiên hỗ trợ và cập nhật']}
+    monthly:{label:'CƠ BẢN',title:'Gói 1 tháng',price:'289.000đ',desc:'Phù hợp người mới bắt đầu muốn trải nghiệm Premium ngắn hạn và dùng các công cụ cốt lõi.',features:['AI Content Studio','Tạo content bán hàng nhanh','Đăng Fanpage cơ bản','Quản lý Fanpage','Quản lý Group','AI Comment','Token Manager cơ bản'],fit:['Chủ shop mới','Cá nhân kinh doanh online','Người mới làm nội dung','Người cần test hệ thống trước'],value:['Tiết kiệm thời gian viết bài mỗi ngày','Có nền tảng quản lý Fanpage/Group','Tạo nội dung đều hơn','Chi phí thấp để bắt đầu']},
+    quarterly:{label:'TIẾT KIỆM',title:'Gói 3 tháng',price:'529.000đ',desc:'Tối ưu hơn gói tháng, phù hợp shop nhỏ cần dùng ổn định và có thêm công cụ chăm sóc khách.',features:['Toàn bộ gói 1 tháng','AI Messenger','CRM Kanban cơ bản','Kịch bản inbox','Lịch đăng nâng cao','Báo cáo cơ bản','Ưu tiên hỗ trợ'],fit:['Shop nhỏ đang bán hàng','Người cần chăm sóc khách đều','Người chạy nội dung thường xuyên','CTV bán dịch vụ'],value:['Quy trình bán hàng rõ hơn','Giảm thời gian trả lời khách','Có kịch bản inbox sẵn','Tiết kiệm hơn so với mua từng tháng']},
+    halfyear:{label:'TĂNG TRƯỞNG',title:'Gói 6 tháng',price:'859.000đ',desc:'Phù hợp shop cần CRM, Sales Bot và quy trình gom khách để chăm sóc lâu dài.',features:['Toàn bộ gói 3 tháng','CRM Pro','AI Sales Bot','Comment Manager','Auto Tag khách hàng','Quản lý khách hàng','Chuyển khách sang CRM'],fit:['Shop có nhiều inbox/comment','Người cần gom khách về CRM','Đội sale nhỏ','Người muốn tối ưu chăm sóc khách'],value:['Không bỏ sót khách tiềm năng','Phân loại khách rõ ràng hơn','Chăm sóc khách có hệ thống','Tăng hiệu quả tư vấn và chốt đơn']},
+    yearly:{label:'PHỔ BIẾN NHẤT',title:'Gói 1 năm',price:'1.589.000đ',desc:'Gói phổ biến nhất cho nhà bán hàng muốn dùng đầy đủ công cụ AI Marketing trong 1 năm.',features:['Toàn bộ gói 6 tháng','AI Marketing Director','AI Ads Chuyên Gia','Kho Content Premium','Automation Marketing','Export báo cáo','Ưu tiên xử lý'],fit:['Shop bán hàng lâu dài','Người chạy quảng cáo','Agency nhỏ / CTV','Người cần hệ thống marketing đầy đủ'],value:['Chi phí thấp theo ngày','Có trợ lý AI định hướng marketing','Tối ưu nội dung và quảng cáo','Tiết kiệm chi phí thuê ngoài']},
+    sellerpro:{label:'VIP ENTERPRISE',title:'Gói nhà bán hàng chuyên nghiệp',price:'2.589.000đ',desc:'Gói cao nhất cho nhà bán hàng chuyên nghiệp, mở toàn bộ hệ thống hiện tại và các tính năng nâng cấp về sau.',features:['Toàn bộ tính năng Premium','AI Image Center','AI Video Center','AI Voice Studio','Dashboard Enterprise','Export PDF / Excel','Backup Database','Ưu tiên hỗ trợ VIP'],fit:['Nhà bán hàng chuyên nghiệp','Agency / đội marketing nhỏ','Người cần toàn bộ AI hiện tại và tương lai','Người muốn dùng lâu dài'],value:['Mở tối đa sức mạnh hệ thống','Giảm chi phí dùng nhiều công cụ rời','Quản lý dữ liệu chuyên nghiệp hơn','Được ưu tiên hỗ trợ và cập nhật']}
   };
   function q(s,r){return (r||document).querySelector(s)}
   function fillList(id,arr){var el=q('#'+id); if(!el) return; el.innerHTML=(arr||[]).map(function(x){return '<li>'+x+'</li>'}).join('')}
@@ -7417,12 +7449,12 @@ function dropKanban(ev){ ev.preventDefault(); const col=ev.currentTarget; if(dra
 (function(){
   'use strict';
   var PLAN={
-    monthly:{title:'Gói 1 tháng',amount:'259000',price:'259.000đ',code:'GOI1THANG',desc:'Phù hợp người mới bắt đầu.'},
-    quarterly:{title:'Gói 3 tháng',amount:'490000',price:'490.000đ',code:'GOI3THANG',desc:'Tối ưu hơn gói tháng.'},
-    halfyear:{title:'Gói 6 tháng',amount:'790000',price:'790.000đ',code:'GOI6THANG',desc:'Mở CRM và Sales Bot.'},
-    yearly:{title:'Gói 1 năm',amount:'1290000',price:'1.290.000đ',code:'GOI1NAM',desc:'Gói phổ biến nhất.'},
-    sellerpro:{title:'Gói nhà bán hàng chuyên nghiệp',amount:'2490000',price:'2.490.000đ',code:'NHABANHANGPRO',desc:'Gói cao nhất cho nhà bán hàng chuyên nghiệp.'},
-    lifetime:{title:'Gói nhà bán hàng chuyên nghiệp',amount:'2490000',price:'2.490.000đ',code:'NHABANHANGPRO',desc:'Gói cao nhất cho nhà bán hàng chuyên nghiệp.'}
+    monthly:{title:'Gói 1 tháng',amount:'289000',price:'289.000đ',code:'GOI1THANG',desc:'Phù hợp người mới bắt đầu.'},
+    quarterly:{title:'Gói 3 tháng',amount:'529000',price:'529.000đ',code:'GOI3THANG',desc:'Tối ưu hơn gói tháng.'},
+    halfyear:{title:'Gói 6 tháng',amount:'859000',price:'859.000đ',code:'GOI6THANG',desc:'Mở CRM và Sales Bot.'},
+    yearly:{title:'Gói 1 năm',amount:'1589000',price:'1.589.000đ',code:'GOI1NAM',desc:'Gói phổ biến nhất.'},
+    sellerpro:{title:'Gói nhà bán hàng chuyên nghiệp',amount:'2589000',price:'2.589.000đ',code:'NHABANHANGPRO',desc:'Gói cao nhất cho nhà bán hàng chuyên nghiệp.'},
+    lifetime:{title:'Gói nhà bán hàng chuyên nghiệp',amount:'2589000',price:'2.589.000đ',code:'NHABANHANGPRO',desc:'Gói cao nhất cho nhà bán hàng chuyên nghiệp.'}
   };
   function q(s,r){return (r||document).querySelector(s)}
   function qa(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s))}
@@ -7460,7 +7492,7 @@ function dropKanban(ev){ ev.preventDefault(); const col=ev.currentTarget; if(dra
     var modal=q('#paymentModal'); if(!modal) return false;
     var title=q('#payPlanTitle'); if(title) title.textContent=p.title;
     var desc=q('#payPlanDesc'); if(desc) desc.textContent=p.desc || 'Vui lòng nhập số điện thoại và Gmail để được duyệt nâng cấp.';
-    var price=q('#payPlanPrice'); if(price) price.textContent=money(p.amount);
+    var price=q('#payPlanPrice'); if(price) price.innerHTML=(p.oldPrice?'<span style=\"text-decoration:line-through;color:#94a3b8;font-size:14px;margin-right:8px\">'+p.oldPrice+'</span> ':'') + money(p.amount) + ' <span style=\"display:inline-flex;margin-left:8px;padding:4px 8px;border-radius:999px;background:#facc15;color:#111827;font-size:12px;font-weight:1000\">⚡ GIẢM 35%</span>';
     var dev=q('#payDeviceId'); if(dev) dev.value=deviceId();
     var content=contentFor(p);
     var pc=q('#payContent'); if(pc) pc.textContent=content;
@@ -7523,11 +7555,11 @@ function dropKanban(ev){ ev.preventDefault(); const col=ev.currentTarget; if(dra
 (function(){
   'use strict';
   var PLANS={
-    monthly:{title:'Gói 1 tháng',price:'259.000đ',amount:'259000',code:'GOI1THANG',desc:'Phù hợp người mới bắt đầu.'},
-    quarterly:{title:'Gói 3 tháng',price:'490.000đ',amount:'490000',code:'GOI3THANG',desc:'Tối ưu hơn gói tháng.'},
-    halfyear:{title:'Gói 6 tháng',price:'790.000đ',amount:'790000',code:'GOI6THANG',desc:'Mở thêm CRM, Sales Bot và công cụ nâng cao.'},
-    yearly:{title:'Gói 1 năm',price:'1.290.000đ',amount:'1290000',code:'GOI1NAM',desc:'Gói phổ biến, tối ưu chi phí dài hạn.'},
-    sellerpro:{title:'Gói nhà bán hàng chuyên nghiệp',price:'2.490.000đ',amount:'2490000',code:'NHABANHANGPRO',desc:'Gói cao nhất cho nhà bán hàng chuyên nghiệp.'}
+    monthly:{title:'Gói 1 tháng',price:'289.000đ',oldPrice:'445.000đ',discount:'GIẢM 35%',amount:'289000',code:'GOI1THANG',desc:'Phù hợp người mới bắt đầu.'},
+    quarterly:{title:'Gói 3 tháng',price:'529.000đ',oldPrice:'815.000đ',discount:'GIẢM 35%',amount:'529000',code:'GOI3THANG',desc:'Tối ưu hơn gói tháng.'},
+    halfyear:{title:'Gói 6 tháng',price:'859.000đ',oldPrice:'1.322.000đ',discount:'GIẢM 35%',amount:'859000',code:'GOI6THANG',desc:'Mở thêm CRM, Sales Bot và công cụ nâng cao.'},
+    yearly:{title:'Gói 1 năm',price:'1.589.000đ',oldPrice:'2.445.000đ',discount:'GIẢM 35%',amount:'1589000',code:'GOI1NAM',desc:'Gói phổ biến, tối ưu chi phí dài hạn.'},
+    sellerpro:{title:'Gói nhà bán hàng chuyên nghiệp',price:'2.589.000đ',oldPrice:'3.983.000đ',discount:'GIẢM 35%',amount:'2589000',code:'NHABANHANGPRO',desc:'Gói cao nhất cho nhà bán hàng chuyên nghiệp.'}
   };
   PLANS.lifetime=PLANS.sellerpro;
   function q(s,r){return (r||document).querySelector(s)}
@@ -7553,7 +7585,7 @@ function dropKanban(ev){ ev.preventDefault(); const col=ev.currentTarget; if(dra
   function q(s,r){return (r||document).querySelector(s)}
   function qa(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s))}
   function device(){var id='';try{id=localStorage.getItem('mkt_device_id')||''}catch(e){} if(!id&&typeof window.getOrCreateDeviceId==='function')id=window.getOrCreateDeviceId(); if(!id){id='MKT-'+Math.random().toString(36).slice(2,8).toUpperCase()+Date.now().toString().slice(-4);try{localStorage.setItem('mkt_device_id',id)}catch(e){}} document.cookie='mkt_device_id='+encodeURIComponent(id)+'; path=/; max-age='+(60*60*24*365*5); return id;}
-  function amountOf(k){k=String(k||window.currentPremiumPlanKey||window.mktSelectedPlanKey||'monthly').toLowerCase(); if(/seller|lifetime|nhabanhang/.test(k))return '2490000'; if(/year|1nam/.test(k))return '1290000'; if(/half|6thang/.test(k))return '790000'; if(/quarter|3thang/.test(k))return '490000'; return '259000';}
+  function amountOf(k){k=String(k||window.currentPremiumPlanKey||window.mktSelectedPlanKey||'monthly').toLowerCase(); if(/seller|lifetime|nhabanhang/.test(k))return '2589000'; if(/year|1nam/.test(k))return '1589000'; if(/half|6thang/.test(k))return '859000'; if(/quarter|3thang/.test(k))return '529000'; return '289000';}
   function cleanTransfer(){var id=device(); var pc=q('#payContent'); if(pc)pc.textContent=id; var dev=q('#payDeviceId'); if(dev)dev.value=id; var qr=q('#payQr'); if(qr){var k=window.currentPremiumPlanKey||window.mktSelectedPlanKey||'monthly';qr.src='https://img.vietqr.io/image/970405-8888363382629-compact2.png?amount='+encodeURIComponent(amountOf(k))+'&addInfo='+encodeURIComponent(id)+'&accountName='+encodeURIComponent('NGUYEN DANG THI XUAN');} qa('span,div,p,b').forEach(function(el){if(el.id==='payContent')return; var t=el.childNodes&&el.childNodes.length===1?el.textContent:''; if(/CHUA_SDT|CHUA_GMAIL|GOI1THANG|GOI3THANG|GOI6THANG|GOI1NAM|NHABANHANGPRO/.test(t||'')){el.textContent=(t||'').replace(/\s*\|\s*CHUA_SDT\s*\|\s*CHUA_GMAIL\s*\|\s*(GOI1THANG|GOI3THANG|GOI6THANG|GOI1NAM|NHABANHANGPRO)/g,'').replace(/\bCHUA_SDT\b|\bCHUA_GMAIL\b|\bGOI1THANG\b|\bGOI3THANG\b|\bGOI6THANG\b|\bGOI1NAM\b|\bNHABANHANGPRO\b/g,'').trim();}});}
   var oldRefresh=window.refreshPaymentContent; window.refreshPaymentContent=function(){try{if(typeof oldRefresh==='function')oldRefresh.apply(this,arguments)}catch(e){} cleanTransfer();};
   var oldOpen=window.openPayment; window.openPayment=function(k){var r; try{if(typeof oldOpen==='function')r=oldOpen.apply(this,arguments)}catch(e){} setTimeout(cleanTransfer,0);setTimeout(cleanTransfer,100);setTimeout(cleanTransfer,250);return r===undefined?false:r;};
@@ -9785,12 +9817,12 @@ ADMIN_HTML = """
     return id;
   }
   var plans=window.premiumPlans || {
-    monthly:{title:'Gói 1 tháng',price:'259.000đ',amount:'259000',package:'1THANG',desc:'Phù hợp người mới bắt đầu.'},
-    quarterly:{title:'Gói 3 tháng',price:'490.000đ',amount:'490000',package:'3THANG',desc:'Tối ưu hơn gói tháng.'},
-    halfyear:{title:'Gói 6 tháng',price:'790.000đ',amount:'790000',package:'6THANG',desc:'Mở CRM và Sales Bot.'},
-    yearly:{title:'Gói 1 năm',price:'1.290.000đ',amount:'1290000',package:'1NAM',desc:'Gói phổ biến nhất.'},
-    sellerpro:{title:'Gói nhà bán hàng chuyên nghiệp',price:'2.490.000đ',amount:'2490000',package:'NHABANHANGCHUYENNGHIEP',desc:'Gói cao nhất cho nhà bán hàng chuyên nghiệp.'},
-    lifetime:{title:'Gói nhà bán hàng chuyên nghiệp',price:'2.490.000đ',amount:'2490000',package:'NHABANHANGCHUYENNGHIEP',desc:'Gói cao nhất cho nhà bán hàng chuyên nghiệp.'}
+    monthly:{title:'Gói 1 tháng',price:'289.000đ',oldPrice:'445.000đ',discount:'GIẢM 35%',amount:'289000',package:'1THANG',desc:'Phù hợp người mới bắt đầu.'},
+    quarterly:{title:'Gói 3 tháng',price:'529.000đ',oldPrice:'815.000đ',discount:'GIẢM 35%',amount:'529000',package:'3THANG',desc:'Tối ưu hơn gói tháng.'},
+    halfyear:{title:'Gói 6 tháng',price:'859.000đ',oldPrice:'1.322.000đ',discount:'GIẢM 35%',amount:'859000',package:'6THANG',desc:'Mở CRM và Sales Bot.'},
+    yearly:{title:'Gói 1 năm',price:'1.589.000đ',oldPrice:'2.445.000đ',discount:'GIẢM 35%',amount:'1589000',package:'1NAM',desc:'Gói phổ biến nhất.'},
+    sellerpro:{title:'Gói nhà bán hàng chuyên nghiệp',price:'2.589.000đ',oldPrice:'3.983.000đ',discount:'GIẢM 35%',amount:'2589000',package:'NHABANHANGCHUYENNGHIEP',desc:'Gói cao nhất cho nhà bán hàng chuyên nghiệp.'},
+    lifetime:{title:'Gói nhà bán hàng chuyên nghiệp',price:'2.589.000đ',oldPrice:'3.983.000đ',discount:'GIẢM 35%',amount:'2589000',package:'NHABANHANGCHUYENNGHIEP',desc:'Gói cao nhất cho nhà bán hàng chuyên nghiệp.'}
   };
   plans.sellerpro=plans.sellerpro||plans.lifetime; plans.lifetime=plans.lifetime||plans.sellerpro;
   function plan(k){return plans[k]||plans.monthly;}
@@ -9812,7 +9844,7 @@ ADMIN_HTML = """
     if(!modal){return false;}
     var title=q('#payPlanTitle'); if(title) title.textContent=(p.title||'Gói Premium').replace(/^🚀 |^⭐ |^💎 |^🔥 |^👑 /,'');
     var desc=q('#payPlanDesc'); if(desc) desc.textContent='Nhập số điện thoại và Gmail để đăng ký kích hoạt. Nội dung chuyển khoản sẽ tự kèm ID thiết bị và gói đã chọn.';
-    var price=q('#payPlanPrice'); if(price) price.textContent=money(p.amount);
+    var price=q('#payPlanPrice'); if(price) price.innerHTML=(p.oldPrice?'<span style=\"text-decoration:line-through;color:#94a3b8;font-size:14px;margin-right:8px\">'+p.oldPrice+'</span> ':'') + money(p.amount) + ' <span style=\"display:inline-flex;margin-left:8px;padding:4px 8px;border-radius:999px;background:#facc15;color:#111827;font-size:12px;font-weight:1000\">⚡ GIẢM 35%</span>';
     var device=q('#payDeviceId'); if(device) device.value=getDevice();
     var benefits=q('#payBenefits'); if(benefits && p.benefits){benefits.innerHTML=p.benefits.map(function(x){return '<div>'+x+'</div>';}).join('');}
     var locked=q('#payLocked'); if(locked){locked.innerHTML=''; var h=locked.previousElementSibling; if(h) h.style.display='none';}
@@ -9864,12 +9896,12 @@ ADMIN_HTML = """
 (function(){
   'use strict';
   var PLAN_MAP={
-    monthly:{title:'Gói 1 tháng',amount:'259000',price:'259.000đ',code:'GOI1THANG'},
-    quarterly:{title:'Gói 3 tháng',amount:'490000',price:'490.000đ',code:'GOI3THANG'},
-    halfyear:{title:'Gói 6 tháng',amount:'790000',price:'790.000đ',code:'GOI6THANG'},
-    yearly:{title:'Gói 1 năm',amount:'1290000',price:'1.290.000đ',code:'GOI1NAM'},
-    sellerpro:{title:'Gói nhà bán hàng chuyên nghiệp',amount:'2490000',price:'2.490.000đ',code:'NHABANHANGPRO'},
-    lifetime:{title:'Gói nhà bán hàng chuyên nghiệp',amount:'2490000',price:'2.490.000đ',code:'NHABANHANGPRO'}
+    monthly:{title:'Gói 1 tháng',amount:'289000',price:'289.000đ',code:'GOI1THANG'},
+    quarterly:{title:'Gói 3 tháng',amount:'529000',price:'529.000đ',code:'GOI3THANG'},
+    halfyear:{title:'Gói 6 tháng',amount:'859000',price:'859.000đ',code:'GOI6THANG'},
+    yearly:{title:'Gói 1 năm',amount:'1589000',price:'1.589.000đ',code:'GOI1NAM'},
+    sellerpro:{title:'Gói nhà bán hàng chuyên nghiệp',amount:'2589000',price:'2.589.000đ',code:'NHABANHANGPRO'},
+    lifetime:{title:'Gói nhà bán hàng chuyên nghiệp',amount:'2589000',price:'2.589.000đ',code:'NHABANHANGPRO'}
   };
   function q(s,root){return (root||document).querySelector(s)}
   function qa(s,root){return Array.prototype.slice.call((root||document).querySelectorAll(s))}
@@ -10079,12 +10111,12 @@ ADMIN_HTML = """
 (function(){
   'use strict';
   var PLANS={
-    monthly:{title:'Gói 1 tháng',price:'259.000đ',amount:'259000',code:'GOI1THANG',package:'GOI1THANG',desc:'Phù hợp người mới bắt đầu.'},
-    quarterly:{title:'Gói 3 tháng',price:'490.000đ',amount:'490000',code:'GOI3THANG',package:'GOI3THANG',desc:'Tối ưu hơn gói tháng.'},
-    halfyear:{title:'Gói 6 tháng',price:'790.000đ',amount:'790000',code:'GOI6THANG',package:'GOI6THANG',desc:'Mở CRM và Sales Bot.'},
-    yearly:{title:'Gói 1 năm',price:'1.290.000đ',amount:'1290000',code:'GOI1NAM',package:'GOI1NAM',desc:'Gói phổ biến nhất.'},
-    sellerpro:{title:'Gói nhà bán hàng chuyên nghiệp',price:'2.490.000đ',amount:'2490000',code:'NHABANHANGPRO',package:'NHABANHANGPRO',desc:'Gói cao nhất cho nhà bán hàng chuyên nghiệp.'},
-    lifetime:{title:'Gói nhà bán hàng chuyên nghiệp',price:'2.490.000đ',amount:'2490000',code:'NHABANHANGPRO',package:'NHABANHANGPRO',desc:'Gói cao nhất cho nhà bán hàng chuyên nghiệp.'}
+    monthly:{title:'Gói 1 tháng',price:'289.000đ',oldPrice:'445.000đ',discount:'GIẢM 35%',amount:'289000',code:'GOI1THANG',package:'GOI1THANG',desc:'Phù hợp người mới bắt đầu.'},
+    quarterly:{title:'Gói 3 tháng',price:'529.000đ',oldPrice:'815.000đ',discount:'GIẢM 35%',amount:'529000',code:'GOI3THANG',package:'GOI3THANG',desc:'Tối ưu hơn gói tháng.'},
+    halfyear:{title:'Gói 6 tháng',price:'859.000đ',oldPrice:'1.322.000đ',discount:'GIẢM 35%',amount:'859000',code:'GOI6THANG',package:'GOI6THANG',desc:'Mở CRM và Sales Bot.'},
+    yearly:{title:'Gói 1 năm',price:'1.589.000đ',oldPrice:'2.445.000đ',discount:'GIẢM 35%',amount:'1589000',code:'GOI1NAM',package:'GOI1NAM',desc:'Gói phổ biến nhất.'},
+    sellerpro:{title:'Gói nhà bán hàng chuyên nghiệp',price:'2.589.000đ',oldPrice:'3.983.000đ',discount:'GIẢM 35%',amount:'2589000',code:'NHABANHANGPRO',package:'NHABANHANGPRO',desc:'Gói cao nhất cho nhà bán hàng chuyên nghiệp.'},
+    lifetime:{title:'Gói nhà bán hàng chuyên nghiệp',price:'2.589.000đ',oldPrice:'3.983.000đ',discount:'GIẢM 35%',amount:'2589000',code:'NHABANHANGPRO',package:'NHABANHANGPRO',desc:'Gói cao nhất cho nhà bán hàng chuyên nghiệp.'}
   };
   function q(s,r){return (r||document).querySelector(s)}
   function txt(el){return String((el&&el.innerText)||'').toLowerCase()}
@@ -10223,11 +10255,11 @@ ADMIN_HTML = """
   'use strict';
 
   var plans={
-    monthly:{title:'Gói 1 tháng',price:'259.000đ',amount:'259000',desc:'Phù hợp người mới bắt đầu, shop nhỏ cần đăng bài, tạo content và quản lý Fanpage cơ bản.',benefits:['Đăng bài Facebook','Quản lý Fanpage','Quản lý Group','AI Comment','Tạo content cơ bản','Token Manager','Hỗ trợ kích hoạt theo ID thiết bị']},
-    quarterly:{title:'Gói 3 tháng',price:'490.000đ',amount:'490000',desc:'Tối ưu cho shop đang bán hàng cần dùng ổn định hơn và tiết kiệm hơn gói tháng.',benefits:['Toàn bộ gói 1 tháng','AI Messenger','CRM Kanban cơ bản','Kịch bản inbox','Lịch đăng nâng cao','Báo cáo cơ bản','Ưu tiên hỗ trợ']},
-    halfyear:{title:'Gói 6 tháng',price:'790.000đ',amount:'790000',desc:'Phù hợp shop cần CRM, chăm sóc khách và tối ưu quy trình bán hàng.',benefits:['Toàn bộ gói 3 tháng','CRM Pro','AI Sales Bot','Comment Manager','Auto Tag khách hàng','Quản lý khách hàng','Chuyển khách sang CRM']},
-    yearly:{title:'Gói 1 năm',price:'1.290.000đ',amount:'1290000',desc:'Gói phổ biến nhất cho nhà bán hàng muốn dùng đầy đủ công cụ AI Marketing trong 1 năm.',benefits:['Toàn bộ gói 6 tháng','AI Marketing Director','AI Ads Chuyên Gia','Kho Content Premium','Automation Marketing','Export báo cáo','Ưu tiên xử lý']},
-    sellerpro:{title:'Gói nhà bán hàng chuyên nghiệp',price:'2.490.000đ',amount:'2490000',desc:'Gói cao nhất cho nhà bán hàng chuyên nghiệp, mở toàn bộ hệ thống sau khi admin duyệt.',benefits:['Toàn bộ tính năng Premium','AI Image Center','AI Video Center','AI Voice Studio','Dashboard Enterprise','Export PDF / Excel','Backup Database','Ưu tiên hỗ trợ VIP']}
+    monthly:{title:'Gói 1 tháng',price:'289.000đ',oldPrice:'445.000đ',discount:'GIẢM 35%',amount:'289000',desc:'Phù hợp người mới bắt đầu, shop nhỏ cần đăng bài, tạo content và quản lý Fanpage cơ bản.',benefits:['Đăng bài Facebook','Quản lý Fanpage','Quản lý Group','AI Comment','Tạo content cơ bản','Token Manager','Hỗ trợ kích hoạt theo ID thiết bị']},
+    quarterly:{title:'Gói 3 tháng',price:'529.000đ',oldPrice:'815.000đ',discount:'GIẢM 35%',amount:'529000',desc:'Tối ưu cho shop đang bán hàng cần dùng ổn định hơn và tiết kiệm hơn gói tháng.',benefits:['Toàn bộ gói 1 tháng','AI Messenger','CRM Kanban cơ bản','Kịch bản inbox','Lịch đăng nâng cao','Báo cáo cơ bản','Ưu tiên hỗ trợ']},
+    halfyear:{title:'Gói 6 tháng',price:'859.000đ',oldPrice:'1.322.000đ',discount:'GIẢM 35%',amount:'859000',desc:'Phù hợp shop cần CRM, chăm sóc khách và tối ưu quy trình bán hàng.',benefits:['Toàn bộ gói 3 tháng','CRM Pro','AI Sales Bot','Comment Manager','Auto Tag khách hàng','Quản lý khách hàng','Chuyển khách sang CRM']},
+    yearly:{title:'Gói 1 năm',price:'1.589.000đ',oldPrice:'2.445.000đ',discount:'GIẢM 35%',amount:'1589000',desc:'Gói phổ biến nhất cho nhà bán hàng muốn dùng đầy đủ công cụ AI Marketing trong 1 năm.',benefits:['Toàn bộ gói 6 tháng','AI Marketing Director','AI Ads Chuyên Gia','Kho Content Premium','Automation Marketing','Export báo cáo','Ưu tiên xử lý']},
+    sellerpro:{title:'Gói nhà bán hàng chuyên nghiệp',price:'2.589.000đ',oldPrice:'3.983.000đ',discount:'GIẢM 35%',amount:'2589000',desc:'Gói cao nhất cho nhà bán hàng chuyên nghiệp, mở toàn bộ hệ thống sau khi admin duyệt.',benefits:['Toàn bộ tính năng Premium','AI Image Center','AI Video Center','AI Voice Studio','Dashboard Enterprise','Export PDF / Excel','Backup Database','Ưu tiên hỗ trợ VIP']}
   };
 
   plans.lifetime = plans.sellerpro;
@@ -10243,11 +10275,11 @@ ADMIN_HTML = """
   function keyFromText(t){
     t = norm(t);
 
-    if(t.includes('2490000') || t.includes('1.959') || t.includes('1959') || t.includes('nhà bán') || t.includes('seller') || t.includes('chuyên nghiệp') || t.includes('trọn đời')) return 'sellerpro';
-    if(t.includes('1290000') || t.includes('859') || t.includes('1 năm') || t.includes('12 tháng')) return 'yearly';
-    if(t.includes('790000') || t.includes('559') || t.includes('6 tháng')) return 'halfyear';
-    if(t.includes('490000') || t.includes('359') || t.includes('3 tháng')) return 'quarterly';
-    if(t.includes('259000') || t.includes('159') || t.includes('1 tháng')) return 'monthly';
+    if(t.includes('2589000') || t.includes('1.959') || t.includes('1959') || t.includes('nhà bán') || t.includes('seller') || t.includes('chuyên nghiệp') || t.includes('trọn đời')) return 'sellerpro';
+    if(t.includes('1589000') || t.includes('859') || t.includes('1 năm') || t.includes('12 tháng')) return 'yearly';
+    if(t.includes('859000') || t.includes('559') || t.includes('6 tháng')) return 'halfyear';
+    if(t.includes('529000') || t.includes('359') || t.includes('3 tháng')) return 'quarterly';
+    if(t.includes('289000') || t.includes('159') || t.includes('1 tháng')) return 'monthly';
 
     return '';
   }
@@ -10379,11 +10411,11 @@ ADMIN_HTML = """
 (function(){
   'use strict';
   var PLANS={
-    monthly:{title:'Gói 1 tháng',price:'259.000đ',amount:'259000',code:'GOI1THANG',desc:'Phù hợp người mới bắt đầu.'},
-    quarterly:{title:'Gói 3 tháng',price:'490.000đ',amount:'490000',code:'GOI3THANG',desc:'Tối ưu hơn gói tháng.'},
-    halfyear:{title:'Gói 6 tháng',price:'790.000đ',amount:'790000',code:'GOI6THANG',desc:'Mở thêm CRM, Sales Bot và công cụ nâng cao.'},
-    yearly:{title:'Gói 1 năm',price:'1.290.000đ',amount:'1290000',code:'GOI1NAM',desc:'Gói phổ biến, tối ưu chi phí dài hạn.'},
-    sellerpro:{title:'Gói nhà bán hàng chuyên nghiệp',price:'2.490.000đ',amount:'2490000',code:'NHABANHANGPRO',desc:'Gói cao nhất cho nhà bán hàng chuyên nghiệp.'}
+    monthly:{title:'Gói 1 tháng',price:'289.000đ',oldPrice:'445.000đ',discount:'GIẢM 35%',amount:'289000',code:'GOI1THANG',desc:'Phù hợp người mới bắt đầu.'},
+    quarterly:{title:'Gói 3 tháng',price:'529.000đ',oldPrice:'815.000đ',discount:'GIẢM 35%',amount:'529000',code:'GOI3THANG',desc:'Tối ưu hơn gói tháng.'},
+    halfyear:{title:'Gói 6 tháng',price:'859.000đ',oldPrice:'1.322.000đ',discount:'GIẢM 35%',amount:'859000',code:'GOI6THANG',desc:'Mở thêm CRM, Sales Bot và công cụ nâng cao.'},
+    yearly:{title:'Gói 1 năm',price:'1.589.000đ',oldPrice:'2.445.000đ',discount:'GIẢM 35%',amount:'1589000',code:'GOI1NAM',desc:'Gói phổ biến, tối ưu chi phí dài hạn.'},
+    sellerpro:{title:'Gói nhà bán hàng chuyên nghiệp',price:'2.589.000đ',oldPrice:'3.983.000đ',discount:'GIẢM 35%',amount:'2589000',code:'NHABANHANGPRO',desc:'Gói cao nhất cho nhà bán hàng chuyên nghiệp.'}
   };
   PLANS.lifetime=PLANS.sellerpro;
   function q(s,r){return (r||document).querySelector(s)}
