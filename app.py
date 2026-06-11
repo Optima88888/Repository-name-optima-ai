@@ -12371,20 +12371,106 @@ ADMIN_HTML = """
 </body></html>
 """
 
+
+
+# ADMIN SAFE SCHEMA + FALLBACK FIX 20260611
+# Giu /admin va /admin/premium_action khong bi loi 500 khi database tren server con schema cu.
+def ensure_admin_safe_schema():
+    conn = db(); c = conn.cursor()
+    def create_and_columns(table, create_sql, columns):
+        c.execute(create_sql)
+        try:
+            c.execute("PRAGMA table_info(" + table + ")")
+            existing = set(str(r[1]) for r in c.fetchall())
+        except Exception:
+            existing = set()
+        for name, ddl in columns.items():
+            if name not in existing:
+                try:
+                    c.execute("ALTER TABLE " + table + " ADD COLUMN " + name + " " + ddl)
+                except Exception:
+                    pass
+    create_and_columns('premium_upgrade_requests', "CREATE TABLE IF NOT EXISTS premium_upgrade_requests (id INTEGER PRIMARY KEY AUTOINCREMENT, device_id TEXT, phone TEXT, email TEXT, package_key TEXT, package_name TEXT, amount INTEGER DEFAULT 0, payment_note TEXT, status TEXT DEFAULT 'Chờ duyệt', admin_note TEXT, created_at TEXT, approved_at TEXT)", {
+        'device_id':'TEXT','phone':'TEXT','email':'TEXT','package_key':'TEXT','package_name':'TEXT','amount':'INTEGER DEFAULT 0','payment_note':'TEXT','status':"TEXT DEFAULT 'Chờ duyệt'",'admin_note':'TEXT','created_at':'TEXT','approved_at':'TEXT','affiliate_code':'TEXT'
+    })
+    create_and_columns('device_subscriptions', "CREATE TABLE IF NOT EXISTS device_subscriptions (id INTEGER PRIMARY KEY AUTOINCREMENT, device_id TEXT UNIQUE, phone TEXT, email TEXT, package_key TEXT, package_name TEXT, start_date TEXT, end_date TEXT, status TEXT DEFAULT 'premium', last_renewal_notice_at TEXT, created_at TEXT, updated_at TEXT)", {
+        'device_id':'TEXT','phone':'TEXT','email':'TEXT','package_key':'TEXT','package_name':'TEXT','start_date':'TEXT','end_date':'TEXT','status':"TEXT DEFAULT 'premium'",'last_renewal_notice_at':'TEXT','created_at':'TEXT','updated_at':'TEXT'
+    })
+    create_and_columns('notifications', "CREATE TABLE IF NOT EXISTS notifications (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT, detail TEXT, level TEXT DEFAULT 'info', status TEXT DEFAULT 'new', created_at TEXT)", {'title':'TEXT','detail':'TEXT','level':"TEXT DEFAULT 'info'",'status':"TEXT DEFAULT 'new'",'created_at':'TEXT'})
+    create_and_columns('user_notifications', "CREATE TABLE IF NOT EXISTS user_notifications (id INTEGER PRIMARY KEY AUTOINCREMENT, device_id TEXT, title TEXT, message TEXT, level TEXT DEFAULT 'success', is_read INTEGER DEFAULT 0, created_at TEXT)", {'device_id':'TEXT','title':'TEXT','message':'TEXT','level':"TEXT DEFAULT 'success'",'is_read':'INTEGER DEFAULT 0','created_at':'TEXT'})
+    create_and_columns('support_messages', "CREATE TABLE IF NOT EXISTS support_messages (id INTEGER PRIMARY KEY AUTOINCREMENT, device_id TEXT, sender TEXT, message TEXT, status TEXT DEFAULT 'new', created_at TEXT)", {'device_id':'TEXT','sender':'TEXT','message':'TEXT','status':"TEXT DEFAULT 'new'",'created_at':'TEXT'})
+    try:
+        ensure_affiliate_tables()
+    except Exception:
+        pass
+    conn.commit(); conn.close()
+
+
+def _safe_call(default, fn, *args, **kwargs):
+    try:
+        return fn(*args, **kwargs)
+    except Exception as e:
+        print('Admin safe call error:', getattr(fn, '__name__', 'fn'), e)
+        return default
+
+
+def _admin_fallback_html(error=''):
+    rows = _safe_call([], get_premium_requests)
+    subs = _safe_call([], get_device_subscriptions)
+    html = '<!doctype html><html><head><meta charset="utf-8"><title>Web Admin</title>'
+    html += '<style>body{font-family:Arial,sans-serif;background:#f8fafc;margin:0;padding:30px;color:#0f172a}.card{background:#fff;border-radius:18px;padding:22px;margin:0 0 18px;box-shadow:0 12px 35px rgba(15,23,42,.08)}table{width:100%;border-collapse:collapse}th,td{padding:12px;border-bottom:1px solid #e5e7eb;text-align:left}th{background:#eef2ff}.ok{display:inline-block;background:#dcfce7;color:#166534;border-radius:999px;padding:6px 10px;font-weight:700}.btn{border:0;border-radius:10px;background:#16a34a;color:#fff;padding:9px 12px;font-weight:700;cursor:pointer}.err{background:#fee2e2;color:#991b1b;padding:12px;border-radius:12px;margin-bottom:18px}</style></head><body>'
+    html += '<div class="card"><h1>Web Admin Premium</h1><p>Trang admin dang chay o che do an toan.</p>'
+    if error:
+        html += '<div class="err">' + str(error).replace('<','&lt;').replace('>','&gt;')[:500] + '</div>'
+    html += '<a href="/dashboard">Ve app khach</a></div>'
+    html += '<div class="card"><h2>Yeu cau nang cap</h2><table><tr><th>ID</th><th>ID thiet bi</th><th>SDT</th><th>Gmail</th><th>Goi</th><th>So tien</th><th>Trang thai</th><th>Thao tac</th></tr>'
+    for r in rows:
+        try:
+            html += f'<tr><td>{r[0]}</td><td><b>{r[1] or ""}</b></td><td>{r[2] or ""}</td><td>{r[3] or ""}</td><td>{r[5] or r[4] or ""}</td><td>{money_vnd(r[6])}</td><td><span class="ok">{r[8] or ""}</span></td><td><form method="post" action="/admin/premium_action"><input type="hidden" name="request_id" value="{r[0]}"><button class="btn" name="status" value="Đã duyệt">Duyet</button></form></td></tr>'
+        except Exception:
+            pass
+    html += '</table></div><div class="card"><h2>Goi da kich hoat</h2><table><tr><th>ID thiet bi</th><th>Goi</th><th>Kich hoat</th><th>Het han</th><th>Con lai</th><th>Trang thai</th></tr>'
+    for r in subs:
+        try:
+            html += f'<tr><td><b>{r[1] or ""}</b></td><td>{r[5] or ""}</td><td>{r[6] or ""}</td><td>{r[7] or ""}</td><td>{r[-2] if len(r)>11 else ""} ngay</td><td><span class="ok">{r[8] or ""}</span></td></tr>'
+        except Exception:
+            pass
+    html += '</table></div></body></html>'
+    return html
+
+# /ADMIN SAFE SCHEMA + FALLBACK FIX 20260611
+
 @app.route("/admin")
 def admin_home():
-    return render_template_string(ADMIN_HTML, rows=get_premium_requests(), support_rows=get_support_messages(limit=200), admin_stats=admin_ceo_stats(), subscriptions=get_device_subscriptions())
+    try:
+        ensure_admin_safe_schema()
+        return render_template_string(
+            ADMIN_HTML,
+            rows=_safe_call([], get_premium_requests),
+            support_rows=_safe_call([], get_support_messages, limit=200),
+            admin_stats=_safe_call({}, admin_ceo_stats),
+            subscriptions=_safe_call([], get_device_subscriptions)
+        )
+    except Exception as e:
+        print("/admin safe fallback:", e)
+        return _admin_fallback_html(e), 200
 
 
 @app.route('/api/admin/ceo_dashboard')
 def api_admin_ceo_dashboard():
     return jsonify(admin_ceo_stats())
 
-@app.route("/admin/premium_action", methods=["POST"])
+@app.route("/admin/premium_action", methods=["GET", "POST"])
 def admin_premium_action():
-    request_id = request.form.get("request_id")
-    status = request.form.get("status", "Đã duyệt")
-    approve_premium_request(request_id, status=status, admin_note="Duyệt từ Web Admin")
+    try:
+        ensure_admin_safe_schema()
+        if request.method == "POST":
+            request_id = request.form.get("request_id")
+            status = request.form.get("status", "Đã duyệt")
+            approve_premium_request(request_id, status=status, admin_note="Duyệt từ Web Admin")
+    except Exception as e:
+        print("/admin/premium_action error:", e)
+        return _admin_fallback_html(e), 200
     return admin_home()
 
 
@@ -13116,6 +13202,7 @@ def api_premium_status_realtime():
 # This prevents /admin/premium_action from failing when tables are missing.
 try:
     init_db()
+    ensure_admin_safe_schema()
 except Exception as _db_bootstrap_err:
     print("Database bootstrap error:", _db_bootstrap_err)
 
