@@ -13562,13 +13562,14 @@ if __name__ == "__main__":
 
 # =========================================================
 # FINAL MOBILE INSTALL CLEAN MODE
-# Mục tiêu: xóa/ẩn toàn bộ giao diện tải app cũ trên điện thoại,
-# chỉ giữ hướng dẫn cài app gọn bằng alert + service worker chuẩn /sw.js.
-# Đặt vào đầu danh sách after_request để hàm này chạy CUỐI cùng.
+# Mục tiêu: loại bỏ toàn bộ nút/giao diện tải xuống trên điện thoại.
+# Chỉ giữ hàm showInstallGuide() + beforeinstallprompt + service worker /sw.js.
+# Giữ nguyên giao diện, menu, nội dung và các cài đặt còn lại.
 # =========================================================
 _MKT_SIMPLE_INSTALL_FINAL = r'''
 <style id="mkt-simple-install-final-css">
-  /* Ẩn toàn bộ popup/nút tải app cũ để không hiện nội dung dài cho khách */
+  /* Ẩn toàn bộ nút/popup tải app trên điện thoại, không tạo nút mới */
+  #gptminiSimpleInstallBtn,
   #mktTopDownloadBar,
   #mktTopInstallSheet,
   #mktInstallSheet,
@@ -13580,6 +13581,8 @@ _MKT_SIMPLE_INSTALL_FINAL = r'''
   #mktMobileInstallQuick,
   #mktMobileInstallQuickRestore,
   #installAppBtn,
+  [data-install-app],
+  [data-mkt-install-app],
   .mkt-mobile-install-menu,
   .mkt-mobile-download-v130,
   .mkt-install-old,
@@ -13593,116 +13596,60 @@ _MKT_SIMPLE_INSTALL_FINAL = r'''
     opacity:0!important;
     pointer-events:none!important;
   }
-
-  @media(max-width:768px){
-    #gptminiSimpleInstallBtn{
-      position:fixed!important;
-      left:12px!important;
-      bottom:calc(14px + env(safe-area-inset-bottom,0px))!important;
-      z-index:2147483646!important;
-      border:0!important;
-      border-radius:999px!important;
-      padding:10px 14px!important;
-      min-height:44px!important;
-      display:inline-flex!important;
-      align-items:center!important;
-      gap:8px!important;
-      background:linear-gradient(135deg,#2563eb,#7c3aed)!important;
-      color:#fff!important;
-      font-family:system-ui,-apple-system,"Segoe UI",Arial,sans-serif!important;
-      font-size:13px!important;
-      font-weight:900!important;
-      box-shadow:0 14px 30px rgba(37,99,235,.35)!important;
-      cursor:pointer!important;
-    }
-    #gptminiSimpleInstallBtn .dot{
-      width:9px!important;height:9px!important;border-radius:50%!important;
-      background:#22c55e!important;box-shadow:0 0 0 4px rgba(34,197,94,.20),0 0 12px rgba(34,197,94,.85)!important;
-    }
-    body.gptmini-standalone #gptminiSimpleInstallBtn{display:none!important;}
-  }
-  @media(min-width:769px){#gptminiSimpleInstallBtn{display:none!important;}}
 </style>
+
 <script id="mkt-simple-install-final-js">
-(function(){
-  'use strict';
+function showInstallGuide(){
+  alert("Cách cài App Mini:\\n\\nAndroid Chrome: bấm dấu 3 chấm → Thêm vào màn hình chính.\\n\\niPhone Safari: bấm Chia sẻ → Thêm vào MH chính.\\n\\nSau đó mở Mkt Automation Pro như một app trên điện thoại.");
+}
 
-  var deferredInstallPrompt = null;
-  window.deferredInstallPrompt = null;
+let deferredInstallPrompt = null;
+window.addEventListener('beforeinstallprompt', function(e){
+  e.preventDefault();
+  deferredInstallPrompt = e;
+});
+</script>
 
-  function isStandalone(){
-    return window.matchMedia('(display-mode: standalone)').matches ||
-           window.navigator.standalone === true;
-  }
-
-  function showInstallGuide(){
-    alert("Cách cài App Mini:\n\nAndroid Chrome: bấm dấu 3 chấm → Thêm vào màn hình chính.\n\niPhone Safari: bấm Chia sẻ → Thêm vào MH chính.\n\nSau đó mở Gptmini như một app trên điện thoại.");
-    return false;
-  }
-
-  window.showInstallGuide = showInstallGuide;
-  window.openInstallGuide = showInstallGuide;
-  window.runMktInstallPrompt = showInstallGuide;
-  window.mktTopInstall = showInstallGuide;
-
-  window.addEventListener('beforeinstallprompt', function(e){
-    e.preventDefault();
-    deferredInstallPrompt = e;
-    window.deferredInstallPrompt = e;
-  });
-
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', function(){
-      navigator.serviceWorker.register('/sw.js').catch(function(err){
-        console.log('Service worker registration failed:', err);
-      });
+<script id="mkt-simple-install-sw-js">
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function(){
+    navigator.serviceWorker.register('/sw.js').catch(function(err){
+      console.log('Service worker registration failed:', err);
     });
-  }
+  });
+}
+</script>
 
-  function removeOldInstallUi(){
+<script id="mkt-simple-install-guide-override-js">
+function showInstallGuide(){
+  alert("Cách cài App Mini:\\n\\nAndroid Chrome: bấm dấu 3 chấm → Thêm vào màn hình chính.\\n\\niPhone Safari: bấm Chia sẻ → Thêm vào MH chính.\\n\\nSau đó mở Mkt Automation Pro V2 như một app.");
+}
+
+(function(){
+  function removeInstallButtons(){
     var selectors = [
-      '#mktTopDownloadBar','#mktTopInstallSheet','#mktInstallSheet','#mktInstallPanel',
-      '#mktDownloadAppV130','#mktPhoneInstallFloat','#mktPhoneInstallEntry','#mktMobileInstallMenu',
-      '#mktMobileInstallQuick','#mktMobileInstallQuickRestore','#installAppBtn',
+      '#gptminiSimpleInstallBtn','#mktTopDownloadBar','#mktTopInstallSheet','#mktInstallSheet',
+      '#mktInstallPanel','#mktDownloadAppV130','#mktPhoneInstallFloat','#mktPhoneInstallEntry',
+      '#mktMobileInstallMenu','#mktMobileInstallQuick','#mktMobileInstallQuickRestore','#installAppBtn',
+      '[data-install-app]','[data-mkt-install-app]',
       '.mkt-mobile-install-menu','.mkt-mobile-download-v130','.mkt-install-old','.mkt-install-sheet',
       '.install-app-btn','.app-install-card','.app-install-banner','.v2-install-box'
     ];
     selectors.forEach(function(sel){
       document.querySelectorAll(sel).forEach(function(el){
-        try{ el.remove(); }catch(_e){ el.style.display='none'; }
+        try{ el.remove(); }catch(e){ el.style.display='none'; }
       });
     });
-    if(isStandalone()) document.body.classList.add('gptmini-standalone');
   }
-
-  function ensureSimpleButton(){
-    if(!/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || '')) return;
-    if(isStandalone()) return;
-    removeOldInstallUi();
-    if(document.getElementById('gptminiSimpleInstallBtn')) return;
-    var btn = document.createElement('button');
-    btn.type = 'button';
-    btn.id = 'gptminiSimpleInstallBtn';
-    btn.innerHTML = '<span class="dot"></span><span>GPTMini</span><small style="font-weight:800;opacity:.9">Cài App</small>';
-    btn.onclick = showInstallGuide;
-    document.body.appendChild(btn);
+  if(document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', removeInstallButtons);
+  } else {
+    removeInstallButtons();
   }
-
-  document.addEventListener('click', function(e){
-    var target = e.target.closest && e.target.closest('#gptminiSimpleInstallBtn,[onclick*="showInstallGuide"],[data-install-app],[data-mkt-install-app]');
-    if(!target) return;
-    e.preventDefault();
-    e.stopPropagation();
-    if(e.stopImmediatePropagation) e.stopImmediatePropagation();
-    return showInstallGuide();
-  }, true);
-
-  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', ensureSimpleButton);
-  else ensureSimpleButton();
-  window.addEventListener('load', ensureSimpleButton);
-  setTimeout(ensureSimpleButton, 600);
-  setTimeout(ensureSimpleButton, 1600);
-  setTimeout(removeOldInstallUi, 2600);
+  window.addEventListener('load', removeInstallButtons);
+  setTimeout(removeInstallButtons, 600);
+  setTimeout(removeInstallButtons, 1600);
+  setTimeout(removeInstallButtons, 3000);
 })();
 </script>
 '''
@@ -13717,8 +13664,9 @@ def _mkt_simple_install_final_response(response):
         if 'text/html' not in ctype.lower():
             return response
         data = response.get_data(as_text=True)
-        # Loại bỏ các bản simple cũ nếu reload nhiều lần trên Render.
-        data = data.replace(_MKT_SIMPLE_INSTALL_FINAL, '')
+        # Chỉ giữ một bản code cài app đơn giản cuối cùng.
+        if 'mkt-simple-install-final-css' in data:
+            return response
         if '</body>' in data:
             data = data.replace('</body>', _MKT_SIMPLE_INSTALL_FINAL + '</body>', 1)
         else:
