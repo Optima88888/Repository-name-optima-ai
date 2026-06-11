@@ -1869,6 +1869,135 @@ def get_device_subscription(device_id=None):
     return row
 
 
+
+
+def get_subscription_view(device_id=None):
+    """Premium Subscription Center: tính gói, ngày còn lại và trạng thái theo thời gian thực."""
+    row = get_device_subscription(device_id)
+    if not row:
+        return {
+            "active": False,
+            "device_id": (device_id or get_device_id()).strip().upper(),
+            "package_key": "",
+            "package_name": "Chưa kích hoạt Premium",
+            "start_date": "",
+            "end_date": "",
+            "status": "free",
+            "days_left": 0,
+            "hours_left": 0,
+            "percent_left": 0,
+            "message": "Tài khoản đang dùng thử hoặc chưa kích hoạt gói."
+        }
+    device_id, phone, email, package_key, package_name, start_date, end_date, status, last_notice = row
+    now = datetime.datetime.now()
+    try:
+        start_dt = datetime.datetime.strptime(start_date, "%Y-%m-%d %H:%M:%S")
+    except Exception:
+        start_dt = now
+    try:
+        end_dt = datetime.datetime.strptime(end_date, "%Y-%m-%d %H:%M:%S")
+    except Exception:
+        end_dt = now
+    total_seconds = max(1, int((end_dt - start_dt).total_seconds()))
+    left_seconds = int((end_dt - now).total_seconds())
+    is_active = status == "premium" and left_seconds > 0
+    if status == "premium" and left_seconds <= 0:
+        try:
+            conn = db(); c = conn.cursor()
+            c.execute("UPDATE device_subscriptions SET status='expired', updated_at=? WHERE device_id=?",
+                      (now.strftime("%Y-%m-%d %H:%M:%S"), device_id))
+            conn.commit(); conn.close()
+        except Exception:
+            pass
+        status = "expired"
+    days_left = max(0, left_seconds // 86400)
+    hours_left = max(0, (left_seconds % 86400) // 3600)
+    percent_left = max(0, min(100, int((max(0, left_seconds) / total_seconds) * 100)))
+    if is_active:
+        msg = f"Gói {package_name} đang hoạt động, còn {days_left} ngày {hours_left} giờ."
+    elif status == "expired":
+        msg = f"Gói {package_name} đã hết hạn. Vui lòng gia hạn để tiếp tục sử dụng."
+    else:
+        msg = "Tài khoản chưa kích hoạt Premium."
+    return {
+        "active": is_active,
+        "device_id": device_id,
+        "phone": phone or "",
+        "email": email or "",
+        "package_key": package_key or "",
+        "package_name": package_name or "",
+        "start_date": start_date or "",
+        "end_date": end_date or "",
+        "status": status,
+        "days_left": days_left,
+        "hours_left": hours_left,
+        "percent_left": percent_left,
+        "message": msg
+    }
+
+
+def get_device_subscriptions(limit=200):
+    conn = db(); c = conn.cursor()
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS device_subscriptions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            device_id TEXT UNIQUE, phone TEXT, email TEXT, package_key TEXT, package_name TEXT,
+            start_date TEXT, end_date TEXT, status TEXT DEFAULT 'premium', last_renewal_notice_at TEXT,
+            created_at TEXT, updated_at TEXT
+        )
+    """)
+    c.execute("""
+        SELECT id,device_id,phone,email,package_key,package_name,start_date,end_date,status,created_at,updated_at
+        FROM device_subscriptions
+        ORDER BY id DESC LIMIT ?
+    """, (limit,))
+    rows = c.fetchall(); conn.close()
+    out = []
+    now = datetime.datetime.now()
+    for r in rows:
+        try:
+            end_dt = datetime.datetime.strptime(r[7], "%Y-%m-%d %H:%M:%S")
+            left = int((end_dt - now).total_seconds())
+            days_left = max(0, left // 86400)
+            hours_left = max(0, (left % 86400) // 3600)
+        except Exception:
+            days_left = 0; hours_left = 0
+        out.append(tuple(list(r) + [days_left, hours_left]))
+    return out
+
+
+def extend_device_subscription(device_id, extra_days=30):
+    device_id = (device_id or "").strip().upper()
+    if not device_id:
+        return False
+    now = datetime.datetime.now()
+    conn = db(); c = conn.cursor()
+    c.execute("SELECT end_date,status FROM device_subscriptions WHERE device_id=?", (device_id,))
+    row = c.fetchone()
+    if not row:
+        conn.close(); return False
+    try:
+        end_dt = datetime.datetime.strptime(row[0], "%Y-%m-%d %H:%M:%S")
+    except Exception:
+        end_dt = now
+    if end_dt < now:
+        end_dt = now
+    new_end = end_dt + datetime.timedelta(days=int(extra_days or 30))
+    c.execute("UPDATE device_subscriptions SET end_date=?, status='premium', updated_at=? WHERE device_id=?",
+              (new_end.strftime("%Y-%m-%d %H:%M:%S"), now.strftime("%Y-%m-%d %H:%M:%S"), device_id))
+    conn.commit(); conn.close(); return True
+
+
+def cancel_device_subscription(device_id):
+    device_id = (device_id or "").strip().upper()
+    if not device_id:
+        return False
+    conn = db(); c = conn.cursor()
+    c.execute("UPDATE device_subscriptions SET status='cancelled', updated_at=? WHERE device_id=?",
+              (datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"), device_id))
+    conn.commit(); conn.close(); return True
+
+
 def get_renewal_notice(device_id=None):
     row = get_device_subscription(device_id)
     if not row:
@@ -5009,8 +5138,16 @@ function closeLockedFeature(){
       {% endif %}
     </div>
     <small id="sidebarPremiumStatus">
-      {% if is_device_premium %}
-        Trạng thái: <b style="color:#22c55e">Đã kích hoạt Premium</b>
+      {% if subscription_view.active %}
+        👑 Gói hiện tại: <b style="color:#facc15">{{ subscription_view.package_name }}</b><br>
+        ⏳ Còn lại: <b style="color:#22c55e">{{ subscription_view.days_left }} ngày {{ subscription_view.hours_left }} giờ</b><br>
+        📅 Hết hạn: {{ subscription_view.end_date }}
+        <div style="height:7px;background:rgba(255,255,255,.12);border-radius:999px;margin-top:8px;overflow:hidden">
+          <span style="display:block;height:100%;width:{{ subscription_view.percent_left }}%;background:linear-gradient(90deg,#22c55e,#facc15);border-radius:999px"></span>
+        </div>
+      {% elif subscription_view.status == 'expired' %}
+        Trạng thái: <b style="color:#f97316">Premium đã hết hạn</b><br>
+        Gói cũ: {{ subscription_view.package_name }}
       {% else %}
         Trạng thái: {{ free_status.label }}
       {% endif %}
@@ -5022,6 +5159,21 @@ function closeLockedFeature(){
     Gói {{ renewal_notice.package_name }} còn {{ renewal_notice.remaining_days }} ngày. Vui lòng gia hạn để không gián đoạn.
   </div>
   {% endif %}
+  <div class="v2-side-card" style="margin-top:12px;background:linear-gradient(135deg,#020617,#111827);border:1px solid rgba(250,204,21,.45);color:#e5e7eb">
+    <b>👑 Premium Subscription Center</b><br>
+    {% if subscription_view.active %}
+      <small>Gói: <b style="color:#facc15">{{ subscription_view.package_name }}</b></small><br>
+      <small>Còn lại: <b style="color:#22c55e">{{ subscription_view.days_left }} ngày {{ subscription_view.hours_left }} giờ</b></small><br>
+      <small>Kích hoạt: {{ subscription_view.start_date }}</small><br>
+      <small>Hết hạn: {{ subscription_view.end_date }}</small>
+    {% elif subscription_view.status == 'expired' %}
+      <small><b style="color:#fb923c">Gói {{ subscription_view.package_name }} đã hết hạn.</b></small><br>
+      <small>Bấm gia hạn để tiếp tục sử dụng đầy đủ.</small>
+    {% else %}
+      <small>Chưa kích hoạt gói Premium.</small><br>
+      <small>Chọn gói và gửi yêu cầu thanh toán để admin duyệt.</small>
+    {% endif %}
+  </div>
 
 <div class="nav mkt-saas-nav mkt-clean-nav">
   <div class="v2-nav-title">MENU CHÍNH</div>
@@ -8696,7 +8848,7 @@ def render(content="", message="", ok=True, selected_industry="spa", analysis=""
         content_open_limits=CONTENT_OPEN_LIMITS, selected_content_count=int(content_count or 100),
         library_items=library_items, locked_count=max(0, 50000 - len(library_items)),
         score=score, warnings=warnings, token_warning=token_warning,
-        analysis=analysis, plan=plan, v3=v3_ceo_summary(), pipeline_rows=get_pipeline_leads(), customer_tasks=get_customer_tasks(), notifications=get_notifications(), fb_groups=get_fb_groups(), group_schedules=get_group_schedules(), comment_leads=get_comment_leads(), messenger_scripts=get_messenger_scripts(), success_assets=get_success_assets(), group_finder_results=get_group_finder_results(), group_finder_stats=get_group_finder_stats(), group_join_queue=get_group_join_queue(), group_uid_files=get_group_uid_files(), group_post_results=get_group_post_results(), group_post_queue=get_group_post_queue(), page_comment_queue=get_page_comment_queue(), page_comment_logs=get_page_comment_logs(), page_comment_stats=get_page_comment_stats(), page_token_rows=get_page_token_rows(), page_group_memberships=get_page_group_memberships(), renewal_notice=get_renewal_notice(), device_id=get_device_id(), is_device_premium=bool(get_device_subscription()), user_ai_key_status=user_ai_key_status(), omni_supported_channels=OMNI_SUPPORTED_CHANNELS, omni_channels=get_omni_channels(), omni_channel_map=get_omni_channel_map(), omni_posts=get_omni_posts(), omni_stats=get_omni_stats()
+        analysis=analysis, plan=plan, v3=v3_ceo_summary(), pipeline_rows=get_pipeline_leads(), customer_tasks=get_customer_tasks(), notifications=get_notifications(), fb_groups=get_fb_groups(), group_schedules=get_group_schedules(), comment_leads=get_comment_leads(), messenger_scripts=get_messenger_scripts(), success_assets=get_success_assets(), group_finder_results=get_group_finder_results(), group_finder_stats=get_group_finder_stats(), group_join_queue=get_group_join_queue(), group_uid_files=get_group_uid_files(), group_post_results=get_group_post_results(), group_post_queue=get_group_post_queue(), page_comment_queue=get_page_comment_queue(), page_comment_logs=get_page_comment_logs(), page_comment_stats=get_page_comment_stats(), page_token_rows=get_page_token_rows(), page_group_memberships=get_page_group_memberships(), renewal_notice=get_renewal_notice(), device_id=get_device_id(), subscription_view=get_subscription_view(), is_device_premium=get_subscription_view().get('active'), user_ai_key_status=user_ai_key_status(), omni_supported_channels=OMNI_SUPPORTED_CHANNELS, omni_channels=get_omni_channels(), omni_channel_map=get_omni_channel_map(), omni_posts=get_omni_posts(), omni_stats=get_omni_stats()
     )
 
 @app.route("/")
@@ -9709,6 +9861,50 @@ ADMIN_HTML = """
 <tr><td>{{r[0]}}</td><td><b>{{r[1]}}</b></td><td>{{r[2]}}</td><td>{{r[3]}}</td><td>{{r[5]}}</td><td>{{"{:,.0f}".format(r[6]).replace(",", ".")}}đ</td><td>{{r[7]}}</td><td><span class="badge {% if r[8]=='Đã duyệt' %}ok{% elif r[8]=='Từ chối' %}danger{% endif %}">{{r[8]}}</span></td><td>{{r[10]}}</td><td>{% if r[8]=='Chờ duyệt' %}<form method="post" action="/admin/premium_action" style="display:inline"><input type="hidden" name="request_id" value="{{r[0]}}"><input type="hidden" name="status" value="Đã duyệt"><button class="approve">Kích hoạt</button></form> <form method="post" action="/admin/premium_action" style="display:inline"><input type="hidden" name="request_id" value="{{r[0]}}"><input type="hidden" name="status" value="Từ chối"><button class="reject">Từ chối</button></form>{% else %}{{r[11] or ''}}{% endif %}</td></tr>
 {% endfor %}
 </tbody></table></div>
+
+
+<div class="card" id="premiumSubscriptionCenter" style="margin-top:18px">
+  <h2>👑 Premium Subscription Center</h2>
+  <p>Quản lý gói đã duyệt theo ID thiết bị. Số ngày còn lại được tính tự động theo thời gian thực.</p>
+  <table>
+    <thead>
+      <tr>
+        <th>ID thiết bị</th><th>SĐT</th><th>Gmail</th><th>Gói đang dùng</th><th>Kích hoạt</th><th>Hết hạn</th><th>Còn lại</th><th>Trạng thái</th><th>Thao tác</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for s in subscriptions %}
+      <tr>
+        <td><b>{{s[1]}}</b></td>
+        <td>{{s[2]}}</td>
+        <td>{{s[3]}}</td>
+        <td>{{s[5]}}</td>
+        <td>{{s[6]}}</td>
+        <td>{{s[7]}}</td>
+        <td><b>{{s[11]}} ngày {{s[12]}} giờ</b></td>
+        <td><span class="badge {% if s[8]=='premium' and s[11]>0 %}ok{% elif s[8] in ['expired','cancelled'] %}danger{% endif %}">{{s[8]}}</span></td>
+        <td>
+          <form method="post" action="/admin/subscription_action" style="display:inline">
+            <input type="hidden" name="device_id" value="{{s[1]}}">
+            <input type="hidden" name="action" value="extend30">
+            <button class="approve">+30 ngày</button>
+          </form>
+          <form method="post" action="/admin/subscription_action" style="display:inline">
+            <input type="hidden" name="device_id" value="{{s[1]}}">
+            <input type="hidden" name="action" value="extend365">
+            <button class="approve">+1 năm</button>
+          </form>
+          <form method="post" action="/admin/subscription_action" style="display:inline">
+            <input type="hidden" name="device_id" value="{{s[1]}}">
+            <input type="hidden" name="action" value="cancel">
+            <button class="reject">Hủy</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
 
 <div class="card" id="adminAffiliateBlock" style="margin-top:18px">
   <h2>Quản Lý CTV / Hoa Hồng</h2>
@@ -11840,7 +12036,7 @@ ADMIN_HTML = """
 
 @app.route("/admin")
 def admin_home():
-    return render_template_string(ADMIN_HTML, rows=get_premium_requests(), support_rows=get_support_messages(limit=200), admin_stats=admin_ceo_stats())
+    return render_template_string(ADMIN_HTML, rows=get_premium_requests(), support_rows=get_support_messages(limit=200), admin_stats=admin_ceo_stats(), subscriptions=get_device_subscriptions())
 
 
 @app.route('/api/admin/ceo_dashboard')
@@ -11854,6 +12050,19 @@ def admin_premium_action():
     approve_premium_request(request_id, status=status, admin_note="Duyệt từ Web Admin")
     return admin_home()
 
+
+@app.route("/admin/subscription_action", methods=["POST"])
+def admin_subscription_action():
+    device_id = request.form.get("device_id", "").strip().upper()
+    action = request.form.get("action", "")
+    if action == "extend30":
+        extend_device_subscription(device_id, 30)
+    elif action == "extend365":
+        extend_device_subscription(device_id, 365)
+    elif action == "cancel":
+        cancel_device_subscription(device_id)
+    return admin_home()
+
 @app.route("/api/device_status")
 def api_device_status():
     device_id = request.args.get("device_id") or get_device_id()
@@ -11861,7 +12070,7 @@ def api_device_status():
     notice = get_renewal_notice(device_id)
     if not sub:
         return jsonify({"ok": True, "device_id": device_id, "premium": False, "notice": notice})
-    return jsonify({"ok": True, "device_id": device_id, "premium": True, "package_name": sub[4], "end_date": sub[6], "status": sub[7], "notice": notice})
+    return jsonify({"ok": True, "device_id": device_id, "premium": get_subscription_view(device_id).get("active"), "subscription": get_subscription_view(device_id), "package_name": sub[4], "end_date": sub[6], "status": sub[7], "notice": notice})
 
 
 @app.route("/api/gemini_key/status")
