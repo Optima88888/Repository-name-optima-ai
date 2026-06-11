@@ -1814,6 +1814,55 @@ def get_premium_requests(limit=100):
     rows = c.fetchall(); conn.close(); return rows
 
 
+
+def ensure_user_notification_table(cursor=None):
+    """Thông báo realtime cho tài khoản khách theo ID thiết bị."""
+    sql = """
+        CREATE TABLE IF NOT EXISTS user_notifications (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            device_id TEXT,
+            title TEXT,
+            message TEXT,
+            level TEXT DEFAULT 'success',
+            is_read INTEGER DEFAULT 0,
+            created_at TEXT
+        )
+    """
+    if cursor is not None:
+        cursor.execute(sql)
+        return
+    conn = db(); c = conn.cursor(); c.execute(sql); conn.commit(); conn.close()
+
+
+def create_user_notification(device_id, title, message, level='success'):
+    device_id = (device_id or '').strip().upper()
+    if not device_id:
+        return False
+    now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    conn = db(); c = conn.cursor(); ensure_user_notification_table(c)
+    c.execute("""
+        INSERT INTO user_notifications(device_id,title,message,level,is_read,created_at)
+        VALUES(?,?,?,?,0,?)
+    """, (device_id, title, message, level, now))
+    conn.commit(); conn.close(); return True
+
+
+def get_user_notifications(device_id=None, limit=10):
+    device_id = (device_id or get_device_id()).strip().upper()
+    conn = db(); c = conn.cursor(); ensure_user_notification_table(c)
+    c.execute("""
+        SELECT id,title,message,level,is_read,created_at
+        FROM user_notifications
+        WHERE device_id=?
+        ORDER BY id DESC
+        LIMIT ?
+    """, (device_id, int(limit or 10)))
+    rows = c.fetchall(); conn.close()
+    return [
+        {'id': r[0], 'title': r[1] or '', 'message': r[2] or '', 'level': r[3] or 'success', 'is_read': bool(r[4]), 'created_at': r[5] or ''}
+        for r in rows
+    ]
+
 def approve_premium_request(request_id, status='Đã duyệt', admin_note=''):
     """Premium Subscription Center V2.
     Admin duyệt gói nào thì thiết bị được kích hoạt đúng gói đó.
@@ -1871,6 +1920,17 @@ def approve_premium_request(request_id, status='Đã duyệt', admin_note=''):
         """, (device_id, phone, email, package_key, package_name, start_date, end_dt.strftime("%Y-%m-%d %H:%M:%S"), 'premium', '', now, now))
         c.execute("""INSERT INTO notifications(title,detail,level,status,created_at) VALUES(?,?,?,?,?)""",
                   ("Đã kích hoạt Premium Subscription Center V2", f"{device_id} - {package_name} - cộng {plan_days} ngày - hạn đến {end_dt.strftime('%Y-%m-%d %H:%M')}", "success", "new", now))
+        ensure_user_notification_table(c)
+        c.execute("""
+            INSERT INTO user_notifications(device_id,title,message,level,is_read,created_at)
+            VALUES(?,?,?,?,0,?)
+        """, (
+            device_id,
+            "🎉 Nâng cấp Premium thành công",
+            f"Gói {package_name} đã được kích hoạt. Thời hạn: {'không giới hạn' if package_key in ['sellerpro','lifetime'] else str(plan_days) + ' ngày'}. Hạn đến: {end_dt.strftime('%d/%m/%Y %H:%M')}",
+            "success",
+            now
+        ))
     c.execute("UPDATE premium_upgrade_requests SET status=?, admin_note=?, approved_at=? WHERE id=?", (status, admin_note, now, request_id))
     if status == 'Đã duyệt':
         try:
@@ -12126,6 +12186,70 @@ ADMIN_HTML = """
   .omni-premium-v2 input::placeholder,.omni-premium-v2 textarea::placeholder{color:#94a3b8!important}
   .omni-premium-v2 .secondary{background:#1e293b!important;color:#e5e7eb!important;border:1px solid #334155!important}
 </style>
+
+
+<style id="premium-activation-realtime-css">
+#sidebarPremiumRealtime{margin-top:8px;padding:8px 10px;border-radius:12px;background:rgba(15,23,42,.55);border:1px solid rgba(59,130,246,.28);box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
+#sidebarPremiumRealtime .pa-plan{font-weight:1000;color:#facc15;font-size:13px;line-height:1.25}
+#sidebarPremiumRealtime .pa-left{margin-top:4px;font-weight:1000;color:#22c55e;font-size:13px;line-height:1.25}
+#sidebarPremiumRealtime .pa-free{color:#cbd5e1}.premium-toast-realtime{position:fixed;right:22px;top:22px;z-index:999999;max-width:390px;background:linear-gradient(135deg,#0f172a,#172554 55%,#312e81);color:#fff;border:1px solid rgba(250,204,21,.45);box-shadow:0 26px 70px rgba(2,6,23,.42);border-radius:20px;padding:18px 18px 16px;display:none;animation:premiumPop .25s ease-out}.premium-toast-realtime b{display:block;color:#facc15;font-size:18px;margin-bottom:6px}.premium-toast-realtime p{margin:0;color:#e5e7eb;font-size:14px;line-height:1.45}.premium-toast-realtime .mini{margin-top:10px;color:#86efac;font-weight:900}.premium-active .premium-locked,.premium-active .real-premium-lock{opacity:1!important;filter:none!important}.premium-active .premium-locked:after,.premium-active .real-premium-lock:after{content:'Active'!important;background:#dcfce7!important;color:#166534!important}
+@keyframes premiumPop{from{transform:translateY(-10px);opacity:0}to{transform:translateY(0);opacity:1}}
+@media(max-width:700px){.premium-toast-realtime{left:14px;right:14px;top:14px;max-width:none}}
+</style>
+<script id="premium-activation-realtime-js">
+(function(){
+  function q(s){return document.querySelector(s)}
+  function getDevice(){
+    var id=localStorage.getItem('mkt_device_id')||'';
+    if(!id){id='MKT-'+Math.random().toString(36).slice(2,8).toUpperCase()+Date.now().toString().slice(-4);localStorage.setItem('mkt_device_id',id)}
+    document.cookie='mkt_device_id='+encodeURIComponent(id)+'; path=/; max-age='+(60*60*24*365*5);
+    var el=q('#sidebarDeviceId'); if(el) el.textContent=id;
+    return id;
+  }
+  function ensureSidebarBox(){
+    var box=q('#sidebarPremiumRealtime'); if(box) return box;
+    var idEl=q('#sidebarDeviceId'); if(!idEl) return null;
+    box=document.createElement('div'); box.id='sidebarPremiumRealtime';
+    box.innerHTML='<div class="pa-plan pa-free">🎁 Đang kiểm tra gói...</div><div class="pa-left">⏳ Còn lại: --</div>';
+    var host=idEl.closest('.v2-device-box')||idEl.parentElement||idEl;
+    host.appendChild(box);
+    return box;
+  }
+  function toast(title,msg,mini){
+    var t=q('#premiumRealtimeToast');
+    if(!t){t=document.createElement('div');t.id='premiumRealtimeToast';t.className='premium-toast-realtime';document.body.appendChild(t)}
+    t.innerHTML='<b>'+String(title||'🎉 Premium Active').replace(/[<>]/g,'')+'</b><p>'+String(msg||'Gói Premium đã được kích hoạt.').replace(/[<>]/g,'')+'</p>'+(mini?'<div class="mini">'+String(mini).replace(/[<>]/g,'')+'</div>':'');
+    t.style.display='block'; clearTimeout(window.__premiumToastTimer); window.__premiumToastTimer=setTimeout(function(){t.style.display='none'},8000);
+  }
+  function render(d){
+    var sub=d&&d.subscription||{}; var box=ensureSidebarBox();
+    if(box){
+      if(d&&d.premium){
+        var plan=sub.package_name||'Premium'; var left=sub.is_forever?'Không giới hạn':(sub.remaining_label||((sub.days_left||0)+' ngày'));
+        box.innerHTML='<div class="pa-plan">👑 '+plan+'</div><div class="pa-left">⏳ Còn lại: '+left+'</div>';
+        document.documentElement.classList.add('premium-active'); document.body.classList.add('premium-active');
+      }else{
+        box.innerHTML='<div class="pa-plan pa-free">🎁 Dùng thử / Chưa Premium</div><div class="pa-left">⏳ Chờ Admin duyệt</div>';
+        document.documentElement.classList.remove('premium-active'); document.body.classList.remove('premium-active');
+      }
+    }
+    var n=d&&d.latest_notification;
+    if(n&&n.id){
+      var key='premium_notification_seen_'+n.id;
+      if(!localStorage.getItem(key)){
+        localStorage.setItem(key,'1');
+        toast(n.title||'🎉 Nâng cấp thành công', n.message||'Gói Premium đã được kích hoạt.', d&&d.unlocked_features&&d.unlocked_features.length?'Đã mở khóa '+d.unlocked_features.length+' tính năng Premium':'');
+      }
+    }
+  }
+  async function poll(){
+    try{var id=getDevice(); var r=await fetch('/api/premium_status?device_id='+encodeURIComponent(id),{cache:'no-store'}); var d=await r.json(); if(d&&d.ok) render(d);}catch(e){}
+  }
+  document.addEventListener('DOMContentLoaded',function(){ensureSidebarBox(); poll(); setInterval(poll,5000);});
+  window.checkPremiumStatusRealtime=poll;
+})();
+</script>
+
 </body></html>
 """
 
@@ -12846,6 +12970,29 @@ def omni_publish_premium_route():
 @app.route("/api/device_id")
 def api_device_id_route():
     return jsonify({"success": True, "device_id": get_device_id()})
+
+
+@app.route('/api/premium_status')
+def api_premium_status_realtime():
+    """Premium Activation Realtime: khách nhận trạng thái ngay sau khi Admin bấm Duyệt."""
+    device_id = (request.args.get('device_id') or get_device_id()).strip().upper()
+    sub = get_subscription_view(device_id)
+    notifications = get_user_notifications(device_id, limit=5)
+    latest = notifications[0] if notifications else None
+    unlocked_features = [
+        'AI Messenger', 'CRM Kanban', 'AI Marketing Director', 'Omni Channel',
+        'Auto Comment', 'Auto Inbox', 'AI Content Studio', 'AI Viral Content',
+        'AI Landing Page', 'AI Video', 'AI Voice', 'Group Finder Pro', 'Group Posting Pro'
+    ] if sub.get('active') else []
+    return jsonify({
+        'ok': True,
+        'device_id': device_id,
+        'premium': bool(sub.get('active')),
+        'subscription': sub,
+        'latest_notification': latest,
+        'notifications': notifications,
+        'unlocked_features': unlocked_features
+    })
 
 if __name__ == "__main__":
     init_db()
