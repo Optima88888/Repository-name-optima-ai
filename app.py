@@ -22,7 +22,7 @@ except Exception:
 
 load_dotenv()
 
-APP_TITLE = "GPTMini.Pro - Công Cụ Marketing Automation Thông Minh"
+APP_TITLE = "Gptmini - Trợ Lý AI Marketing Đa Kênh"
 DB = "marketing_automation_pro_v11.db"
 UPLOAD_DIR = "uploads"
 REPORT_DIR = "reports"
@@ -34,6 +34,39 @@ os.makedirs(BACKUP_DIR, exist_ok=True)
 
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 100 * 1024 * 1024
+
+# SEO an toàn: không cho Google index khu vực quản trị/nội bộ
+@app.after_request
+def add_noindex_for_internal_pages(response):
+    try:
+        internal_prefixes = (
+            "/admin",
+            "/admin/",
+            "/support_admin",
+            "/premium_admin",
+            "/affiliate_admin",
+            "/api/admin",
+        )
+        path = request.path or ""
+        if path.startswith(internal_prefixes):
+            response.headers["X-Robots-Tag"] = "noindex, nofollow, noarchive"
+    except Exception:
+        pass
+    return response
+
+@app.route("/robots.txt")
+def robots_txt():
+    return app.response_class(
+        "User-agent: *\n"
+        "Disallow: /admin\n"
+        "Disallow: /admin/\n"
+        "Disallow: /support_admin\n"
+        "Disallow: /premium_admin\n"
+        "Disallow: /affiliate_admin\n"
+        "Allow: /\n",
+        mimetype="text/plain"
+    )
+
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "").strip()
 PAGES_JSON = os.getenv("PAGES_JSON", "[]").strip()
@@ -441,7 +474,7 @@ def init_db():
     )
     """)
 
-    # V5 Seller AI Suite tables
+    # AI Marketing Automation Suite tables
     c.execute("""
     CREATE TABLE IF NOT EXISTS fb_groups (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1543,7 +1576,7 @@ def export_pdf_report():
         width, height = A4
         y = height - 40
         c.setFont("Helvetica-Bold", 14)
-        c.drawString(40, y, "Marketing Automation Pro V9 - Report")
+        c.drawString(40, y, "GPTMini.Pro - Report")
         y -= 30
         c.setFont("Helvetica", 9)
         for r in rows[:80]:
@@ -1559,7 +1592,7 @@ def export_pdf_report():
     except Exception:
         txt_path = os.path.join(REPORT_DIR, "report_posts_pdf_fallback.txt")
         with open(txt_path, "w", encoding="utf-8") as f:
-            f.write("Marketing Automation Pro V9 Report\n\n")
+            f.write("GPTMini.Pro Report\n\n")
             for r in rows:
                 f.write(f"ID {r[0]} | Page: {r[1]} | Status: {r[3]} | Campaign: {r[7]} | Time: {r[9]}\n")
         return txt_path
@@ -2729,13 +2762,13 @@ HTML = r"""
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>GPTMini.Pro - Công Cụ Marketing Automation Thông Minh</title>
-<meta name="title" content="GPTMini.Pro - Công Cụ Marketing Automation Thông Minh">
+<title>Gptmini - Trợ Lý AI Marketing Đa Kênh</title>
+<meta name="title" content="Gptmini - Trợ Lý AI Marketing Đa Kênh">
 <meta name="description" content="Nền tảng AI Marketing Automation giúp quản lý Fanpage, Group, AI Comment, AI Messenger, CRM Kanban, Content AI và Automation bán hàng đa kênh.">
 <meta name="robots" content="index,follow,max-image-preview:large">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="GPTMini.Pro">
-<meta property="og:title" content="GPTMini.Pro - Công Cụ Marketing Automation Thông Minh">
+<meta property="og:title" content="Gptmini - Trợ Lý AI Marketing Đa Kênh">
 <meta property="og:description" content="Giải pháp AI Marketing Automation dành cho cá nhân, shop online và doanh nghiệp.">
 <meta property="og:url" content="https://gptmini.pro/">
 <meta name="twitter:card" content="summary_large_image">
@@ -5196,8 +5229,8 @@ function closeLockedFeature(){
 <div class="v2-topbar">
   <div class="v2-brand-row">
     <div>
-      <div class="v2-brand-title">Mkt Automation Pro V5</div>
-      <div class="v2-brand-sub">AI Marketing • Facebook • CRM • Automation</div>
+      <div class="v2-brand-title">GPTMini.Pro</div>
+      <div class="v2-brand-sub">Công Cụ Marketing Automation Thông Minh</div>
     </div>
     <div class="v2-status-pill">Online</div>
   </div>
@@ -5306,7 +5339,7 @@ function closeLockedFeature(){
 <main class="main">
 
 <section class="top-hero" id="dashboard">
-  <h1>Mkt Automation Pro V5 Seller AI Suite</h1>
+  <h1>GPTMini.Pro</h1>
 
 <div class="app-quick-grid">
   <div class="app-quick-card" onclick="return openModule('post')">
@@ -6956,7 +6989,7 @@ Thời gian tạo: {{ h[9] }}
 
 
   <div class="v5-focus-box">
-    <b>V5 Seller AI Suite</b><br>
+    <b>AI Marketing Automation Suite</b><br>
     Fanpage • Group • AI Comment • AI Messenger • CRM Kanban • Marketing Director
   </div>
 </aside>
@@ -7017,7 +7050,7 @@ function toggleMenuGroup(el){
 
 <script>
 function showInstallGuide(){
-  alert("Cách cài App Mini:\\n\\nAndroid Chrome: bấm dấu 3 chấm → Thêm vào màn hình chính.\\n\\niPhone Safari: bấm Chia sẻ → Thêm vào MH chính.\\n\\nSau đó mở Mkt Automation Pro như một app trên điện thoại.");
+  alert("Cách cài App Mini:\\n\\nAndroid Chrome: bấm dấu 3 chấm → Thêm vào màn hình chính.\\n\\niPhone Safari: bấm Chia sẻ → Thêm vào MH chính.\\n\\nSau đó mở GPTMini.Pro như một app trên điện thoại.");
 }
 
 let deferredInstallPrompt = null;
@@ -9818,7 +9851,7 @@ def money_vnd(value):
         return "0đ"
 
 def admin_ceo_stats():
-    """Dashboard CEO cho Web Admin: doanh thu Premium, CTV, hoa hồng, ngày/tháng."""
+    """Dashboard CEO cho GPTMini.Pro Admin Dashboard: doanh thu Premium, CTV, hoa hồng, ngày/tháng."""
     try:
         ensure_affiliate_tables()
     except Exception:
@@ -9935,7 +9968,7 @@ def admin_ceo_stats():
 
 
 ADMIN_HTML = """
-<!doctype html><html lang="vi"><head><meta charset="utf-8"><title>Web Admin Premium</title>
+<!doctype html><html lang="vi"><head><meta charset="utf-8"><title>GPTMini.Pro Admin Dashboard</title><meta name="robots" content="noindex,nofollow,noarchive">
 <style>body{font-family:system-ui;background:#f8fafc;margin:0;padding:24px;color:#111827}.wrap{max-width:1180px;margin:auto}h1{margin-top:0}.card{background:white;border:1px solid #e5e7eb;border-radius:18px;padding:18px;box-shadow:0 10px 30px rgba(15,23,42,.08)}table{width:100%;border-collapse:collapse}th,td{border-bottom:1px solid #e5e7eb;padding:10px;text-align:left;font-size:13px}th{background:#f1f5f9}.badge{display:inline-block;padding:4px 8px;border-radius:999px;background:#fef3c7;color:#92400e;font-weight:700}.ok{background:#dcfce7;color:#166534}.danger{background:#fee2e2;color:#991b1b}button{border:0;border-radius:10px;padding:9px 12px;font-weight:700;cursor:pointer}.approve{background:#16a34a;color:white}.reject{background:#ef4444;color:white}.top{display:flex;gap:12px;align-items:center;justify-content:space-between;margin-bottom:16px}a{color:#2563eb;text-decoration:none}
 .ceo-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:14px;margin:18px 0}
 .ceo-card{background:linear-gradient(135deg,#ffffff,#eef2ff);border:1px solid #dbeafe;border-radius:18px;padding:16px;box-shadow:0 12px 28px rgba(37,99,235,.08)}
@@ -10045,7 +10078,7 @@ body{background:linear-gradient(135deg,#f8fafc,#eef2ff)!important}
   {% if not admin_stats.top_ctv %}<tr><td colspan="8">Chưa có CTV phát sinh doanh thu.</td></tr>{% endif %}
   </tbody></table>
 </div>
-<div class="top"><div><h1>Web Admin - Duyệt Premium</h1><p>Danh sách yêu cầu nâng cấp theo ID thiết bị, SĐT và Gmail.</p><p><a href="#adminAffiliateBlock" style="display:inline-block;background:#16a34a;color:#fff;padding:9px 12px;border-radius:10px;font-weight:800">Quản Lý CTV / Hoa Hồng</a></p></div><a href="/">← Về app khách</a></div><div class="card" id="premiumRequests"><table><thead><tr><th>ID</th><th>ID thiết bị</th><th>SĐT</th><th>Gmail</th><th>Gói</th><th>Số tiền</th><th>Nội dung CK</th><th>Trạng thái</th><th>Ngày tạo</th><th>Thao tác</th></tr></thead><tbody>
+<div class="top"><div><h1>GPTMini.Pro Admin Dashboard - Duyệt Premium</h1><p>Danh sách yêu cầu nâng cấp theo ID thiết bị, SĐT và Gmail.</p><p><a href="#adminAffiliateBlock" style="display:inline-block;background:#16a34a;color:#fff;padding:9px 12px;border-radius:10px;font-weight:800">Quản Lý CTV / Hoa Hồng</a></p></div><a href="/">← Về app khách</a></div><div class="card" id="premiumRequests"><table><thead><tr><th>ID</th><th>ID thiết bị</th><th>SĐT</th><th>Gmail</th><th>Gói</th><th>Số tiền</th><th>Nội dung CK</th><th>Trạng thái</th><th>Ngày tạo</th><th>Thao tác</th></tr></thead><tbody>
 {% for r in rows %}
 <tr><td>{{r[0]}}</td><td><b>{{r[1]}}</b></td><td>{{r[2]}}</td><td>{{r[3]}}</td><td>{{r[5]}}</td><td>{{"{:,.0f}".format(r[6]).replace(",", ".")}}đ</td><td>{{r[7]}}</td><td><span class="badge {% if r[8]=='Đã duyệt' %}ok{% elif r[8]=='Từ chối' %}danger{% endif %}">{{r[8]}}</span></td><td>{{r[10]}}</td><td>{% if r[8]=='Chờ duyệt' %}<form method="post" action="/admin/premium_action" style="display:inline"><input type="hidden" name="request_id" value="{{r[0]}}"><input type="hidden" name="status" value="Đã duyệt"><button class="approve">Kích hoạt</button></form> <form method="post" action="/admin/premium_action" style="display:inline"><input type="hidden" name="request_id" value="{{r[0]}}"><input type="hidden" name="status" value="Từ chối"><button class="reject">Từ chối</button></form>{% else %}{{r[11] or ''}}{% endif %}</td></tr>
 {% endfor %}
@@ -10837,7 +10870,7 @@ body{background:linear-gradient(135deg,#f8fafc,#eef2ff)!important}
 
 
 
-<!-- FINAL SUPPORT BOT 2-WAY PATCH: khách ↔ Web Admin theo ID thiết bị -->
+<!-- FINAL SUPPORT BOT 2-WAY PATCH: khách ↔ GPTMini.Pro Admin Dashboard theo ID thiết bị -->
 <style id="mkt-support-2way-css">
   .floating-bot,.bot-bubble,#floatingBotPanel{z-index:2147483647!important;pointer-events:auto!important}
   .bot-bubble{cursor:pointer!important;box-shadow:0 12px 34px rgba(79,70,229,.38)!important}
@@ -10899,9 +10932,9 @@ body{background:linear-gradient(135deg,#f8fafc,#eef2ff)!important}
         lastSupportId=Math.max(lastSupportId,Number(data.id)||0);
         localStorage.setItem('mkt_support_last_id',String(lastSupportId));
       }
-      append('system','Đã gửi tin nhắn về Web Admin theo ID thiết bị: <b>'+esc(deviceId())+'</b><div class="bot-admin-wait">Admin phản hồi sẽ tự hiện tại đây.</div>');
+      append('system','Đã gửi tin nhắn về GPTMini.Pro Admin Dashboard theo ID thiết bị: <b>'+esc(deviceId())+'</b><div class="bot-admin-wait">Admin phản hồi sẽ tự hiện tại đây.</div>');
     }catch(err){
-      append('system','Chưa gửi được tin nhắn về Web Admin. Vui lòng kiểm tra mạng rồi thử lại.');
+      append('system','Chưa gửi được tin nhắn về GPTMini.Pro Admin Dashboard. Vui lòng kiểm tra mạng rồi thử lại.');
     }
   }
   async function pollAdmin(){
@@ -10946,7 +10979,7 @@ body{background:linear-gradient(135deg,#f8fafc,#eef2ff)!important}
     sendToAdmin(text);
     setTimeout(function(){
       var typing=document.querySelector('[data-support-id="'+typingId+'"]');
-      if(typing){ typing.outerHTML='<div class="bot-msg ai"><b>Bot hỗ trợ:</b><br>'+localBotReply(text)+'<div class="bot-admin-wait">Tin nhắn cũng đã chuyển về Web Admin để hỗ trợ 2 chiều.</div></div>'; }
+      if(typing){ typing.outerHTML='<div class="bot-msg ai"><b>Bot hỗ trợ:</b><br>'+localBotReply(text)+'<div class="bot-admin-wait">Tin nhắn cũng đã chuyển về GPTMini.Pro Admin Dashboard để hỗ trợ 2 chiều.</div></div>'; }
       scrollBottom();
     },700+Math.floor(Math.random()*500));
     startPolling();
@@ -11596,7 +11629,7 @@ body{background:linear-gradient(135deg,#f8fafc,#eef2ff)!important}
 
 <!-- FINAL PATCH 20260610: Device ID under logo + mobile Download/CTV dock -->
 <style id="mkt-deviceid-mobile-ctv-final-css">
-  /* Hiển thị ID máy ngay dưới logo Marketing Automation Pro */
+  /* Hiển thị ID máy ngay dưới logo GPTMini.Pro */
   #mktDeviceUnderLogo{
     display:flex!important;align-items:center!important;gap:7px!important;
     margin:0 18px 14px!important;padding:9px 11px!important;border-radius:14px!important;
@@ -12470,7 +12503,7 @@ body{background:linear-gradient(135deg,#f8fafc,#eef2ff)!important}
       box.innerHTML='<strong>🎁 Dùng thử 3 ngày</strong>Chỉ mở 4 chức năng Facebook Center<div class="mkt-mini-bar"><i style="width:72%"></i></div>';
     }
   }
-  function ensureBell(){var b=q('#mktNotifyBell');if(!b){b=document.createElement('button');b.id='mktNotifyBell';b.type='button';b.innerHTML='🔔<span class="mkt-bell-count">5</span>';document.body.appendChild(b)}var p=q('#mktNotifyPanel');if(!p){p=document.createElement('div');p.id='mktNotifyPanel';p.innerHTML='<h3>🔔 Notification Center</h3><div class="mkt-note"><b>Premium kích hoạt thành công</b><span>Tài khoản sau khi Admin duyệt sẽ tự mở khóa realtime.</span><br><small>Vừa xong</small></div><div class="mkt-note"><b>Khách hàng mới đăng ký</b><span>Yêu cầu nâng cấp sẽ xuất hiện trong Web Admin.</span><br><small>Hôm nay</small></div><div class="mkt-note"><b>Omni Channel Premium</b><span>Hỗ trợ đăng đa kênh, hẹn giờ 2h, 3h, 6h, 12h.</span></div>';document.body.appendChild(p)}b.onclick=function(){p.style.display=p.style.display==='block'?'none':'block'}}
+  function ensureBell(){var b=q('#mktNotifyBell');if(!b){b=document.createElement('button');b.id='mktNotifyBell';b.type='button';b.innerHTML='🔔<span class="mkt-bell-count">5</span>';document.body.appendChild(b)}var p=q('#mktNotifyPanel');if(!p){p=document.createElement('div');p.id='mktNotifyPanel';p.innerHTML='<h3>🔔 Notification Center</h3><div class="mkt-note"><b>Premium kích hoạt thành công</b><span>Tài khoản sau khi Admin duyệt sẽ tự mở khóa realtime.</span><br><small>Vừa xong</small></div><div class="mkt-note"><b>Khách hàng mới đăng ký</b><span>Yêu cầu nâng cấp sẽ xuất hiện trong GPTMini.Pro Admin Dashboard.</span><br><small>Hôm nay</small></div><div class="mkt-note"><b>Omni Channel Premium</b><span>Hỗ trợ đăng đa kênh, hẹn giờ 2h, 3h, 6h, 12h.</span></div>';document.body.appendChild(p)}b.onclick=function(){p.style.display=p.style.display==='block'?'none':'block'}}
   function insertCEOHint(){var dash=q('#dashboard'); if(!dash||q('#mktDashboardCeoStrip'))return;var title=dash.querySelector('h1,h2,.hero-title');var wrap=document.createElement('div');wrap.id='mktDashboardCeoStrip';wrap.className='mkt-dashboard-ceo-strip';wrap.innerHTML='<div class="ceo-mini"><span>Tổng bài</span><b>Realtime</b></div><div class="ceo-mini"><span>Premium</span><b>Active</b></div><div class="ceo-mini"><span>Omni Channel</span><b>Đa kênh</b></div><div class="ceo-mini"><span>CTV</span><b>Hoa hồng</b></div><div class="ceo-mini"><span>AI Suite</span><b>Enterprise</b></div>'; if(title&&title.parentNode)title.parentNode.insertBefore(wrap,title.nextSibling);}
   function boot(){ensureLiveBar();rotateLive();setInterval(rotateLive,6500);enhancePremiumCompact();setInterval(enhancePremiumCompact,5000);ensureBell();insertCEOHint();}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();
@@ -12527,9 +12560,9 @@ def _safe_call(default, fn, *args, **kwargs):
 def _admin_fallback_html(error=''):
     rows = _safe_call([], get_premium_requests)
     subs = _safe_call([], get_device_subscriptions)
-    html = '<!doctype html><html><head><meta charset="utf-8"><title>Web Admin</title>'
+    html = '<!doctype html><html><head><meta charset="utf-8"><title>GPTMini.Pro Admin Dashboard</title><meta name="robots" content="noindex,nofollow,noarchive">'
     html += '<style>body{font-family:Arial,sans-serif;background:#f8fafc;margin:0;padding:30px;color:#0f172a}.card{background:#fff;border-radius:18px;padding:22px;margin:0 0 18px;box-shadow:0 12px 35px rgba(15,23,42,.08)}table{width:100%;border-collapse:collapse}th,td{padding:12px;border-bottom:1px solid #e5e7eb;text-align:left}th{background:#eef2ff}.ok{display:inline-block;background:#dcfce7;color:#166534;border-radius:999px;padding:6px 10px;font-weight:700}.btn{border:0;border-radius:10px;background:#16a34a;color:#fff;padding:9px 12px;font-weight:700;cursor:pointer}.err{background:#fee2e2;color:#991b1b;padding:12px;border-radius:12px;margin-bottom:18px}</style></head><body>'
-    html += '<div class="card"><h1>Web Admin Premium</h1><p>Trang admin dang chay o che do an toan.</p>'
+    html += '<div class="card"><h1>GPTMini.Pro Admin Dashboard</h1><p>Trang admin dang chay o che do an toan.</p>'
     if error:
         html += '<div class="err">' + str(error).replace('<','&lt;').replace('>','&gt;')[:500] + '</div>'
     html += '<a href="/dashboard">Ve app khach</a></div>'
@@ -12553,7 +12586,7 @@ def _admin_fallback_html(error=''):
 
 
 # ENTERPRISE ADMIN SAFETY UPGRADE 20260611
-# Render Web Admin with the old layout when possible; if Jinja sees broken HTML comments, strip comments and render again.
+# Render GPTMini.Pro Admin Dashboard with the old layout when possible; if Jinja sees broken HTML comments, strip comments and render again.
 def _render_admin_html_enterprise(**ctx):
     try:
         return render_template_string(ADMIN_HTML, **ctx)
@@ -12592,7 +12625,7 @@ def admin_premium_action():
         if request.method == "POST":
             request_id = request.form.get("request_id")
             status = request.form.get("status", "Đã duyệt")
-            approve_premium_request(request_id, status=status, admin_note="Duyệt từ Web Admin")
+            approve_premium_request(request_id, status=status, admin_note="Duyệt từ GPTMini.Pro Admin Dashboard")
     except Exception as e:
         print("/admin/premium_action error:", e)
         return _admin_fallback_html(e), 200
@@ -12788,7 +12821,7 @@ def api_templates():
 def pwa_manifest():
     resp = jsonify({
         "id": "/",
-        "name": "GPTMini.Pro - Công Cụ Marketing Automation Thông Minh",
+        "name": "Gptmini - Trợ Lý AI Marketing Đa Kênh",
         "short_name": "GPTMini.Pro",
         "description": "Công cụ AI Marketing Automation cho Fanpage, Group, Content, CRM và bán hàng đa kênh.",
         "start_url": "/?source=pwa",
@@ -13418,7 +13451,7 @@ def _mkt_approve_request_direct(request_id, status="Đã duyệt"):
         return False
     try:
         # Prefer existing project logic because it already handles package days and realtime notifications.
-        approve_premium_request(request_id, status=status, admin_note="Duyệt từ Web Admin Enterprise")
+        approve_premium_request(request_id, status=status, admin_note="Duyệt từ GPTMini.Pro Admin Dashboard Enterprise")
         return True
     except Exception as e:
         print("approve_premium_request fallback:", e)
@@ -13456,7 +13489,7 @@ def _mkt_approve_request_direct(request_id, status="Đã duyệt"):
             phone=excluded.phone,email=excluded.email,package_key=excluded.package_key,package_name=excluded.package_name,
             start_date=excluded.start_date,end_date=excluded.end_date,status='premium',updated_at=excluded.updated_at
     """, (device_id, phone, email, package_key, package_name, now_s, end_s, "premium", now_s, now_s))
-    c.execute("UPDATE premium_upgrade_requests SET status=?, admin_note=?, approved_at=? WHERE id=?", (status, "Duyệt từ Web Admin Enterprise", now_s, request_id))
+    c.execute("UPDATE premium_upgrade_requests SET status=?, admin_note=?, approved_at=? WHERE id=?", (status, "Duyệt từ GPTMini.Pro Admin Dashboard Enterprise", now_s, request_id))
     try:
         c.execute("""
             INSERT INTO user_notifications(device_id,title,message,level,is_read,created_at)
@@ -13489,7 +13522,7 @@ def _mkt_enterprise_admin_html(error=""):
         ("🤝", "Tổng CTV", stats.get("ctv_total",0)),
     ]
     html = """<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Web Admin Premium Enterprise</title>
+<title>GPTMini.Pro Admin Dashboard</title><meta name="robots" content="noindex,nofollow,noarchive">
 <style>
 :root{--bg:#f5f7fb;--card:#fff;--ink:#0f172a;--muted:#64748b;--blue:#2563eb;--green:#16a34a;--gold:#f59e0b;--red:#ef4444}
 *{box-sizing:border-box}body{margin:0;font-family:Inter,Arial,sans-serif;background:radial-gradient(circle at top left,#dbeafe 0,#f8fafc 36%,#eef2ff 100%);color:var(--ink)}
@@ -13502,7 +13535,7 @@ def _mkt_enterprise_admin_html(error=""):
 .table-wrap{overflow:auto;border-radius:18px;border:1px solid #e5e7eb}table{width:100%;border-collapse:collapse;background:#fff;min-width:980px}th,td{padding:12px 13px;border-bottom:1px solid #e5e7eb;text-align:left;font-size:13px;vertical-align:middle}th{background:linear-gradient(135deg,#eff6ff,#eef2ff);color:#1e3a8a;font-weight:1000;white-space:nowrap}tr:hover td{background:#f8fafc}.status{display:inline-flex;border-radius:999px;padding:6px 10px;font-weight:1000;background:#dcfce7;color:#166534}.status.pending{background:#fef3c7;color:#92400e}.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-weight:900}.plans{display:grid;grid-template-columns:repeat(5,minmax(150px,1fr));gap:12px}.plan{background:linear-gradient(135deg,#0f172a,#1e1b4b);border-radius:18px;padding:16px;color:#fff;border:1px solid rgba(250,204,21,.25)}.plan small{color:#fde68a;font-weight:1000}.plan b{font-size:20px;display:block;margin-top:6px}.footer-note{color:#64748b;font-size:13px;margin-top:18px}
 @media(max-width:1100px){.admin-shell{grid-template-columns:1fr}.side{position:relative;height:auto}.grid{grid-template-columns:repeat(2,1fr)}.plans{grid-template-columns:1fr 1fr}.top{display:block}.top-actions{margin-top:12px}}
 </style></head><body><div class="admin-shell">
-<aside class="side"><div class="brand">👑 Web Admin Premium</div><div class="sub">Dashboard CEO • Premium Subscription • CTV • Omni Channel • Realtime Activation</div><div class="badge">Enterprise Mode Active</div><nav class="nav"><a href="#requests">Yêu cầu nâng cấp</a><a href="#subscriptions">Gói đã kích hoạt</a><a href="#plans">Premium Center</a><a href="#ctv">CTV Hoa Hồng</a><a href="/dashboard">← Về app khách</a></nav></aside>
+<aside class="side"><div class="brand">👑 GPTMini.Pro Admin Dashboard</div><div class="sub">Dashboard CEO • Premium Subscription • CTV • Omni Channel • Realtime Activation</div><div class="badge">Enterprise Mode Active</div><nav class="nav"><a href="#requests">Yêu cầu nâng cấp</a><a href="#subscriptions">Gói đã kích hoạt</a><a href="#plans">Premium Center</a><a href="#ctv">CTV Hoa Hồng</a><a href="/dashboard">← Về app khách</a></nav></aside>
 <main class="main"><div class="top"><div><h1>Dashboard CEO</h1><div class="sub" style="color:#475569">Quản lý doanh thu, duyệt Premium và theo dõi kích hoạt realtime.</div></div><div class="top-actions"><a class="btn btn-dark" href="/">🏠 App khách</a><a class="btn btn-soft" href="/healthz">Health</a><button class="btn btn-blue" onclick="location.reload()">↻ Làm mới</button></div></div>
 """
     if error:
@@ -13540,7 +13573,7 @@ def _mkt_enterprise_admin_html(error=""):
         html += f'<div class="plan"><small>{_mkt_html_escape(pl.get("discount","GIẢM 35%"))}</small><b>{_mkt_html_escape(pl.get("name"))}</b><p>{_mkt_html_escape(pl.get("price"))}</p><div>{("Forever" if int(pl.get("days",0))>=3000 else str(pl.get("days"))+" ngày")}</div></div>'
     html += '</div></section>'
     html += '<section class="card" id="ctv"><h2>🤝 CTV Hoa Hồng Enterprise</h2><div class="hint">Mục này giữ sẵn giao diện quản lý CTV: mã giới thiệu, link giới thiệu, doanh thu, hoa hồng chờ duyệt và hoa hồng đã thanh toán.</div></section>'
-    html += '<div class="footer-note">Web Admin Enterprise Fix: không render qua ADMIN_HTML nên không còn lỗi Jinja Missing end of comment tag.</div></main></div></body></html>'
+    html += '<div class="footer-note">GPTMini.Pro Admin Dashboard Enterprise Fix: không render qua ADMIN_HTML nên không còn lỗi Jinja Missing end of comment tag.</div></main></div></body></html>'
     return html
 
 def _mkt_enterprise_admin_home():
