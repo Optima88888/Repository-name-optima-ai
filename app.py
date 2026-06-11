@@ -11799,6 +11799,46 @@ def affiliate_pretty_link(slug):
 def api_device_id_route():
     return jsonify({"success": True, "device_id": get_device_id()})
 
+<link rel="manifest" href="/manifest.json">
+<link rel="icon" href="/pwa-icon-192.png">
+<link rel="apple-touch-icon" href="/pwa-icon-192.png">
+@app.get("/manifest.json")
+def pwa_manifest():
+    return jsonify({
+        "name": "Marketing Automation Pro",
+        "short_name": "MKT Pro",
+        "start_url": "/",
+        "scope": "/",
+        "display": "standalone",
+        "background_color": "#0f172a",
+        "theme_color": "#0f172a",
+        "orientation": "portrait",
+        "icons": [
+            {
+                "src": "/pwa-icon-192.png",
+                "sizes": "192x192",
+                "type": "image/png",
+                "purpose": "any maskable"
+            },
+            {
+                "src": "/pwa-icon-512.png",
+                "sizes": "512x512",
+                "type": "image/png",
+                "purpose": "any maskable"
+            }
+        ]
+    })
+
+
+@app.get("/pwa-icon-192.png")
+def pwa_icon_192():
+    return send_file("pwa-icon-192.png", mimetype="image/png")
+
+
+@app.get("/pwa-icon-512.png")
+def pwa_icon_512():
+    return send_file("pwa-icon-512.png", mimetype="image/png")
+
 if __name__ == "__main__":
     init_db()
     threading.Thread(target=scheduler_loop, daemon=True).start()
