@@ -7076,20 +7076,20 @@ Thời gian tạo: {{ h[9] }}
 
 <aside class="rightbar">
   <h2>Hoạt động hôm nay</h2>
-  <div class="activity-card mkt-revenue-card-v166">
-    <span>Doanh thu hôm nay</span><b>{{ analytics.summary.total_value }}đ</b>
+  <div class="activity-card mkt-revenue-card-v168" data-mkt-counter="customers">
+    <span>👥 Khách đang sử dụng</span><b>126</b>
   </div>
-  <div class="activity-card mkt-revenue-card-v166">
-    <span>Premium hiện tại</span><b>{{ 'Active' if is_device_premium else 'Trial' }}</b>
+  <div class="activity-card mkt-revenue-card-v168" data-mkt-counter="premium">
+    <span>👑 Premium hoạt động</span><b>58</b>
   </div>
-  <div class="activity-card mkt-revenue-card-v166">
-    <span>Khách hàng CRM</span><b>{{ s.crm }}</b>
+  <div class="activity-card mkt-revenue-card-v168" data-mkt-counter="ctv">
+    <span>🤝 CTV hoạt động</span><b>34</b>
   </div>
-  <div class="activity-card mkt-revenue-card-v166">
-    <span>Bài AI đã tạo</span><b>{{ s.total }}</b>
+  <div class="activity-card mkt-revenue-card-v168" data-mkt-counter="posts">
+    <span>📈 Bài đã đăng</span><b>5.240</b>
   </div>
-  <div class="activity-card mkt-revenue-card-v166">
-    <span>Thời gian tiết kiệm</span><b>40-60h</b>
+  <div class="activity-card mkt-revenue-card-v168" data-mkt-counter="saved">
+    <span>⏰ Thời gian tiết kiệm</span><b>40-60h</b>
   </div>
 
   <div class="{{ 'free-status-card free-expired' if free_status.is_expired else 'free-status-card' }}">
@@ -16007,3 +16007,119 @@ if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port, debug=False)
 
+
+
+# ============================================================
+# V168 LIVE MARQUEE TICKER + RIGHTBAR SOCIAL PROOF COUNTER
+# Chỉ sửa thanh chạy trên đầu + số liệu cột phải. Không đụng menu/cấu trúc cũ.
+# ============================================================
+_MKT_V168_TICKER_RIGHTBAR_ADDON = r"""
+<!-- MKT V168 LIVE MARQUEE TICKER + RIGHTBAR COUNTER -->
+<style id="mkt-v168-ticker-rightbar-css">
+  #mktLivePremiumBarV2,#mktLivePremiumBarHard,#mktLivePremiumBar{display:none!important;visibility:hidden!important;pointer-events:none!important;}
+  #mktLiveTickerV168{
+    position:fixed!important;top:14px!important;left:50%!important;transform:translateX(-50%)!important;z-index:2147483650!important;
+    width:min(760px,calc(100vw - 28px))!important;height:52px!important;display:flex!important;align-items:center!important;gap:12px!important;
+    padding:0 18px!important;border-radius:999px!important;background:rgba(255,255,255,.96)!important;color:#172554!important;
+    border:1px solid rgba(99,102,241,.28)!important;box-shadow:0 18px 52px rgba(2,6,23,.24)!important;backdrop-filter:blur(16px)!important;
+    overflow:hidden!important;font-weight:1000!important;
+  }
+  #mktLiveTickerV168 .mkt-v168-dot{width:18px!important;height:18px!important;border-radius:999px!important;background:#22c55e!important;box-shadow:0 0 0 9px rgba(34,197,94,.13),0 0 20px rgba(34,197,94,.68)!important;flex:0 0 auto!important;}
+  #mktLiveTickerV168 .mkt-v168-mask{overflow:hidden!important;white-space:nowrap!important;flex:1!important;min-width:0!important;}
+  #mktLiveTickerTrackV168{display:inline-flex!important;align-items:center!important;gap:46px!important;white-space:nowrap!important;will-change:transform!important;animation:mktTickerMoveV168 68s linear infinite!important;}
+  #mktLiveTickerTrackV168 span{display:inline-flex!important;align-items:center!important;gap:7px!important;font-size:15px!important;line-height:1!important;flex:0 0 auto!important;}
+  #mktLiveTickerV168:hover #mktLiveTickerTrackV168{animation-play-state:paused!important;}
+  @keyframes mktTickerMoveV168{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+  .rightbar .activity-card.mkt-revenue-card-v168{position:relative!important;overflow:hidden!important;}
+  .rightbar .activity-card.mkt-revenue-card-v168:after{content:"";position:absolute;inset:0;background:linear-gradient(100deg,transparent,rgba(255,255,255,.08),transparent);transform:translateX(-120%);animation:mktCardShineV168 5s infinite;pointer-events:none;}
+  .rightbar .activity-card.mkt-revenue-card-v168 b{transition:transform .35s ease,filter .35s ease!important;}
+  .rightbar .activity-card.mkt-revenue-card-v168.mkt-count-pop b{transform:scale(1.12)!important;filter:drop-shadow(0 0 12px rgba(103,232,249,.55))!important;}
+  @keyframes mktCardShineV168{0%{transform:translateX(-130%)}70%,100%{transform:translateX(130%)}}
+  @media(max-width:900px){#mktLiveTickerV168{top:10px!important;height:46px!important;padding:0 12px!important;width:calc(100vw - 22px)!important}#mktLiveTickerTrackV168 span{font-size:12px!important}#mktLiveTickerTrackV168{gap:32px!important;animation-duration:58s!important}}
+</style>
+<script id="mkt-v168-ticker-rightbar-js">
+(function(){
+  if(window.__MKT_V168_TICKER_RIGHTBAR__) return;
+  window.__MKT_V168_TICKER_RIGHTBAR__=true;
+  function q(s,r){return (r||document).querySelector(s)}
+  function qa(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s))}
+  function pick(a){return a[Math.floor(Math.random()*a.length)]}
+  var names=['Nguyễn V***','Trần H***','Lê M***','Phạm T***','Hoàng K***','Bùi A***','Đặng N***','Võ Q***','Huỳnh L***','Minh K***','Thanh P***','Quốc D***','Anh T***','Bảo N***','Khánh H***','Tuấn L***','Hải P***','Thành N***'];
+  var plans=['Gói 1 tháng','Gói 3 tháng','Gói 6 tháng','Gói 1 năm','Seller Pro','Premium AI Seller'];
+  var ctvMsgs=['CTV #128 vừa giới thiệu khách hàng mới','CTV #095 vừa nhận hoa hồng 289.000đ','CTV #217 đạt mốc 10 khách hàng','CTV #084 vừa tạo link giới thiệu','CTV #156 vừa có đơn hàng thành công','CTV #203 nhận thưởng doanh số tháng','CTV #177 vừa được duyệt tài khoản','CTV #311 vừa kích hoạt chương trình cộng tác viên','CTV #142 giới thiệu thành công Premium 1 năm','CTV #088 vừa nhận thanh toán hoa hồng','CTV #261 đạt cấp độ CTV Bạc','CTV #074 đạt cấp độ CTV Vàng','CTV #199 vừa cập nhật thông tin nhận thưởng','CTV #135 vừa tạo chiến dịch giới thiệu mới','CTV #054 nhận thưởng giới thiệu khách hàng','CTV #286 vừa có khách nâng cấp Seller Pro','CTV #101 hoàn thành mục tiêu tháng','CTV #233 vừa nhận thưởng 529.000đ','CTV #165 đạt doanh số nổi bật tuần này','CTV #308 vừa tham gia hệ thống CTV'];
+  function money(){return pick(['289.000đ','529.000đ','859.000đ','1.589.000đ','2.589.000đ']);}
+  function buildItems(){
+    var arr=[];
+    for(var i=0;i<28;i++) arr.push('🟢 '+pick(names)+' vừa nâng cấp '+pick(plans));
+    for(var j=0;j<24;j++) arr.push('🤝 '+pick(ctvMsgs));
+    for(var k=0;k<14;k++) arr.push('💰 '+pick(names)+' vừa thanh toán '+money());
+    arr=arr.concat([
+      '📈 AI vừa tạo 20 content bán hàng mới','💬 AI Messenger vừa xử lý hội thoại khách hàng','📣 Fanpage mới được kết nối thành công','🌐 Omni Channel vừa hoàn tất chiến dịch','👥 Khách hàng mới được lưu vào CRM','🚀 Hệ thống vừa lên lịch 35 bài đăng','⭐ Token Fanpage vừa cập nhật thành công','🔥 Đã tiết kiệm 57 giờ làm việc tháng này','👑 Premium Seller Pro vừa được kích hoạt','🔵 Khách hàng mới đăng ký tài khoản','🟣 CTV mới vừa tạo link giới thiệu','📊 CRM vừa ghi nhận khách hàng tiềm năng','🤖 AI Comment vừa phản hồi khách hàng','📩 Tin nhắn mới đã được chuyển vào CRM','🟢 Telegram Support đang trực tuyến'
+    ]);
+    arr.sort(function(){return Math.random()-.5});
+    return arr;
+  }
+  function ensureTicker(){
+    qa('#mktLivePremiumBarV2,#mktLivePremiumBarHard,#mktLivePremiumBar').forEach(function(el){el.style.display='none';});
+    var bar=q('#mktLiveTickerV168');
+    if(!bar){
+      bar=document.createElement('div');bar.id='mktLiveTickerV168';
+      bar.innerHTML='<i class="mkt-v168-dot"></i><div class="mkt-v168-mask"><div id="mktLiveTickerTrackV168"></div></div>';
+      document.body.appendChild(bar);
+    }
+    var track=q('#mktLiveTickerTrackV168');
+    if(track && !track.dataset.ready){
+      var items=buildItems(); var html=items.map(function(x){return '<span>'+x+'</span>';}).join('');
+      track.innerHTML=html+html; track.dataset.ready='1';
+    }
+  }
+  function formatNum(n){return String(n).replace(/\B(?=(\d{3})+(?!\d))/g,'.')}
+  var counters={customers:126,premium:58,ctv:34,posts:5240};
+  function fixRightbar(){
+    var cards=qa('.rightbar .activity-card');
+    if(cards.length>=4){
+      var cfg=[['customers','👥 Khách đang sử dụng'],['premium','👑 Premium hoạt động'],['ctv','🤝 CTV hoạt động'],['posts','📈 Bài đã đăng']];
+      cfg.forEach(function(c,i){var card=cards[i]; if(!card)return; card.classList.add('mkt-revenue-card-v168'); card.setAttribute('data-mkt-counter',c[0]); var sp=q('span',card), b=q('b',card); if(sp)sp.textContent=c[1]; if(b)b.textContent=formatNum(counters[c[0]]);});
+      if(cards[4]){cards[4].classList.add('mkt-revenue-card-v168'); var sp=q('span',cards[4]),b=q('b',cards[4]); if(sp)sp.textContent='⏰ Thời gian tiết kiệm'; if(b)b.textContent='40-60h';}
+    }
+  }
+  function tickCounter(){
+    fixRightbar();
+    var keys=['customers','premium','ctv','posts']; var key=pick(keys);
+    counters[key]+= key==='posts' ? pick([1,2,3,4,5]) : 1;
+    var card=q('.rightbar .activity-card[data-mkt-counter="'+key+'"]');
+    if(card){var b=q('b',card); if(b)b.textContent=formatNum(counters[key]); card.classList.remove('mkt-count-pop'); void card.offsetWidth; card.classList.add('mkt-count-pop'); setTimeout(function(){card.classList.remove('mkt-count-pop')},700);}
+  }
+  function boot(){ensureTicker();fixRightbar();setInterval(ensureTicker,2500);setInterval(tickCounter,5000)}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();
+})();
+</script>
+<!-- /MKT V168 LIVE MARQUEE TICKER + RIGHTBAR COUNTER -->
+"""
+
+def _mkt_v168_ticker_rightbar_after_request(response):
+    try:
+        if request.path.startswith('/admin') or request.path.startswith('/api') or request.path.startswith('/healthz'):
+            return response
+        ctype = response.headers.get('Content-Type','')
+        if 'text/html' not in ctype.lower():
+            return response
+        html = response.get_data(as_text=True)
+        if 'mkt-v168-ticker-rightbar-js' in html:
+            return response
+        if '</body>' in html:
+            html = html.replace('</body>', _MKT_V168_TICKER_RIGHTBAR_ADDON + '</body>', 1)
+        else:
+            html += _MKT_V168_TICKER_RIGHTBAR_ADDON
+        response.set_data(html)
+        response.headers['Content-Length'] = str(len(response.get_data()))
+    except Exception as e:
+        print('V168 ticker/rightbar inject skipped:', e)
+    return response
+
+try:
+    if not getattr(app, '_mkt_v168_ticker_rightbar_installed', False):
+        app.after_request(_mkt_v168_ticker_rightbar_after_request)
+        app._mkt_v168_ticker_rightbar_installed = True
+except Exception as _mkt_v168_error:
+    print('V168 ticker/rightbar install skipped:', _mkt_v168_error)
