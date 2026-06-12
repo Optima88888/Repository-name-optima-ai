@@ -14738,35 +14738,42 @@ _MKT_V154_SAFE_MOBILE_PATCH = r"""
     opacity:1!important;
     pointer-events:auto!important;
     position:fixed!important;
-    left:16px!important;
+    left:14px!important;
     bottom:calc(env(safe-area-inset-bottom,0px) + 22px)!important;
     right:auto!important;
     top:auto!important;
-    width:54px!important;
-    height:54px!important;
-    min-width:54px!important;
-    max-width:54px!important;
-    min-height:54px!important;
-    max-height:54px!important;
-    padding:0!important;
+    width:auto!important;
+    height:42px!important;
+    min-width:116px!important;
+    max-width:154px!important;
+    min-height:42px!important;
+    max-height:42px!important;
+    padding:0 14px 0 10px!important;
     margin:0!important;
     overflow:visible!important;
-    border:1px solid rgba(134,239,172,.55)!important;
+    border:1px solid rgba(134,239,172,.50)!important;
     border-radius:999px!important;
     background:
-      radial-gradient(circle at 34% 30%,rgba(255,255,255,.95) 0 9%,rgba(187,247,208,.95) 10% 20%,rgba(34,197,94,.98) 21% 48%,rgba(21,128,61,.98) 49% 100%)!important;
-    color:#fff!important;
+      linear-gradient(135deg,rgba(2,6,23,.92),rgba(15,23,42,.88)),
+      radial-gradient(circle at 16px 15px,rgba(34,197,94,.30),transparent 34px)!important;
+    backdrop-filter:blur(14px)!important;
+    -webkit-backdrop-filter:blur(14px)!important;
+    color:#ffffff!important;
     box-shadow:
-      0 0 0 6px rgba(34,197,94,.10),
-      0 0 28px rgba(34,197,94,.72),
-      0 18px 42px rgba(2,6,23,.35),
-      inset 0 2px 4px rgba(255,255,255,.42),
-      inset 0 -8px 14px rgba(5,46,22,.34)!important;
+      0 0 0 5px rgba(34,197,94,.08),
+      0 12px 32px rgba(2,6,23,.38),
+      0 0 24px rgba(34,197,94,.36),
+      inset 0 1px 0 rgba(255,255,255,.18)!important;
     z-index:2147483550!important;
     align-items:center!important;
     justify-content:center!important;
-    gap:0!important;
+    gap:8px!important;
     font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif!important;
+    font-size:13px!important;
+    font-weight:900!important;
+    letter-spacing:.1px!important;
+    line-height:1!important;
+    white-space:nowrap!important;
     text-decoration:none!important;
     cursor:pointer!important;
     transform:translateZ(0)!important;
@@ -14776,23 +14783,33 @@ _MKT_V154_SAFE_MOBILE_PATCH = r"""
   body #mktVipGreenDotInstall::before{
     content:""!important;
     position:absolute!important;
-    inset:-8px!important;
+    left:9px!important;
+    top:50%!important;
+    width:20px!important;
+    height:20px!important;
+    transform:translateY(-50%)!important;
     border-radius:999px!important;
-    border:1px solid rgba(34,197,94,.26)!important;
-    box-shadow:0 0 0 0 rgba(34,197,94,.30)!important;
-    animation:mktVipGreenDotRing 5s ease-in-out infinite!important;
+    background:
+      radial-gradient(circle at 35% 30%,#ffffff 0 10%,#dcfce7 11% 28%,#22c55e 29% 64%,#15803d 65% 100%)!important;
+    box-shadow:
+      0 0 0 5px rgba(34,197,94,.13),
+      0 0 18px rgba(34,197,94,.92),
+      0 0 30px rgba(34,197,94,.48),
+      inset 0 1px 2px rgba(255,255,255,.62)!important;
     pointer-events:none!important;
   }
   body #mktVipGreenDotInstall::after{
     content:""!important;
     position:absolute!important;
-    width:14px!important;
-    height:14px!important;
-    right:8px!important;
-    bottom:8px!important;
+    left:4px!important;
+    top:50%!important;
+    width:30px!important;
+    height:30px!important;
+    transform:translateY(-50%)!important;
     border-radius:999px!important;
-    background:radial-gradient(circle,#ffffff 0 22%,#bbf7d0 23% 45%,#22c55e 46% 100%)!important;
-    box-shadow:0 0 16px rgba(34,197,94,.95),0 0 28px rgba(34,197,94,.55)!important;
+    border:1px solid rgba(34,197,94,.22)!important;
+    box-shadow:0 0 0 0 rgba(34,197,94,.26)!important;
+    animation:mktVipGreenDotRing 5s ease-in-out infinite!important;
     pointer-events:none!important;
   }
   body #mktVipDownloadBtn,
@@ -14808,11 +14825,18 @@ _MKT_V154_SAFE_MOBILE_PATCH = r"""
   }
   body #mktVipGreenDotInstall .mkt-green-dot-core{
     display:block!important;
-    width:22px!important;
-    height:22px!important;
+    width:20px!important;
+    height:20px!important;
+    min-width:20px!important;
     border-radius:999px!important;
-    background:radial-gradient(circle at 35% 30%,#ffffff 0 12%,#dcfce7 13% 28%,#22c55e 29% 100%)!important;
-    box-shadow:0 0 18px rgba(255,255,255,.92),0 0 24px rgba(34,197,94,.9)!important;
+    background:transparent!important;
+    box-shadow:none!important;
+  }
+  body #mktVipGreenDotInstall .mkt-green-download-text{
+    display:inline-block!important;
+    padding-left:22px!important;
+    color:#fff!important;
+    text-shadow:0 1px 2px rgba(0,0,0,.35)!important;
   }
   @keyframes mktVipGreenDotAlert{
     0%,82%,100%{transform:translateY(0) scale(1);filter:brightness(1)}
@@ -14950,7 +14974,7 @@ _MKT_V154_SAFE_MOBILE_PATCH = r"""
       btn.addEventListener('click', function(e){ e.preventDefault(); openVipInstallGuide(); }, true);
       document.body.appendChild(btn);
     }
-    btn.innerHTML = '<span class="mkt-green-dot-core" aria-hidden="true"></span>';
+    btn.innerHTML = '<span class="mkt-green-dot-core" aria-hidden="true"></span><span class="mkt-green-download-text">Tải xuống</span>';
     btn.classList.remove('mkt-v154-hide-mobile');
     btn.removeAttribute('aria-hidden');
     btn.style.setProperty('display','flex','important');
@@ -14958,17 +14982,17 @@ _MKT_V154_SAFE_MOBILE_PATCH = r"""
     btn.style.setProperty('opacity','1','important');
     btn.style.setProperty('pointer-events','auto','important');
     btn.style.setProperty('position','fixed','important');
-    btn.style.setProperty('left','16px','important');
+    btn.style.setProperty('left','14px','important');
     btn.style.setProperty('bottom','calc(env(safe-area-inset-bottom,0px) + 22px)','important');
     btn.style.setProperty('right','auto','important');
     btn.style.setProperty('top','auto','important');
-    btn.style.setProperty('width','54px','important');
-    btn.style.setProperty('height','54px','important');
-    btn.style.setProperty('min-width','54px','important');
-    btn.style.setProperty('min-height','54px','important');
-    btn.style.setProperty('max-height','54px','important');
-    btn.style.setProperty('max-width','54px','important');
-    btn.style.setProperty('padding','0','important');
+    btn.style.setProperty('width','auto','important');
+    btn.style.setProperty('height','42px','important');
+    btn.style.setProperty('min-width','116px','important');
+    btn.style.setProperty('min-height','42px','important');
+    btn.style.setProperty('max-height','42px','important');
+    btn.style.setProperty('max-width','154px','important');
+    btn.style.setProperty('padding','0 14px 0 10px','important');
     btn.style.setProperty('border-radius','999px','important');
     btn.style.setProperty('z-index','2147483550','important');
   }
