@@ -5179,7 +5179,7 @@ function submitPremiumRequest(){
         document.getElementById("payContent").innerText = data.payment_note;
         showPaymentNotice("Đã gửi yêu cầu thanh toán về web admin. Anh/chị vui lòng giữ lại ảnh giao dịch để đối chiếu khi cần.");
       }else alert(data.message || "Chưa gửi được yêu cầu, vui lòng thử lại.");
-    }).catch(()=>alert("Kết nối chậm, vui lòng thử lại hoặc gửi Zalo hỗ trợ."));
+    }).catch(()=>alert("Kết nối chậm, vui lòng thử lại hoặc bấm biểu tượng Zalo."));
   return false;
 }
 
@@ -5342,7 +5342,7 @@ function closeLockedFeature(){
     <div class="bot-head">
       <div>
         <div class="bot-title">Mini Chat Support</div>
-        <div class="bot-online">Đang trực tuyến
+        <div class="bot-online">Hỗ trợ trực tuyến
           <span class="typing-dots"><span></span><span></span><span></span></span>
         </div>
       </div>
@@ -6889,7 +6889,7 @@ Thời gian tạo: {{ h[9] }}
         </div>
 
         <div class="payment-actions">
-          <a href="https://zalo.me/0363382629" target="_blank">Liên hệ Zalo hỗ trợ</a>
+          <a href="https://zalo.me/0363382629" target="_blank">Liên hệ Zalo</a>
           <a class="light" href="#token" onclick="closePayment()">Tôi đã thanh toán</a>
         </div>
       </div>
@@ -7389,7 +7389,7 @@ function dropKanban(ev){ ev.preventDefault(); const col=ev.currentTarget; if(dra
     var device=q('#payDeviceId'); if(device) device.value=getDevice();
     var benefits=q('#payBenefits'); if(benefits && p.benefits){benefits.innerHTML=p.benefits.map(function(x){return '<div>'+x+'</div>';}).join('');}
     var locked=q('#payLocked'); if(locked){locked.innerHTML=''; var h=locked.previousElementSibling; if(h) h.style.display='none';}
-    var alertBox=q('.payment-alert'); if(alertBox){alertBox.innerHTML='Sau khi chuyển khoản, bấm <b>Đã thanh toán</b> để gửi yêu cầu về web admin. Nội dung chuyển khoản gồm ID thiết bị, số điện thoại, Gmail và gói đã chọn. Zalo hỗ trợ: <b>036 338 2629</b>.';}
+    var alertBox=q('.payment-alert'); if(alertBox){alertBox.innerHTML='Sau khi chuyển khoản, bấm <b>Đã thanh toán</b> để gửi yêu cầu về web admin. Nội dung chuyển khoản gồm ID thiết bị, số điện thoại, Gmail và gói đã chọn. bấm biểu tượng Zalo tròn cạnh khung chat nếu cần hỗ trợ nhanh.';}
     var payBtn=q('.payment-actions .light'); if(payBtn){payBtn.textContent='Đã thanh toán'; payBtn.removeAttribute('href'); payBtn.onclick=function(e){e.preventDefault(); if(typeof window.submitPremiumRequest==='function') return window.submitPremiumRequest(); return false;};}
     window.refreshPaymentContent();
     modal.style.display='flex';
@@ -7505,7 +7505,7 @@ function dropKanban(ev){ ev.preventDefault(); const col=ev.currentTarget; if(dra
     var locked=q('#payLocked'); if(locked) locked.innerHTML='';
     var h=locked && locked.previousElementSibling; if(h) h.style.display='none';
     var alertBox=q('#paymentModal .payment-alert'); if(alertBox) alertBox.style.display='none';
-    var z=q('#paymentModal .payment-actions a:not(.light)'); if(z){z.textContent='Zalo hỗ trợ: 036 338 2629'; z.href='https://zalo.me/0363382629'; z.target='_blank';}
+    var z=q('#paymentModal .payment-actions a:not(.light)'); if(z){z.textContent=''; z.href='https://zalo.me/0363382629'; z.target='_blank';}
     var done=q('#paymentModal .payment-actions .light'); if(done){done.textContent='Gửi yêu cầu admin duyệt'; done.removeAttribute('href'); done.onclick=function(e){e.preventDefault(); return window.submitPremiumRequest();};}
     var btn=q('#paymentModal .primary'); if(btn) btn.textContent='Gửi yêu cầu kích hoạt';
     window.refreshPaymentContent();
@@ -8256,8 +8256,8 @@ button[aria-label="CTV"]{
   async function poll(){try{var r=await fetch('/support_poll?device_id='+encodeURIComponent(deviceId())+'&after_id='+encodeURIComponent(lastId),{cache:'no-store'});var d=await r.json().catch(function(){return{messages:[]}});(d.messages||[]).forEach(function(m){var mid=Number(m.id)||0;if(mid<=lastId)return;lastId=mid;if(m.sender==='admin')bubble('ad',m.message);});}catch(e){}}
   window.toggleSupportChat=function(){var p=byId('mktFixSupportPanel');if(!p)return;p.classList.toggle('open');poll();};
   window.quickSupportText=function(text){var b=byId('mktFixSupportMessage');if(b){b.value=text;b.focus();}};
-  window.sendSupportMessage=async function(){var msg=(byId('mktFixSupportMessage')&&byId('mktFixSupportMessage').value.trim())||'';if(!msg){alert('Vui lòng nhập nội dung cần hỗ trợ.');return false;}bubble('me',msg);byId('mktFixSupportMessage').value='';var payload={device_id:deviceId(),sender:'user',message:msg,phone:(byId('mktFixSupportPhone')||{}).value||'',email:(byId('mktFixSupportEmail')||{}).value||''};try{var res=await fetch('/support_send',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});var data=await res.json().catch(function(){return{}});if(data.id)lastId=Math.max(lastId,Number(data.id)||0);var note=byId('mktFixSupportNote');if(note)note.innerText=data.message||'Đã gửi tin nhắn hỗ trợ.';}catch(e){var note2=byId('mktFixSupportNote');if(note2)note2.innerText='Chưa gửi được tin nhắn, vui lòng thử lại.';}poll();return false;};
-  function buildChat(){if(byId('mktFixSupportFloat'))return;var wrap=document.createElement('div');wrap.id='mktFixSupportFloat';wrap.innerHTML='<div id="mktFixSupportPanel"><div class="mkt-fix-head"><span>💬 Hỗ trợ trực tiếp</span><button type="button" class="mkt-fix-close" onclick="toggleSupportChat()">×</button></div><div class="mkt-fix-body"><div class="mkt-fix-menu"><button type="button" onclick="quickSupportText(\'Tôi cần kích hoạt Premium\')">👑 Premium</button><button type="button" onclick="quickSupportText(\'Tôi đã thanh toán cần hỗ trợ\')">💳 Thanh toán</button><button type="button" onclick="quickSupportText(\'Tôi bị lỗi đăng bài Fanpage\')">📣 Lỗi đăng</button></div><div id="mktFixSupportLog"><div class="ad">Nhân viên hỗ trợ đang trực tuyến. Anh/chị để lại SĐT/Email và nội dung cần xử lý.</div></div><input id="mktFixSupportPhone" placeholder="SĐT/Zalo của anh/chị"><input id="mktFixSupportEmail" placeholder="Email/Gmail"><textarea id="mktFixSupportMessage" placeholder="Nhập nội dung cần hỗ trợ..."></textarea><button class="mkt-fix-send" onclick="sendSupportMessage()">Gửi Tin Nhắn</button><div class="mkt-fix-note" id="mktFixSupportNote">Tin nhắn đã được gửi đến bộ phận hỗ trợ để phản hồi.</div></div></div><button id="mktFixSupportBtn" type="button" title="AI Online" onclick="toggleSupportChat()"><span class="robot">🤖</span><span class="online"></span></button>';document.body.appendChild(wrap);}
+  window.sendSupportMessage=async function(){var msg=(byId('mktFixSupportMessage')&&byId('mktFixSupportMessage').value.trim())||'';if(!msg){alert('Vui lòng nhập nội dung cần hỗ trợ.');return false;}bubble('me',msg);byId('mktFixSupportMessage').value='';var payload={device_id:deviceId(),sender:'user',message:msg,phone:(byId('mktFixSupportPhone')||{}).value||'',email:(byId('mktFixSupportEmail')||{}).value||''};try{var res=await fetch('/support_send',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});var data=await res.json().catch(function(){return{}});if(data.id)lastId=Math.max(lastId,Number(data.id)||0);var note=byId('mktFixSupportNote');if(note)note.innerText='';}catch(e){var note2=byId('mktFixSupportNote');if(note2)note2.innerText='Chưa gửi được tin nhắn, vui lòng thử lại.';}poll();return false;};
+  function buildChat(){if(byId('mktFixSupportFloat'))return;var wrap=document.createElement('div');wrap.id='mktFixSupportFloat';wrap.innerHTML='<div id="mktFixSupportPanel"><div class="mkt-fix-head"><span>💬 Hỗ trợ trực tiếp</span><button type="button" class="mkt-fix-close" onclick="toggleSupportChat()">×</button></div><div class="mkt-fix-body"><div class="mkt-fix-menu"><button type="button" onclick="quickSupportText(\'Tôi cần kích hoạt Premium\')">👑 Premium</button><button type="button" onclick="quickSupportText(\'Tôi đã thanh toán cần hỗ trợ\')">💳 Thanh toán</button><button type="button" onclick="quickSupportText(\'Tôi bị lỗi đăng bài Fanpage\')">📣 Lỗi đăng</button></div><div id="mktFixSupportLog"><div class="ad">Nhân viên hỗ trợ đang trực tuyến. Anh/chị để lại SĐT/Email và nội dung cần xử lý.</div></div><input id="mktFixSupportPhone" placeholder="SĐT/Zalo của anh/chị"><input id="mktFixSupportEmail" placeholder="Email/Gmail"><textarea id="mktFixSupportMessage" placeholder="Nhập nội dung cần hỗ trợ..."></textarea><button class="mkt-fix-send" onclick="sendSupportMessage()">Gửi Tin Nhắn</button><div class="mkt-fix-note" id="mktFixSupportNote"></div></div></div><button id="mktFixSupportBtn" type="button" title="AI Online" onclick="toggleSupportChat()"><span class="robot">🤖</span><span class="online"></span></button>';document.body.appendChild(wrap);}
   function boot(){deviceId();buildMobileInstall();buildChat();setInterval(function(){var p=byId('mktFixSupportPanel');if(p&&p.classList.contains('open'))poll();},3000)}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();setTimeout(boot,700);setTimeout(boot,1800);
 })();
@@ -8364,12 +8364,12 @@ button[aria-label="CTV"]{
     if(head && !q('.mkt-live-support-status',head)){
       var st=document.createElement('div');
       st.className='mkt-live-support-status';
-      st.textContent='Đang trực tuyến';
+      st.textContent='Hỗ trợ trực tuyến';
       head.appendChild(st);
     }
     var oldHead=q('#floatingBotPanel .bot-head,#floatingBotPanel .bot-header,.bot-panel-header');
     if(oldHead && !q('.mkt-live-support-status',oldHead)){
-      var st2=document.createElement('div');st2.className='mkt-live-support-status';st2.textContent='Đang trực tuyến';oldHead.appendChild(st2);
+      var st2=document.createElement('div');st2.className='mkt-live-support-status';st2.textContent='Hỗ trợ trực tuyến';oldHead.appendChild(st2);
     }
   }
   function showTypingOnce(){
@@ -8383,7 +8383,7 @@ button[aria-label="CTV"]{
     log.scrollTop=log.scrollHeight;
     setTimeout(function(){
       if(typing && typing.parentNode){
-        typing.innerHTML='Xin chào anh/chị 👋<br>Em đang trực tuyến. Anh/chị cần hỗ trợ kích hoạt Premium, đăng ký CTV hoặc báo lỗi hệ thống thì nhắn em hỗ trợ ngay ạ.<div class="mkt-live-typing-row">Đang trực tuyến</div>';
+        typing.innerHTML='Xin chào anh/chị 👋<br>Em đang trực tuyến. Anh/chị cần hỗ trợ kích hoạt Premium, đăng ký CTV hoặc báo lỗi hệ thống thì nhắn em hỗ trợ ngay ạ.<div class="mkt-live-typing-row">Hỗ trợ trực tuyến</div>';
         log.scrollTop=log.scrollHeight;
       }
     },1400+Math.floor(Math.random()*900));
@@ -9773,67 +9773,66 @@ def get_support_messages(device_id=None, after_id=0, limit=100):
 # AUTO SUPPORT REPLY FINAL 20260611
 # Chỉ xử lý khung chat hỗ trợ. Không thay đổi menu, màu sắc, card hoặc giao diện chính.
 def support_auto_reply_text(message):
-    """Trả lời tự động theo từ khóa để khách nhận phản hồi ngay trong khung chat."""
+    """Trả lời tự nhiên trong khung chat hỗ trợ, ngắn gọn như nhân viên CSKH."""
     msg = (message or '').strip()
     low = msg.lower()
 
     def has_any(words):
         return any(w in low for w in words)
 
+    if has_any(['xin chào', 'chào', 'hello', 'hi', 'alo', 'a lô']):
+        return (
+            "Chào anh/chị 👋\n\n"
+            "Anh/chị cần hỗ trợ Premium, thanh toán hay sử dụng tính năng nào ạ?"
+        )
+
     if has_any(['premium', 'nâng cấp', 'nang cap', 'kích hoạt', 'kich hoat', 'mở gói', 'mo goi', 'gia hạn', 'gia han']):
         return (
-            "Em đã nhận yêu cầu hỗ trợ Premium ạ.\n\n"
-            "Anh/chị vui lòng gửi thêm: ID thiết bị, gói muốn kích hoạt và ảnh thanh toán nếu đã chuyển khoản. "
-            "Bộ phận kỹ thuật sẽ kiểm tra và kích hoạt ngay khi thông tin hợp lệ."
+            "Dạ, em nhận được yêu cầu Premium rồi ạ.\n\n"
+            "Anh/chị gửi giúp em ID máy, Gmail hoặc số điện thoại đăng ký để em kiểm tra nhanh nhé."
         )
 
     if has_any(['thanh toán', 'thanh toan', 'chuyển khoản', 'chuyen khoan', 'qr', 'momo', 'mb bank', 'vietqr', 'đã thanh toán', 'da thanh toan']):
         return (
-            "Em đã nhận thông tin thanh toán ạ.\n\n"
-            "Anh/chị vui lòng gửi ảnh giao dịch kèm ID thiết bị trong nội dung chuyển khoản. "
-            "Nếu sau vài phút chưa được kích hoạt, kỹ thuật sẽ đối soát và phản hồi tại đây."
+            "Dạ em nhận thông tin thanh toán rồi ạ.\n\n"
+            "Thông thường hệ thống xử lý trong 1–5 phút. Nếu quá 5 phút chưa kích hoạt, anh/chị gửi ảnh chuyển khoản qua biểu tượng Zalo để được ưu tiên hỗ trợ nhé."
         )
 
     if has_any(['tải', 'tai', 'cài', 'cai', 'app', 'ứng dụng', 'ung dung', 'iphone', 'android', 'pwa', 'màn hình chính', 'man hinh chinh']):
         return (
-            "Em hướng dẫn nhanh phần tải app ạ.\n\n"
-            "Android: bấm nút GPT MKT / Tải xuống để cài ra màn hình chính.\n"
-            "iPhone: mở bằng Safari → bấm Chia sẻ → Thêm vào màn hình chính."
+            "Dạ, phần cài app anh/chị làm như sau ạ:\n\n"
+            "Android: bấm nút GPT MKT / Tải xuống để thêm ra màn hình chính.\n"
+            "iPhone: mở bằng Safari → Chia sẻ → Thêm vào màn hình chính."
         )
 
     if has_any(['lỗi đăng', 'loi dang', 'đăng bài', 'dang bai', 'fanpage', 'page', 'token', 'facebook', 'không đăng', 'khong dang']):
         return (
-            "Em đã ghi nhận lỗi đăng bài/Fanpage ạ.\n\n"
-            "Anh/chị vui lòng gửi tên Page, nội dung lỗi hoặc ảnh màn hình lỗi. "
-            "Kỹ thuật sẽ kiểm tra token, quyền Page và trạng thái kết nối cho anh/chị."
+            "Dạ, em ghi nhận lỗi đăng bài/Fanpage rồi ạ.\n\n"
+            "Anh/chị gửi giúp em tên Page và ảnh màn hình lỗi, kỹ thuật sẽ kiểm tra token/quyền Page cho mình."
         )
 
     if has_any(['ctv', 'cộng tác viên', 'cong tac vien', 'hoa hồng', 'hoa hong', 'link giới thiệu', 'link gioi thieu']):
         return (
-            "Em đã nhận yêu cầu về CTV ạ.\n\n"
-            "Anh/chị có thể mở mục CTV Hoa Hồng để lấy mã/link giới thiệu. "
-            "Nếu cần kiểm tra hoa hồng hoặc doanh thu, gửi mã CTV để bộ phận hỗ trợ đối soát nhanh."
+            "Dạ, mục CTV anh/chị mở trong menu CTV Hoa Hồng để lấy mã/link giới thiệu nhé.\n\n"
+            "Nếu cần đối soát hoa hồng, anh/chị gửi mã CTV để bên em kiểm tra nhanh."
         )
 
     if has_any(['gemini', 'api', 'key', 'content', 'tạo content', 'tao content', 'ai không chạy', 'ai khong chay']):
         return (
-            "Em đã nhận yêu cầu về AI Content/API Gemini ạ.\n\n"
-            "Anh/chị vào Tạo Content AI / Content Center để nhập API Gemini riêng cho thiết bị. "
-            "Sau khi lưu API, hệ thống sẽ ưu tiên dùng API riêng của máy khi tạo content."
+            "Dạ, em nhận yêu cầu về AI Content/API rồi ạ.\n\n"
+            "Anh/chị gửi giúp em ảnh lỗi hoặc nội dung báo lỗi để kỹ thuật kiểm tra ngay."
         )
 
     if has_any(['zalo', 'số điện thoại', 'so dien thoai', 'sdt', 'gmail', 'email', 'liên hệ', 'lien he']):
         return (
-            "Em đã nhận thông tin liên hệ ạ.\n\n"
-            "Anh/chị vui lòng mô tả ngắn vấn đề cần hỗ trợ. Nhân viên hỗ trợ sẽ phản hồi trực tiếp trong khung chat này."
+            "Dạ, anh/chị có thể nhắn trực tiếp trong khung chat này.\n\n"
+            "Nếu cần xử lý gấp, bấm biểu tượng Zalo tròn bên cạnh khung chat để gặp kỹ thuật nhanh hơn."
         )
 
     return (
-        "Em đã nhận tin nhắn của anh/chị ạ.\n\n"
-        "Anh/chị vui lòng chờ trong giây lát, nhân viên hỗ trợ sẽ phản hồi trực tiếp trong khung chat này. "
-        "Nếu cần xử lý nhanh, anh/chị có thể gửi thêm ảnh lỗi, ID thiết bị hoặc nội dung cần kiểm tra."
+        "Dạ em đã nhận được tin nhắn rồi ạ.\n\n"
+        "Anh/chị mô tả thêm giúp em vấn đề đang gặp, hoặc gửi ID máy/Gmail để bên em kiểm tra nhanh nhé."
     )
-
 
 def save_support_auto_reply(device_id, user_message):
     try:
@@ -10278,7 +10277,7 @@ body{background:linear-gradient(135deg,#f8fafc,#eef2ff)!important}
     var device=q('#payDeviceId'); if(device) device.value=getDevice();
     var benefits=q('#payBenefits'); if(benefits && p.benefits){benefits.innerHTML=p.benefits.map(function(x){return '<div>'+x+'</div>';}).join('');}
     var locked=q('#payLocked'); if(locked){locked.innerHTML=''; var h=locked.previousElementSibling; if(h) h.style.display='none';}
-    var alertBox=q('.payment-alert'); if(alertBox){alertBox.innerHTML='Sau khi chuyển khoản, bấm <b>Đã thanh toán</b> để gửi yêu cầu về web admin. Nội dung chuyển khoản gồm ID thiết bị, số điện thoại, Gmail và gói đã chọn. Zalo hỗ trợ: <b>036 338 2629</b>.';}
+    var alertBox=q('.payment-alert'); if(alertBox){alertBox.innerHTML='Sau khi chuyển khoản, bấm <b>Đã thanh toán</b> để gửi yêu cầu về web admin. Nội dung chuyển khoản gồm ID thiết bị, số điện thoại, Gmail và gói đã chọn. bấm biểu tượng Zalo tròn cạnh khung chat nếu cần hỗ trợ nhanh.';}
     var payBtn=q('.payment-actions .light'); if(payBtn){payBtn.textContent='Đã thanh toán'; payBtn.removeAttribute('href'); payBtn.onclick=function(e){e.preventDefault(); if(typeof window.submitPremiumRequest==='function') return window.submitPremiumRequest(); return false;};}
     window.refreshPaymentContent();
     modal.style.display='flex';
@@ -10394,7 +10393,7 @@ body{background:linear-gradient(135deg,#f8fafc,#eef2ff)!important}
     var locked=q('#payLocked'); if(locked) locked.innerHTML='';
     var h=locked && locked.previousElementSibling; if(h) h.style.display='none';
     var alertBox=q('#paymentModal .payment-alert'); if(alertBox) alertBox.style.display='none';
-    var z=q('#paymentModal .payment-actions a:not(.light)'); if(z){z.textContent='Zalo hỗ trợ: 036 338 2629'; z.href='https://zalo.me/0363382629'; z.target='_blank';}
+    var z=q('#paymentModal .payment-actions a:not(.light)'); if(z){z.textContent=''; z.href='https://zalo.me/0363382629'; z.target='_blank';}
     var done=q('#paymentModal .payment-actions .light'); if(done){done.textContent='Gửi yêu cầu admin duyệt'; done.removeAttribute('href'); done.onclick=function(e){e.preventDefault(); return window.submitPremiumRequest();};}
     var btn=q('#paymentModal .primary'); if(btn) btn.textContent='Gửi yêu cầu kích hoạt';
     window.refreshPaymentContent();
@@ -10611,7 +10610,7 @@ body{background:linear-gradient(135deg,#f8fafc,#eef2ff)!important}
     var device=q('#payDeviceId'); if(device) device.value=getDevice();
     var locked=q('#payLocked'); if(locked) locked.innerHTML='';
     var alert=q('#paymentModal .payment-alert'); if(alert) alert.style.display='none';
-    var z=q('#paymentModal .payment-actions a:not(.light)'); if(z){z.textContent='Zalo hỗ trợ: 036 338 2629'; z.href='https://zalo.me/0363382629'; z.target='_blank';}
+    var z=q('#paymentModal .payment-actions a:not(.light)'); if(z){z.textContent=''; z.href='https://zalo.me/0363382629'; z.target='_blank';}
     var done=q('#paymentModal .payment-actions .light'); if(done){done.textContent='Gửi yêu cầu admin duyệt'; done.removeAttribute('href'); done.onclick=function(e){e.preventDefault();return window.submitPremiumRequest();};}
     var primary=q('#paymentModal .primary'); if(primary){primary.textContent='Gửi yêu cầu kích hoạt'; primary.onclick=function(e){e.preventDefault();return window.submitPremiumRequest();};}
     window.refreshPaymentContent();
@@ -10640,7 +10639,7 @@ body{background:linear-gradient(135deg,#f8fafc,#eef2ff)!important}
           else alert((data&&data.message)||'Chưa gửi được yêu cầu, vui lòng thử lại.');
         }
       }).catch(function(){
-        if(typeof window.showPaymentNotice==='function') window.showPaymentNotice('Kết nối chậm, vui lòng thử lại hoặc gửi Zalo hỗ trợ.');
+        if(typeof window.showPaymentNotice==='function') window.showPaymentNotice('Kết nối chậm, vui lòng thử lại hoặc bấm biểu tượng Zalo.');
       });
     return false;
   };
@@ -12668,7 +12667,7 @@ def support_send_route():
     auto_id = None
     if sender == "user":
         auto_id = save_support_auto_reply(device_id, message)
-    return jsonify({"success": True, "id": msg_id, "auto_id": auto_id, "message": "Đã gửi tin nhắn hỗ trợ. Trợ lý đang phản hồi tự động."})
+    return jsonify({"success": True, "id": msg_id, "auto_id": auto_id, "message": ""})
 
 @app.route("/admin/support_reply", methods=["POST"])
 def admin_support_reply_route():
@@ -13953,7 +13952,7 @@ _MKT_CUSTOMER_SMOOTH_V142_ADDON = r"""
   function buildChat(){
     if(byId('mktFixSupportFloat')) return;
     var wrap=document.createElement('div');wrap.id='mktFixSupportFloat';
-    wrap.innerHTML='<div id="mktFixSupportPanel"><div class="mkt-fix-head"><span>💬 Hỗ trợ trực tiếp</span><button type="button" class="mkt-fix-close" onclick="toggleSupportChat()">×</button></div><div class="mkt-fix-body"><div id="mktFixSupportLog"><div class="ad">Nhân viên hỗ trợ đang trực tuyến. Anh/chị để lại SĐT/Email và nội dung cần xử lý.</div></div><input id="mktFixSupportPhone" placeholder="SĐT/Zalo"><input id="mktFixSupportEmail" placeholder="Email/Gmail"><textarea id="mktFixSupportMessage" placeholder="Nhập nội dung cần hỗ trợ..."></textarea><button class="mkt-fix-send" onclick="sendSupportMessage()">Gửi tin nhắn</button><div class="mkt-fix-note" id="mktFixSupportNote">Tin nhắn sẽ gửi về Admin.</div></div></div><button id="mktFixSupportBtn" type="button" onclick="toggleSupportChat()"><span class="robot">🤖</span><span class="online"></span></button>';
+    wrap.innerHTML='<div id="mktFixSupportPanel"><div class="mkt-fix-head"><span>💬 Hỗ trợ trực tiếp</span><button type="button" class="mkt-fix-close" onclick="toggleSupportChat()">×</button></div><div class="mkt-fix-body"><div id="mktFixSupportLog"><div class="ad">Nhân viên hỗ trợ đang trực tuyến. Anh/chị để lại SĐT/Email và nội dung cần xử lý.</div></div><input id="mktFixSupportPhone" placeholder="SĐT/Zalo"><input id="mktFixSupportEmail" placeholder="Email/Gmail"><textarea id="mktFixSupportMessage" placeholder="Nhập nội dung cần hỗ trợ..."></textarea><button class="mkt-fix-send" onclick="sendSupportMessage()">Gửi tin nhắn</button><div class="mkt-fix-note" id="mktFixSupportNote"></div></div></div><button id="mktFixSupportBtn" type="button" onclick="toggleSupportChat()"><span class="robot">🤖</span><span class="online"></span></button>';
     document.body.appendChild(wrap);
   }
   function bubble(type,text){var log=byId('mktFixSupportLog'); if(!log)return; var div=document.createElement('div'); div.className=type; div.textContent=text; log.appendChild(div); log.scrollTop=log.scrollHeight;}
@@ -14312,7 +14311,7 @@ def support_auto_reply_text(message):
     low = msg.lower()
 
     contact = (
-        "\n\n📱 Zalo hỗ trợ kỹ thuật: 036 338 2629"
+        "\n\n kỹ thuật: 036 338 2629"
         "\n📧 Gmail: gptminipro@gmail.com"
         "\n\nNếu đã thanh toán mà sau 5 phút chưa được duyệt tự động, anh/chị vui lòng gửi ảnh chuyển khoản qua Zalo để được hỗ trợ nhanh nhất."
     )
@@ -14363,7 +14362,7 @@ def support_auto_reply_text(message):
     if has_any(['zalo', 'số điện thoại', 'so dien thoai', 'sdt', 'gmail', 'email', 'liên hệ', 'lien he', 'hỗ trợ', 'ho tro']):
         return (
             "Dạ thông tin hỗ trợ của GPTMini.pro đây ạ:\n\n"
-            "📱 Zalo hỗ trợ kỹ thuật: 036 338 2629\n"
+            " kỹ thuật: 036 338 2629\n"
             "📧 Gmail: gptminipro@gmail.com\n\n"
             "Anh/chị vui lòng mô tả vấn đề hoặc gửi ảnh lỗi để đội ngũ kỹ thuật hỗ trợ nhanh nhất."
         )
@@ -14376,26 +14375,28 @@ def support_auto_reply_text(message):
     )
 
 _MKT_V147_SUPPORT_CONTACT_PATCH = """
-<style id="mkt-v147-support-contact-css">
+<style id="mkt-v149-chat-zalo-css">
 .mkt-v147-support-box{margin:12px 0;padding:13px 14px;border:1px solid #bfdbfe;background:linear-gradient(135deg,#eff6ff,#f8fafc);border-radius:16px;color:#0f172a;font-weight:800;line-height:1.55;box-shadow:0 10px 28px rgba(37,99,235,.08)}
 .mkt-v147-support-box b{color:#1d4ed8}.mkt-v147-support-box a{color:#2563eb;text-decoration:none;font-weight:1000}.mkt-v147-mini{font-size:13px;color:#475569;font-weight:700}
-.mkt-v147-chat-banner{margin:8px 10px 10px;padding:10px 12px;border-radius:14px;border:1px solid #c7d2fe;background:#eef2ff;color:#1e1b4b;font-weight:900;line-height:1.45;font-size:13px}
-#mktV147ZaloFloat{position:fixed;right:18px;bottom:154px;z-index:2147483000;display:flex;align-items:center;gap:7px;border-radius:999px;padding:11px 14px;background:linear-gradient(135deg,#06b6d4,#2563eb);color:#fff;text-decoration:none;font-weight:1000;box-shadow:0 16px 38px rgba(37,99,235,.28)}
-@media(max-width:768px){ #mktV147ZaloFloat{right:14px;bottom:138px;font-size:13px;padding:10px 12px}.mkt-v147-support-box{font-size:13px}}
+.mkt-v147-chat-banner{margin:8px 10px 10px;padding:10px 12px;border-radius:14px;border:1px solid rgba(34,197,94,.25);background:rgba(34,197,94,.10);color:#d1fae5;font-weight:900;line-height:1.45;font-size:13px}
+#mktV147ZaloFloat{position:fixed;right:18px;bottom:154px;z-index:2147483000;width:54px;height:54px;border-radius:999px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#008fe5,#00b2ff);color:#fff;text-decoration:none;font-weight:1000;box-shadow:0 16px 38px rgba(0,143,229,.35);border:3px solid rgba(255,255,255,.95);font-family:Arial,sans-serif;font-size:25px;letter-spacing:-2px}
+#mktV147ZaloFloat::before{content:'Z';display:block;line-height:1;font-weight:1000;transform:skew(-8deg)}
+#mktV147ZaloFloat:hover{transform:translateY(-2px);filter:brightness(1.05)}
+@media(max-width:768px){ #mktV147ZaloFloat{right:14px;bottom:138px;width:50px;height:50px;font-size:23px}.mkt-v147-support-box{font-size:13px}}
 </style>
-<a id="mktV147ZaloFloat" href="https://zalo.me/0363382629" target="_blank" rel="noopener">📱 Zalo hỗ trợ</a>
-<script id="mkt-v147-support-contact-js">
+<a id="mktV147ZaloFloat" href="https://zalo.me/0363382629" target="_blank" rel="noopener" aria-label="Liên hệ Zalo"></a>
+<script id="mkt-v149-chat-zalo-js">
 (function(){
   'use strict';
   var ZALO='036 338 2629', GMAIL='gptminipro@gmail.com', ZALO_LINK='https://zalo.me/0363382629';
-  function supportHTML(){return '<div class="mkt-v147-support-box">📌 Sau khi chuyển khoản thành công, hệ thống sẽ tự động duyệt trong vòng <b>1–5 phút</b>.<br><br>⏳ Nếu sau <b>5 phút</b> tài khoản chưa được kích hoạt Premium, vui lòng liên hệ:<br>📱 Zalo hỗ trợ kỹ thuật: <a href="'+ZALO_LINK+'" target="_blank">'+ZALO+'</a><br>📧 Gmail: <b>'+GMAIL+'</b><br><br>🚀 Đội ngũ kỹ thuật sẽ ưu tiên hỗ trợ nhanh nhất cho quý khách.</div>';}
-  function chatBannerHTML(){return '<div class="mkt-v147-chat-banner">📱 Zalo kỹ thuật: <b>'+ZALO+'</b><br>📧 Gmail: <b>'+GMAIL+'</b><br><span class="mkt-v147-mini">Đã thanh toán quá 5 phút chưa duyệt? Gửi ảnh chuyển khoản qua Zalo để được hỗ trợ nhanh.</span></div>';}
+  function supportHTML(){return '<div class="mkt-v147-support-box">📌 Sau khi chuyển khoản thành công, hệ thống sẽ tự động duyệt trong vòng <b>1–5 phút</b>.<br><br>⏳ Nếu sau <b>5 phút</b> tài khoản chưa được kích hoạt Premium, vui lòng bấm biểu tượng Zalo tròn để được kỹ thuật hỗ trợ nhanh.<br>📧 Gmail: <b>'+GMAIL+'</b></div>';}
+  function chatBannerHTML(){return '<div class="mkt-v147-chat-banner">🟢 Hỗ trợ trực tuyến<br><span class="mkt-v147-mini">Thời gian phản hồi trung bình: 1–5 phút</span></div>';}
   function q(s){return document.querySelector(s)}
   function qa(s){return Array.prototype.slice.call(document.querySelectorAll(s))}
   function addAfter(el, html, id){if(!el || document.getElementById(id))return; var d=document.createElement('div'); d.id=id; d.innerHTML=html; el.parentNode.insertBefore(d, el.nextSibling);}
   function addInsideTop(el, html, id){if(!el || document.getElementById(id))return; var d=document.createElement('div'); d.id=id; d.innerHTML=html; el.insertBefore(d, el.firstChild);}
   function patchPayment(){
-    var alertBox=q('.payment-alert'); if(alertBox){alertBox.innerHTML='Sau khi chuyển khoản, bấm <b>Đã thanh toán</b> để gửi yêu cầu về web admin. Nội dung chuyển khoản gồm ID thiết bị, số điện thoại, Gmail và gói đã chọn.<br><br>📱 Zalo hỗ trợ kỹ thuật: <b>'+ZALO+'</b><br>📧 Gmail: <b>'+GMAIL+'</b><br><b>Nếu sau 5 phút chưa được duyệt tự động, vui lòng nhắn tin qua Zalo để được đội ngũ kỹ thuật hỗ trợ nhanh nhất.</b>';}
+    var alertBox=q('.payment-alert'); if(alertBox){alertBox.innerHTML='Sau khi chuyển khoản, bấm <b>Đã thanh toán</b> để gửi yêu cầu về web admin. Nội dung chuyển khoản gồm ID thiết bị, số điện thoại, Gmail và gói đã chọn.<br><br>⏳ Nếu sau 5 phút chưa được duyệt tự động, vui lòng bấm biểu tượng Zalo tròn cạnh khung chat hoặc gửi Gmail <b>'+GMAIL+'</b> để đội ngũ kỹ thuật hỗ trợ nhanh nhất.';}
     var payBtn=q('.payment-actions .light') || q('[onclick*="submitPremiumRequest"]') || q('button[type="submit"]');
     if(payBtn) addAfter(payBtn, supportHTML(), 'mktV147PaymentSupportBox');
     var qr=q('#payQr'); if(qr) addAfter(qr, supportHTML(), 'mktV147QrSupportBox');
@@ -14403,26 +14404,38 @@ _MKT_V147_SUPPORT_CONTACT_PATCH = """
   }
   function patchChat(){
     addInsideTop(q('#floatingBotBody') || q('.bot-body'), chatBannerHTML(), 'mktV147ChatBannerOld');
-    addInsideTop(q('#mktFixSupportBody') || q('#mktFixSupportPanel .support-body') || q('.support-chat-body'), chatBannerHTML(), 'mktV147ChatBannerNew');
-    var note=q('#mktFixSupportNote'); if(note && !note.dataset.v147){note.dataset.v147='1'; note.innerHTML='📱 Zalo: <b>'+ZALO+'</b> &nbsp;|&nbsp; 📧 '+GMAIL;}
+    addInsideTop(q('#mktFixSupportBody') || q('#mktFixSupportPanel .support-body') || q('.support-chat-body') || q('#mktFixSupportLog'), chatBannerHTML(), 'mktV147ChatBannerNew');
+    var note=q('#mktFixSupportNote'); if(note){note.innerHTML=''; note.textContent=''; note.style.display='none';}
+    qa('.bot-online,.mkt-live-support-status').forEach(function(el){el.textContent='Hỗ trợ trực tuyến';});
   }
   function patchPlaceholders(){
     qa('input[placeholder],textarea[placeholder]').forEach(function(el){
       var ph=el.getAttribute('placeholder')||'';
-      if(/hỗ trợ|ho tro|tin nhắn|tin nhan|nội dung/i.test(ph) && !/Zalo/i.test(ph)) el.setAttribute('placeholder', ph+' - Zalo hỗ trợ: '+ZALO);
+      ph=ph.replace(/\s*-\s*Zalo:?\s*036\s*338\s*2629/ig,'');
+      el.setAttribute('placeholder', ph);
     });
   }
-  function patchAll(){patchPayment();patchChat();patchPlaceholders();}
+  function patchSendFunction(){
+    if(!window.sendSupportMessage || window.sendSupportMessage.__v149Clean)return;
+    var old=window.sendSupportMessage;
+    window.sendSupportMessage=async function(){
+      var r=old.apply(this, arguments);
+      setTimeout(function(){var note=q('#mktFixSupportNote'); if(note){note.innerHTML=''; note.textContent=''; note.style.display='none';}},80);
+      return r;
+    };
+    window.sendSupportMessage.__v149Clean=true;
+  }
+  function patchAll(){patchPayment();patchChat();patchPlaceholders();patchSendFunction();}
   var oldOpenPayment=window.openPayment;
   window.openPayment=function(){var r=oldOpenPayment&&oldOpenPayment.apply(this,arguments); setTimeout(patchPayment,80); setTimeout(patchPayment,500); return r;};
   var oldNotice=window.showPaymentNotice;
   window.showPaymentNotice=function(msg){
-    var full=(msg||'Đã gửi yêu cầu về web admin.')+'<br><br>⏳ Nếu sau 5 phút chưa được kích hoạt Premium, vui lòng nhắn Zalo <b>'+ZALO+'</b> hoặc Gmail <b>'+GMAIL+'</b> để đội ngũ kỹ thuật hỗ trợ nhanh nhất.';
+    var full=(msg||'Đã gửi yêu cầu về web admin.')+'<br><br>⏳ Nếu sau 5 phút chưa được kích hoạt Premium, vui lòng bấm biểu tượng Zalo tròn cạnh khung chat hoặc Gmail <b>'+GMAIL+'</b> để đội ngũ kỹ thuật hỗ trợ nhanh nhất.';
     if(typeof oldNotice==='function') return oldNotice(full);
     alert((msg||'Đã gửi yêu cầu về web admin.')+'\n\nNếu sau 5 phút chưa được kích hoạt, vui lòng liên hệ Zalo '+ZALO+' hoặc Gmail '+GMAIL+'.');
   };
   document.addEventListener('DOMContentLoaded',function(){patchAll(); setTimeout(patchAll,500); setTimeout(patchAll,1500);});
-  document.addEventListener('click',function(e){var t=e.target; if(t && (String(t.textContent||'').match(/nâng cấp|thanh toán|chuyển khoản|premium/i) || (t.closest&&t.closest('#paymentModal')))) setTimeout(patchAll,180);},true);
+  document.addEventListener('click',function(e){var t=e.target; if(t && (String(t.textContent||'').match(/nâng cấp|thanh toán|chuyển khoản|premium|hỗ trợ/i) || (t.closest&&t.closest('#paymentModal')))) setTimeout(patchAll,180);},true);
 })();
 </script>
 """
