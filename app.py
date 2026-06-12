@@ -730,7 +730,50 @@ def init_db():
     conn.close()
 
 def db():
-    return sqlite3.connect(DB)
+    conn = sqlite3.connect(DB, timeout=30, check_same_thread=False)
+    try:
+        conn.execute("PRAGMA journal_mode=WAL;")
+        conn.execute("PRAGMA busy_timeout=30000;")
+    except Exception:
+        pass
+    return conn
+
+
+# ============================================================
+# TELEGRAM BOT CENTER - Admin notification bridge
+# Giữ nguyên menu/giao diện hiện tại. Chỉ bổ sung kênh báo admin.
+# Cấu hình trên Render Environment:
+# TELEGRAM_BOT_TOKEN=...
+# TELEGRAM_CHAT_ID=...
+# ============================================================
+
+def telegram_enabled():
+    return bool(os.getenv("TELEGRAM_BOT_TOKEN", "").strip() and os.getenv("TELEGRAM_CHAT_ID", "").strip())
+
+def send_telegram_message(text):
+    token = os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
+    chat_id = os.getenv("TELEGRAM_CHAT_ID", "").strip()
+    if not token or not chat_id:
+        return False
+    try:
+        url = f"https://api.telegram.org/bot{token}/sendMessage"
+        payload = {
+            "chat_id": chat_id,
+            "text": str(text or "")[:3900],
+            "parse_mode": "HTML",
+            "disable_web_page_preview": True
+        }
+        res = requests.post(url, json=payload, timeout=12)
+        return res.status_code < 400
+    except Exception as e:
+        print("Telegram notify error:", e)
+        return False
+
+def tg_safe(value):
+    text = str(value or "")
+    return (text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;"))[:800]
+
+
 
 
 def get_pages_dynamic():
@@ -1796,7 +1839,20 @@ def create_premium_request(device_id, phone, email, package_key):
     c.execute("""INSERT INTO notifications(title,detail,level,status,created_at) VALUES(?,?,?,?,?)""",
               ("Yêu cầu nâng cấp Premium mới", f"{device_id} - {phone} - {email} - {plan['name']}" + (f" - CTV: {affiliate_code}" if affiliate_code else ""), "warning", "new", now))
     conn.commit(); conn.close()
+    try:
+        send_telegram_message(
+            "🔔 <b>YÊU CẦU NÂNG CẤP PREMIUM</b>\n\n"
+            f"ID máy: <b>{tg_safe(device_id)}</b>\n"
+            f"SĐT: {tg_safe(phone)}\n"
+            f"Gmail: {tg_safe(email)}\n"
+            f"Gói: <b>{tg_safe(plan['name'])}</b>\n"
+            f"Số tiền: <b>{int(plan.get('amount',0)):,}đ</b>\n"
+            f"Nội dung CK: <code>{tg_safe(payment_note)}</code>"
+        )
+    except Exception as _tg_err:
+        print('Telegram premium request notify skipped:', _tg_err)
     return {"id": req_id, "device_id": device_id, "payment_note": payment_note, "package_name": plan['name'], "amount": int(plan.get('amount',0))}
+
 
 
 def get_premium_requests(limit=100):
@@ -1947,7 +2003,25 @@ def approve_premium_request(request_id, status='Đã duyệt', admin_note=''):
             create_affiliate_commission_for_request(c, request_id)
         except Exception as _affiliate_err:
             print('Affiliate commission error:', _affiliate_err)
-    conn.commit(); conn.close(); return True
+    conn.commit(); conn.close()
+    try:
+        if status == 'Đã duyệt':
+            send_telegram_message(
+                "✅ <b>PREMIUM ĐÃ KÍCH HOẠT</b>\n\n"
+                f"ID máy: <b>{tg_safe(device_id)}</b>\n"
+                f"Gói: <b>{tg_safe(package_name)}</b>\n"
+                f"SĐT: {tg_safe(phone)}\n"
+                f"Gmail: {tg_safe(email)}"
+            )
+        else:
+            send_telegram_message(
+                "⚠️ <b>YÊU CẦU PREMIUM ĐÃ CẬP NHẬT</b>\n\n"
+                f"ID máy: <b>{tg_safe(device_id)}</b>\n"
+                f"Trạng thái: <b>{tg_safe(status)}</b>"
+            )
+    except Exception as _tg_err:
+        print('Telegram approval notify skipped:', _tg_err)
+    return True
 
 def get_device_subscription(device_id=None):
     device_id = (device_id or get_device_id()).strip().upper()
@@ -2094,7 +2168,17 @@ def extend_device_subscription(device_id, extra_days=30):
     new_end = end_dt + datetime.timedelta(days=int(extra_days or 30))
     c.execute("UPDATE device_subscriptions SET end_date=?, status='premium', updated_at=? WHERE device_id=?",
               (new_end.strftime("%Y-%m-%d %H:%M:%S"), now.strftime("%Y-%m-%d %H:%M:%S"), device_id))
-    conn.commit(); conn.close(); return True
+    conn.commit(); conn.close()
+    try:
+        send_telegram_message(
+            "🔄 <b>GIA HẠN PREMIUM</b>\n\n"
+            f"ID máy: <b>{tg_safe(device_id)}</b>\n"
+            f"Cộng thêm: <b>{int(extra_days or 30)} ngày</b>\n"
+            f"Hạn mới: {tg_safe(new_end.strftime('%Y-%m-%d %H:%M:%S'))}"
+        )
+    except Exception as _tg_err:
+        print('Telegram renewal notify skipped:', _tg_err)
+    return True
 
 
 def cancel_device_subscription(device_id):
@@ -8432,7 +8516,14 @@ CONTENT_TARGET_TOTAL = 50000
 
 
 def content_db():
-    return sqlite3.connect(CONTENT_DB)
+    conn = sqlite3.connect(CONTENT_DB, timeout=30, check_same_thread=False)
+    try:
+        conn.execute("PRAGMA journal_mode=WAL;")
+        conn.execute("PRAGMA busy_timeout=30000;")
+    except Exception:
+        pass
+    return conn
+
 
 
 def ensure_content_50k_library():
@@ -9593,6 +9684,16 @@ def save_support_message(device_id, sender, message):
         except Exception:
             pass
     conn.commit(); conn.close()
+    if sender == 'user':
+        try:
+            send_telegram_message(
+                "🎫 <b>TICKET HỖ TRỢ MỚI</b>\n\n"
+                f"ID máy: <b>{tg_safe(device_id)}</b>\n"
+                f"Nội dung: {tg_safe(message)}\n"
+                f"Thời gian: {tg_safe(now)}"
+            )
+        except Exception as _tg_err:
+            print('Telegram support notify skipped:', _tg_err)
     return msg_id
 
 def get_support_messages(device_id=None, after_id=0, limit=100):
@@ -12469,6 +12570,12 @@ def api_dashboard_ceo_route():
 def healthz_route():
     return jsonify({"ok": True, "app": APP_TITLE, "pages": len(get_pages_dynamic())})
 
+@app.route("/admin/telegram_test")
+def admin_telegram_test_route():
+    ok = send_telegram_message("✅ <b>Telegram Bot Center đã kết nối thành công</b>\n\nWeb Admin đã gửi được thông báo từ GPTMINI.PRO.")
+    return jsonify({"success": bool(ok), "telegram_enabled": telegram_enabled()})
+
+
 @app.route("/support_poll")
 def support_poll_route():
     device_id = (request.args.get("device_id") or get_device_id()).strip().upper()
@@ -13668,10 +13775,8 @@ except Exception as _mkt_live_notify_v2_error:
 
 
 if __name__ == "__main__":
-    try:
-        threading.Thread(target=ensure_content_50k_library, daemon=True).start()
-    except Exception as e:
-        print('content library init skipped:', e)
+    # Không tự tạo kho 50k content khi khởi động để tránh lỗi SQLite database is locked trên Render.
+    # Khi cần kiểm tra/tạo kho content, gọi /api/content_50k_stats từ admin.
     threading.Thread(target=scheduler_loop, daemon=True).start()
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port, debug=False)
