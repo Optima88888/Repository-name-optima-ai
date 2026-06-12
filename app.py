@@ -14534,6 +14534,115 @@ except Exception as _e:
     print('V150 chat ux patch skipped:', _e)
 
 
+# ============================================================
+# V151 Mobile UX fix:
+# - Ẩn nút tải xuống trùng trên điện thoại.
+# - Dời chuông thông báo lên trên cùng bên phải.
+# - Giữ nguyên menu/cài đặt hiện tại.
+# ============================================================
+_MKT_V151_MOBILE_DOWNLOAD_BELL_PATCH = r"""
+<style id="mkt-v151-mobile-download-bell-fix">
+@media (max-width: 768px) {
+  #mktTopDownloadBar,
+  #mktTopInstallSheet,
+  #mktInstallSheetBackdrop,
+  #mktMobileInstallMenu,
+  .mkt-mobile-install-menu,
+  .mkt-top-download-bar,
+  .mkt-install-top,
+  .app-install-banner,
+  .v2-install-box {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    width: 0 !important;
+    height: 0 !important;
+    overflow: hidden !important;
+  }
+
+  #mktNotifyBell {
+    position: fixed !important;
+    top: 12px !important;
+    right: 14px !important;
+    left: auto !important;
+    bottom: auto !important;
+    width: 46px !important;
+    height: 46px !important;
+    border-radius: 999px !important;
+    z-index: 2147483000 !important;
+    transform: none !important;
+  }
+
+  #mktNotifyBell .mkt-bell-count {
+    top: -7px !important;
+    right: -7px !important;
+  }
+
+  .mkt-live-ticker,
+  .mkt-enterprise-ticker,
+  .premium-live-banner {
+    margin-right: 58px !important;
+  }
+}
+</style>
+
+<script id="mkt-v151-mobile-download-bell-fix-js">
+(function(){
+  function isMobile(){
+    return window.matchMedia && window.matchMedia('(max-width: 768px)').matches;
+  }
+
+  function cleanupMobileDownloadAndBell(){
+    if(!isMobile()) return;
+
+    [
+      '#mktTopDownloadBar',
+      '#mktTopInstallSheet',
+      '#mktInstallSheetBackdrop',
+      '#mktMobileInstallMenu',
+      '.mkt-mobile-install-menu',
+      '.mkt-top-download-bar',
+      '.mkt-install-top',
+      '.app-install-banner',
+      '.v2-install-box'
+    ].forEach(function(sel){
+      document.querySelectorAll(sel).forEach(function(el){
+        el.style.setProperty('display','none','important');
+        el.style.setProperty('visibility','hidden','important');
+        el.style.setProperty('opacity','0','important');
+        el.style.setProperty('pointer-events','none','important');
+      });
+    });
+
+    var bell = document.getElementById('mktNotifyBell');
+    if(bell){
+      bell.style.setProperty('position','fixed','important');
+      bell.style.setProperty('top','12px','important');
+      bell.style.setProperty('right','14px','important');
+      bell.style.setProperty('left','auto','important');
+      bell.style.setProperty('bottom','auto','important');
+      bell.style.setProperty('z-index','2147483000','important');
+    }
+  }
+
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', cleanupMobileDownloadAndBell);
+  } else {
+    cleanupMobileDownloadAndBell();
+  }
+  window.addEventListener('resize', cleanupMobileDownloadAndBell);
+  setTimeout(cleanupMobileDownloadAndBell, 300);
+  setTimeout(cleanupMobileDownloadAndBell, 900);
+  setTimeout(cleanupMobileDownloadAndBell, 1800);
+})();
+</script>
+"""
+try:
+    HTML = HTML.replace('</body>', _MKT_V151_MOBILE_DOWNLOAD_BELL_PATCH + '</body>') if '</body>' in HTML else HTML + _MKT_V151_MOBILE_DOWNLOAD_BELL_PATCH
+except Exception as _e:
+    print('V151 mobile download/bell patch skipped:', _e)
+
 if __name__ == "__main__":
     # Không tự tạo kho 50k content khi khởi động để tránh lỗi SQLite database is locked trên Render.
     # Khi cần kiểm tra/tạo kho content, gọi /api/content_50k_stats từ admin.
