@@ -14644,47 +14644,48 @@ except Exception as _e:
     print('V151 mobile download/bell patch skipped:', _e)
 
 
+
 # ============================================================
-# V153 REAL MOBILE CLEANUP PATCH
-# Fix thật: patch được đăng ký TRƯỚC app.run và cập nhật app.view_functions['home'].
-# - Ẩn toàn bộ nút tải xuống nổi/trùng trên điện thoại.
-# - Dời nút chuông thông báo lên góc phải trên cùng.
-# - Giữ nguyên menu/cài đặt hiện tại.
+# V154 SAFE MOBILE CLEANUP PATCH
+# - Không override home bằng str(Response) nữa vì làm vỡ toàn bộ CSS/HTML.
+# - Chỉ chèn CSS/JS sau khi Flask đã render HTML xong.
+# - Ẩn nút tải xuống trùng trên mobile và dời chuông lên góc phải.
 # ============================================================
-def _mkt_v153_mobile_cleanup_patch_html(html):
-    patch = r"""
-<style id="mkt-v153-real-mobile-cleanup-css">
-@media(max-width:900px){
-  /* Ẩn toàn bộ nút tải xuống nổi/trùng trên mobile */
-  #gptMktLeftDockFinal,
-  #gptMktInstallFinal,
-  #mktTopDownloadBar,
-  #mktMobileActionDock,
-  #mktMobileQuickActionsRestore,
-  #mktMobileQuickActions,
-  #mktMobileInstallQuickRestore,
-  #mktMobileInstallQuick,
-  #mktPhoneInstallFloat,
-  #mktPhoneInstallEntry,
-  #mktDownloadAppV130,
-  #mktMobileInstallMenu,
-  #mktInstallFloat,
-  #mktInstallPanel,
-  .gptmkt-install-btn-final,
-  .mkt-dock-download,
-  .mkt-mobile-install-menu,
-  .mkt-mobile-download-v130,
-  .mkt-mobile-download,
-  .mkt-top-download-bar,
-  .mkt-install-top,
-  .mkt-install-btn,
-  .app-install-banner,
-  .app-install-card,
-  .v2-install-box,
-  [data-install-app],
-  [data-mkt-install-app],
-  [data-install],
-  [data-pwa-install]{
+_MKT_V154_SAFE_MOBILE_PATCH = r"""
+<style id="mkt-v154-safe-mobile-cleanup-css">
+@media (max-width: 900px){
+  body .mkt-v154-hide-mobile,
+  body #gptMktLeftDockFinal,
+  body #gptMktInstallFinal,
+  body #mktTopDownloadBar,
+  body #mktMobileActionDock,
+  body #mktMobileQuickActionsRestore,
+  body #mktMobileQuickActions,
+  body #mktMobileInstallQuickRestore,
+  body #mktMobileInstallQuick,
+  body #mktPhoneInstallFloat,
+  body #mktPhoneInstallEntry,
+  body #mktDownloadAppV130,
+  body #mktMobileInstallMenu,
+  body #mktInstallFloat,
+  body #mktInstallPanel,
+  body #mktMobileCtvQuick,
+  body #mobileCtvQuickBtn,
+  body .gptmkt-install-btn-final,
+  body .mkt-dock-download,
+  body .mkt-mobile-install-menu,
+  body .mkt-mobile-download-v130,
+  body .mkt-mobile-download,
+  body .mkt-top-download-bar,
+  body .mkt-install-top,
+  body .mkt-install-btn,
+  body .app-install-banner,
+  body .app-install-card,
+  body .v2-install-box,
+  body [data-install-app],
+  body [data-mkt-install-app],
+  body [data-install],
+  body [data-pwa-install]{
     display:none!important;
     visibility:hidden!important;
     opacity:0!important;
@@ -14698,18 +14699,18 @@ def _mkt_v153_mobile_cleanup_patch_html(html):
     padding:0!important;
     margin:0!important;
     overflow:hidden!important;
-    transform:scale(0)!important;
   }
 
-  /* Chuông lên góc phải trên cùng */
-  #mktNotifyBell,
-  #mktNotifyBellV2,
-  .mkt-notify-bell,
-  .mkt-notify-bell-v2,
-  .mkt-alarm-bell,
-  .notification-bell,
-  [data-notify-bell]{
+  body #mktNotifyBell,
+  body #mktNotifyBellV2,
+  body .mkt-notify-bell,
+  body .mkt-notify-bell-v2,
+  body .mkt-alarm-bell,
+  body .notification-bell,
+  body [data-notify-bell]{
     display:flex!important;
+    align-items:center!important;
+    justify-content:center!important;
     visibility:visible!important;
     opacity:1!important;
     pointer-events:auto!important;
@@ -14726,12 +14727,13 @@ def _mkt_v153_mobile_cleanup_patch_html(html):
     z-index:2147483600!important;
     transform:none!important;
   }
-  #mktNotifyBell .mkt-bell-count,
-  #mktNotifyBellV2 .mkt-notify-count-v2,
-  .mkt-notify-count-v2,
-  .mkt-bell-count,
-  .notification-count,
-  [data-notify-count]{
+
+  body #mktNotifyBell .mkt-bell-count,
+  body #mktNotifyBellV2 .mkt-notify-count-v2,
+  body .mkt-notify-count-v2,
+  body .mkt-bell-count,
+  body .notification-count,
+  body [data-notify-count]{
     display:flex!important;
     position:absolute!important;
     top:-7px!important;
@@ -14740,44 +14742,64 @@ def _mkt_v153_mobile_cleanup_patch_html(html):
   }
 }
 </style>
-<script id="mkt-v153-real-mobile-cleanup-js">
+<script id="mkt-v154-safe-mobile-cleanup-js">
 (function(){
   'use strict';
-  function mobile(){return !window.matchMedia || window.matchMedia('(max-width:900px)').matches;}
-  function qa(s){return Array.prototype.slice.call(document.querySelectorAll(s));}
-  var hideSelectors=[
-    '#gptMktLeftDockFinal','#gptMktInstallFinal','#mktTopDownloadBar','#mktMobileActionDock',
-    '#mktMobileQuickActionsRestore','#mktMobileQuickActions','#mktMobileInstallQuickRestore',
-    '#mktMobileInstallQuick','#mktPhoneInstallFloat','#mktPhoneInstallEntry','#mktDownloadAppV130',
-    '#mktMobileInstallMenu','#mktInstallFloat','#mktInstallPanel','.gptmkt-install-btn-final',
-    '.mkt-dock-download','.mkt-mobile-install-menu','.mkt-mobile-download-v130','.mkt-mobile-download',
-    '.mkt-top-download-bar','.mkt-install-top','.mkt-install-btn','.app-install-banner',
-    '.app-install-card','.v2-install-box','[data-install-app]','[data-mkt-install-app]',
-    '[data-install]','[data-pwa-install]'
-  ];
+  if(window.__MKT_V154_SAFE_MOBILE_CLEANUP__) return;
+  window.__MKT_V154_SAFE_MOBILE_CLEANUP__ = true;
+
+  function mobile(){
+    return !window.matchMedia || window.matchMedia('(max-width:900px)').matches;
+  }
+  function qa(s){
+    return Array.prototype.slice.call(document.querySelectorAll(s));
+  }
   function hardHide(el){
-    if(!el) return;
-    ['display','visibility','opacity','pointer-events','width','height','min-width','min-height','max-width','max-height','padding','margin','overflow'].forEach(function(p){
-      var v={display:'none',visibility:'hidden',opacity:'0','pointer-events':'none',width:'0',height:'0','min-width':'0','min-height':'0','max-width':'0','max-height':'0',padding:'0',margin:'0',overflow:'hidden'}[p];
-      el.style.setProperty(p,v,'important');
+    if(!el || !mobile()) return;
+    el.classList.add('mkt-v154-hide-mobile');
+    var styles = {
+      display:'none', visibility:'hidden', opacity:'0', pointerEvents:'none',
+      width:'0', height:'0', minWidth:'0', minHeight:'0', maxWidth:'0', maxHeight:'0',
+      padding:'0', margin:'0', overflow:'hidden'
+    };
+    Object.keys(styles).forEach(function(k){
+      el.style.setProperty(k.replace(/[A-Z]/g, function(m){return '-' + m.toLowerCase();}), styles[k], 'important');
     });
     el.setAttribute('aria-hidden','true');
   }
   function hideDownloads(){
     if(!mobile()) return;
-    hideSelectors.forEach(function(sel){qa(sel).forEach(hardHide);});
-    // Bắt thêm các nút có chữ GPT MKT + Tải xuống nhưng ID bị đổi
-    qa('button,a,div').forEach(function(el){
-      var t=(el.textContent||'').replace(/\s+/g,' ').trim().toLowerCase();
-      if((t.indexOf('gpt mkt')>=0 && t.indexOf('tải xuống')>=0) || (t.indexOf('cài ứng dụng')>=0 && el.offsetWidth<240)) hardHide(el);
+    var selectors = [
+      '#gptMktLeftDockFinal','#gptMktInstallFinal','#mktTopDownloadBar','#mktMobileActionDock',
+      '#mktMobileQuickActionsRestore','#mktMobileQuickActions','#mktMobileInstallQuickRestore',
+      '#mktMobileInstallQuick','#mktPhoneInstallFloat','#mktPhoneInstallEntry','#mktDownloadAppV130',
+      '#mktMobileInstallMenu','#mktInstallFloat','#mktInstallPanel','#mktMobileCtvQuick','#mobileCtvQuickBtn',
+      '.gptmkt-install-btn-final','.mkt-dock-download','.mkt-mobile-install-menu',
+      '.mkt-mobile-download-v130','.mkt-mobile-download','.mkt-top-download-bar','.mkt-install-top',
+      '.mkt-install-btn','.app-install-banner','.app-install-card','.v2-install-box',
+      '[data-install-app]','[data-mkt-install-app]','[data-install]','[data-pwa-install]'
+    ];
+    selectors.forEach(function(sel){ qa(sel).forEach(hardHide); });
+    qa('button,a,div,span').forEach(function(el){
+      var t = (el.textContent || '').replace(/\s+/g,' ').trim().toLowerCase();
+      if(!t) return;
+      if((t.indexOf('gpt mkt') >= 0 && t.indexOf('tải xuống') >= 0) ||
+         (t.indexOf('tải xuống') >= 0 && (el.offsetWidth < 260 || el.getBoundingClientRect().bottom > window.innerHeight - 160)) ||
+         (t.indexOf('cài ứng dụng') >= 0 && el.offsetWidth < 260)){
+        hardHide(el);
+      }
     });
   }
   function moveBell(){
     if(!mobile()) return;
-    var bells=[];
-    ['#mktNotifyBell','#mktNotifyBellV2','.mkt-notify-bell','.mkt-notify-bell-v2','.mkt-alarm-bell','.notification-bell','[data-notify-bell]'].forEach(function(sel){qa(sel).forEach(function(b){if(bells.indexOf(b)<0)bells.push(b);});});
+    var bells = [];
+    ['#mktNotifyBell','#mktNotifyBellV2','.mkt-notify-bell','.mkt-notify-bell-v2','.mkt-alarm-bell','.notification-bell','[data-notify-bell]'].forEach(function(sel){
+      qa(sel).forEach(function(b){ if(bells.indexOf(b) < 0) bells.push(b); });
+    });
     bells.forEach(function(bell){
       bell.style.setProperty('display','flex','important');
+      bell.style.setProperty('align-items','center','important');
+      bell.style.setProperty('justify-content','center','important');
       bell.style.setProperty('visibility','visible','important');
       bell.style.setProperty('opacity','1','important');
       bell.style.setProperty('pointer-events','auto','important');
@@ -14788,37 +14810,44 @@ def _mkt_v153_mobile_cleanup_patch_html(html):
       bell.style.setProperty('bottom','auto','important');
       bell.style.setProperty('width','52px','important');
       bell.style.setProperty('height','52px','important');
+      bell.style.setProperty('min-width','52px','important');
+      bell.style.setProperty('min-height','52px','important');
+      bell.style.setProperty('border-radius','999px','important');
       bell.style.setProperty('z-index','2147483600','important');
       bell.style.setProperty('transform','none','important');
     });
   }
-  function run(){hideDownloads();moveBell();}
+  function run(){
+    hideDownloads();
+    moveBell();
+  }
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', run);
   run();
-  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',run); else setTimeout(run,50);
-  window.addEventListener('load',run);
-  window.addEventListener('resize',run);
-  setTimeout(run,250);setTimeout(run,800);setTimeout(run,1600);setTimeout(run,3000);
-  setInterval(run,700);
+  window.addEventListener('load', run);
+  window.addEventListener('resize', run);
+  [80,250,700,1400,2500,4000].forEach(function(ms){ setTimeout(run, ms); });
+  setInterval(run, 1200);
 })();
 </script>
 """
-    try:
-        return html.replace('</body>', patch + '</body>') if '</body>' in html else html + patch
-    except Exception:
-        return html
 
-try:
-    _mkt_v153_old_home = home
-    def home():
-        res = _mkt_v153_old_home()
-        try:
-            return _mkt_v153_mobile_cleanup_patch_html(str(res))
-        except Exception:
-            return res
-    # Quan trọng: Flask giữ view function cũ trong app.view_functions, phải cập nhật lại.
-    app.view_functions['home'] = home
-except Exception as _e:
-    print('V153 mobile cleanup patch skipped:', _e)
+@app.after_request
+def _mkt_v154_safe_mobile_cleanup_after_request(response):
+    try:
+        content_type = response.headers.get("Content-Type", "")
+        if response.status_code == 200 and "text/html" in content_type.lower():
+            html = response.get_data(as_text=True)
+            if "mkt-v154-safe-mobile-cleanup-css" not in html:
+                if "</body>" in html:
+                    html = html.replace("</body>", _MKT_V154_SAFE_MOBILE_PATCH + "</body>")
+                else:
+                    html = html + _MKT_V154_SAFE_MOBILE_PATCH
+                response.set_data(html)
+                response.headers["Content-Length"] = str(len(response.get_data()))
+    except Exception as _e:
+        print("V154 safe mobile cleanup skipped:", _e)
+    return response
+
 
 
 if __name__ == "__main__":
