@@ -16080,13 +16080,7 @@ _MKT_V169_LIVE_TICKER_RIGHTBAR_PRO = r"""
     var cards=qa('.rightbar .activity-card');
     if(!cards.length) return;
     var cfg=[
-      ['customers','👥','Khách đang sử dụng',function(){return formatNum(counters.customers)},'+1'],
-      ['premium','👑','Premium hoạt động',function(){return formatNum(counters.premium)},'+1'],
-      ['ctv','🤝','CTV hoạt động',function(){return formatNum(counters.ctv)},'+1'],
-      ['posts','📈','Bài đã đăng',function(){return formatNum(counters.posts)},'+3'],
-      ['saved','⏱️','Thời gian tiết kiệm',savedText,'+12m']
-    ];
-    cfg.forEach(function(c,i){var card=cards[i]; if(!card) return; card.classList.add('mkt-v169-pro-card'); card.classList.remove('mkt-revenue-card-v168'); card.setAttribute('data-mkt-counter',c[0]); card.setAttribute('data-icon',c[1]); card.innerHTML='<span>'+c[2]+'</span><b>'+c[3]()+'</b><i class="mkt-v169-delta">▲ '+c[4]+'</i><small class="mkt-v169-sub">Cập nhật mỗi 5 giây</small>';});
+          cfg.forEach(function(c,i){var card=cards[i]; if(!card) return; card.classList.add('mkt-v169-pro-card'); card.classList.remove('mkt-revenue-card-v168'); card.setAttribute('data-mkt-counter',c[0]); card.setAttribute('data-icon',c[1]); card.innerHTML='<span>'+c[2]+'</span><b>'+c[3]()+'</b><i class="mkt-v169-delta">▲ '+c[4]+'</i><small class="mkt-v169-sub">Cập nhật mỗi 5 giây</small>';});
   }
   function tick(){
     enhanceRightbar();
