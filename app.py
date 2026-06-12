@@ -14292,6 +14292,145 @@ try:
 except Exception as _e:
     print('V145 mobile back patch skipped:', _e)
 
+
+# ============================================================
+# V147 SUPPORT CONTACT PATCH - Zalo/Gmail trong thanh toán + chat
+# Giữ nguyên menu/cài đặt hiện tại. Chỉ bổ sung nội dung hỗ trợ khách.
+# ============================================================
+SUPPORT_ZALO = "036 338 2629"
+SUPPORT_GMAIL = "gptminipro@gmail.com"
+SUPPORT_ZALO_LINK = "https://zalo.me/0363382629"
+SUPPORT_PAYMENT_TEXT = (
+    "📌 Sau khi chuyển khoản thành công, hệ thống sẽ tự động duyệt trong vòng 1–5 phút.\n\n"
+    "⏳ Nếu sau 5 phút tài khoản chưa được kích hoạt Premium, vui lòng liên hệ Zalo 036 338 2629 "
+    "hoặc Gmail gptminipro@gmail.com để đội ngũ kỹ thuật hỗ trợ nhanh nhất cho quý khách."
+)
+
+def support_auto_reply_text(message):
+    """V147: Trả lời tự động luôn kèm Zalo/Gmail hỗ trợ khi khách hỏi trong khung chat."""
+    msg = (message or '').strip()
+    low = msg.lower()
+
+    contact = (
+        "\n\n📱 Zalo hỗ trợ kỹ thuật: 036 338 2629"
+        "\n📧 Gmail: gptminipro@gmail.com"
+        "\n\nNếu đã thanh toán mà sau 5 phút chưa được duyệt tự động, anh/chị vui lòng gửi ảnh chuyển khoản qua Zalo để được hỗ trợ nhanh nhất."
+    )
+
+    def has_any(words):
+        return any(w in low for w in words)
+
+    if has_any(['premium', 'nâng cấp', 'nang cap', 'kích hoạt', 'kich hoat', 'mở gói', 'mo goi', 'gia hạn', 'gia han']):
+        return (
+            "Em đã nhận yêu cầu hỗ trợ Premium ạ.\n\n"
+            "Anh/chị vui lòng gửi thêm: ID thiết bị, gói muốn kích hoạt và ảnh thanh toán nếu đã chuyển khoản. "
+            "Bộ phận kỹ thuật sẽ kiểm tra và kích hoạt ngay khi thông tin hợp lệ."
+            + contact
+        )
+
+    if has_any(['thanh toán', 'thanh toan', 'chuyển khoản', 'chuyen khoan', 'qr', 'momo', 'mb bank', 'vietqr', 'đã thanh toán', 'da thanh toan']):
+        return (
+            "Em đã nhận thông tin thanh toán ạ.\n\n"
+            "Sau khi chuyển khoản, hệ thống sẽ tự động duyệt trong vòng 1–5 phút. "
+            "Anh/chị vui lòng giữ ảnh giao dịch và kiểm tra đúng ID thiết bị trong nội dung chuyển khoản."
+            + contact
+        )
+
+    if has_any(['tải', 'tai', 'cài', 'cai', 'app', 'ứng dụng', 'ung dung', 'iphone', 'android', 'pwa', 'màn hình chính', 'man hinh chinh']):
+        return (
+            "Em hướng dẫn nhanh phần tải app ạ.\n\n"
+            "Android: bấm nút GPT MKT / Tải xuống để cài ra màn hình chính.\n"
+            "iPhone: mở bằng Safari → bấm Chia sẻ → Thêm vào màn hình chính."
+            + contact
+        )
+
+    if has_any(['lỗi đăng', 'loi dang', 'đăng bài', 'dang bai', 'fanpage', 'page', 'token', 'facebook', 'không đăng', 'khong dang', 'lỗi', 'loi']):
+        return (
+            "Em đã ghi nhận lỗi cần hỗ trợ ạ.\n\n"
+            "Anh/chị vui lòng gửi ảnh màn hình lỗi, ID thiết bị và mô tả ngắn tình trạng. "
+            "Kỹ thuật sẽ kiểm tra và phản hồi nhanh cho anh/chị."
+            + contact
+        )
+
+    if has_any(['ctv', 'cộng tác viên', 'cong tac vien', 'hoa hồng', 'hoa hong', 'link giới thiệu', 'link gioi thieu']):
+        return (
+            "Em đã nhận yêu cầu về CTV ạ.\n\n"
+            "Anh/chị có thể mở mục CTV Hoa Hồng để lấy mã/link giới thiệu. "
+            "Nếu cần kiểm tra hoa hồng hoặc doanh thu, gửi mã CTV để bộ phận hỗ trợ đối soát nhanh."
+            + contact
+        )
+
+    if has_any(['zalo', 'số điện thoại', 'so dien thoai', 'sdt', 'gmail', 'email', 'liên hệ', 'lien he', 'hỗ trợ', 'ho tro']):
+        return (
+            "Dạ thông tin hỗ trợ của GPTMini.pro đây ạ:\n\n"
+            "📱 Zalo hỗ trợ kỹ thuật: 036 338 2629\n"
+            "📧 Gmail: gptminipro@gmail.com\n\n"
+            "Anh/chị vui lòng mô tả vấn đề hoặc gửi ảnh lỗi để đội ngũ kỹ thuật hỗ trợ nhanh nhất."
+        )
+
+    return (
+        "Em đã nhận tin nhắn của anh/chị ạ.\n\n"
+        "Anh/chị vui lòng chờ trong giây lát, nhân viên hỗ trợ sẽ phản hồi trực tiếp trong khung chat này. "
+        "Nếu cần xử lý nhanh, anh/chị có thể gửi thêm ảnh lỗi, ID thiết bị hoặc nội dung cần kiểm tra."
+        + contact
+    )
+
+_MKT_V147_SUPPORT_CONTACT_PATCH = """
+<style id="mkt-v147-support-contact-css">
+.mkt-v147-support-box{margin:12px 0;padding:13px 14px;border:1px solid #bfdbfe;background:linear-gradient(135deg,#eff6ff,#f8fafc);border-radius:16px;color:#0f172a;font-weight:800;line-height:1.55;box-shadow:0 10px 28px rgba(37,99,235,.08)}
+.mkt-v147-support-box b{color:#1d4ed8}.mkt-v147-support-box a{color:#2563eb;text-decoration:none;font-weight:1000}.mkt-v147-mini{font-size:13px;color:#475569;font-weight:700}
+.mkt-v147-chat-banner{margin:8px 10px 10px;padding:10px 12px;border-radius:14px;border:1px solid #c7d2fe;background:#eef2ff;color:#1e1b4b;font-weight:900;line-height:1.45;font-size:13px}
+#mktV147ZaloFloat{position:fixed;right:18px;bottom:154px;z-index:2147483000;display:flex;align-items:center;gap:7px;border-radius:999px;padding:11px 14px;background:linear-gradient(135deg,#06b6d4,#2563eb);color:#fff;text-decoration:none;font-weight:1000;box-shadow:0 16px 38px rgba(37,99,235,.28)}
+@media(max-width:768px){#mktV147ZaloFloat{right:14px;bottom:138px;font-size:13px;padding:10px 12px}.mkt-v147-support-box{font-size:13px}}
+</style>
+<a id="mktV147ZaloFloat" href="https://zalo.me/0363382629" target="_blank" rel="noopener">📱 Zalo hỗ trợ</a>
+<script id="mkt-v147-support-contact-js">
+(function(){
+  'use strict';
+  var ZALO='036 338 2629', GMAIL='gptminipro@gmail.com', ZALO_LINK='https://zalo.me/0363382629';
+  function supportHTML(){return '<div class="mkt-v147-support-box">📌 Sau khi chuyển khoản thành công, hệ thống sẽ tự động duyệt trong vòng <b>1–5 phút</b>.<br><br>⏳ Nếu sau <b>5 phút</b> tài khoản chưa được kích hoạt Premium, vui lòng liên hệ:<br>📱 Zalo hỗ trợ kỹ thuật: <a href="'+ZALO_LINK+'" target="_blank">'+ZALO+'</a><br>📧 Gmail: <b>'+GMAIL+'</b><br><br>🚀 Đội ngũ kỹ thuật sẽ ưu tiên hỗ trợ nhanh nhất cho quý khách.</div>';}
+  function chatBannerHTML(){return '<div class="mkt-v147-chat-banner">📱 Zalo kỹ thuật: <b>'+ZALO+'</b><br>📧 Gmail: <b>'+GMAIL+'</b><br><span class="mkt-v147-mini">Đã thanh toán quá 5 phút chưa duyệt? Gửi ảnh chuyển khoản qua Zalo để được hỗ trợ nhanh.</span></div>';}
+  function q(s){return document.querySelector(s)}
+  function qa(s){return Array.prototype.slice.call(document.querySelectorAll(s))}
+  function addAfter(el, html, id){if(!el || document.getElementById(id))return; var d=document.createElement('div'); d.id=id; d.innerHTML=html; el.parentNode.insertBefore(d, el.nextSibling);}
+  function addInsideTop(el, html, id){if(!el || document.getElementById(id))return; var d=document.createElement('div'); d.id=id; d.innerHTML=html; el.insertBefore(d, el.firstChild);}
+  function patchPayment(){
+    var alertBox=q('.payment-alert'); if(alertBox){alertBox.innerHTML='Sau khi chuyển khoản, bấm <b>Đã thanh toán</b> để gửi yêu cầu về web admin. Nội dung chuyển khoản gồm ID thiết bị, số điện thoại, Gmail và gói đã chọn.<br><br>📱 Zalo hỗ trợ kỹ thuật: <b>'+ZALO+'</b><br>📧 Gmail: <b>'+GMAIL+'</b><br><b>Nếu sau 5 phút chưa được duyệt tự động, vui lòng nhắn tin qua Zalo để được đội ngũ kỹ thuật hỗ trợ nhanh nhất.</b>';}
+    var payBtn=q('.payment-actions .light') || q('[onclick*="submitPremiumRequest"]') || q('button[type="submit"]');
+    if(payBtn) addAfter(payBtn, supportHTML(), 'mktV147PaymentSupportBox');
+    var qr=q('#payQr'); if(qr) addAfter(qr, supportHTML(), 'mktV147QrSupportBox');
+    var content=q('#payContent'); if(content) addAfter(content, supportHTML(), 'mktV147ContentSupportBox');
+  }
+  function patchChat(){
+    addInsideTop(q('#floatingBotBody') || q('.bot-body'), chatBannerHTML(), 'mktV147ChatBannerOld');
+    addInsideTop(q('#mktFixSupportBody') || q('#mktFixSupportPanel .support-body') || q('.support-chat-body'), chatBannerHTML(), 'mktV147ChatBannerNew');
+    var note=q('#mktFixSupportNote'); if(note && !note.dataset.v147){note.dataset.v147='1'; note.innerHTML='📱 Zalo: <b>'+ZALO+'</b> &nbsp;|&nbsp; 📧 '+GMAIL;}
+  }
+  function patchPlaceholders(){
+    qa('input[placeholder],textarea[placeholder]').forEach(function(el){
+      var ph=el.getAttribute('placeholder')||'';
+      if(/hỗ trợ|ho tro|tin nhắn|tin nhan|nội dung/i.test(ph) && !/Zalo/i.test(ph)) el.setAttribute('placeholder', ph+' - Zalo hỗ trợ: '+ZALO);
+    });
+  }
+  function patchAll(){patchPayment();patchChat();patchPlaceholders();}
+  var oldOpenPayment=window.openPayment;
+  window.openPayment=function(){var r=oldOpenPayment&&oldOpenPayment.apply(this,arguments); setTimeout(patchPayment,80); setTimeout(patchPayment,500); return r;};
+  var oldNotice=window.showPaymentNotice;
+  window.showPaymentNotice=function(msg){
+    var full=(msg||'Đã gửi yêu cầu về web admin.')+'<br><br>⏳ Nếu sau 5 phút chưa được kích hoạt Premium, vui lòng nhắn Zalo <b>'+ZALO+'</b> hoặc Gmail <b>'+GMAIL+'</b> để đội ngũ kỹ thuật hỗ trợ nhanh nhất.';
+    if(typeof oldNotice==='function') return oldNotice(full);
+    alert((msg||'Đã gửi yêu cầu về web admin.')+'\n\nNếu sau 5 phút chưa được kích hoạt, vui lòng liên hệ Zalo '+ZALO+' hoặc Gmail '+GMAIL+'.');
+  };
+  document.addEventListener('DOMContentLoaded',function(){patchAll(); setTimeout(patchAll,500); setTimeout(patchAll,1500);});
+  document.addEventListener('click',function(e){var t=e.target; if(t && (String(t.textContent||'').match(/nâng cấp|thanh toán|chuyển khoản|premium/i) || (t.closest&&t.closest('#paymentModal')))) setTimeout(patchAll,180);},true);
+})();
+</script>
+"""
+try:
+    HTML = HTML.replace('</body>', _MKT_V147_SUPPORT_CONTACT_PATCH + '</body>') if '</body>' in HTML else HTML + _MKT_V147_SUPPORT_CONTACT_PATCH
+except Exception as _e:
+    print('V147 support contact patch skipped:', _e)
+
 if __name__ == "__main__":
     # Không tự tạo kho 50k content khi khởi động để tránh lỗi SQLite database is locked trên Render.
     # Khi cần kiểm tra/tạo kho content, gọi /api/content_50k_stats từ admin.
