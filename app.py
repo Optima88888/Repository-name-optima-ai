@@ -12402,7 +12402,7 @@ body{background:linear-gradient(135deg,#f8fafc,#eef2ff)!important}
   .mkt-premium-compact-upgrade strong{color:#facc15;display:block;margin-bottom:2px;text-transform:uppercase;letter-spacing:.4px}
   .mkt-premium-compact-upgrade .mkt-mini-bar{height:5px;border-radius:999px;background:rgba(148,163,184,.25);margin-top:7px;overflow:hidden}.mkt-premium-compact-upgrade .mkt-mini-bar i{display:block;height:100%;background:linear-gradient(90deg,#22c55e,#3b82f6,#a855f7);width:100%}
   .mkt-dashboard-ceo-strip{display:grid;grid-template-columns:repeat(5,minmax(120px,1fr));gap:12px;margin:14px 0 18px}.mkt-dashboard-ceo-strip .ceo-mini{background:linear-gradient(135deg,#0f172a,#1e1b4b);border:1px solid rgba(96,165,250,.22);border-radius:18px;padding:14px;color:#fff;box-shadow:0 14px 36px rgba(2,6,23,.22)}.mkt-dashboard-ceo-strip .ceo-mini span{display:block;color:#bfdbfe;font-size:12px;font-weight:800}.mkt-dashboard-ceo-strip .ceo-mini b{display:block;font-size:21px;margin-top:4px;color:#f8fafc}
-  @media(max-width:900px){#mktLivePremiumBar{top:10px;min-width:calc(100vw - 18px);padding:9px 12px}#mktLivePremiumText{font-size:13px}.mkt-dashboard-ceo-strip{grid-template-columns:1fr 1fr}#mktNotifyBell{top:auto;bottom:86px;right:18px}#mktNotifyPanel{top:auto;bottom:140px;right:14px}}
+  @media(max-width:900px){ #mktLivePremiumBar{top:10px;min-width:calc(100vw - 18px);padding:9px 12px}#mktLivePremiumText{font-size:13px}.mkt-dashboard-ceo-strip{grid-template-columns:1fr 1fr}#mktNotifyBell{top:auto;bottom:86px;right:18px}#mktNotifyPanel{top:auto;bottom:140px;right:14px}}
 </style>
 <script id="mkt-enterprise-v6-addon-js">
 (function(){
@@ -13580,7 +13580,7 @@ _MKT_ENTERPRISE_FRONT_ADDON = r"""
 #mktNotifyPanelHard{position:fixed;right:20px;top:132px;z-index:2147482999;width:min(360px,calc(100vw - 32px));display:none;background:#fff;color:#0f172a;border-radius:20px;border:1px solid rgba(148,163,184,.24);box-shadow:0 24px 70px rgba(2,6,23,.32);overflow:hidden}
 #mktNotifyPanelHard h3{margin:0;padding:16px 18px;background:linear-gradient(135deg,#eff6ff,#eef2ff);font-size:17px;color:#1e3a8a}
 #mktNotifyPanelHard .note{padding:12px 18px;border-top:1px solid #e5e7eb;font-size:13px;line-height:1.4}.mkt-premium-compact-hard{margin-top:8px;padding:9px 10px;border-radius:15px;background:linear-gradient(135deg,rgba(34,197,94,.14),rgba(99,102,241,.16));border:1px solid rgba(96,165,250,.26);color:#dcfce7;font-weight:900;font-size:12px;line-height:1.35}.mkt-premium-compact-hard strong{color:#facc15;display:block;margin-bottom:2px;text-transform:uppercase}.feature-card:hover,.dashboard-card:hover,.module-card:hover,.v2-card:hover,.tool-card:hover{transform:translateY(-7px)!important;box-shadow:0 24px 70px rgba(37,99,235,.18),0 0 0 1px rgba(139,92,246,.22)!important;transition:.22s!important}
-@media(max-width:900px){#mktLivePremiumBarHard{top:10px;padding:9px 12px}#mktLivePremiumTextHard{font-size:12px}#mktNotifyBellHard{top:auto;bottom:86px;right:18px}#mktNotifyPanelHard{top:auto;bottom:140px;right:14px}}
+@media(max-width:900px){ #mktLivePremiumBarHard{top:10px;padding:9px 12px}#mktLivePremiumTextHard{font-size:12px}#mktNotifyBellHard{top:auto;bottom:86px;right:18px}#mktNotifyPanelHard{top:auto;bottom:140px;right:14px}}
 </style>
 <script id="mkt-hard-enterprise-front-js">
 (function(){if(window.__MKT_HARD_ENTERPRISE_FRONT__)return;window.__MKT_HARD_ENTERPRISE_FRONT__=1;
@@ -13860,8 +13860,8 @@ _MKT_CUSTOMER_SMOOTH_V142_ADDON = r"""
   #mktSmoothInstallBtn{background:linear-gradient(135deg,#2563eb,#7c3aed)!important;color:#fff!important}
   #mktSmoothCtvBtn{background:linear-gradient(135deg,#f59e0b,#f97316)!important;color:#111827!important}
   @keyframes mktSmoothFloatV142{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
-  @media(min-width:901px){#mktSmoothMobileDock{display:none!important}}
-  @media(max-width:900px){#mktMobileQuickActionsRestore,#gptMktLeftDockFinal,.mkt-mobile-install-menu,#mktTopDownloadBar,#mktMobileInstallMenu,#mktMobileCtvQuick,#mobileCtvQuickBtn{display:none!important}}
+  @media(min-width:901px){ #mktSmoothMobileDock{display:none!important}}
+  @media(max-width:900px){ #mktMobileQuickActionsRestore,#gptMktLeftDockFinal,.mkt-mobile-install-menu,#mktTopDownloadBar,#mktMobileInstallMenu,#mktMobileCtvQuick,#mobileCtvQuickBtn{display:none!important}}
 </style>
 <script id="mkt-customer-smooth-v142-js">
 (function(){
@@ -14257,7 +14257,7 @@ _MKT_V145_MOBILE_BACK_PATCH = """
   #mktMobileBackBtnV145{position:fixed;left:14px;bottom:88px;z-index:2147483000;border:0;border-radius:999px;padding:11px 15px;background:linear-gradient(135deg,#0f172a,#4f46e5);color:#fff;font-weight:1000;box-shadow:0 14px 35px rgba(15,23,42,.35);display:none;align-items:center;gap:7px;font-size:14px}
   body.mkt-show-mobile-back #mktMobileBackBtnV145{display:flex!important}
 }
-@media(min-width:769px){#mktMobileBackBtnV145{display:none!important}}
+@media(min-width:769px){ #mktMobileBackBtnV145{display:none!important}}
 </style>
 <button id="mktMobileBackBtnV145" type="button">← Trở lại</button>
 <script id="mkt-v145-mobile-back-js">
