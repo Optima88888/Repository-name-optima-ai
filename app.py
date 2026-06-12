@@ -1,4 +1,4 @@
-from flask import Flask, request, render_template_string, jsonify, send_file
+from flask import Flask, request, render_template_string, jsonify, send_file, session
 from dotenv import load_dotenv
 import google.generativeai as genai
 from werkzeug.utils import secure_filename
@@ -34,6 +34,49 @@ os.makedirs(BACKUP_DIR, exist_ok=True)
 
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 100 * 1024 * 1024
+app.secret_key = os.getenv("SECRET_KEY", "gptmini-change-this-secret-key")
+
+ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "GptMini@2026")
+
+def admin_login_html(error=""):
+    err = f"<div class='err'>{error}</div>" if error else ""
+    return f"""
+<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Đăng nhập Web Admin</title>
+<style>
+body{{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;font-family:system-ui;background:linear-gradient(135deg,#020617,#1e1b4b,#312e81);color:#0f172a;padding:18px}}
+.box{{width:min(440px,94vw);background:#fff;border:1px solid #c7d2fe;border-radius:28px;padding:28px;box-shadow:0 35px 100px rgba(0,0,0,.35)}}
+h1{{margin:0 0 8px;font-size:28px;color:#1e1b4b}}p{{margin:0 0 20px;color:#64748b;font-weight:700;line-height:1.5}}
+input{{width:100%;box-sizing:border-box;padding:15px;border:1px solid #cbd5e1;border-radius:16px;font-size:16px;outline:none}}
+button{{width:100%;margin-top:14px;border:0;border-radius:16px;padding:15px;font-weight:1000;color:white;background:linear-gradient(135deg,#2563eb,#7c3aed);cursor:pointer;box-shadow:0 16px 35px rgba(37,99,235,.25)}}
+a{{display:block;text-align:center;margin-top:14px;color:#4f46e5;text-decoration:none;font-weight:900}}.err{{background:#fee2e2;color:#991b1b;border:1px solid #fecaca;border-radius:14px;padding:10px;margin-bottom:12px;font-weight:800}}
+</style></head><body><form class="box" method="post" action="/admin"><h1>🔐 Web Admin</h1><p>Nhập mật khẩu quản trị để xem Premium, CTV, doanh thu và hỗ trợ khách hàng.</p>{err}<input type="password" name="password" placeholder="Mật khẩu quản trị" autofocus><button>Đăng nhập Admin</button><a href="/">← Về trang khách</a></form></body></html>
+"""
+
+def is_admin_logged_in():
+    return bool(session.get("gptmini_admin_ok"))
+
+def admin_guard_response():
+    if request.path.startswith('/api/admin'):
+        return jsonify({"ok": False, "message": "Bạn cần đăng nhập Web Admin."}), 401
+    return admin_login_html(), 401
+
+@app.before_request
+def protect_admin_routes():
+    path = request.path or ''
+    if path == '/admin/logout':
+        return None
+    if path == '/admin' and request.method == 'POST':
+        return None
+    if path == '/admin' or path.startswith('/admin/') or path.startswith('/api/admin'):
+        if not is_admin_logged_in():
+            return admin_guard_response()
+    return None
+
+@app.route('/admin/logout')
+def admin_logout():
+    session.pop('gptmini_admin_ok', None)
+    return admin_login_html('Đã đăng xuất Web Admin.')
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "").strip()
 PAGES_JSON = os.getenv("PAGES_JSON", "[]").strip()
@@ -8396,6 +8439,10 @@ button[aria-label="CTV"]{
 
 
 
+
+<style id="hide-admin-only-customer-modules-final">
+a[href="#premium_auto_renew"],a[data-module="premium_auto_renew"],#premium_auto_renew,[onclick*="premium_auto_renew"]{display:none!important;visibility:hidden!important;pointer-events:none!important}
+</style>
 <!-- GPTMINI Enterprise Menu UI Final - keep old content, add balanced SaaS modules -->
 <style id="gptmini-enterprise-menu-ui-final-css">
 :root{--mkt-blue:#2563eb;--mkt-purple:#7c3aed;--mkt-dark:#0f172a;--mkt-green:#22c55e;--mkt-gold:#f59e0b}
@@ -8428,7 +8475,7 @@ button[aria-label="CTV"]{
     {id:'ctv_revenue_dashboard',adminOnly:true,icon:'💰',title:'Dashboard Doanh Thu CTV',tag:'Admin',desc:'Quản lý cộng tác viên, doanh thu giới thiệu, hoa hồng và bảng xếp hạng CTV.',features:[['Top CTV','Xem ai đang mang về nhiều khách nhất.'],['Hoa hồng','Theo dõi số tiền cần trả theo từng CTV.'],['Link giới thiệu','Quản lý mã và link giới thiệu riêng.']]},
     {id:'device_id_manager',adminOnly:true,icon:'🆔',title:'Quản lý khách theo Device ID',tag:'Admin',desc:'Mỗi khách có ID máy riêng để kích hoạt gói, chống chia sẻ tài khoản và hỗ trợ nhanh.',features:[['ID thiết bị','Theo dõi gói theo từng máy khách hàng.'],['Premium realtime','Admin duyệt là tài khoản khách tự mở khóa.'],['Tra cứu hỗ trợ','Tìm khách bằng ID, Gmail hoặc SĐT.']]},
     {id:'ticket_support_center',adminOnly:true,icon:'🎫',title:'Ticket Hỗ Trợ Khách Hàng',tag:'Admin',desc:'Chuyển tin nhắn hỗ trợ thành ticket để không bỏ sót lỗi, thanh toán hoặc yêu cầu kích hoạt.',features:[['Ticket mới','Ghi nhận yêu cầu hỗ trợ của khách.'],['Trạng thái xử lý','Mới, đang xử lý, hoàn thành.'],['Lịch sử hỗ trợ','Xem lại toàn bộ trao đổi theo ID máy.']]},
-    {id:'premium_auto_renew',icon:'🔄',title:'Gia Hạn Tự Động Premium',tag:'Premium',desc:'Nhắc khách trước 7/5/3/1 ngày, tạo QR gia hạn kèm ID máy, Gmail và SĐT.',features:[['Nhắc gia hạn','Tăng tỷ lệ khách quay lại trước khi hết hạn.'],['QR nhanh','Tự điền nội dung chuyển khoản đúng gói.'],['Cộng ngày còn lại','Gia hạn không mất số ngày đang dùng.']]},
+    {id:'premium_auto_renew',adminOnly:true,icon:'🔄',title:'Gia Hạn Tự Động Premium',tag:'Premium',desc:'Nhắc khách trước 7/5/3/1 ngày, tạo QR gia hạn kèm ID máy, Gmail và SĐT.',features:[['Nhắc gia hạn','Tăng tỷ lệ khách quay lại trước khi hết hạn.'],['QR nhanh','Tự điền nội dung chuyển khoản đúng gói.'],['Cộng ngày còn lại','Gia hạn không mất số ngày đang dùng.']]},
     {id:'saas_admin_center',adminOnly:true,icon:'🏢',title:'SaaS Admin Center',tag:'Admin',desc:'Trung tâm điều hành toàn bộ hệ thống: khách hàng, Premium, CTV, ticket, doanh thu và module.',features:[['Dashboard CEO','Tổng quan khách, doanh thu, Premium, CTV và ticket.'],['Quản trị module','Điều hướng nhanh đến các trung tâm chức năng.'],['Vận hành SaaS','Phù hợp bán gói thuê bao theo tháng/năm.']]}
   ];
   var customerModules = modules.filter(function(m){return !m.adminOnly;});
@@ -8455,6 +8502,8 @@ button[aria-label="CTV"]{
   }
   var oldOpen=window.openModule;
   window.openModule=function(id){
+    var adminIds={premium_revenue_dashboard:1,ctv_revenue_dashboard:1,device_id_manager:1,ticket_support_center:1,premium_auto_renew:1,saas_admin_center:1};
+    if(adminIds[id]){ window.location.href='/admin'; return false; }
     addModules();
     if(typeof oldOpen==='function'){
       try{oldOpen(id);}catch(e){}
@@ -9968,10 +10017,12 @@ body{background:linear-gradient(135deg,#f8fafc,#eef2ff)!important}
 </head><body><div class="wrap">
 <div class="admin-tabs">
   <a href="/admin">🏠 Dashboard CEO</a>
+  <a href="#premiumSubscriptionCenter">🔄 Gia hạn Premium</a>
   <a href="#premiumRequests">👑 Premium</a>
   <a href="#adminAffiliateBlock">🤝 CTV Hoa Hồng</a>
   <a href="#revenueReport">💰 Doanh thu</a>
   <a href="#withdrawReport">💳 Rút hoa hồng</a>
+  <a href="/admin/logout">🚪 Đăng xuất</a>
 </div>
 
 <div class="admin-section-title">
@@ -10028,7 +10079,8 @@ body{background:linear-gradient(135deg,#f8fafc,#eef2ff)!important}
 
 
 <div class="card" id="premiumSubscriptionCenter" style="margin-top:18px">
-  <h2>👑 Premium Subscription Center V2</h2>
+  <h2>🔄 Gia Hạn Tự Động Premium / Premium Subscription Center</h2>
+  <p><b>Khu vực chỉ dành cho Web Admin.</b> Duyệt gia hạn, cộng ngày, kiểm tra khách sắp hết hạn và quản lý gói theo ID thiết bị.</p>
   <p>Quản lý gói đã duyệt theo ID thiết bị. Admin bấm Kích hoạt gói nào, tài khoản khách tự chuyển đúng gói đó: 1 tháng 30 ngày, 3 tháng 90 ngày, 6 tháng 180 ngày, 1 năm 365 ngày, Vĩnh Viễn không giới hạn.</p>
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:12px 0">
     <div class="card" style="box-shadow:none;background:#ecfeff"><b>Gói 1 tháng</b><br><span class="badge ok">Premium Active</span><br>Còn lại: 30 ngày</div>
@@ -12495,8 +12547,16 @@ def _render_admin_html_enterprise(**ctx):
             return render_template_string(safe_html, **ctx)
         raise
 # /ENTERPRISE ADMIN SAFETY UPGRADE 20260611
-@app.route("/admin")
+@app.route("/admin", methods=["GET", "POST"])
 def admin_home():
+    if request.method == "POST":
+        password = (request.form.get("password") or "").strip()
+        if password == ADMIN_PASSWORD:
+            session["gptmini_admin_ok"] = True
+        else:
+            return admin_login_html("Mật khẩu admin chưa đúng."), 401
+    if not is_admin_logged_in():
+        return admin_login_html(), 401
     try:
         ensure_admin_safe_schema()
         return _render_admin_html_enterprise(
