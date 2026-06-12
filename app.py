@@ -12141,7 +12141,9 @@ body{background:linear-gradient(135deg,#f8fafc,#eef2ff)!important}
     border:1px solid rgba(96,165,250,.32);background:linear-gradient(135deg,#0f172a,#1e1b4b);
     color:#fff;display:flex;align-items:center;justify-content:center;font-size:22px;box-shadow:0 16px 42px rgba(2,6,23,.35);cursor:pointer;
   }
-  #mktNotifyBell .mkt-bell-count{position:absolute;right:-3px;top:-4px;background:#ef4444;color:#fff;border-radius:999px;min-width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:1000;border:2px solid #fff}
+  #mktNotifyBell .mkt-bell-count{position:absolute;right:-8px;top:-6px;background:#ef4444;color:#fff;border-radius:999px;min-width:28px;height:20px;padding:0 5px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:1000;border:2px solid #fff;box-shadow:0 0 0 3px rgba(239,68,68,.15)}
+  #mktNotifyBell.mkt-bell-pulse{animation:mktBellPulse 1.1s ease-in-out}
+  @keyframes mktBellPulse{0%{transform:scale(1);box-shadow:0 16px 42px rgba(2,6,23,.35)}35%{transform:scale(1.12);box-shadow:0 0 0 10px rgba(239,68,68,.18),0 18px 48px rgba(239,68,68,.28)}70%{transform:scale(.98)}100%{transform:scale(1);box-shadow:0 16px 42px rgba(2,6,23,.35)}}
   #mktNotifyPanel{position:fixed;right:20px;top:132px;z-index:999998;width:min(360px,calc(100vw - 32px));display:none;background:#fff;color:#0f172a;border-radius:20px;border:1px solid rgba(148,163,184,.24);box-shadow:0 24px 70px rgba(2,6,23,.32);overflow:hidden}
   #mktNotifyPanel h3{margin:0;padding:16px 18px;background:linear-gradient(135deg,#eff6ff,#eef2ff);font-size:17px;color:#1e3a8a}
   #mktNotifyPanel .mkt-note{padding:12px 18px;border-top:1px solid #e5e7eb;font-size:13px;line-height:1.4}
@@ -12179,7 +12181,39 @@ body{background:linear-gradient(135deg,#f8fafc,#eef2ff)!important}
       box.innerHTML='<strong>🎁 Dùng thử 3 ngày</strong>Chỉ mở 4 chức năng Facebook Center<div class="mkt-mini-bar"><i style="width:72%"></i></div>';
     }
   }
-  function ensureBell(){var b=q('#mktNotifyBell');if(!b){b=document.createElement('button');b.id='mktNotifyBell';b.type='button';b.innerHTML='🔔<span class="mkt-bell-count">5</span>';document.body.appendChild(b)}var p=q('#mktNotifyPanel');if(!p){p=document.createElement('div');p.id='mktNotifyPanel';p.innerHTML='<h3>🔔 Notification Center</h3><div class="mkt-note"><b>Premium kích hoạt thành công</b><span>Tài khoản sau khi Admin duyệt sẽ tự mở khóa realtime.</span><br><small>Vừa xong</small></div><div class="mkt-note"><b>Khách hàng mới đăng ký</b><span>Yêu cầu nâng cấp sẽ xuất hiện trong Web Admin.</span><br><small>Hôm nay</small></div><div class="mkt-note"><b>Omni Channel Premium</b><span>Hỗ trợ đăng đa kênh, hẹn giờ 2h, 3h, 6h, 12h.</span></div>';document.body.appendChild(p)}b.onclick=function(){p.style.display=p.style.display==='block'?'none':'block'}}
+  function ensureBell(){
+    var b=q('#mktNotifyBell');
+    if(!b){
+      b=document.createElement('button');
+      b.id='mktNotifyBell';
+      b.type='button';
+      b.innerHTML='🔔<span class="mkt-bell-count">99+</span>';
+      document.body.appendChild(b);
+    }else{
+      var bc=q('.mkt-bell-count',b);
+      if(bc)bc.textContent='99+';
+    }
+    var p=q('#mktNotifyPanel');
+    if(!p){
+      p=document.createElement('div');
+      p.id='mktNotifyPanel';
+      p.innerHTML='<h3>🔔 Notification Center</h3><div class="mkt-note"><b>Premium kích hoạt thành công</b><span>Tài khoản sau khi Admin duyệt sẽ tự mở khóa realtime.</span><br><small>Vừa xong</small></div><div class="mkt-note"><b>Khách hàng mới đăng ký</b><span>Yêu cầu nâng cấp sẽ xuất hiện trong Web Admin.</span><br><small>Hôm nay</small></div><div class="mkt-note"><b>Omni Channel Premium</b><span>Hỗ trợ đăng đa kênh, hẹn giờ 2h, 3h, 6h, 12h.</span></div><div class="mkt-note"><b>Thông báo Live</b><span>Hệ thống đang ghi nhận nhiều hoạt động Premium, CTV và Omni Channel.</span><br><small>Đang cập nhật</small></div>';
+      document.body.appendChild(p);
+    }
+    b.onclick=function(){p.style.display=p.style.display==='block'?'none':'block'};
+    if(!window.mktBellPulseTimer){
+      window.mktBellPulseTimer=setInterval(function(){
+        var btn=q('#mktNotifyBell');
+        var count=btn?q('.mkt-bell-count',btn):null;
+        if(count)count.textContent='99+';
+        if(btn){
+          btn.classList.remove('mkt-bell-pulse');
+          void btn.offsetWidth;
+          btn.classList.add('mkt-bell-pulse');
+        }
+      },5000);
+    }
+  }
   function insertCEOHint(){var dash=q('#dashboard'); if(!dash||q('#mktDashboardCeoStrip'))return;var title=dash.querySelector('h1,h2,.hero-title');var wrap=document.createElement('div');wrap.id='mktDashboardCeoStrip';wrap.className='mkt-dashboard-ceo-strip';wrap.innerHTML='<div class="ceo-mini"><span>Tổng bài</span><b>Realtime</b></div><div class="ceo-mini"><span>Premium</span><b>Active</b></div><div class="ceo-mini"><span>Omni Channel</span><b>Đa kênh</b></div><div class="ceo-mini"><span>CTV</span><b>Hoa hồng</b></div><div class="ceo-mini"><span>AI Suite</span><b>Enterprise</b></div>'; if(title&&title.parentNode)title.parentNode.insertBefore(wrap,title.nextSibling);}
   function boot(){ensureLiveBar();rotateLive();setInterval(rotateLive,6500);enhancePremiumCompact();setInterval(enhancePremiumCompact,5000);ensureBell();insertCEOHint();}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();
