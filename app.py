@@ -15414,20 +15414,28 @@ def telegram_set_webhook_route():
     if not token:
         return jsonify({'ok': False, 'message': 'Thiếu TELEGRAM_BOT_TOKEN'}), 400
 
+    # Telegram bat buoc webhook phai la HTTPS. Render/Cloudflare doi khi dua url_root ve http,
+    # nen ep cung sang https de nut inline callback hoat dong.
     base = (request.url_root or '').rstrip('/')
-    base = base.replace('http://', 'https://')
+    base = base.replace('http://', 'https://', 1)
     url = base + '/telegram/webhook'
 
     res = _mkt_v160_tg_api('setWebhook', {
         'url': url,
         'drop_pending_updates': False
     })
-
+    tg_ok = bool(res and res.get('ok'))
     return jsonify({
-        'ok': True,
+        'ok': tg_ok,
         'webhook_url': url,
         'telegram_response': res
-    })
+    }), (200 if tg_ok else 400)
+
+
+@app.route('/telegram/get_webhook_info')
+def telegram_get_webhook_info_route():
+    res = _mkt_v160_tg_api('getWebhookInfo', {})
+    return jsonify({'ok': bool(res and res.get('ok')), 'telegram_response': res})
 
 
 @app.route('/telegram/help')
@@ -15461,11 +15469,26 @@ def telegram_webhook_route():
             cmd = parts[0]
             arg = parts[1] if len(parts) > 1 else ''
             if cmd == 'approve':
-                ok = approve_premium_request(int(arg), status='Đã duyệt', admin_note='Duyệt từ Telegram')
+                req_id = int(arg or 0)
+                _device_for_reply = ''
+                try:
+                    _conn = db(); _c = _conn.cursor()
+                    _c.execute('SELECT device_id FROM premium_upgrade_requests WHERE id=?', (req_id,))
+                    _r = _c.fetchone(); _conn.close()
+                    _device_for_reply = (_r[0] if _r else '') or ''
+                except Exception:
+                    _device_for_reply = ''
+                ok = approve_premium_request(req_id, status='Đã duyệt', admin_note='Duyệt từ Telegram')
                 _mkt_v160_tg_answer_callback(cb_id, 'Đã duyệt Premium' if ok else 'Không duyệt được')
+                if ok and _device_for_reply:
+                    try:
+                        save_support_message(_device_for_reply, 'admin', 'Gói Premium của anh/chị đã được kích hoạt thành công. Anh/chị tải lại trang hoặc chờ vài giây để hệ thống tự mở khóa nhé.')
+                    except Exception as _e:
+                        print('Telegram approve customer notify skipped:', _e)
                 _mkt_v160_tg_send(chat_id, '✅ Đã duyệt Premium yêu cầu #' + tg_safe(arg) if ok else '❌ Không tìm thấy yêu cầu #' + tg_safe(arg))
             elif cmd == 'reject':
-                ok = approve_premium_request(int(arg), status='Từ chối', admin_note='Từ chối từ Telegram')
+                req_id = int(arg or 0)
+                ok = approve_premium_request(req_id, status='Từ chối', admin_note='Từ chối từ Telegram')
                 _mkt_v160_tg_answer_callback(cb_id, 'Đã từ chối' if ok else 'Không xử lý được')
                 _mkt_v160_tg_send(chat_id, '⚠️ Đã từ chối yêu cầu #' + tg_safe(arg) if ok else '❌ Không tìm thấy yêu cầu #' + tg_safe(arg))
             elif cmd == 'days':
@@ -15487,7 +15510,7 @@ def telegram_webhook_route():
             return jsonify({'ok': True})
 
         low = text.lower()
-        if low in ['/start', '/help']:
+        if low in ['/start', '/help', 'start', 'help']:
             _mkt_v160_tg_send(chat_id,
                 "🤖 <b>GPTMini Telegram Admin</b>\n\n"
                 "Lệnh nhanh:\n"
@@ -15501,35 +15524,49 @@ def telegram_webhook_route():
             )
             return jsonify({'ok': True})
 
-        if low.startswith('/cho'):
+        if low.startswith('/cho') or low == 'cho':
             _mkt_v160_tg_send(chat_id, _mkt_v160_pending_premium_list())
             return jsonify({'ok': True})
-        if low.startswith('/hethan'):
+        if low.startswith('/hethan') or low.startswith('hethan'):
             parts = text.split()
             days = int(parts[1]) if len(parts) > 1 and parts[1].isdigit() else 5
             _mkt_v160_tg_send(chat_id, _mkt_v160_expiring_list(days))
             return jsonify({'ok': True})
-        if low.startswith('/ngay') or low.startswith('/han'):
+        if low.startswith('/ngay') or low.startswith('/han') or low.startswith('ngay') or low.startswith('han'):
             device = _mkt_v160_find_device(text)
             _mkt_v160_tg_send(chat_id, _mkt_v160_subscription_summary(device))
             return jsonify({'ok': True})
-        if low.startswith('/ctv'):
+        if low.startswith('/ctv') or low.startswith('ctv'):
             key = text.split(maxsplit=1)[1] if len(text.split(maxsplit=1)) > 1 else ''
             _mkt_v160_tg_send(chat_id, _mkt_v160_ctv_summary(key))
             return jsonify({'ok': True})
-        if low.startswith('/duyet'):
+        if low.startswith('/duyet') or low.startswith('duyet'):
             parts = text.split()
             req_id = int(parts[1]) if len(parts) > 1 and parts[1].isdigit() else 0
+            _device_for_reply = ''
+            if req_id:
+                try:
+                    _conn = db(); _c = _conn.cursor()
+                    _c.execute('SELECT device_id FROM premium_upgrade_requests WHERE id=?', (req_id,))
+                    _r = _c.fetchone(); _conn.close()
+                    _device_for_reply = (_r[0] if _r else '') or ''
+                except Exception:
+                    _device_for_reply = ''
             ok = approve_premium_request(req_id, status='Đã duyệt', admin_note='Duyệt từ Telegram') if req_id else False
+            if ok and _device_for_reply:
+                try:
+                    save_support_message(_device_for_reply, 'admin', 'Gói Premium của anh/chị đã được kích hoạt thành công. Anh/chị tải lại trang hoặc chờ vài giây để hệ thống tự mở khóa nhé.')
+                except Exception as _e:
+                    print('Telegram /duyet customer notify skipped:', _e)
             _mkt_v160_tg_send(chat_id, '✅ Đã duyệt Premium #' + str(req_id) if ok else '❌ Không duyệt được. Dùng: /duyet 123')
             return jsonify({'ok': True})
-        if low.startswith('/tuchoi') or low.startswith('/reject'):
+        if low.startswith('/tuchoi') or low.startswith('/reject') or low.startswith('tuchoi') or low.startswith('reject'):
             parts = text.split()
             req_id = int(parts[1]) if len(parts) > 1 and parts[1].isdigit() else 0
             ok = approve_premium_request(req_id, status='Từ chối', admin_note='Từ chối từ Telegram') if req_id else False
             _mkt_v160_tg_send(chat_id, '⚠️ Đã từ chối #' + str(req_id) if ok else '❌ Không xử lý được. Dùng: /tuchoi 123')
             return jsonify({'ok': True})
-        if low.startswith('/reply'):
+        if low.startswith('/reply') or low.startswith('reply'):
             # /reply MKT-ABC nội dung
             rest = text.split(maxsplit=2)
             if len(rest) >= 3:
@@ -15538,7 +15575,7 @@ def telegram_webhook_route():
                 save_support_message(device, 'admin', body)
                 _mkt_v160_tg_send(chat_id, f"✅ Đã gửi phản hồi cho khách <b>{tg_safe(device)}</b>\n\n{tg_safe(body)}")
             else:
-                _mkt_v160_tg_send(chat_id, 'Cú pháp: /reply MKT-ABC nội dung cần gửi')
+                _mkt_v160_tg_send(chat_id, 'Cú pháp: /reply MKT-ABC nội dung cần gửi\nHoặc: reply MKT-ABC nội dung cần gửi')
             return jsonify({'ok': True})
 
         # Nếu admin reply trực tiếp vào tin Telegram có chứa ID máy, tự gửi về chat web.
@@ -15559,7 +15596,7 @@ def admin_telegram_admin_help_route():
     return jsonify({
         'success': True,
         'message': 'Telegram Admin Center đã sẵn sàng.',
-        'set_webhook': (request.url_root or '').rstrip('/') + '/telegram/set_webhook?secret=' + os.getenv('TELEGRAM_WEBHOOK_SECRET',''),
+        'set_webhook': (request.url_root or '').rstrip('/').replace('http://','https://',1) + '/telegram/set_webhook?secret=' + os.getenv('TELEGRAM_WEBHOOK_SECRET',''),
         'commands': ['/cho','/duyet 123','/tuchoi 123','/reply MKT-ABC nội dung','/ngay MKT-ABC','/hethan 5','/ctv CTV-123456']
     })
 
