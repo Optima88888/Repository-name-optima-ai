@@ -14,7 +14,6 @@ import csv
 import random
 import io
 import shutil
-import re
 
 try:
     import openpyxl
@@ -23,7 +22,7 @@ except Exception:
 
 load_dotenv()
 
-APP_TITLE = "Gptmini – Trợ Lý AI Marketing Đa Kênh"
+APP_TITLE = "Gptmini-Trợ Lý AI Marketing Đa Kênh"
 DB = "marketing_automation_pro_v11.db"
 UPLOAD_DIR = "uploads"
 REPORT_DIR = "reports"
@@ -35,114 +34,6 @@ os.makedirs(BACKUP_DIR, exist_ok=True)
 
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 100 * 1024 * 1024
-
-# SEO an toàn: không cho Google index khu vực quản trị/nội bộ
-@app.after_request
-def add_noindex_for_internal_pages(response):
-    try:
-        internal_prefixes = (
-            "/admin",
-            "/admin/",
-            "/support_admin",
-            "/premium_admin",
-            "/affiliate_admin",
-            "/api/admin",
-        )
-        path = request.path or ""
-        if path.startswith(internal_prefixes):
-            response.headers["X-Robots-Tag"] = "noindex, nofollow, noarchive"
-    except Exception:
-        pass
-    return response
-
-@app.route("/robots.txt")
-def robots_txt():
-    return app.response_class(
-        "User-agent: *\n"
-        "Disallow: /admin\n"
-        "Disallow: /admin/\n"
-        "Disallow: /support_admin\n"
-        "Disallow: /premium_admin\n"
-        "Disallow: /affiliate_admin\n"
-        "Allow: /\n",
-        mimetype="text/plain"
-    )
-
-
-# CLEANUP: remove all mobile app install / PWA download code from rendered pages
-# Reason: mobile install/download scripts caused broken overlays on phone UI.
-@app.after_request
-def strip_mobile_install_code(response):
-    try:
-        ctype = response.headers.get("Content-Type", "")
-        if "text/html" not in ctype.lower():
-            return response
-        html = response.get_data(as_text=True)
-
-        # Remove manifest / apple mobile tags
-        html = re.sub(r'<link\s+rel=["\']manifest["\'][^>]*>\s*', '', html, flags=re.I)
-        html = re.sub(r'<link\s+rel=["\']apple-touch-icon["\'][^>]*>\s*', '', html, flags=re.I)
-        html = re.sub(r'<meta\s+name=["\']apple-mobile-web-app[^>]*>\s*', '', html, flags=re.I)
-
-        install_words = (
-            'beforeinstallprompt',
-            'serviceworker',
-            'showinstallguide',
-            'mktopendinstallguide',
-            'mktopeninstallguide',
-            'runmktinstallprompt',
-            'mktdeferredinstallprompt',
-            'deferredinstallprompt',
-            'mktinstall',
-            'installapp',
-            'downloadapp',
-            'pwa',
-            'thêm vào màn hình chính',
-            'cài đặt ứng dụng',
-            'cài app',
-            'tải xuống',
-            'mobile download',
-            'mobile install'
-        )
-
-        def is_install_block(block):
-            low = block.lower()
-            return any(w in low for w in install_words)
-
-        # Remove full script/style blocks that contain install/PWA/download logic
-        html = re.sub(
-            r'<script\b[^>]*>[\s\S]*?</script>',
-            lambda m: '' if is_install_block(m.group(0)) else m.group(0),
-            html,
-            flags=re.I
-        )
-        html = re.sub(
-            r'<style\b[^>]*>[\s\S]*?</style>',
-            lambda m: '' if is_install_block(m.group(0)) else m.group(0),
-            html,
-            flags=re.I
-        )
-
-        # Remove standalone comments related to mobile install/download/PWA
-        html = re.sub(r'<!--[\s\S]*?(?:install|download|pwa|tải xuống|cài app|màn hình chính)[\s\S]*?-->\s*', '', html, flags=re.I)
-
-        # Remove known install/download elements if any static HTML remains
-        ids = [
-            'mktTopDownloadBar','mktTopInstallSheet','mktInstallSheet','mktInstallPanel',
-            'mktDownloadAppV130','mktPhoneInstallFloat','mktPhoneInstallEntry',
-            'mktMobileInstallMenu','mktMobileInstallQuick','mktMobileInstallQuickRestore',
-            'installAppBtn','gptMktInstallFinal','gptMktInstallSheetFinal',
-            'gptminiSimpleInstallBtn'
-        ]
-        for _id in ids:
-            html = re.sub(r'<[^>]+id=["\']' + re.escape(_id) + r'["\'][\s\S]*?</[^>]+>', '', html, flags=re.I)
-
-        response.set_data(html)
-        response.headers["Content-Length"] = str(len(response.get_data()))
-    except Exception:
-        pass
-    return response
-
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "").strip()
 PAGES_JSON = os.getenv("PAGES_JSON", "[]").strip()
@@ -390,7 +281,7 @@ INDUSTRY_LABELS = {
 }
 
 def init_db():
-    conn = sqlite3.connect(DB, timeout=30, check_same_thread=False)
+    conn = sqlite3.connect(DB)
     c = conn.cursor()
     c.execute("""
     CREATE TABLE IF NOT EXISTS posts (
@@ -550,7 +441,7 @@ def init_db():
     )
     """)
 
-    # AI Marketing Automation Suite tables
+    # V5 Seller AI Suite tables
     c.execute("""
     CREATE TABLE IF NOT EXISTS fb_groups (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -839,13 +730,7 @@ def init_db():
     conn.close()
 
 def db():
-    conn = sqlite3.connect(DB, timeout=30, check_same_thread=False)
-    try:
-        conn.execute("PRAGMA journal_mode=WAL;")
-        conn.execute("PRAGMA busy_timeout=30000;")
-    except Exception:
-        pass
-    return conn
+    return sqlite3.connect(DB)
 
 
 def get_pages_dynamic():
@@ -1336,7 +1221,7 @@ def export_csv():
 def add_crm(name, phone, zalo, source, note):
     if not name and not phone and not zalo:
         return
-    conn = sqlite3.connect(DB, timeout=30, check_same_thread=False)
+    conn = sqlite3.connect(DB)
     c = conn.cursor()
     c.execute("""
     INSERT INTO crm(name,phone,zalo,source,note,created_at)
@@ -1346,7 +1231,7 @@ def add_crm(name, phone, zalo, source, note):
     conn.close()
 
 def get_crm(limit=30):
-    conn = sqlite3.connect(DB, timeout=30, check_same_thread=False)
+    conn = sqlite3.connect(DB)
     c = conn.cursor()
     c.execute("SELECT id,name,phone,zalo,source,note,created_at FROM crm ORDER BY id DESC LIMIT ?", (limit,))
     rows = c.fetchall()
@@ -1355,7 +1240,7 @@ def get_crm(limit=30):
 
 
 def save_token_check(page_name, page_id, status, detail):
-    conn = sqlite3.connect(DB, timeout=30, check_same_thread=False)
+    conn = sqlite3.connect(DB)
     c = conn.cursor()
     c.execute("""
     INSERT INTO token_checks(page_name,page_id,status,detail,checked_at)
@@ -1365,7 +1250,7 @@ def save_token_check(page_name, page_id, status, detail):
     conn.close()
 
 def get_latest_token_checks(limit=30):
-    conn = sqlite3.connect(DB, timeout=30, check_same_thread=False)
+    conn = sqlite3.connect(DB)
     c = conn.cursor()
     c.execute("""
     SELECT page_name,page_id,status,detail,checked_at
@@ -1419,7 +1304,7 @@ def check_all_page_tokens():
 def add_page_cluster(name, page_names, note):
     if not name:
         return
-    conn = sqlite3.connect(DB, timeout=30, check_same_thread=False)
+    conn = sqlite3.connect(DB)
     c = conn.cursor()
     c.execute("""
     INSERT OR REPLACE INTO page_clusters(name,page_names,note,created_at)
@@ -1429,7 +1314,7 @@ def add_page_cluster(name, page_names, note):
     conn.close()
 
 def get_page_clusters():
-    conn = sqlite3.connect(DB, timeout=30, check_same_thread=False)
+    conn = sqlite3.connect(DB)
     c = conn.cursor()
     c.execute("SELECT id,name,page_names,note,created_at FROM page_clusters ORDER BY id DESC")
     rows = c.fetchall()
@@ -1437,7 +1322,7 @@ def get_page_clusters():
     return rows
 
 def get_analytics_summary():
-    conn = sqlite3.connect(DB, timeout=30, check_same_thread=False)
+    conn = sqlite3.connect(DB)
     c = conn.cursor()
 
     def one(query, params=()):
@@ -1658,7 +1543,7 @@ def export_pdf_report():
         width, height = A4
         y = height - 40
         c.setFont("Helvetica-Bold", 14)
-        c.drawString(40, y, "Gptmini – Trợ Lý AI Marketing Đa Kênh - Report")
+        c.drawString(40, y, "Marketing Automation Pro V9 - Report")
         y -= 30
         c.setFont("Helvetica", 9)
         for r in rows[:80]:
@@ -1674,7 +1559,7 @@ def export_pdf_report():
     except Exception:
         txt_path = os.path.join(REPORT_DIR, "report_posts_pdf_fallback.txt")
         with open(txt_path, "w", encoding="utf-8") as f:
-            f.write("Gptmini – Trợ Lý AI Marketing Đa Kênh Report\n\n")
+            f.write("Marketing Automation Pro V9 Report\n\n")
             for r in rows:
                 f.write(f"ID {r[0]} | Page: {r[1]} | Status: {r[3]} | Campaign: {r[7]} | Time: {r[9]}\n")
         return txt_path
@@ -1699,7 +1584,7 @@ def get_free_status(username=None):
     username = username or get_trial_identity()
     now = datetime.datetime.now()
 
-    conn = sqlite3.connect(DB, timeout=30, check_same_thread=False)
+    conn = sqlite3.connect(DB)
     c = conn.cursor()
     c.execute("""
     CREATE TABLE IF NOT EXISTS users_trial (
@@ -2844,19 +2729,15 @@ HTML = r"""
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Gptmini – Trợ Lý AI Marketing Đa Kênh</title>
-<meta name="title" content="Gptmini – Trợ Lý AI Marketing Đa Kênh">
-<meta name="description" content="Gptmini là nền tảng AI Marketing Đa Kênh giúp tạo content, đăng Fanpage, quản lý Group, CRM và Automation bán hàng.">
-<meta name="robots" content="index,follow,max-image-preview:large">
-<meta property="og:type" content="website">
-<meta property="og:site_name" content="Gptmini">
-<meta property="og:title" content="Gptmini – Trợ Lý AI Marketing Đa Kênh">
-<meta property="og:description" content="Gptmini là nền tảng AI Marketing Đa Kênh giúp tạo content, đăng Fanpage, quản lý Group, CRM và Automation bán hàng.">
-<meta property="og:url" content="https://gptmini.pro/">
-<meta name="twitter:card" content="summary_large_image">
+<title>{{ title }}</title>
 
 <meta name="theme-color" content="#2563eb">
-<link rel="canonical" href="https://gptmini.pro/">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="GPT MKT Pro">
+<link rel="manifest" href="/manifest.json">
+<link rel="apple-touch-icon" href="/static/icon-192.png">
+
 <style>
 :root{
   --blue:#2563EB;
@@ -4151,7 +4032,7 @@ button:hover{
 }
 
 
-/* ===== MKT AUTOMATION PRO - APP MINI PWA MODE ===== */
+/* ===== Gptmini – Trợ Lý AI Marketing Đa Kênh ===== */
 :root{
   --app-dark:#0F172A;
   --app-primary:#2563EB;
@@ -5305,8 +5186,8 @@ function closeLockedFeature(){
 <div class="v2-topbar">
   <div class="v2-brand-row">
     <div>
-      <div class="v2-brand-title">GPTMini.Pro</div>
-      <div class="v2-brand-sub">Công Cụ Marketing Automation Thông Minh</div>
+      <div class="v2-brand-title">Mkt Automation Pro V5</div>
+      <div class="v2-brand-sub">AI Marketing • Facebook • CRM • Automation</div>
     </div>
     <div class="v2-status-pill">Online</div>
   </div>
@@ -5415,7 +5296,7 @@ function closeLockedFeature(){
 <main class="main">
 
 <section class="top-hero" id="dashboard">
-  <h1>GPTMini.Pro</h1>
+  <h1>Mkt Automation Pro V5 Seller AI Suite</h1>
 
 <div class="app-quick-grid">
   <div class="app-quick-card" onclick="return openModule('post')">
@@ -7065,7 +6946,7 @@ Thời gian tạo: {{ h[9] }}
 
 
   <div class="v5-focus-box">
-    <b>AI Marketing Automation Suite</b><br>
+    <b>V5 Seller AI Suite</b><br>
     Fanpage • Group • AI Comment • AI Messenger • CRM Kanban • Marketing Director
   </div>
 </aside>
@@ -7126,7 +7007,7 @@ function toggleMenuGroup(el){
 
 <script>
 function showInstallGuide(){
-  alert("Cách cài App Mini:\\n\\nAndroid Chrome: bấm dấu 3 chấm → Thêm vào màn hình chính.\\n\\niPhone Safari: bấm Chia sẻ → Thêm vào MH chính.\\n\\nSau đó mở GPTMini.Pro như một app trên điện thoại.");
+  alert("Cách cài App Mini:\\n\\nAndroid Chrome: bấm dấu 3 chấm → Thêm vào màn hình chính.\\n\\niPhone Safari: bấm Chia sẻ → Thêm vào MH chính.\\n\\nSau đó mở Mkt Automation Pro như một app trên điện thoại.");
 }
 
 let deferredInstallPrompt = null;
@@ -7150,7 +7031,7 @@ if ('serviceWorker' in navigator) {
 
 <script>
 function showInstallGuide(){
-  alert("Cách cài App Mini:\\n\\nAndroid Chrome: bấm dấu 3 chấm → Thêm vào màn hình chính.\\n\\niPhone Safari: bấm Chia sẻ → Thêm vào MH chính.\\n\\nSau đó mở GPTMini.Pro như một app.");
+  alert("Cách cài App Mini:\\n\\nAndroid Chrome: bấm dấu 3 chấm → Thêm vào màn hình chính.\\n\\niPhone Safari: bấm Chia sẻ → Thêm vào MH chính.\\n\\nSau đó mở Mkt Automation Pro V2 như một app.");
 }
 (function(){
   function planKeyFromText(text){
@@ -7634,6 +7515,201 @@ function dropKanban(ev){ ev.preventDefault(); const col=ev.currentTarget; if(dra
 </script>
 <!-- /CTV FINAL VISIBILITY PATCH -->
 
+
+  function selectedKey(){
+    return normKey(window.mktSelectedPlanKey || window.currentPremiumPlanKey || localStorage.getItem('mkt_selected_plan_key')) || 'monthly';
+  }
+
+  window.refreshPaymentContent=function(){
+    var p=plan(selectedKey());
+    var content=payContent(p);
+
+    var pc=q('#payContent'); 
+    if(pc) pc.textContent=content;
+
+    var qr=q('#payQr'); 
+    if(qr){
+      qr.src='https://img.vietqr.io/image/970405-8888363382629-compact2.png?amount='+
+        encodeURIComponent(p.amount)+
+        '&addInfo='+encodeURIComponent(content)+
+        '&accountName='+encodeURIComponent('NGUYEN DANG THI XUAN');
+    }
+
+    var price=q('#payPlanPrice'); 
+    if(price) price.textContent=Number(p.amount).toLocaleString('vi-VN')+' VNĐ';
+  };
+
+  window.openPayment=function(k){
+    k=setKey(k || selectedKey());
+    var p=plan(k);
+
+    var modal=q('#paymentModal'); 
+    if(!modal) return false;
+
+    var title=q('#payPlanTitle'); 
+    if(title) title.textContent=p.title;
+
+    var desc=q('#payPlanDesc'); 
+    if(desc) desc.textContent=p.desc || 'Vui lòng nhập số điện thoại và Gmail để được duyệt nâng cấp.';
+
+    var price=q('#payPlanPrice'); 
+    if(price) price.textContent=Number(p.amount).toLocaleString('vi-VN')+' VNĐ';
+
+    var device=q('#payDeviceId'); 
+    if(device) device.value=getDevice();
+
+    window.refreshPaymentContent();
+    modal.style.display='flex';
+    return false;
+  };
+
+  document.addEventListener('click',function(e){
+    var b=e.target.closest && e.target.closest('button,a');
+    if(!b) return;
+
+    var text=String(b.innerText || b.textContent || '');
+    var k=keyFromNode(b);
+
+    if(k) setKey(k);
+
+    if(/nâng cấp|thanh toán|kích hoạt|mở khóa/i.test(text)){
+      if(k){
+        e.preventDefault();
+        e.stopPropagation();
+        if(e.stopImmediatePropagation) e.stopImmediatePropagation();
+        return window.openPayment(k);
+      }
+    }
+  },true);
+
+  document.addEventListener('input',function(e){
+    if(e.target && /payPhone|payEmail/.test(e.target.id || '')){
+      window.refreshPaymentContent();
+    }
+  },true);
+
+  qa('[data-plan]').forEach(function(btn){
+    var k=normKey(btn.dataset.plan);
+    if(k){
+      btn.onclick=function(e){
+        e.preventDefault();
+        e.stopPropagation();
+        return window.openPayment(k);
+      };
+    }
+  });
+
+  getDevice();
+})();
+</script>
+
+  function fillPayment(k){
+    k=setKey(k);
+    var p=plan(k);
+    var title=q('#payPlanTitle'); if(title) title.textContent=p.title;
+    var desc=q('#payPlanDesc'); if(desc) desc.textContent=p.desc;
+    var price=q('#payPlanPrice'); if(price) price.textContent=Number(p.amount).toLocaleString('vi-VN')+' VNĐ';
+    var device=q('#payDeviceId'); if(device) device.value=getDevice();
+    var content=payContent(p);
+    var pc=q('#payContent'); if(pc) pc.textContent=content;
+    var qr=q('#payQr');
+    if(qr){
+      qr.src='https://img.vietqr.io/image/970405-8888363382629-compact2.png?amount='+encodeURIComponent(p.amount)+'&addInfo='+encodeURIComponent(content)+'&accountName='+encodeURIComponent('NGUYEN DANG THI XUAN');
+    }
+    var locked=q('#payLocked'); if(locked) locked.innerHTML='';
+    var notice=q('#paymentNotice'); if(notice) notice.style.display='none';
+    return p;
+  }
+
+  window.refreshPaymentContent=function(){fillPayment(window.currentPremiumPlanKey||'monthly');};
+  window.openPayment=function(planKey){
+    var k=setKey(planKey||window.mktSelectedPlanKey||'monthly');
+    fillPayment(k);
+    var modal=q('#paymentModal');
+    if(modal) modal.style.display='flex';
+    var z=q('#paymentModal .payment-actions a:not(.light)');
+    if(z){z.textContent='Zalo hỗ trợ: 036 338 2629'; z.href='https://zalo.me/0363382629'; z.target='_blank';}
+    var done=q('#paymentModal .payment-actions .light');
+    if(done){done.textContent='Gửi yêu cầu admin duyệt'; done.removeAttribute('href'); done.onclick=function(e){e.preventDefault(); return window.submitPremiumRequest();};}
+    var primary=q('#paymentModal .primary');
+    if(primary){primary.textContent='Gửi yêu cầu kích hoạt'; primary.onclick=function(e){e.preventDefault(); return window.submitPremiumRequest();};}
+    return false;
+  };
+
+  window.submitPremiumRequest=function(){
+    var k=setKey(window.mktSelectedPlanKey||window.currentPremiumPlanKey||'monthly');
+    var p=fillPayment(k);
+    var phone=(q('#payPhone')&&q('#payPhone').value.trim())||'';
+    var email=(q('#payEmail')&&q('#payEmail').value.trim())||'';
+    if(!phone||!email){
+      if(typeof window.showPaymentNotice==='function') window.showPaymentNotice('Vui lòng nhập số điện thoại và Gmail để được duyệt nâng cấp tự động lên gói Premium sau khi thanh toán xong.');
+      else alert('Vui lòng nhập số điện thoại và Gmail.');
+      return false;
+    }
+    fetch('/premium_request',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({device_id:getDevice(),phone:phone,email:email,package_key:k})})
+      .then(function(r){return r.json();})
+      .then(function(data){
+        var pc=q('#payContent'); if(pc) pc.textContent=(data&&data.payment_note)||payContent(p);
+        var msg=(data&&data.ok)?('Đã gửi yêu cầu '+p.title+' về web admin. Số tiền: '+p.price+'.'):((data&&data.message)||'Chưa gửi được yêu cầu, vui lòng thử lại.');
+        if(typeof window.showPaymentNotice==='function') window.showPaymentNotice(msg); else alert(msg);
+      })
+      .catch(function(){
+        if(typeof window.showPaymentNotice==='function') window.showPaymentNotice('Kết nối chậm, vui lòng thử lại hoặc gửi Zalo hỗ trợ.');
+      });
+    return false;
+  };
+
+  var oldDetail=window.mktOpenPlanDetail;
+  window.mktOpenPlanDetail=function(k){
+    k=setKey(k||window.mktSelectedPlanKey||'monthly');
+    var r=false;
+    if(typeof oldDetail==='function'){
+      try{r=oldDetail(k);}catch(e){}
+    }
+    setTimeout(function(){
+      var p=plan(k);
+      var note=q('#mktPlanNote');
+      if(note){note.innerHTML='ID thiết bị: <b>'+getDevice()+'</b><br>Gói đang chọn: <b>'+p.title+'</b><br><span style="color:#64748b">Số tiền: <b>'+p.price+'</b>. Vui lòng nhập số điện thoại và Gmail để được duyệt nâng cấp tự động lên gói Premium sau khi thanh toán xong.</span>';}
+      var mini=q('.mktPlanMini'); if(mini) mini.textContent='Gói đang chọn: '+p.title+' - '+p.price;
+      var pay=q('#mktPlanPay'); if(pay){pay.onclick=function(e){e.preventDefault(); e.stopPropagation(); var ov=q('#mktPlanOverlay'); if(ov) ov.style.display='none'; return window.openPayment(k);};}
+    },80);
+    return r;
+  };
+
+  function bindPlanCards(){
+    qa('.premium-plan,.v4-plan,.price-card,.plan-card,.pricing-card').forEach(function(card){
+      var k=keyFromText(card.innerText||card.textContent||'');
+      if(k){
+        card.setAttribute('data-plan',k);
+        qa('button,a',card).forEach(function(btn){
+          if(/nâng cấp|mở khóa|đăng ký|thanh toán|kích hoạt|xem chi tiết/i.test(btn.innerText||btn.textContent||'')) btn.setAttribute('data-plan',k);
+        });
+      }
+    });
+  }
+  document.addEventListener('click',function(e){
+    var btn=e.target.closest&&e.target.closest('button,a');
+    if(!btn) return;
+    var txt=btn.innerText||btn.textContent||'';
+    if(!/nâng cấp|mở khóa|đăng ký|thanh toán|kích hoạt|xem chi tiết|gửi yêu cầu/i.test(txt) && btn.id!=='mktPlanPay') return;
+    var k=keyFromNode(btn)||window.mktSelectedPlanKey||window.currentPremiumPlanKey||'monthly';
+    setKey(k);
+    if(btn.id==='mktPlanPay'){
+      e.preventDefault(); e.stopPropagation(); if(e.stopImmediatePropagation)e.stopImmediatePropagation();
+      var ov=q('#mktPlanOverlay'); if(ov) ov.style.display='none';
+      return window.openPayment(k);
+    }
+    if(/nâng cấp|mở khóa|đăng ký|thanh toán|kích hoạt/i.test(txt)) fillPayment(k);
+  },true);
+  document.addEventListener('input',function(e){if(e.target&&(/payPhone|payEmail/.test(e.target.id||''))) fillPayment(window.currentPremiumPlanKey||'monthly');},true);
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',bindPlanCards); else bindPlanCards();
+  setTimeout(bindPlanCards,500); setTimeout(bindPlanCards,1500);
+})();
+</script>
+
+
+
+
 <script id="mkt-premium-benefit-modal-v1">
 (function(){
   'use strict';
@@ -7872,8 +7948,8 @@ function dropKanban(ev){ ev.preventDefault(); const col=ev.currentTarget; if(dra
   window.openModule=showSection;
   window.visibleSection=showSection;
   document.addEventListener('click',function(e){var a=e.target.closest&&e.target.closest('.v2-nav-link[href^="#"],.app-quick-card[onclick],.module-card[onclick]');if(!a||a.classList.contains('app-quick-card')||a.classList.contains('module-card'))return;var id=a.getAttribute('data-module')||a.getAttribute('href');e.preventDefault();e.stopPropagation();if(e.stopImmediatePropagation)e.stopImmediatePropagation();return showSection(id)},true);
-  function ensureSheet(){var old=qs('#mktInstallSheetBackdrop');if(old)return old;var wrap=document.createElement('div');wrap.id='mktInstallSheetBackdrop';wrap.className='mkt-install-sheet-backdrop';wrap.innerHTML='<div class="mkt-install-sheet" role="dialog" aria-modal="true"><h3>📱 Cài GPTMini.Pro vào điện thoại</h3><p id="mktInstallGuideText"></p><div class="mkt-install-actions"><button type="button" class="mkt-install-now" id="mktInstallNowBtn">Cài ngay</button><button type="button" class="mkt-install-close" id="mktInstallCloseBtn">Đóng</button></div></div>';document.body.appendChild(wrap);qs('#mktInstallCloseBtn',wrap).addEventListener('click',function(){wrap.classList.remove('show')});wrap.addEventListener('click',function(e){if(e.target===wrap)wrap.classList.remove('show')});qs('#mktInstallNowBtn',wrap).addEventListener('click',runInstall);return wrap}
-  function guideText(){if(deferredPrompt)return 'Bấm <b>Cài ngay</b>, sau đó chọn <b>Cài đặt</b> để đưa GPTMini.Pro ra màn hình chính.'; if(isIOS)return '<b>iPhone Safari:</b><br>1. Bấm nút <b>Chia sẻ</b> ở thanh dưới.<br>2. Chọn <b>Thêm vào màn hình chính</b>.<br>3. Bấm <b>Thêm</b>.'; if(isAndroid)return '<b>Android Chrome:</b><br>Nếu chưa hiện popup cài đặt, bấm menu <b>⋮</b> góc phải trình duyệt → chọn <b>Cài đặt ứng dụng</b> hoặc <b>Thêm vào màn hình chính</b>.'; return 'Mở website trên điện thoại bằng Chrome Android hoặc Safari iPhone để cài vào màn hình chính.'}
+  function ensureSheet(){var old=qs('#mktInstallSheetBackdrop');if(old)return old;var wrap=document.createElement('div');wrap.id='mktInstallSheetBackdrop';wrap.className='mkt-install-sheet-backdrop';wrap.innerHTML='<div class="mkt-install-sheet" role="dialog" aria-modal="true"><h3>📱 Cài GPT MKT Pro vào điện thoại</h3><p id="mktInstallGuideText"></p><div class="mkt-install-actions"><button type="button" class="mkt-install-now" id="mktInstallNowBtn">Cài ngay</button><button type="button" class="mkt-install-close" id="mktInstallCloseBtn">Đóng</button></div></div>';document.body.appendChild(wrap);qs('#mktInstallCloseBtn',wrap).addEventListener('click',function(){wrap.classList.remove('show')});wrap.addEventListener('click',function(e){if(e.target===wrap)wrap.classList.remove('show')});qs('#mktInstallNowBtn',wrap).addEventListener('click',runInstall);return wrap}
+  function guideText(){if(deferredPrompt)return 'Bấm <b>Cài ngay</b>, sau đó chọn <b>Cài đặt</b> để đưa GPT MKT Pro ra màn hình chính.'; if(isIOS)return '<b>iPhone Safari:</b><br>1. Bấm nút <b>Chia sẻ</b> ở thanh dưới.<br>2. Chọn <b>Thêm vào màn hình chính</b>.<br>3. Bấm <b>Thêm</b>.'; if(isAndroid)return '<b>Android Chrome:</b><br>Nếu chưa hiện popup cài đặt, bấm menu <b>⋮</b> góc phải trình duyệt → chọn <b>Cài đặt ứng dụng</b> hoặc <b>Thêm vào màn hình chính</b>.'; return 'Mở website trên điện thoại bằng Chrome Android hoặc Safari iPhone để cài vào màn hình chính.'}
   function openGuide(){var w=ensureSheet();qs('#mktInstallGuideText',w).innerHTML=guideText();qs('#mktInstallNowBtn',w).textContent=deferredPrompt?'Cài ngay':'Đã hiểu';w.classList.add('show')}
   async function runInstall(e){if(e){e.preventDefault();e.stopPropagation()}if(standalone()){document.body.classList.add('mkt-app-installed');return false}if(deferredPrompt){try{deferredPrompt.prompt();await deferredPrompt.userChoice}catch(_e){}deferredPrompt=null;window.__mktDeferredPrompt=null;var w=qs('#mktInstallSheetBackdrop');if(w)w.classList.remove('show');return false}openGuide();return false}
   function buildMobileInstall(){if(!isMobile||standalone()){document.body.classList.add('mkt-app-installed');return}if(qs('#mktMobileInstallMenu'))return;var sidebar=qs('.sidebar')||qs('aside')||qs('nav');if(!sidebar)return;var item=document.createElement('button');item.type='button';item.id='mktMobileInstallMenu';item.className='mkt-mobile-install-menu';item.innerHTML='<span class="mkt-install-phone-icon">📱</span><span><b>Cài ứng dụng</b><small>Bấm để thêm vào màn hình điện thoại</small></span>';var nav=qs('.mkt-clean-nav',sidebar)||qs('.nav',sidebar);if(nav)nav.insertBefore(item,nav.firstChild);else sidebar.appendChild(item);item.addEventListener('click',runInstall,true)}
@@ -7888,7 +7964,7 @@ function dropKanban(ev){ ev.preventDefault(); const col=ev.currentTarget; if(dra
 <!-- FINAL MOBILE APP INSTALL 20260610: phone-only download button in mobile menu + floating shortcut -->
 
 
-<!-- MOBILE PWA TOP DOWNLOAD FINAL 20260610: top blue GPTMini download button + mobile responsive fix -->
+<!-- MOBILE PWA TOP DOWNLOAD FINAL 20260610: top blue GPT MKT download button + mobile responsive fix -->
 <style id="mkt-mobile-top-download-final-css">
   /* Dọn toàn bộ nút tải cũ để không còn nút nổi dưới màn hình */
   #mktInstallFloat,#mktInstallPanel,#mktPhoneInstallFloat,#mktPhoneInstallEntry,#mktMobileInstallMenu,
@@ -7945,7 +8021,7 @@ function dropKanban(ev){ ev.preventDefault(); const col=ev.currentTarget; if(dra
     if(!mobile() || standalone()){document.body.classList.add('mkt-app-installed');return null;}
     var old=qs('#mktTopDownloadBar'); if(old) return old;
     var btn=document.createElement('button'); btn.type='button'; btn.id='mktTopDownloadBar';
-    btn.innerHTML='<span class="mkt-dl-dot"></span><span>GPTMini</span><small>Tải xuống</small>';
+    btn.innerHTML='<span class="mkt-dl-dot"></span><span>GPT MKT</span><small>Tải xuống</small>';
     btn.addEventListener('click',runInstall,true);
     document.body.appendChild(btn);
     return btn;
@@ -7953,7 +8029,7 @@ function dropKanban(ev){ ev.preventDefault(); const col=ev.currentTarget; if(dra
   function ensureSheet(){
     var old=qs('#mktTopInstallSheet'); if(old) return old;
     var wrap=document.createElement('div'); wrap.id='mktTopInstallSheet';
-    wrap.innerHTML='<div class="mkt-top-install-box" role="dialog" aria-modal="true"><h3>📱 Cài GPTMini.Pro</h3><p id="mktTopInstallText"></p><div class="mkt-top-install-actions"><button type="button" id="mktTopInstallNow">Cài ngay</button><button type="button" id="mktTopInstallClose">Đóng</button></div></div>';
+    wrap.innerHTML='<div class="mkt-top-install-box" role="dialog" aria-modal="true"><h3>📱 Cài GPT MKT Pro</h3><p id="mktTopInstallText"></p><div class="mkt-top-install-actions"><button type="button" id="mktTopInstallNow">Cài ngay</button><button type="button" id="mktTopInstallClose">Đóng</button></div></div>';
     document.body.appendChild(wrap);
     qs('#mktTopInstallClose',wrap).addEventListener('click',function(){wrap.classList.remove('show')});
     wrap.addEventListener('click',function(e){if(e.target===wrap)wrap.classList.remove('show')});
@@ -7984,7 +8060,7 @@ function dropKanban(ev){ ev.preventDefault(); const col=ev.currentTarget; if(dra
 
 
 
-<!-- FINAL MOBILE QUICK ACTIONS 20260610: compact left GPTMini download + CTV, fixed click PWA -->
+<!-- FINAL MOBILE QUICK ACTIONS 20260610: compact left GPT MKT download + CTV, fixed click PWA -->
 <style id="mkt-mobile-quick-actions-final-css">
   #mktMobileQuickActions{display:none!important;}
   @media(max-width:768px){
@@ -8082,7 +8158,7 @@ function dropKanban(ev){ ev.preventDefault(); const col=ev.currentTarget; if(dra
     var wrap=document.createElement('div');
     wrap.id='mktQuickInstallSheet';
     wrap.style.cssText='position:fixed!important;inset:0!important;z-index:2147483640!important;display:none!important;align-items:flex-end!important;justify-content:center!important;background:rgba(2,6,23,.58)!important;backdrop-filter:blur(8px)!important;';
-    wrap.innerHTML='<div style="width:min(430px,100vw);background:#fff;color:#0f172a;border-radius:24px 24px 0 0;padding:20px 18px 18px;box-shadow:0 -24px 70px rgba(15,23,42,.42);font-family:system-ui,-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif"><h3 style="margin:0 0 8px;font-size:20px;line-height:1.15;font-weight:1000;color:#0f172a">📱 Cài GPTMini.Pro</h3><p id="mktQuickInstallText" style="margin:8px 0;font-size:14px;line-height:1.55;color:#334155;font-weight:760"></p><div style="display:flex;gap:10px;margin-top:15px"><button type="button" id="mktQuickInstallNow" style="flex:1;border:0;border-radius:999px;padding:13px 14px;font-size:14px;font-weight:1000;cursor:pointer;color:#fff;background:linear-gradient(135deg,#2563eb,#7c3aed)">Cài ngay</button><button type="button" id="mktQuickInstallClose" style="flex:1;border:0;border-radius:999px;padding:13px 14px;font-size:14px;font-weight:1000;cursor:pointer;color:#334155;background:#e5e7eb">Đóng</button></div></div>';
+    wrap.innerHTML='<div style="width:min(430px,100vw);background:#fff;color:#0f172a;border-radius:24px 24px 0 0;padding:20px 18px 18px;box-shadow:0 -24px 70px rgba(15,23,42,.42);font-family:system-ui,-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif"><h3 style="margin:0 0 8px;font-size:20px;line-height:1.15;font-weight:1000;color:#0f172a">📱 Cài GPT MKT Pro</h3><p id="mktQuickInstallText" style="margin:8px 0;font-size:14px;line-height:1.55;color:#334155;font-weight:760"></p><div style="display:flex;gap:10px;margin-top:15px"><button type="button" id="mktQuickInstallNow" style="flex:1;border:0;border-radius:999px;padding:13px 14px;font-size:14px;font-weight:1000;cursor:pointer;color:#fff;background:linear-gradient(135deg,#2563eb,#7c3aed)">Cài ngay</button><button type="button" id="mktQuickInstallClose" style="flex:1;border:0;border-radius:999px;padding:13px 14px;font-size:14px;font-weight:1000;cursor:pointer;color:#334155;background:#e5e7eb">Đóng</button></div></div>';
     document.body.appendChild(wrap);
     qs('#mktQuickInstallClose',wrap).onclick=function(){wrap.style.display='none'};
     wrap.addEventListener('click',function(e){if(e.target===wrap)wrap.style.display='none'});
@@ -8093,7 +8169,7 @@ function dropKanban(ev){ ev.preventDefault(); const col=ev.currentTarget; if(dra
     var w=ensureSheet();
     var p=qs('#mktQuickInstallText',w);
     if(isIOS()){
-      p.innerHTML='<b>Trên iPhone:</b><br>1. Bấm nút <b>Chia sẻ</b> ở thanh dưới/trên trình duyệt.<br>2. Chọn <b>Thêm vào màn hình chính</b>.<br>3. Bấm <b>Thêm</b> để đưa GPTMini ra màn hình.';
+      p.innerHTML='<b>Trên iPhone:</b><br>1. Bấm nút <b>Chia sẻ</b> ở thanh dưới/trên trình duyệt.<br>2. Chọn <b>Thêm vào màn hình chính</b>.<br>3. Bấm <b>Thêm</b> để đưa GPT MKT ra màn hình.';
       var n=qs('#mktQuickInstallNow',w); if(n) n.textContent='Đã hiểu';
     }else{
       p.innerHTML='<b>Trên Android Chrome:</b><br>Bấm <b>Cài ngay</b>. Nếu chưa hiện popup, chọn menu <b>⋮</b> → <b>Thêm vào màn hình chính</b>.';
@@ -8106,7 +8182,7 @@ function dropKanban(ev){ ev.preventDefault(); const col=ev.currentTarget; if(dra
     if(standalone()){document.body.classList.add('mkt-app-installed');return false;}
     var dp = deferredPrompt || window.__mktDeferredPrompt;
     if(dp){
-      try{var choice=await (dp.prompt(), dp.userChoice); if(choice && choice.outcome && choice.outcome!=='accepted'){setTimeout(guide,300);}}catch(_e){setTimeout(guide,300);}
+      try{dp.prompt(); await dp.userChoice;}catch(_e){}
       deferredPrompt=null; window.__mktDeferredPrompt=null;
       var w=qs('#mktQuickInstallSheet'); if(w) w.style.display='none';
       return false;
@@ -8126,7 +8202,7 @@ function dropKanban(ev){ ev.preventDefault(); const col=ev.currentTarget; if(dra
     if(!isMobile() || standalone()){document.body.classList.add('mkt-app-installed');return;}
     var old=qs('#mktMobileQuickActions'); if(old) return;
     var box=document.createElement('div'); box.id='mktMobileQuickActions';
-    box.innerHTML='<button type="button" id="mktMobileInstallQuick" aria-label="Tải GPTMini"><span class="mkt-q-dot"></span><span class="mkt-q-text"><span class="mkt-q-title">GPTMini</span><span class="mkt-q-sub">Tải xuống</span></span></button>';
+    box.innerHTML='<button type="button" id="mktMobileInstallQuick" aria-label="Tải GPT MKT"><span class="mkt-q-dot"></span><span class="mkt-q-text"><span class="mkt-q-title">GPT MKT</span><span class="mkt-q-sub">Tải xuống</span></span></button>';
     document.body.appendChild(box);
     qs('#mktMobileInstallQuick',box).addEventListener('click',runInstall,true);
   }
@@ -8214,8 +8290,8 @@ button[aria-label="CTV"]{
   window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();window.mktDeferredInstallPrompt=e;window.__mktDeferredPrompt=e;var st=byId('installStatus');if(st)st.innerText='Thiết bị này đã sẵn sàng cài đặt ứng dụng.';},{capture:true});
   window.showInstallGuide=async function(){
     var st=byId('installStatus');
-    if(standalone()){if(st)st.innerText='App đã được cài đặt trên thiết bị này.';alert('GPTMini.Pro đã được cài đặt trên thiết bị này.');return false;}
-    var title='Cài đặt GPTMini.Pro';
+    if(standalone()){if(st)st.innerText='App đã được cài đặt trên thiết bị này.';alert('Mkt Automation Pro đã được cài đặt trên thiết bị này.');return false;}
+    var title='Cài đặt Mkt Automation Pro';
     var intro='✔ Dùng như app trên điện thoại\n✔ Không cần mở trình duyệt\n✔ Nhận thông báo nhanh\n✔ Truy cập chỉ 1 chạm';
     var dp=window.mktDeferredInstallPrompt||window.__mktDeferredPrompt;
     if(dp){
@@ -8227,9 +8303,9 @@ button[aria-label="CTV"]{
     if(st)st.innerText='Trình duyệt chưa bật hộp cài đặt tự động. Làm theo hướng dẫn vừa hiển thị.';
     alert(title+'\n\n'+intro+'\n\n'+msg);return false;
   };
-  window.addEventListener('appinstalled',function(){var st=byId('installStatus');if(st)st.innerText='Đã cài đặt GPTMini.Pro thành công.';document.body.classList.add('mkt-app-installed')});
+  window.addEventListener('appinstalled',function(){var st=byId('installStatus');if(st)st.innerText='Đã cài đặt Mkt Automation Pro thành công.';document.body.classList.add('mkt-app-installed')});
   function openCTV(){try{if(typeof window.openModule==='function'){window.openModule('affiliate_center');return false}}catch(e){} location.hash='affiliate_center';return false}
-  function buildMobileInstall(){if(!mobile()||standalone())return;if(byId('mktMobileQuickActionsRestore'))return;var box=document.createElement('div');box.id='mktMobileQuickActionsRestore';box.innerHTML='<button type="button" id="mktMobileInstallQuickRestore"><span class="dot"></span><span class="txt"><b>GPTMini</b><span class="mkt-install-sub">Tải xuống</span></span></button>';document.body.appendChild(box);byId('mktMobileInstallQuickRestore').onclick=window.showInstallGuide;}
+  function buildMobileInstall(){if(!mobile()||standalone())return;if(byId('mktMobileQuickActionsRestore'))return;var box=document.createElement('div');box.id='mktMobileQuickActionsRestore';box.innerHTML='<button type="button" id="mktMobileInstallQuickRestore"><span class="dot"></span><span class="txt"><b>GPT MKT</b><span class="mkt-install-sub">Tải xuống</span></span></button>';document.body.appendChild(box);byId('mktMobileInstallQuickRestore').onclick=window.showInstallGuide;}
   function bubble(type,text){var log=byId('mktFixSupportLog');if(!log)return;var div=document.createElement('div');div.className=type;div.innerText=text;log.appendChild(div);log.scrollTop=log.scrollHeight;}
   var lastId=0;
   async function poll(){try{var r=await fetch('/support_poll?device_id='+encodeURIComponent(deviceId())+'&after_id='+encodeURIComponent(lastId),{cache:'no-store'});var d=await r.json().catch(function(){return{messages:[]}});(d.messages||[]).forEach(function(m){var mid=Number(m.id)||0;if(mid<=lastId)return;lastId=mid;if(m.sender==='admin')bubble('ad',m.message);});}catch(e){}}
@@ -8427,14 +8503,6 @@ button[aria-label="CTV"]{
 })();
 </script>
 
-
-<style id="gptmini-mobile-clean-final">
-@media(max-width:768px){
-  body{background:#0f172a!important;}
-  .layout,.panel,.sidebar,.main,.rightbar,section{position:relative!important;z-index:2!important;}
-  pre:not(.keep-code),code:not(.keep-code){white-space:pre-wrap;word-break:break-word;}
-}
-</style>
 </body>
 </html>
 """
@@ -8472,26 +8540,14 @@ CONTENT_TARGET_TOTAL = 50000
 
 
 def content_db():
-    conn = sqlite3.connect(CONTENT_DB, timeout=30, check_same_thread=False)
-    try:
-        conn.execute("PRAGMA journal_mode=WAL;")
-        conn.execute("PRAGMA busy_timeout=30000;")
-    except Exception:
-        pass
-    return conn
+    return sqlite3.connect(CONTENT_DB)
 
 
 def ensure_content_50k_library():
-    """Bản ổn định Render: không tự nạp 50.000 content để tránh khóa SQLite.
-    Chỉ đảm bảo bảng content_items tồn tại và trả về số mẫu hiện có.
+    """Tạo kho content SQLite 50.000+ mẫu một lần, không làm nặng app.py.
+    Dữ liệu được sinh theo ngành, loại nội dung, mục tiêu và giọng văn để khách có kho dùng nhanh kể cả khi AI/API bận.
     """
-    conn = content_db()
-    try:
-        conn.execute("PRAGMA journal_mode=WAL;")
-        conn.execute("PRAGMA busy_timeout=30000;")
-    except Exception:
-        pass
-    c = conn.cursor()
+    conn = content_db(); c = conn.cursor()
     c.execute("""
         CREATE TABLE IF NOT EXISTS content_items (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -8508,8 +8564,74 @@ def ensure_content_50k_library():
     c.execute("CREATE INDEX IF NOT EXISTS idx_content_filter ON content_items(industry_key, content_type, goal, tone)")
     c.execute("SELECT COUNT(*) FROM content_items")
     total = int(c.fetchone()[0] or 0)
-    conn.close()
-    return total
+    if total >= CONTENT_TARGET_TOTAL:
+        conn.close(); return total
+
+    now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    industries = list(INDUSTRY_LABELS.items()) or [('spa','Spa')]
+    types = list(CONTENT_TYPE_LABELS.keys()) if 'CONTENT_TYPE_LABELS' in globals() else ['facebook','tiktok','group','comment','hook','cta','calendar','combo']
+    goals = list(CONTENT_GOAL_LABELS.keys()) if 'CONTENT_GOAL_LABELS' in globals() else ['inbox','trust','sale','viral','remarketing']
+    tones = list(CONTENT_TONE_LABELS.keys()) if 'CONTENT_TONE_LABELS' in globals() else ['gan_gui','chuyen_nghiep','cao_cap','viral','manh']
+    hooks = [
+        'Khách không mua không hẳn vì giá, đôi khi vì nội dung chưa chạm đúng nhu cầu.',
+        'Một thông điệp rõ ràng có thể giúp khách hiểu nhanh lý do nên inbox.',
+        'Nội dung tốt không cần dài, chỉ cần đúng vấn đề khách đang gặp.',
+        'Muốn tăng chuyển đổi, hãy nói đúng nỗi đau và lợi ích thật.',
+        'Bài viết đầu tiên có thể quyết định khách có tin tưởng hay không.',
+        'Đừng đăng cho có, hãy đăng để khách muốn hỏi thêm.',
+        'Sản phẩm tốt cần cách kể chuyện đủ rõ để khách hành động.',
+        'Muốn tiết kiệm chi phí quảng cáo, hãy tối ưu nội dung trước.',
+        'Một câu mở đầu đúng insight có thể kéo inbox tốt hơn.',
+        'Khách cần thấy giá trị trước khi họ quyết định mua.'
+    ]
+    ctas = [
+        'Inbox để được tư vấn giải pháp phù hợp.', 'Nhắn tin ngay để nhận thông tin chi tiết.',
+        'Để lại nhu cầu, đội ngũ hỗ trợ sẽ tư vấn nhanh.', 'Liên hệ hôm nay để được gợi ý phương án phù hợp.',
+        'Gửi tin nhắn để nhận báo giá và ưu đãi mới nhất.', 'Kết nối ngay để được hỗ trợ chi tiết.'
+    ]
+    comments = ['Quan tâm, tư vấn giúp mình.', 'Cho mình xin thông tin chi tiết.', 'Inbox mình bảng giá nhé.', 'Mẫu này phù hợp, tư vấn thêm giúp mình.', 'Có ưu đãi hôm nay không?']
+
+    rows=[]
+    start_id=total
+    i=start_id
+    while i < CONTENT_TARGET_TOTAL:
+        industry_key, industry_label = industries[i % len(industries)]
+        ctype = types[(i // len(industries)) % len(types)]
+        goal = goals[(i // 7) % len(goals)]
+        tone = tones[(i // 11) % len(tones)]
+        seed_list = CONTENT_LIBRARY.get(industry_key) or CONTENT_LIBRARY.get('spa', ['Giải pháp phù hợp giúp khách hàng tăng hiệu quả công việc.'])
+        seed = seed_list[i % len(seed_list)]
+        hook = hooks[i % len(hooks)]
+        cta = ctas[(i * 3) % len(ctas)]
+        comment = comments[(i * 5) % len(comments)]
+        day = (i % 30) + 1
+        tag = f"#{industry_key.replace('_','')} #Marketing #KinhDoanhOnline"
+        type_label = CONTENT_TYPE_LABELS.get(ctype, ctype) if 'CONTENT_TYPE_LABELS' in globals() else ctype
+        goal_label = CONTENT_GOAL_LABELS.get(goal, goal) if 'CONTENT_GOAL_LABELS' in globals() else goal
+        tone_label = CONTENT_TONE_LABELS.get(tone, tone) if 'CONTENT_TONE_LABELS' in globals() else tone
+        if ctype == 'hook':
+            content = f"Hook {i+1}: {hook}"
+        elif ctype == 'cta':
+            content = f"CTA {i+1}: {cta}"
+        elif ctype == 'comment':
+            content = f"Comment {i+1}: {comment}"
+        elif ctype == 'calendar':
+            content = f"Ngày {day}: Chủ đề {industry_label}. Mở đầu: {hook} Mục tiêu: {goal_label}. CTA: {cta}"
+        elif ctype == 'combo':
+            content = f"Combo {i+1}:\nHook: {hook}\nContent: {seed}\nCTA: {cta}\nComment gợi ý: {comment}\nHashtag: {tag}"
+        else:
+            content = f"{type_label} {i+1}: {hook}\n\n{seed}\n\nGiọng văn: {tone_label}. Mục tiêu: {goal_label}.\n\n{cta}\n{tag}"
+        rows.append((industry_key, industry_label, ctype, goal, tone, f'{type_label} {i+1}', content, now))
+        i += 1
+        if len(rows) >= 1000:
+            c.executemany("""INSERT INTO content_items(industry_key,industry_label,content_type,goal,tone,title,content,created_at) VALUES(?,?,?,?,?,?,?,?)""", rows)
+            conn.commit(); rows=[]
+    if rows:
+        c.executemany("""INSERT INTO content_items(industry_key,industry_label,content_type,goal,tone,title,content,created_at) VALUES(?,?,?,?,?,?,?,?)""", rows)
+        conn.commit()
+    c.execute('SELECT COUNT(*) FROM content_items')
+    total = int(c.fetchone()[0] or 0)
+    conn.close(); return total
 
 
 def query_content_50k(selected_industry, content_type='facebook', goal='inbox', tone='gan_gui', count=100):
@@ -9622,7 +9744,7 @@ def support_auto_reply_text(message):
     if has_any(['tải', 'tai', 'cài', 'cai', 'app', 'ứng dụng', 'ung dung', 'iphone', 'android', 'pwa', 'màn hình chính', 'man hinh chinh']):
         return (
             "Em hướng dẫn nhanh phần tải app ạ.\n\n"
-            "Android: bấm nút GPTMini / Tải xuống để cài ra màn hình chính.\n"
+            "Android: bấm nút GPT MKT / Tải xuống để cài ra màn hình chính.\n"
             "iPhone: mở bằng Safari → bấm Chia sẻ → Thêm vào màn hình chính."
         )
 
@@ -9678,7 +9800,7 @@ def money_vnd(value):
         return "0đ"
 
 def admin_ceo_stats():
-    """Dashboard CEO cho GPTMini.Pro Admin Dashboard: doanh thu Premium, CTV, hoa hồng, ngày/tháng."""
+    """Dashboard CEO cho Web Admin: doanh thu Premium, CTV, hoa hồng, ngày/tháng."""
     try:
         ensure_affiliate_tables()
     except Exception:
@@ -9695,7 +9817,7 @@ def admin_ceo_stats():
         "top_ctv": [], "package_rows": []
     }
 
-    conn = sqlite3.connect(DB, timeout=30, check_same_thread=False)
+    conn = sqlite3.connect(DB)
     c = conn.cursor()
 
     def one(sql, params=()):
@@ -9795,7 +9917,7 @@ def admin_ceo_stats():
 
 
 ADMIN_HTML = """
-<!doctype html><html lang="vi"><head><meta charset="utf-8"><title>GPTMini.Pro Admin Dashboard</title><meta name="robots" content="noindex,nofollow,noarchive">
+<!doctype html><html lang="vi"><head><meta charset="utf-8"><title>Web Admin Premium</title>
 <style>body{font-family:system-ui;background:#f8fafc;margin:0;padding:24px;color:#111827}.wrap{max-width:1180px;margin:auto}h1{margin-top:0}.card{background:white;border:1px solid #e5e7eb;border-radius:18px;padding:18px;box-shadow:0 10px 30px rgba(15,23,42,.08)}table{width:100%;border-collapse:collapse}th,td{border-bottom:1px solid #e5e7eb;padding:10px;text-align:left;font-size:13px}th{background:#f1f5f9}.badge{display:inline-block;padding:4px 8px;border-radius:999px;background:#fef3c7;color:#92400e;font-weight:700}.ok{background:#dcfce7;color:#166534}.danger{background:#fee2e2;color:#991b1b}button{border:0;border-radius:10px;padding:9px 12px;font-weight:700;cursor:pointer}.approve{background:#16a34a;color:white}.reject{background:#ef4444;color:white}.top{display:flex;gap:12px;align-items:center;justify-content:space-between;margin-bottom:16px}a{color:#2563eb;text-decoration:none}
 .ceo-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:14px;margin:18px 0}
 .ceo-card{background:linear-gradient(135deg,#ffffff,#eef2ff);border:1px solid #dbeafe;border-radius:18px;padding:16px;box-shadow:0 12px 28px rgba(37,99,235,.08)}
@@ -9905,7 +10027,7 @@ body{background:linear-gradient(135deg,#f8fafc,#eef2ff)!important}
   {% if not admin_stats.top_ctv %}<tr><td colspan="8">Chưa có CTV phát sinh doanh thu.</td></tr>{% endif %}
   </tbody></table>
 </div>
-<div class="top"><div><h1>GPTMini.Pro Admin Dashboard - Duyệt Premium</h1><p>Danh sách yêu cầu nâng cấp theo ID thiết bị, SĐT và Gmail.</p><p><a href="#adminAffiliateBlock" style="display:inline-block;background:#16a34a;color:#fff;padding:9px 12px;border-radius:10px;font-weight:800">Quản Lý CTV / Hoa Hồng</a></p></div><a href="/">← Về app khách</a></div><div class="card" id="premiumRequests"><table><thead><tr><th>ID</th><th>ID thiết bị</th><th>SĐT</th><th>Gmail</th><th>Gói</th><th>Số tiền</th><th>Nội dung CK</th><th>Trạng thái</th><th>Ngày tạo</th><th>Thao tác</th></tr></thead><tbody>
+<div class="top"><div><h1>Web Admin - Duyệt Premium</h1><p>Danh sách yêu cầu nâng cấp theo ID thiết bị, SĐT và Gmail.</p><p><a href="#adminAffiliateBlock" style="display:inline-block;background:#16a34a;color:#fff;padding:9px 12px;border-radius:10px;font-weight:800">Quản Lý CTV / Hoa Hồng</a></p></div><a href="/">← Về app khách</a></div><div class="card" id="premiumRequests"><table><thead><tr><th>ID</th><th>ID thiết bị</th><th>SĐT</th><th>Gmail</th><th>Gói</th><th>Số tiền</th><th>Nội dung CK</th><th>Trạng thái</th><th>Ngày tạo</th><th>Thao tác</th></tr></thead><tbody>
 {% for r in rows %}
 <tr><td>{{r[0]}}</td><td><b>{{r[1]}}</b></td><td>{{r[2]}}</td><td>{{r[3]}}</td><td>{{r[5]}}</td><td>{{"{:,.0f}".format(r[6]).replace(",", ".")}}đ</td><td>{{r[7]}}</td><td><span class="badge {% if r[8]=='Đã duyệt' %}ok{% elif r[8]=='Từ chối' %}danger{% endif %}">{{r[8]}}</span></td><td>{{r[10]}}</td><td>{% if r[8]=='Chờ duyệt' %}<form method="post" action="/admin/premium_action" style="display:inline"><input type="hidden" name="request_id" value="{{r[0]}}"><input type="hidden" name="status" value="Đã duyệt"><button class="approve">Kích hoạt</button></form> <form method="post" action="/admin/premium_action" style="display:inline"><input type="hidden" name="request_id" value="{{r[0]}}"><input type="hidden" name="status" value="Từ chối"><button class="reject">Từ chối</button></form>{% else %}{{r[11] or ''}}{% endif %}</td></tr>
 {% endfor %}
@@ -10502,7 +10624,6 @@ body{background:linear-gradient(135deg,#f8fafc,#eef2ff)!important}
   document.addEventListener('input',function(e){if(e.target&&(/payPhone|payEmail/.test(e.target.id||''))) window.refreshPaymentContent();},true);
   getDevice();
 })();
-</script>
 <script id="mkt-price-detail-final-js">
 (function(){
   'use strict';
@@ -10576,6 +10697,88 @@ body{background:linear-gradient(135deg,#f8fafc,#eef2ff)!important}
   }, true);
 
 })();
+</script>  function payContent(p){
+    var phone=(q('#payPhone')&&q('#payPhone').value.trim())||'';
+    var email=(q('#payEmail')&&q('#payEmail').value.trim())||'';
+    return deviceId();
+  }
+  function fill(k){
+    k=setPlan(k); var p=getPlan(k);
+    var t=q('#payPlanTitle'); if(t) t.textContent=p.title;
+    var d=q('#payPlanDesc'); if(d) d.textContent=p.desc;
+    var pr=q('#payPlanPrice'); if(pr) pr.textContent=Number(p.amount).toLocaleString('vi-VN')+' VNĐ';
+    var dev=q('#payDeviceId'); if(dev) dev.value=deviceId();
+    var content=payContent(p);
+    var pc=q('#payContent'); if(pc) pc.textContent=content;
+    var qr=q('#payQr'); if(qr) qr.src='https://img.vietqr.io/image/970405-8888363382629-compact2.png?amount='+encodeURIComponent(p.amount)+'&addInfo='+encodeURIComponent(content)+'&accountName='+encodeURIComponent('NGUYEN DANG THI XUAN');
+    var lock=q('#payLocked'); if(lock) lock.innerHTML='';
+    return p;
+  }
+  window.refreshPaymentContent=function(){fill(window.mktPaymentPlanKey||window.mktSelectedPlanKey||window.currentPremiumPlanKey||'monthly')};
+  window.openPayment=function(planKey){
+    var k=normKey(planKey)||normKey(window.mktPaymentPlanKey)||normKey(window.mktSelectedPlanKey)||normKey(window.currentPremiumPlanKey)||'monthly';
+    fill(k);
+    var modal=q('#paymentModal'); if(modal) modal.style.display='flex';
+    var primary=q('#paymentModal .primary'); if(primary){primary.textContent='Gửi yêu cầu kích hoạt'; primary.onclick=function(e){e.preventDefault(); return window.submitPremiumRequest();};}
+    var light=q('#paymentModal .payment-actions .light'); if(light){light.textContent='Gửi yêu cầu admin duyệt'; light.removeAttribute('href'); light.onclick=function(e){e.preventDefault(); return window.submitPremiumRequest();};}
+    return false;
+  };
+  var previousDetail=window.mktOpenPlanDetail;
+  window.mktOpenPlanDetail=function(k){
+    k=setPlan(k||window.mktPaymentPlanKey||'monthly');
+    var ret=false; if(typeof previousDetail==='function'){try{ret=previousDetail(k)}catch(e){}}
+    setTimeout(function(){
+      setPlan(k); var p=getPlan(k);
+      var note=q('#mktPlanNote');
+      if(note) note.innerHTML='ID thiết bị: <b>'+deviceId()+'</b><br>Gói đang chọn: <b>'+p.title+'</b><br><span style="color:#64748b">Số tiền: <b>'+p.price+'</b>. Vui lòng nhập số điện thoại và Gmail để được duyệt nâng cấp tự động lên gói Premium sau khi thanh toán xong.</span>';
+      var mini=q('.mktPlanMini'); if(mini) mini.textContent='Gói đang chọn: '+p.title+' - '+p.price;
+      var pay=q('#mktPlanPay'); if(pay){pay.setAttribute('data-plan',k); pay.onclick=function(e){e.preventDefault(); e.stopPropagation(); if(e.stopImmediatePropagation)e.stopImmediatePropagation(); var ov=q('#mktPlanOverlay'); if(ov) ov.style.display='none'; return window.openPayment(k);};}
+    },100);
+    return ret;
+  };
+  window.submitPremiumRequest=function(){
+    var k=setPlan(window.mktPaymentPlanKey||window.mktSelectedPlanKey||window.currentPremiumPlanKey||'monthly');
+    var p=fill(k);
+    var phone=(q('#payPhone')&&q('#payPhone').value.trim())||'';
+    var email=(q('#payEmail')&&q('#payEmail').value.trim())||'';
+    if(!phone||!email){ if(typeof window.showPaymentNotice==='function') window.showPaymentNotice('Vui lòng nhập số điện thoại và Gmail để được duyệt nâng cấp tự động lên gói Premium sau khi thanh toán xong.'); else alert('Vui lòng nhập số điện thoại và Gmail.'); return false; }
+    fetch('/premium_request',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({device_id:deviceId(),phone:phone,email:email,package_key:k})})
+      .then(function(r){return r.json()}).then(function(data){
+        if(data&&data.payment_note){var pc=q('#payContent'); if(pc) pc.textContent=data.payment_note;}
+        var msg=(data&&data.ok)?('Đã gửi yêu cầu '+p.title+' về web admin. Số tiền: '+p.price+'.'):((data&&data.message)||'Chưa gửi được yêu cầu, vui lòng thử lại.');
+        if(typeof window.showPaymentNotice==='function') window.showPaymentNotice(msg); else alert(msg);
+      }).catch(function(){if(typeof window.showPaymentNotice==='function') window.showPaymentNotice('Kết nối chậm, vui lòng thử lại hoặc gửi Zalo hỗ trợ.');});
+    return false;
+  };
+  function bindCards(){
+    qa('.premium-plan,.v4-plan,.price-card,.pricing-card,.plan-card').forEach(function(card){
+      var k=keyFromText(card.innerText||card.textContent||'');
+      if(!k) return;
+      card.setAttribute('data-plan',k);
+      qa('button,a',card).forEach(function(b){b.setAttribute('data-plan',k);});
+    });
+  }
+  document.addEventListener('click',function(e){
+    var b=e.target.closest&&e.target.closest('button,a'); if(!b) return;
+    var k=keyFromNode(b);
+    if(k) setPlan(k);
+    var text=norm(b.innerText||b.textContent||'');
+    var isPay=b.id==='mktPlanPay'||/nang cap|mo khoa|dang ky|thanh toan|kich hoat|da thanh toan|gui yeu cau/.test(text)||/openPayment\(/i.test(String(b.getAttribute('onclick')||''));
+    if(b.id==='mktPlanPay'){
+      e.preventDefault(); e.stopPropagation(); if(e.stopImmediatePropagation)e.stopImmediatePropagation();
+      var ov=q('#mktPlanOverlay'); if(ov) ov.style.display='none';
+      return window.openPayment(k||window.mktPaymentPlanKey||window.mktSelectedPlanKey||'monthly');
+    }
+    if(isPay && k){
+      e.preventDefault(); e.stopPropagation(); if(e.stopImmediatePropagation)e.stopImmediatePropagation();
+      return window.openPayment(k);
+    }
+  },true);
+  document.addEventListener('input',function(e){if(e.target&&(/payPhone|payEmail/.test(e.target.id||''))) window.refreshPaymentContent();},true);
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',bindCards); else bindCards();
+  setTimeout(bindCards,300); setTimeout(bindCards,1000); setTimeout(bindCards,2500);
+  deviceId();
+})();
 </script>
 
 <script id="mkt-compact-pricing-final-fix">
@@ -10616,7 +10819,7 @@ body{background:linear-gradient(135deg,#f8fafc,#eef2ff)!important}
 
 
 
-<!-- FINAL SUPPORT BOT 2-WAY PATCH: khách ↔ GPTMini.Pro Admin Dashboard theo ID thiết bị -->
+<!-- FINAL SUPPORT BOT 2-WAY PATCH: khách ↔ Web Admin theo ID thiết bị -->
 <style id="mkt-support-2way-css">
   .floating-bot,.bot-bubble,#floatingBotPanel{z-index:2147483647!important;pointer-events:auto!important}
   .bot-bubble{cursor:pointer!important;box-shadow:0 12px 34px rgba(79,70,229,.38)!important}
@@ -10678,9 +10881,9 @@ body{background:linear-gradient(135deg,#f8fafc,#eef2ff)!important}
         lastSupportId=Math.max(lastSupportId,Number(data.id)||0);
         localStorage.setItem('mkt_support_last_id',String(lastSupportId));
       }
-      append('system','Đã gửi tin nhắn về GPTMini.Pro Admin Dashboard theo ID thiết bị: <b>'+esc(deviceId())+'</b><div class="bot-admin-wait">Admin phản hồi sẽ tự hiện tại đây.</div>');
+      append('system','Đã gửi tin nhắn về Web Admin theo ID thiết bị: <b>'+esc(deviceId())+'</b><div class="bot-admin-wait">Admin phản hồi sẽ tự hiện tại đây.</div>');
     }catch(err){
-      append('system','Chưa gửi được tin nhắn về GPTMini.Pro Admin Dashboard. Vui lòng kiểm tra mạng rồi thử lại.');
+      append('system','Chưa gửi được tin nhắn về Web Admin. Vui lòng kiểm tra mạng rồi thử lại.');
     }
   }
   async function pollAdmin(){
@@ -10725,7 +10928,7 @@ body{background:linear-gradient(135deg,#f8fafc,#eef2ff)!important}
     sendToAdmin(text);
     setTimeout(function(){
       var typing=document.querySelector('[data-support-id="'+typingId+'"]');
-      if(typing){ typing.outerHTML='<div class="bot-msg ai"><b>Bot hỗ trợ:</b><br>'+localBotReply(text)+'<div class="bot-admin-wait">Tin nhắn cũng đã chuyển về GPTMini.Pro Admin Dashboard để hỗ trợ 2 chiều.</div></div>'; }
+      if(typing){ typing.outerHTML='<div class="bot-msg ai"><b>Bot hỗ trợ:</b><br>'+localBotReply(text)+'<div class="bot-admin-wait">Tin nhắn cũng đã chuyển về Web Admin để hỗ trợ 2 chiều.</div></div>'; }
       scrollBottom();
     },700+Math.floor(Math.random()*500));
     startPolling();
@@ -10931,14 +11134,14 @@ body{background:linear-gradient(135deg,#f8fafc,#eef2ff)!important}
   }
 </style>
 
-<button type="button" class="mkt-mobile-download-v130" id="mktDownloadAppV130" aria-label="Tải GPTMini">
+<button type="button" class="mkt-mobile-download-v130" id="mktDownloadAppV130" aria-label="Tải GPT MKT">
   <span class="mkt-dot"></span>
-  <span>GPTMini <small>Tải xuống</small></span>
+  <span>GPT MKT <small>Tải xuống</small></span>
 </button>
 
 <div class="mkt-install-guide-v130" id="mktInstallGuideV130" aria-hidden="true">
   <div class="mkt-install-guide-box-v130">
-    <h3>Cài GPTMini.Pro vào điện thoại</h3>
+    <h3>Cài GPT MKT Pro vào điện thoại</h3>
     <p id="mktInstallIntroV130">Bấm cài để đưa ứng dụng ra màn hình chính.</p>
     <div class="mkt-install-steps-v130" id="mktInstallStepsV130"></div>
     <div class="mkt-install-guide-actions-v130">
@@ -11132,7 +11335,7 @@ body{background:linear-gradient(135deg,#f8fafc,#eef2ff)!important}
       if(steps) steps.innerHTML='1. Bấm biểu tượng <b>Chia sẻ</b> trên thanh trình duyệt.<br>2. Chọn <b>Thêm vào màn hình chính</b>.<br>3. Bấm <b>Thêm</b> để hoàn tất.';
       if(go) go.textContent='Đã hiểu';
     }else if(deferredPrompt){
-      if(intro) intro.textContent='Bấm Cài ngay để thêm GPTMini.Pro ra màn hình chính.';
+      if(intro) intro.textContent='Bấm Cài ngay để thêm GPT MKT Pro ra màn hình chính.';
       if(steps) steps.innerHTML='Sau khi cài, khách mở như app riêng, không cần vào trình duyệt.';
       if(go) go.textContent='Cài ngay';
     }else{
@@ -11197,7 +11400,7 @@ body{background:linear-gradient(135deg,#f8fafc,#eef2ff)!important}
 
 
 
-<!-- GPTMini FINAL MOBILE INSTALL + SUPPORT CHAT OVERRIDE 20260610 -->
+<!-- GPT MKT FINAL MOBILE INSTALL + SUPPORT CHAT OVERRIDE 20260610 -->
 <style id="gpt-mkt-final-mobile-chat-css">
   /* Ẩn các nút cài app cũ để tránh chồng click */
   #mktTopDownloadBar,#mktMobileInstallQuick,#mktPhoneInstallFloat,#mktPhoneInstallEntry,#mktMobileInstallMenu,
@@ -11286,15 +11489,15 @@ body{background:linear-gradient(135deg,#f8fafc,#eef2ff)!important}
   function ensureDock(){
     if(!byId('gptMktLeftDockFinal')){
       var dock=document.createElement('div');dock.id='gptMktLeftDockFinal';dock.className='gptmkt-left-dock-final';
-      dock.innerHTML='<button type="button" id="gptMktInstallFinal" class="gptmkt-install-btn-final" aria-label="Tải GPTMini"><span class="gptmkt-install-dot-final"></span><span>GPTMini<small>Tải xuống</small></span></button>';
+      dock.innerHTML='<button type="button" id="gptMktInstallFinal" class="gptmkt-install-btn-final" aria-label="Tải GPT MKT"><span class="gptmkt-install-dot-final"></span><span>GPT MKT<small>Tải xuống</small></span></button>';
       document.body.appendChild(dock);
     }
     if(!byId('gptMktChatFinal')){
-      var chat=document.createElement('button');chat.type='button';chat.id='gptMktChatFinal';chat.className='gptmkt-chat-btn-final';chat.setAttribute('aria-label','Mở GPTMini Support');chat.innerHTML='🤖';document.body.appendChild(chat);
+      var chat=document.createElement('button');chat.type='button';chat.id='gptMktChatFinal';chat.className='gptmkt-chat-btn-final';chat.setAttribute('aria-label','Mở GPT MKT Support');chat.innerHTML='🤖';document.body.appendChild(chat);
     }
     if(!byId('gptMktInstallSheetFinal')){
       var sheet=document.createElement('div');sheet.id='gptMktInstallSheetFinal';sheet.className='gptmkt-install-sheet-final';
-      sheet.innerHTML='<div class="gptmkt-install-box-final"><h3>📱 Cài GPTMini vào điện thoại</h3><p id="gptMktInstallIntroFinal">Đưa app ra màn hình chính để khách mở nhanh như ứng dụng.</p><div class="gptmkt-install-steps-final" id="gptMktInstallStepsFinal"></div><div class="gptmkt-install-actions-final"><button type="button" id="gptMktInstallGoFinal">Cài ngay</button><button type="button" id="gptMktInstallCloseFinal">Đóng</button></div></div>';
+      sheet.innerHTML='<div class="gptmkt-install-box-final"><h3>📱 Cài GPT MKT vào điện thoại</h3><p id="gptMktInstallIntroFinal">Đưa app ra màn hình chính để khách mở nhanh như ứng dụng.</p><div class="gptmkt-install-steps-final" id="gptMktInstallStepsFinal"></div><div class="gptmkt-install-actions-final"><button type="button" id="gptMktInstallGoFinal">Cài ngay</button><button type="button" id="gptMktInstallCloseFinal">Đóng</button></div></div>';
       document.body.appendChild(sheet);
     }
   }
@@ -11313,7 +11516,7 @@ body{background:linear-gradient(135deg,#f8fafc,#eef2ff)!important}
   }
   function greet(){
     var b=bodyBox(); if(!b || b.dataset.gptMktGreeted==='1') return; b.dataset.gptMktGreeted='1';
-    if(!b.innerHTML.trim()) appendMsg('ai','Xin chào 👋\nEm là GPTMini Support. Anh/chị cần hỗ trợ tải app, kích hoạt Premium, thanh toán hay lỗi kỹ thuật ạ?');
+    if(!b.innerHTML.trim()) appendMsg('ai','Xin chào 👋\nEm là GPT MKT Support. Anh/chị cần hỗ trợ tải app, kích hoạt Premium, thanh toán hay lỗi kỹ thuật ạ?');
   }
   function openChat(){var p=panel(); if(!p) return; p.classList.add('gptmkt-chat-open-final'); p.style.display='block'; p.style.opacity='1'; p.style.visibility='visible'; greet(); startPoll(); setTimeout(scrollBot,80)}
   function closeChat(){var p=panel(); if(!p) return; p.classList.remove('gptmkt-chat-open-final'); p.style.display='none'}
@@ -11323,11 +11526,11 @@ body{background:linear-gradient(135deg,#f8fafc,#eef2ff)!important}
   async function saveSupport(text){try{var r=await fetch('/support_send',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({device_id:deviceId(),sender:'user',message:text})});var d=await r.json().catch(function(){return{}});if(d.id){lastSupportId=Math.max(lastSupportId,Number(d.id)||0);localStorage.setItem('mkt_support_last_id',String(lastSupportId));}}catch(e){}}
   async function poll(){try{var r=await fetch('/support_poll?device_id='+encodeURIComponent(deviceId())+'&after_id='+encodeURIComponent(lastSupportId),{cache:'no-store'});var d=await r.json().catch(function(){return{messages:[]}});(d.messages||[]).forEach(function(m){var mid=Number(m.id)||0;if(mid<=lastSupportId)return;lastSupportId=mid;localStorage.setItem('mkt_support_last_id',String(lastSupportId));if(String(m.sender||'').toLowerCase()==='admin'){appendMsg('admin',m.message,mid);openChat();}})}catch(e){}}
   function startPoll(){if(pollTimer) return; poll(); pollTimer=setInterval(poll,3500)}
-  function localReply(text){var low=String(text||'').toLowerCase();if(low.indexOf('tải')>=0||low.indexOf('cài')>=0)return 'Anh/chị bấm nút GPTMini bên trái để cài ra màn hình chính. Android có thể cài trực tiếp, iPhone làm theo hướng dẫn Chia sẻ → Thêm vào màn hình chính.'; if(low.indexOf('thanh toán')>=0||low.indexOf('qr')>=0)return 'Sau khi thanh toán, anh/chị gửi ID thiết bị + ảnh thanh toán + gói đăng ký. Nếu 5 phút chưa kích hoạt, liên hệ Zalo 036 338 2629.'; if(low.indexOf('premium')>=0||low.indexOf('gói')>=0)return 'Các gói hiện có: 1 tháng 259K, 3 tháng 490K, 6 tháng 790K, 1 năm 1.290K, Nhà bán hàng chuyên nghiệp 2.490K.'; return 'Em đã nhận tin nhắn. Admin sẽ phản hồi trực tiếp trong khung chat này ạ.'}
+  function localReply(text){var low=String(text||'').toLowerCase();if(low.indexOf('tải')>=0||low.indexOf('cài')>=0)return 'Anh/chị bấm nút GPT MKT bên trái để cài ra màn hình chính. Android có thể cài trực tiếp, iPhone làm theo hướng dẫn Chia sẻ → Thêm vào màn hình chính.'; if(low.indexOf('thanh toán')>=0||low.indexOf('qr')>=0)return 'Sau khi thanh toán, anh/chị gửi ID thiết bị + ảnh thanh toán + gói đăng ký. Nếu 5 phút chưa kích hoạt, liên hệ Zalo 036 338 2629.'; if(low.indexOf('premium')>=0||low.indexOf('gói')>=0)return 'Các gói hiện có: 1 tháng 259K, 3 tháng 490K, 6 tháng 790K, 1 năm 1.290K, Nhà bán hàng chuyên nghiệp 2.490K.'; return 'Em đã nhận tin nhắn. Admin sẽ phản hồi trực tiếp trong khung chat này ạ.'}
   window.sendBotInput=function(){var input=inputBox(); if(!input || !input.value.trim()) return; var text=input.value.trim(); input.value=''; openChat(); appendMsg('user',text); saveSupport(text); setTimeout(function(){appendMsg('ai',localReply(text))},350)};
   window.botQuick=function(text){openChat(); var input=inputBox(); if(input){input.value=String(text||'')} window.sendBotInput()};
 
-  function setGuide(){var intro=byId('gptMktInstallIntroFinal'),steps=byId('gptMktInstallStepsFinal'),go=byId('gptMktInstallGoFinal'); if(ios()){if(intro)intro.textContent='iPhone cần thêm app thủ công bằng nút Chia sẻ của Safari.'; if(steps)steps.innerHTML='1. Mở bằng <b>Safari</b>.<br>2. Bấm nút <b>Chia sẻ</b>.<br>3. Chọn <b>Thêm vào màn hình chính</b> → <b>Thêm</b>.'; if(go)go.textContent='Đã hiểu';}else if(deferredPrompt && android()){if(intro)intro.textContent='Bấm Cài ngay để đưa GPTMini ra màn hình chính.'; if(steps)steps.innerHTML='Sau khi cài, khách mở như app riêng, thao tác nhanh hơn trên điện thoại.'; if(go)go.textContent='Cài ngay';}else{if(intro)intro.textContent='Trình duyệt chưa bật popup cài tự động.'; if(steps)steps.innerHTML='Android Chrome: bấm menu <b>⋮</b> → <b>Thêm vào màn hình chính</b> hoặc <b>Cài đặt ứng dụng</b>.<br>iPhone Safari: <b>Chia sẻ</b> → <b>Thêm vào màn hình chính</b>.'; if(go)go.textContent='Đã hiểu';}}
+  function setGuide(){var intro=byId('gptMktInstallIntroFinal'),steps=byId('gptMktInstallStepsFinal'),go=byId('gptMktInstallGoFinal'); if(ios()){if(intro)intro.textContent='iPhone cần thêm app thủ công bằng nút Chia sẻ của Safari.'; if(steps)steps.innerHTML='1. Mở bằng <b>Safari</b>.<br>2. Bấm nút <b>Chia sẻ</b>.<br>3. Chọn <b>Thêm vào màn hình chính</b> → <b>Thêm</b>.'; if(go)go.textContent='Đã hiểu';}else if(deferredPrompt && android()){if(intro)intro.textContent='Bấm Cài ngay để đưa GPT MKT ra màn hình chính.'; if(steps)steps.innerHTML='Sau khi cài, khách mở như app riêng, thao tác nhanh hơn trên điện thoại.'; if(go)go.textContent='Cài ngay';}else{if(intro)intro.textContent='Trình duyệt chưa bật popup cài tự động.'; if(steps)steps.innerHTML='Android Chrome: bấm menu <b>⋮</b> → <b>Thêm vào màn hình chính</b> hoặc <b>Cài đặt ứng dụng</b>.<br>iPhone Safari: <b>Chia sẻ</b> → <b>Thêm vào màn hình chính</b>.'; if(go)go.textContent='Đã hiểu';}}
   async function install(){if(standalone())return; if(deferredPrompt && android()){var dp=deferredPrompt; deferredPrompt=null; try{dp.prompt(); await dp.userChoice}catch(e){} return;} setGuide(); var s=byId('gptMktInstallSheetFinal'); if(s)s.classList.add('open')}
 
   window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();deferredPrompt=e;window.__gptMktDeferredPrompt=e});
@@ -11375,7 +11578,7 @@ body{background:linear-gradient(135deg,#f8fafc,#eef2ff)!important}
 
 <!-- FINAL PATCH 20260610: Device ID under logo + mobile Download/CTV dock -->
 <style id="mkt-deviceid-mobile-ctv-final-css">
-  /* Hiển thị ID máy ngay dưới logo GPTMini.Pro */
+  /* Hiển thị ID máy ngay dưới logo Marketing Automation Pro */
   #mktDeviceUnderLogo{
     display:flex!important;align-items:center!important;gap:7px!important;
     margin:0 18px 14px!important;padding:9px 11px!important;border-radius:14px!important;
@@ -11386,7 +11589,7 @@ body{background:linear-gradient(135deg,#f8fafc,#eef2ff)!important}
   #mktDeviceUnderLogo .mkt-device-dot{width:8px!important;height:8px!important;border-radius:999px!important;background:#22c55e!important;box-shadow:0 0 10px rgba(34,197,94,.9)!important;flex:0 0 8px!important;}
   #mktDeviceUnderLogo b{color:#fff!important;font-weight:1000!important;letter-spacing:.01em!important;}
 
-  /* Cụm nút điện thoại gọn: GPTMini / Tải xuống / CTV */
+  /* Cụm nút điện thoại gọn: GPT MKT / Tải xuống / CTV */
   #mktMobileActionDock{display:none!important;}
   @media(max-width:768px){
     /* Ẩn các nút CTV/tải xuống nổi lẻ để không bị trùng, chỉ giữ dock này */
@@ -11465,7 +11668,7 @@ body{background:linear-gradient(135deg,#f8fafc,#eef2ff)!important}
     if(!dock){
       dock=document.createElement('div');
       dock.id='mktMobileActionDock';
-      dock.innerHTML='<button type="button" class="mkt-dock-gpt"><span>📱</span><span>GPTMini</span></button><button type="button" class="mkt-dock-download"><span>⬇️</span><span>Tải xuống</span></button><button type="button" class="mkt-dock-ctv"><span>🤝</span><span>CTV</span></button>';
+      dock.innerHTML='<button type="button" class="mkt-dock-gpt"><span>📱</span><span>GPT MKT</span></button><button type="button" class="mkt-dock-download"><span>⬇️</span><span>Tải xuống</span></button><button type="button" class="mkt-dock-ctv"><span>🤝</span><span>CTV</span></button>';
       document.body.appendChild(dock);
     }
     qs('.mkt-dock-gpt',dock).onclick=function(e){e.preventDefault();window.scrollTo({top:0,behavior:'smooth'});return false;};
@@ -11573,7 +11776,7 @@ body{background:linear-gradient(135deg,#f8fafc,#eef2ff)!important}
     var box=q('#mktMobileQuickActionsRestore')||q('#mktMobileQuickActions');
     if(!box){
       box=document.createElement('div'); box.id='mktMobileQuickActionsRestore';
-      box.innerHTML='<button type="button" id="mktMobileInstallQuickRestore" onclick="return showInstallGuide&&showInstallGuide()"><span class="dot"></span><span class="txt"><b>GPTMini</b><span class="mkt-install-sub">Tải xuống</span></span></button>';
+      box.innerHTML='<button type="button" id="mktMobileInstallQuickRestore" onclick="return showInstallGuide&&showInstallGuide()"><span class="dot"></span><span class="txt"><b>GPT MKT</b><span class="mkt-install-sub">Tải xuống</span></span></button>';
       document.body.appendChild(box);
     }
     var ctv=q('#mktMobileCtvQuickRestore');
@@ -11670,7 +11873,7 @@ body{background:linear-gradient(135deg,#f8fafc,#eef2ff)!important}
     var dock=q('#mktPhoneCtvDockFinal');
     if(!dock){
       dock=document.createElement('div'); dock.id='mktPhoneCtvDockFinal';
-      dock.innerHTML='<button type="button" class="mkt-phone-gpt"><em>📱</em><span>GPTMini</span></button><button type="button" class="mkt-phone-download"><em>⬇️</em><span>Tải xuống</span></button><button type="button" class="mkt-phone-ctv"><em>🤝</em><span>CTV</span></button>';
+      dock.innerHTML='<button type="button" class="mkt-phone-gpt"><em>📱</em><span>GPT MKT</span></button><button type="button" class="mkt-phone-download"><em>⬇️</em><span>Tải xuống</span></button><button type="button" class="mkt-phone-ctv"><em>🤝</em><span>CTV</span></button>';
       document.body.appendChild(dock);
     }
     q('.mkt-phone-gpt',dock).onclick=function(e){e.preventDefault();window.scrollTo({top:0,behavior:'smooth'});return false;};
@@ -12249,7 +12452,7 @@ body{background:linear-gradient(135deg,#f8fafc,#eef2ff)!important}
       box.innerHTML='<strong>🎁 Dùng thử 3 ngày</strong>Chỉ mở 4 chức năng Facebook Center<div class="mkt-mini-bar"><i style="width:72%"></i></div>';
     }
   }
-  function ensureBell(){var b=q('#mktNotifyBell');if(!b){b=document.createElement('button');b.id='mktNotifyBell';b.type='button';b.innerHTML='🔔<span class="mkt-bell-count">5</span>';document.body.appendChild(b)}var p=q('#mktNotifyPanel');if(!p){p=document.createElement('div');p.id='mktNotifyPanel';p.innerHTML='<h3>🔔 Notification Center</h3><div class="mkt-note"><b>Premium kích hoạt thành công</b><span>Tài khoản sau khi Admin duyệt sẽ tự mở khóa realtime.</span><br><small>Vừa xong</small></div><div class="mkt-note"><b>Khách hàng mới đăng ký</b><span>Yêu cầu nâng cấp sẽ xuất hiện trong GPTMini.Pro Admin Dashboard.</span><br><small>Hôm nay</small></div><div class="mkt-note"><b>Omni Channel Premium</b><span>Hỗ trợ đăng đa kênh, hẹn giờ 2h, 3h, 6h, 12h.</span></div>';document.body.appendChild(p)}b.onclick=function(){p.style.display=p.style.display==='block'?'none':'block'}}
+  function ensureBell(){var b=q('#mktNotifyBell');if(!b){b=document.createElement('button');b.id='mktNotifyBell';b.type='button';b.innerHTML='🔔<span class="mkt-bell-count">5</span>';document.body.appendChild(b)}var p=q('#mktNotifyPanel');if(!p){p=document.createElement('div');p.id='mktNotifyPanel';p.innerHTML='<h3>🔔 Notification Center</h3><div class="mkt-note"><b>Premium kích hoạt thành công</b><span>Tài khoản sau khi Admin duyệt sẽ tự mở khóa realtime.</span><br><small>Vừa xong</small></div><div class="mkt-note"><b>Khách hàng mới đăng ký</b><span>Yêu cầu nâng cấp sẽ xuất hiện trong Web Admin.</span><br><small>Hôm nay</small></div><div class="mkt-note"><b>Omni Channel Premium</b><span>Hỗ trợ đăng đa kênh, hẹn giờ 2h, 3h, 6h, 12h.</span></div>';document.body.appendChild(p)}b.onclick=function(){p.style.display=p.style.display==='block'?'none':'block'}}
   function insertCEOHint(){var dash=q('#dashboard'); if(!dash||q('#mktDashboardCeoStrip'))return;var title=dash.querySelector('h1,h2,.hero-title');var wrap=document.createElement('div');wrap.id='mktDashboardCeoStrip';wrap.className='mkt-dashboard-ceo-strip';wrap.innerHTML='<div class="ceo-mini"><span>Tổng bài</span><b>Realtime</b></div><div class="ceo-mini"><span>Premium</span><b>Active</b></div><div class="ceo-mini"><span>Omni Channel</span><b>Đa kênh</b></div><div class="ceo-mini"><span>CTV</span><b>Hoa hồng</b></div><div class="ceo-mini"><span>AI Suite</span><b>Enterprise</b></div>'; if(title&&title.parentNode)title.parentNode.insertBefore(wrap,title.nextSibling);}
   function boot(){ensureLiveBar();rotateLive();setInterval(rotateLive,6500);enhancePremiumCompact();setInterval(enhancePremiumCompact,5000);ensureBell();insertCEOHint();}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();
@@ -12306,9 +12509,9 @@ def _safe_call(default, fn, *args, **kwargs):
 def _admin_fallback_html(error=''):
     rows = _safe_call([], get_premium_requests)
     subs = _safe_call([], get_device_subscriptions)
-    html = '<!doctype html><html><head><meta charset="utf-8"><title>GPTMini.Pro Admin Dashboard</title><meta name="robots" content="noindex,nofollow,noarchive">'
+    html = '<!doctype html><html><head><meta charset="utf-8"><title>Web Admin</title>'
     html += '<style>body{font-family:Arial,sans-serif;background:#f8fafc;margin:0;padding:30px;color:#0f172a}.card{background:#fff;border-radius:18px;padding:22px;margin:0 0 18px;box-shadow:0 12px 35px rgba(15,23,42,.08)}table{width:100%;border-collapse:collapse}th,td{padding:12px;border-bottom:1px solid #e5e7eb;text-align:left}th{background:#eef2ff}.ok{display:inline-block;background:#dcfce7;color:#166534;border-radius:999px;padding:6px 10px;font-weight:700}.btn{border:0;border-radius:10px;background:#16a34a;color:#fff;padding:9px 12px;font-weight:700;cursor:pointer}.err{background:#fee2e2;color:#991b1b;padding:12px;border-radius:12px;margin-bottom:18px}</style></head><body>'
-    html += '<div class="card"><h1>GPTMini.Pro Admin Dashboard</h1><p>Trang admin dang chay o che do an toan.</p>'
+    html += '<div class="card"><h1>Web Admin Premium</h1><p>Trang admin dang chay o che do an toan.</p>'
     if error:
         html += '<div class="err">' + str(error).replace('<','&lt;').replace('>','&gt;')[:500] + '</div>'
     html += '<a href="/dashboard">Ve app khach</a></div>'
@@ -12332,7 +12535,7 @@ def _admin_fallback_html(error=''):
 
 
 # ENTERPRISE ADMIN SAFETY UPGRADE 20260611
-# Render GPTMini.Pro Admin Dashboard with the old layout when possible; if Jinja sees broken HTML comments, strip comments and render again.
+# Render Web Admin with the old layout when possible; if Jinja sees broken HTML comments, strip comments and render again.
 def _render_admin_html_enterprise(**ctx):
     try:
         return render_template_string(ADMIN_HTML, **ctx)
@@ -12371,7 +12574,7 @@ def admin_premium_action():
         if request.method == "POST":
             request_id = request.form.get("request_id")
             status = request.form.get("status", "Đã duyệt")
-            approve_premium_request(request_id, status=status, admin_note="Duyệt từ GPTMini.Pro Admin Dashboard")
+            approve_premium_request(request_id, status=status, admin_note="Duyệt từ Web Admin")
     except Exception as e:
         print("/admin/premium_action error:", e)
         return _admin_fallback_html(e), 200
@@ -12563,12 +12766,58 @@ def api_templates():
     return jsonify(current_library(industry, content_type, content_goal, content_tone, content_count))
 
 
+@app.get("/manifest.json")
+def pwa_manifest():
+    return jsonify({
+        "name": "GPT MKT Pro",
+        "short_name": "GPT MKT",
+        "start_url": "/",
+        "scope": "/",
+        "display": "standalone",
+        "background_color": "#ffffff",
+        "theme_color": "#2563eb",
+        "orientation": "portrait",
+        "icons": [
+            {"src": "/static/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable"},
+            {"src": "/static/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"}
+        ]
+    })
 
+@app.get("/sw.js")
+def pwa_sw():
+    js = """
+const CACHE_NAME = "gptmkt-v1";
+const urlsToCache = [
+  "/",
+  "/manifest.json"
+];
+
+self.addEventListener("install", event => {
+  event.waitUntil(
+    caches.open(CACHE_NAME).then(cache => cache.addAll(urlsToCache)).catch(() => Promise.resolve())
+  );
+  self.skipWaiting();
+});
+
+self.addEventListener("activate", event => {
+  event.waitUntil(self.clients.claim());
+});
+
+self.addEventListener("fetch", event => {
+  event.respondWith(
+    fetch(event.request).catch(() => caches.match(event.request))
+  );
+});
+"""
+    return app.response_class(js, mimetype="application/javascript")
 
 @app.get("/favicon.ico")
 def favicon_icon():
     return static_icon_192()
 
+@app.get("/service-worker.js")
+def pwa_service_worker():
+    return pwa_sw()
 
 @app.get("/static/icon-192.png")
 def static_icon_192():
@@ -13145,7 +13394,7 @@ def _mkt_approve_request_direct(request_id, status="Đã duyệt"):
         return False
     try:
         # Prefer existing project logic because it already handles package days and realtime notifications.
-        approve_premium_request(request_id, status=status, admin_note="Duyệt từ GPTMini.Pro Admin Dashboard Enterprise")
+        approve_premium_request(request_id, status=status, admin_note="Duyệt từ Web Admin Enterprise")
         return True
     except Exception as e:
         print("approve_premium_request fallback:", e)
@@ -13183,7 +13432,7 @@ def _mkt_approve_request_direct(request_id, status="Đã duyệt"):
             phone=excluded.phone,email=excluded.email,package_key=excluded.package_key,package_name=excluded.package_name,
             start_date=excluded.start_date,end_date=excluded.end_date,status='premium',updated_at=excluded.updated_at
     """, (device_id, phone, email, package_key, package_name, now_s, end_s, "premium", now_s, now_s))
-    c.execute("UPDATE premium_upgrade_requests SET status=?, admin_note=?, approved_at=? WHERE id=?", (status, "Duyệt từ GPTMini.Pro Admin Dashboard Enterprise", now_s, request_id))
+    c.execute("UPDATE premium_upgrade_requests SET status=?, admin_note=?, approved_at=? WHERE id=?", (status, "Duyệt từ Web Admin Enterprise", now_s, request_id))
     try:
         c.execute("""
             INSERT INTO user_notifications(device_id,title,message,level,is_read,created_at)
@@ -13216,7 +13465,7 @@ def _mkt_enterprise_admin_html(error=""):
         ("🤝", "Tổng CTV", stats.get("ctv_total",0)),
     ]
     html = """<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>GPTMini.Pro Admin Dashboard</title><meta name="robots" content="noindex,nofollow,noarchive">
+<title>Web Admin Premium Enterprise</title>
 <style>
 :root{--bg:#f5f7fb;--card:#fff;--ink:#0f172a;--muted:#64748b;--blue:#2563eb;--green:#16a34a;--gold:#f59e0b;--red:#ef4444}
 *{box-sizing:border-box}body{margin:0;font-family:Inter,Arial,sans-serif;background:radial-gradient(circle at top left,#dbeafe 0,#f8fafc 36%,#eef2ff 100%);color:var(--ink)}
@@ -13229,7 +13478,7 @@ def _mkt_enterprise_admin_html(error=""):
 .table-wrap{overflow:auto;border-radius:18px;border:1px solid #e5e7eb}table{width:100%;border-collapse:collapse;background:#fff;min-width:980px}th,td{padding:12px 13px;border-bottom:1px solid #e5e7eb;text-align:left;font-size:13px;vertical-align:middle}th{background:linear-gradient(135deg,#eff6ff,#eef2ff);color:#1e3a8a;font-weight:1000;white-space:nowrap}tr:hover td{background:#f8fafc}.status{display:inline-flex;border-radius:999px;padding:6px 10px;font-weight:1000;background:#dcfce7;color:#166534}.status.pending{background:#fef3c7;color:#92400e}.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-weight:900}.plans{display:grid;grid-template-columns:repeat(5,minmax(150px,1fr));gap:12px}.plan{background:linear-gradient(135deg,#0f172a,#1e1b4b);border-radius:18px;padding:16px;color:#fff;border:1px solid rgba(250,204,21,.25)}.plan small{color:#fde68a;font-weight:1000}.plan b{font-size:20px;display:block;margin-top:6px}.footer-note{color:#64748b;font-size:13px;margin-top:18px}
 @media(max-width:1100px){.admin-shell{grid-template-columns:1fr}.side{position:relative;height:auto}.grid{grid-template-columns:repeat(2,1fr)}.plans{grid-template-columns:1fr 1fr}.top{display:block}.top-actions{margin-top:12px}}
 </style></head><body><div class="admin-shell">
-<aside class="side"><div class="brand">👑 GPTMini.Pro Admin Dashboard</div><div class="sub">Dashboard CEO • Premium Subscription • CTV • Omni Channel • Realtime Activation</div><div class="badge">Enterprise Mode Active</div><nav class="nav"><a href="#requests">Yêu cầu nâng cấp</a><a href="#subscriptions">Gói đã kích hoạt</a><a href="#plans">Premium Center</a><a href="#ctv">CTV Hoa Hồng</a><a href="/dashboard">← Về app khách</a></nav></aside>
+<aside class="side"><div class="brand">👑 Web Admin Premium</div><div class="sub">Dashboard CEO • Premium Subscription • CTV • Omni Channel • Realtime Activation</div><div class="badge">Enterprise Mode Active</div><nav class="nav"><a href="#requests">Yêu cầu nâng cấp</a><a href="#subscriptions">Gói đã kích hoạt</a><a href="#plans">Premium Center</a><a href="#ctv">CTV Hoa Hồng</a><a href="/dashboard">← Về app khách</a></nav></aside>
 <main class="main"><div class="top"><div><h1>Dashboard CEO</h1><div class="sub" style="color:#475569">Quản lý doanh thu, duyệt Premium và theo dõi kích hoạt realtime.</div></div><div class="top-actions"><a class="btn btn-dark" href="/">🏠 App khách</a><a class="btn btn-soft" href="/healthz">Health</a><button class="btn btn-blue" onclick="location.reload()">↻ Làm mới</button></div></div>
 """
     if error:
@@ -13267,7 +13516,7 @@ def _mkt_enterprise_admin_html(error=""):
         html += f'<div class="plan"><small>{_mkt_html_escape(pl.get("discount","GIẢM 35%"))}</small><b>{_mkt_html_escape(pl.get("name"))}</b><p>{_mkt_html_escape(pl.get("price"))}</p><div>{("Forever" if int(pl.get("days",0))>=3000 else str(pl.get("days"))+" ngày")}</div></div>'
     html += '</div></section>'
     html += '<section class="card" id="ctv"><h2>🤝 CTV Hoa Hồng Enterprise</h2><div class="hint">Mục này giữ sẵn giao diện quản lý CTV: mã giới thiệu, link giới thiệu, doanh thu, hoa hồng chờ duyệt và hoa hồng đã thanh toán.</div></section>'
-    html += '<div class="footer-note">GPTMini.Pro Admin Dashboard Enterprise Fix: không render qua ADMIN_HTML nên không còn lỗi Jinja Missing end of comment tag.</div></main></div></body></html>'
+    html += '<div class="footer-note">Web Admin Enterprise Fix: không render qua ADMIN_HTML nên không còn lỗi Jinja Missing end of comment tag.</div></main></div></body></html>'
     return html
 
 def _mkt_enterprise_admin_home():
@@ -13572,9 +13821,10 @@ except Exception as _mkt_live_notify_v2_error:
 
 
 if __name__ == "__main__":
-    # Đã tắt auto nạp kho 50k content khi khởi động để tránh lỗi SQLite database is locked trên Render.
-    # Khi cần nạp thủ công, dùng route /admin_content_50k_seed trong khu vực quản trị.
+    try:
+        threading.Thread(target=ensure_content_50k_library, daemon=True).start()
+    except Exception as e:
+        print('content library init skipped:', e)
     threading.Thread(target=scheduler_loop, daemon=True).start()
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port, debug=False)
-
