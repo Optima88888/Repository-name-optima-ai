@@ -8310,6 +8310,88 @@ button[aria-label="CTV"]{
 })();
 </script>
 
+
+
+<!-- GPTMINI Enterprise Menu UI Final - keep old content, add balanced SaaS modules -->
+<style id="gptmini-enterprise-menu-ui-final-css">
+:root{--mkt-blue:#2563eb;--mkt-purple:#7c3aed;--mkt-dark:#0f172a;--mkt-green:#22c55e;--mkt-gold:#f59e0b}
+.mkt-clean-nav{padding-bottom:42px!important}
+.mkt-clean-nav .v2-nav-title{margin-top:22px!important;margin-bottom:9px!important;letter-spacing:2.3px!important;font-size:12px!important;opacity:.92!important;color:#b8c4ff!important}
+.mkt-clean-nav .v2-nav-link{min-height:42px!important;padding:10px 13px!important;border-radius:14px!important;display:flex!important;align-items:center!important;justify-content:space-between!important;gap:8px!important;margin:4px 0!important;transition:.18s ease!important}
+.mkt-clean-nav .v2-nav-link:hover{background:linear-gradient(135deg,rgba(37,99,235,.18),rgba(124,58,237,.16))!important;transform:translateX(3px)!important;box-shadow:0 12px 24px rgba(37,99,235,.14)!important}
+.mkt-clean-nav .v2-nav-link .v2-nav-text{line-height:1.2!important;display:block!important;max-width:172px!important}
+.mkt-menu-new{position:relative!important;overflow:hidden!important}
+.mkt-menu-new:before{content:"";position:absolute;left:0;top:11px;bottom:11px;width:3px;border-radius:9px;background:linear-gradient(180deg,#22c55e,#38bdf8,#a855f7);opacity:.88}
+.mkt-dot-tag.enterprise{background:rgba(34,197,94,.12)!important;color:#bbf7d0!important;border:1px solid rgba(34,197,94,.25)!important;box-shadow:0 0 14px rgba(34,197,94,.25)!important}
+.mkt-dot-tag.enterprise i{background:#22c55e!important;box-shadow:0 0 12px #22c55e!important}
+.enterprise-hub{margin:18px 0 18px;padding:18px;border:1px solid rgba(99,102,241,.22);border-radius:24px;background:linear-gradient(135deg,rgba(255,255,255,.96),rgba(245,243,255,.92));box-shadow:0 18px 42px rgba(30,41,59,.09)}
+.enterprise-hub-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px}.enterprise-hub-head h2{margin:0;font-size:23px;color:#1e1b4b}.enterprise-hub-head p{margin:5px 0 0;color:#64748b;font-weight:700}.enterprise-badge{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:8px 12px;font-weight:1000;font-size:12px;color:#064e3b;background:linear-gradient(135deg,#bbf7d0,#d9f99d);border:1px solid rgba(34,197,94,.25);white-space:nowrap}
+.enterprise-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.enterprise-card{border:1px solid #e5e7eb;background:#fff;border-radius:20px;padding:15px;min-height:128px;cursor:pointer;box-shadow:0 12px 28px rgba(30,41,59,.08);transition:.18s ease;position:relative;overflow:hidden}.enterprise-card:hover{transform:translateY(-4px);border-color:#a78bfa;box-shadow:0 20px 42px rgba(124,58,237,.16)}.enterprise-card .ec-icon{font-size:26px;margin-bottom:8px}.enterprise-card b{display:block;color:#111827;font-size:15px;margin-bottom:6px}.enterprise-card span{display:block;color:#64748b;font-size:12.5px;line-height:1.45}.enterprise-card small{position:absolute;right:12px;top:12px;border-radius:999px;padding:4px 8px;background:#fef3c7;color:#92400e;font-weight:900;font-size:10px}
+.enterprise-module-wrap{background:linear-gradient(135deg,#ffffff,#f8fafc);border:1px solid #e5e7eb;border-radius:28px;padding:24px;box-shadow:0 22px 55px rgba(15,23,42,.10);margin:18px 0}.enterprise-module-title{display:flex;align-items:center;gap:10px;margin:0 0 8px;font-size:30px;line-height:1.12;background:linear-gradient(135deg,#2563eb,#7c3aed);-webkit-background-clip:text;background-clip:text;color:transparent}.enterprise-module-desc{color:#475569;font-weight:700;margin:0 0 18px}.enterprise-feature-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}.enterprise-feature{background:#fff;border:1px solid #e5e7eb;border-radius:18px;padding:15px;box-shadow:0 10px 24px rgba(15,23,42,.06)}.enterprise-feature b{color:#1e1b4b}.enterprise-feature p{margin:7px 0 0;color:#64748b;line-height:1.5;font-size:13px}.enterprise-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}.enterprise-actions button{margin:0!important;border:none!important;border-radius:14px!important;padding:12px 16px!important;font-weight:1000!important;background:linear-gradient(135deg,#2563eb,#7c3aed)!important;color:#fff!important;box-shadow:0 12px 26px rgba(37,99,235,.24)!important}.enterprise-actions button.light{background:#eef2ff!important;color:#3730a3!important;border:1px solid #c7d2fe!important;box-shadow:none!important}
+@media(max-width:1180px){.enterprise-grid{grid-template-columns:repeat(3,1fr)}.enterprise-feature-grid{grid-template-columns:repeat(2,1fr)}}@media(max-width:760px){.enterprise-grid,.enterprise-feature-grid{grid-template-columns:1fr}.enterprise-hub-head{display:block}.enterprise-badge{margin-top:10px}.enterprise-module-title{font-size:24px}}
+</style>
+<script id="gptmini-enterprise-menu-ui-final-js">
+(function(){
+  if(window.__gptminiEnterpriseMenuFinal){return;} window.__gptminiEnterpriseMenuFinal=true;
+  var modules=[
+    {id:'messenger_facebook_real',icon:'🤖',title:'AI Messenger Facebook',tag:'Premium',desc:'Kết nối Fanpage, tạo kịch bản trả lời inbox/comment, thu lead và chuyển khách vào CRM.',features:[['Trả lời 24/7','Tự động phản hồi tin nhắn và bình luận theo kịch bản bán hàng.'],['Thu lead thông minh','Ghi nhận tên, SĐT, nhu cầu và nguồn khách hàng.'],['Chuyển CRM','Đẩy khách quan tâm sang CRM Kanban để chăm sóc tiếp.']]},
+    {id:'tiktok_api_center',icon:'🎵',title:'TikTok API Center',tag:'Premium',desc:'Quản lý TikTok, TikTok Shop, video, comment và dữ liệu chiến dịch trong một khu vực.',features:[['Kết nối TikTok','Lưu tài khoản, token/API và trạng thái kết nối.'],['Thống kê video','Theo dõi view, comment, tương tác và hiệu quả nội dung.'],['TikTok Shop','Chuẩn bị khu vực quản lý đơn, sản phẩm và báo cáo shop.']]},
+    {id:'telegram_bot_center',icon:'✈️',title:'Telegram Bot Center',tag:'Premium',desc:'Điều khiển hệ thống qua Telegram: nhận thông báo, đăng bài, kiểm tra Premium và báo cáo.',features:[['Bot điều khiển','Gửi lệnh đăng bài, kiểm tra gói và xem báo cáo nhanh.'],['Thông báo realtime','Nhận tin khi Premium kích hoạt, CTV có đơn hoặc bài đăng lỗi.'],['Quản trị di động','Điều hành hệ thống từ điện thoại mọi lúc.']]},
+    {id:'zalo_oa_center',icon:'💬',title:'Zalo OA Center',tag:'Premium',desc:'Quản lý Zalo OA, chăm sóc khách Việt Nam, gửi tin nhắn và broadcast hợp lệ.',features:[['Kết nối OA','Lưu thông tin Zalo OA và trạng thái kết nối.'],['Chăm sóc khách','Tư vấn, nhắc lịch và hỗ trợ khách hàng nhanh.'],['Broadcast','Chuẩn bị khu vực gửi thông báo chăm sóc lại khách.']]},
+    {id:'crm_kanban_pro',icon:'📊',title:'CRM Kanban Pro',tag:'Premium',desc:'Kéo thả khách qua các giai đoạn: mới, tư vấn, báo giá, chốt đơn và chăm sóc lại.',features:[['Pipeline bán hàng','Không bỏ sót khách và biết khách đang ở bước nào.'],['Ghi chú & nhắc việc','Lưu nhu cầu, giá trị đơn và lịch chăm sóc.'],['Tăng chốt đơn','Tập trung xử lý khách nóng trước.']]},
+    {id:'premium_revenue_dashboard',icon:'👑',title:'Dashboard Doanh Thu Premium',tag:'Admin',desc:'Theo dõi doanh thu gói Premium, gói bán chạy, khách sắp hết hạn và tỷ lệ gia hạn.',features:[['Doanh thu ngày/tháng','Xem nhanh doanh thu theo thời gian.'],['Gói bán chạy','Biết khách đang chọn gói nào nhiều nhất.'],['Sắp hết hạn','Lọc khách cần nhắc gia hạn để tăng doanh thu.']]},
+    {id:'ctv_revenue_dashboard',icon:'💰',title:'Dashboard Doanh Thu CTV',tag:'Admin',desc:'Quản lý cộng tác viên, doanh thu giới thiệu, hoa hồng và bảng xếp hạng CTV.',features:[['Top CTV','Xem ai đang mang về nhiều khách nhất.'],['Hoa hồng','Theo dõi số tiền cần trả theo từng CTV.'],['Link giới thiệu','Quản lý mã và link giới thiệu riêng.']]},
+    {id:'device_id_manager',icon:'🆔',title:'Quản lý khách theo Device ID',tag:'Admin',desc:'Mỗi khách có ID máy riêng để kích hoạt gói, chống chia sẻ tài khoản và hỗ trợ nhanh.',features:[['ID thiết bị','Theo dõi gói theo từng máy khách hàng.'],['Premium realtime','Admin duyệt là tài khoản khách tự mở khóa.'],['Tra cứu hỗ trợ','Tìm khách bằng ID, Gmail hoặc SĐT.']]},
+    {id:'ticket_support_center',icon:'🎫',title:'Ticket Hỗ Trợ Khách Hàng',tag:'Admin',desc:'Chuyển tin nhắn hỗ trợ thành ticket để không bỏ sót lỗi, thanh toán hoặc yêu cầu kích hoạt.',features:[['Ticket mới','Ghi nhận yêu cầu hỗ trợ của khách.'],['Trạng thái xử lý','Mới, đang xử lý, hoàn thành.'],['Lịch sử hỗ trợ','Xem lại toàn bộ trao đổi theo ID máy.']]},
+    {id:'premium_auto_renew',icon:'🔄',title:'Gia Hạn Tự Động Premium',tag:'Premium',desc:'Nhắc khách trước 7/5/3/1 ngày, tạo QR gia hạn kèm ID máy, Gmail và SĐT.',features:[['Nhắc gia hạn','Tăng tỷ lệ khách quay lại trước khi hết hạn.'],['QR nhanh','Tự điền nội dung chuyển khoản đúng gói.'],['Cộng ngày còn lại','Gia hạn không mất số ngày đang dùng.']]},
+    {id:'saas_admin_center',icon:'🏢',title:'SaaS Admin Center',tag:'Admin',desc:'Trung tâm điều hành toàn bộ hệ thống: khách hàng, Premium, CTV, ticket, doanh thu và module.',features:[['Dashboard CEO','Tổng quan khách, doanh thu, Premium, CTV và ticket.'],['Quản trị module','Điều hướng nhanh đến các trung tâm chức năng.'],['Vận hành SaaS','Phù hợp bán gói thuê bao theo tháng/năm.']]}
+  ];
+  function qs(s,root){return (root||document).querySelector(s)}
+  function qsa(s,root){return Array.prototype.slice.call((root||document).querySelectorAll(s))}
+  function tag(t){return '<span class="mkt-dot-tag enterprise"><i></i><span>'+t+'</span></span>'}
+  function addMenu(){
+    var nav=qs('.mkt-clean-nav')||qs('.nav'); if(!nav||qs('[data-enterprise-menu="1"]',nav))return;
+    var wrap=document.createElement('div'); wrap.setAttribute('data-enterprise-menu','1');
+    wrap.innerHTML='<div class="v2-nav-title">ENTERPRISE CENTER</div>'+modules.map(function(m){return '<a class="v2-nav-link mkt-menu-new" href="#'+m.id+'" data-module="'+m.id+'"><span class="v2-nav-text">'+m.icon+' '+m.title+'</span>'+tag(m.tag)+'</a>';}).join('');
+    var systemTitle=qsa('.v2-nav-title',nav).filter(function(x){return /HỆ THỐNG/i.test(x.textContent||'')})[0];
+    if(systemTitle){nav.insertBefore(wrap, systemTitle);} else {nav.appendChild(wrap);} 
+    var old=qs('[data-module="messenger_ai"] .v2-nav-text'); if(old) old.textContent='AI Messenger Facebook';
+    var crm=qs('[data-module="crm_sales"] .v2-nav-text'); if(crm) crm.textContent='CRM Kanban';
+  }
+  function mainRoot(){return qs('main.main')||qs('.main')||document.body;}
+  function moduleHTML(m){return '<section class="module-section mkt-enterprise-module" id="'+m.id+'"><div class="section-open-note">Bạn đang mở: '+m.title+'</div><div class="enterprise-module-wrap"><h2 class="enterprise-module-title"><span>'+m.icon+'</span><span>'+m.title+'</span></h2><p class="enterprise-module-desc">'+m.desc+'</p><div class="enterprise-feature-grid">'+m.features.map(function(f){return '<div class="enterprise-feature"><b>'+f[0]+'</b><p>'+f[1]+'</p></div>';}).join('')+'</div><div class="enterprise-actions"><button onclick="openModule(\'premium\')">👑 Mở khóa Premium</button><button class="light" onclick="openModule(\'dashboard\')">← Về Dashboard</button></div></div></section>';}
+  function addModules(){var root=mainRoot(); modules.forEach(function(m){if(!document.getElementById(m.id)){root.insertAdjacentHTML('beforeend', moduleHTML(m));}});}
+  function addDashboardHub(){
+    var dash=qs('#dashboard'); if(!dash||qs('#enterpriseHubFinal'))return;
+    var html='<div class="enterprise-hub" id="enterpriseHubFinal"><div class="enterprise-hub-head"><div><h2>🏢 Enterprise SaaS Center</h2><p>Bổ sung các trung tâm vận hành cao cấp, giữ nguyên toàn bộ giao diện và chức năng hiện tại.</p></div><span class="enterprise-badge">✨ Premium Enterprise Ready</span></div><div class="enterprise-grid">'+modules.slice(0,8).map(function(m){return '<div class="enterprise-card" onclick="openModule(\''+m.id+'\')"><small>'+m.tag+'</small><div class="ec-icon">'+m.icon+'</div><b>'+m.title+'</b><span>'+m.desc+'</span></div>';}).join('')+'</div></div>';
+    dash.insertAdjacentHTML('beforeend', html);
+  }
+  var oldOpen=window.openModule;
+  window.openModule=function(id){
+    addModules();
+    if(typeof oldOpen==='function'){
+      try{oldOpen(id);}catch(e){}
+    }
+    var target=document.getElementById(id);
+    if(target){
+      qsa('.module-section').forEach(function(s){s.classList.remove('active-module');});
+      target.classList.add('active-module');
+      target.style.display='block';
+      qsa('.v2-nav-link').forEach(function(a){a.classList.remove('active')});
+      var link=qs('[data-module="'+id+'"]'); if(link) link.classList.add('active');
+      try{history.replaceState(null,'','#'+id);}catch(e){}
+      target.scrollIntoView({behavior:'smooth',block:'start'});
+      return false;
+    }
+    return false;
+  };
+  function bindMenu(){qsa('[data-module]').forEach(function(a){if(a.__entBind)return; a.__entBind=true; a.addEventListener('click',function(e){var id=a.getAttribute('data-module'); if(id){e.preventDefault(); window.openModule(id);}},true);});}
+  function init(){addMenu();addModules();addDashboardHub();bindMenu(); if(location.hash){var id=location.hash.replace('#',''); if(document.getElementById(id)) setTimeout(function(){window.openModule(id)},250);} }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
+  setTimeout(init,900);
+})();
+</script>
+
 </body>
 </html>
 """
