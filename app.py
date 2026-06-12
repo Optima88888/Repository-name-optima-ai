@@ -35,8 +35,18 @@ os.makedirs(BACKUP_DIR, exist_ok=True)
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 100 * 1024 * 1024
 app.secret_key = os.getenv("SECRET_KEY", "gptmini-change-this-secret-key")
+# Giữ phiên đăng nhập admin ổn định khi bấm Duyệt trên Render / domain HTTPS.
+app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+app.config["SESSION_COOKIE_HTTPONLY"] = True
+if os.getenv("FLASK_ENV", "production").lower() == "production":
+    app.config["SESSION_COOKIE_SECURE"] = True
 
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "GptMini@2026")
+ADMIN_ACTION_TOKEN = os.getenv("ADMIN_ACTION_TOKEN", ADMIN_PASSWORD)
+
+def admin_action_token_ok():
+    token = (request.form.get("admin_token") or request.args.get("admin_token") or request.headers.get("X-Admin-Token") or "").strip()
+    return bool(token and token == ADMIN_ACTION_TOKEN)
 
 def admin_login_html(error=""):
     err = f"<div class='err'>{error}</div>" if error else ""
@@ -69,7 +79,8 @@ def protect_admin_routes():
     if path == '/admin' and request.method == 'POST':
         return None
     if path == '/admin' or path.startswith('/admin/') or path.startswith('/api/admin'):
-        if not is_admin_logged_in():
+        # Các form admin như Duyệt Premium có thêm admin_token dự phòng để tránh mất session/cookie trên mobile/Render.
+        if not is_admin_logged_in() and not admin_action_token_ok():
             return admin_guard_response()
     return None
 
@@ -14160,6 +14171,126 @@ except Exception as _mkt_v144_install_err:
 # /HOTFIX V144
 # ============================================================
 
+
+
+
+# ============================================================
+# HOTFIX V145: Admin approve works even if session cookie drops + mobile back button
+# ============================================================
+
+def _mkt_admin_token_hidden_input():
+    try:
+        return '<input type="hidden" name="admin_token" value="' + str(ADMIN_ACTION_TOKEN).replace('"','&quot;') + '">'
+    except Exception:
+        return ''
+
+def _mkt_v145_inject_admin_tokens(html):
+    # Them token an vao form admin de bam Duyet khong bi da ve man hinh nhap mat khau.
+    try:
+        token_input = _mkt_admin_token_hidden_input()
+        html = str(html)
+        js_token = str(ADMIN_ACTION_TOKEN).replace('\\', '\\\\').replace('"', '\\"')
+        if token_input and 'admin_token' not in html:
+            html = html.replace('<form method="post" action="/admin/premium_action" style=', '<form method="post" action="/admin/premium_action" data-admin-token="1" style=')
+            html = html.replace('<form method="post" action="/admin/premium_action">', '<form method="post" action="/admin/premium_action" data-admin-token="1">')
+            html = html.replace('<form method="post" action="/admin/subscription_action" style=', '<form method="post" action="/admin/subscription_action" data-admin-token="1" style=')
+            html = html.replace('<form method="post" action="/admin/support_reply" style=', '<form method="post" action="/admin/support_reply" data-admin-token="1" style=')
+            html = html.replace('data-admin-token="1">', 'data-admin-token="1">' + token_input)
+        js = """
+<script id="mkt-v145-admin-token-js">
+(function(){
+  var token = "__TOKEN__";
+  function addToken(){
+    document.querySelectorAll('form[action^="/admin/"]').forEach(function(f){
+      if(!f.querySelector('input[name="admin_token"]')){
+        var i=document.createElement('input');
+        i.type='hidden'; i.name='admin_token'; i.value=token; f.appendChild(i);
+      }
+    });
+  }
+  addToken(); document.addEventListener('submit', addToken, true);
+})();
+</script>
+""".replace('__TOKEN__', js_token)
+        if 'mkt-v145-admin-token-js' not in html:
+            return html.replace('</body>', js + '</body>') if '</body>' in html else html + js
+        return html
+    except Exception:
+        return html
+
+try:
+    _mkt_old_enterprise_admin_html_v145 = _mkt_enterprise_admin_html
+    def _mkt_enterprise_admin_html(*args, **kwargs):
+        return _mkt_v145_inject_admin_tokens(_mkt_old_enterprise_admin_html_v145(*args, **kwargs))
+except Exception as _e:
+    print('V145 wrap enterprise admin skipped:', _e)
+
+try:
+    _mkt_old_render_admin_html_enterprise_v145 = _render_admin_html_enterprise
+    def _render_admin_html_enterprise(*args, **kwargs):
+        return _mkt_v145_inject_admin_tokens(_mkt_old_render_admin_html_enterprise_v145(*args, **kwargs))
+except Exception as _e:
+    print('V145 wrap render admin skipped:', _e)
+
+def _mkt_v145_admin_premium_action():
+    if not is_admin_logged_in() and not admin_action_token_ok():
+        return admin_login_html('Phiên admin đã hết hạn, vui lòng đăng nhập lại.'), 401
+    try:
+        ensure_admin_safe_schema()
+        if request.method == 'POST':
+            ok = _mkt_v144_approve_premium_request(request.form.get('request_id'), request.form.get('status', 'Đã duyệt'))
+            if not ok:
+                return _mkt_enterprise_admin_html('Không tìm thấy yêu cầu Premium cần duyệt.'), 200
+    except Exception as e:
+        print('V145 admin premium action error:', e)
+        return _mkt_enterprise_admin_html(e), 200
+    return _mkt_enterprise_admin_html(), 200
+
+try:
+    app.view_functions['admin_premium_action'] = _mkt_v145_admin_premium_action
+except Exception as _e:
+    print('V145 admin action override skipped:', _e)
+
+_MKT_V145_MOBILE_BACK_PATCH = """
+<style id="mkt-v145-mobile-back-css">
+@media(max-width:768px){
+  #mktMobileBackBtnV145{position:fixed;left:14px;bottom:88px;z-index:2147483000;border:0;border-radius:999px;padding:11px 15px;background:linear-gradient(135deg,#0f172a,#4f46e5);color:#fff;font-weight:1000;box-shadow:0 14px 35px rgba(15,23,42,.35);display:none;align-items:center;gap:7px;font-size:14px}
+  body.mkt-show-mobile-back #mktMobileBackBtnV145{display:flex!important}
+}
+@media(min-width:769px){#mktMobileBackBtnV145{display:none!important}}
+</style>
+<button id="mktMobileBackBtnV145" type="button">← Trở lại</button>
+<script id="mkt-v145-mobile-back-js">
+(function(){
+  function currentModule(){return (location.hash||'').replace('#','') || 'dashboard';}
+  function updateBack(){
+    var m=currentModule();
+    var should=window.innerWidth<=768 && m && !/^(dashboard|home)$/i.test(m);
+    document.body.classList.toggle('mkt-show-mobile-back', !!should);
+  }
+  function goBack(){
+    if(window.openModule){ try{ window.openModule('dashboard'); }catch(e){} }
+    location.hash='dashboard';
+    setTimeout(updateBack,80);
+  }
+  document.addEventListener('DOMContentLoaded',function(){
+    var btn=document.getElementById('mktMobileBackBtnV145');
+    if(btn) btn.addEventListener('click',goBack);
+    document.addEventListener('click',function(e){
+      var a=e.target.closest && e.target.closest('[data-module],.v2-nav-link,a[href^="#"]');
+      if(a) setTimeout(updateBack,120);
+    },true);
+    updateBack();
+  });
+  window.addEventListener('hashchange',updateBack);
+  window.addEventListener('resize',updateBack);
+})();
+</script>
+"""
+try:
+    HTML = HTML.replace('</body>', _MKT_V145_MOBILE_BACK_PATCH + '</body>') if '</body>' in HTML else HTML + _MKT_V145_MOBILE_BACK_PATCH
+except Exception as _e:
+    print('V145 mobile back patch skipped:', _e)
 
 if __name__ == "__main__":
     # Không tự tạo kho 50k content khi khởi động để tránh lỗi SQLite database is locked trên Render.
