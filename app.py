@@ -12412,7 +12412,7 @@ body{background:linear-gradient(135deg,#f8fafc,#eef2ff)!important}
   #mktLivePremiumBar{
     position:fixed;top:18px;left:50%;transform:translateX(-50%);z-index:999999;
     min-width:min(560px,calc(100vw - 28px));max-width:calc(100vw - 28px);
-    display:flex;align-items:center;justify-content:center;gap:10px;
+    display:flex;align-items:center;justify-content:flex-start;gap:10px;overflow:hidden;
     padding:11px 18px;border-radius:999px;
     background:rgba(255,255,255,.96);color:#172554;border:1px solid rgba(99,102,241,.22);
     box-shadow:0 18px 50px rgba(2,6,23,.20), inset 0 1px 0 rgba(255,255,255,.9);
@@ -12420,7 +12420,10 @@ body{background:linear-gradient(135deg,#f8fafc,#eef2ff)!important}
   }
   #mktLivePremiumBar .mkt-live-dot{width:18px;height:18px;border-radius:999px;background:#22c55e;box-shadow:0 0 0 8px rgba(34,197,94,.12),0 0 18px rgba(34,197,94,.65);flex:0 0 auto;position:relative}
   #mktLivePremiumBar .mkt-live-dot:after{content:'';position:absolute;inset:4px;border-radius:inherit;background:#bbf7d0}
-  #mktLivePremiumText{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:15px;animation:mktLiveFade .28s ease-out}
+  #mktLivePremiumBar .mkt-live-viewport{overflow:hidden;flex:1;min-width:0}
+  #mktLivePremiumText{white-space:nowrap;font-size:15px;display:flex;gap:32px;width:max-content;will-change:transform}
+  #mktLivePremiumText span{display:inline-flex;align-items:center;flex:0 0 auto}
+  @keyframes mktTickerMove{from{transform:translateX(0)}to{transform:translateX(-50%)}}
   @keyframes mktLiveFade{from{opacity:.2;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
   .mkt-enterprise-hover-card,.feature-card,.dashboard-card,.module-card,.v2-card,.tool-card{
     transition:transform .22s ease,box-shadow .22s ease,border-color .22s ease!important;
@@ -12455,13 +12458,54 @@ body{background:linear-gradient(135deg,#f8fafc,#eef2ff)!important}
   function money(n){try{return Number(n||0).toLocaleString('vi-VN')+'đ'}catch(e){return '0đ'}}
   var first=['Minh','Hoàng','Bảo','Tuấn','Khánh','Gia','Thanh','Ngọc','Quang','Đức','Hữu','Anh','Long','Phúc','Nam','Duy','Khang','Huy','Thành','Trung','Việt','Phương','Thảo','Linh','Trang','Mai','Hà','Vy','Yến','Nhung','Tâm','An'];
   var last=['N***','M***','T***','A***','V***','H***','K***','P***','L***','D***','B***','Q***'];
-  var actions=['vừa nâng cấp Gói 1 năm','vừa kích hoạt Seller Pro','vừa mở khóa Omni Channel','vừa gia hạn Gói 6 tháng','vừa nâng cấp Premium Forever','vừa mở khóa AI Messenger','vừa kết nối đa kênh bán hàng','vừa kích hoạt CRM Kanban'];
-  var icons=['🎉','🔥','🚀','👑','⭐','💎'];
+  var premiumActions=['vừa nâng cấp Gói 1 tháng','vừa nâng cấp Gói 3 tháng','vừa nâng cấp Gói 6 tháng','vừa nâng cấp Gói 1 năm','vừa kích hoạt Seller Pro','vừa mở khóa Omni Channel','vừa gia hạn Premium','vừa kích hoạt Premium Forever','vừa mở khóa AI Messenger','vừa kích hoạt CRM Kanban'];
+  var ctvActions=[
+    'vừa giới thiệu khách hàng mới','vừa tạo link giới thiệu','vừa có đơn hàng thành công','vừa được duyệt tài khoản',
+    'vừa kích hoạt chương trình CTV','giới thiệu thành công Premium 1 năm','vừa nhận thanh toán hoa hồng',
+    'đạt cấp độ CTV Bạc','đạt cấp độ CTV Vàng','vừa cập nhật thông tin nhận thưởng','vừa tạo chiến dịch giới thiệu mới',
+    'nhận thưởng giới thiệu khách hàng','vừa có khách nâng cấp Seller Pro','hoàn thành mục tiêu tháng',
+    'vừa nhận thưởng doanh số tuần','vừa đạt mốc 10 khách hàng','vừa đạt mốc 20 khách hàng','vừa tham gia hệ thống CTV'
+  ];
+  var aiActions=['AI vừa tạo 20 content mới','AI vừa gợi ý kịch bản chốt sale','AI Messenger vừa xử lý hội thoại','Hệ thống vừa lên lịch 35 bài đăng','AI Comment vừa phân loại khách hàng','CRM vừa ghi nhận khách hàng mới','Omni Channel vừa hoàn tất chiến dịch','Fanpage mới được kết nối thành công','Token Fanpage vừa cập nhật','Telegram Support đang trực tuyến'];
+  var cities=['Hà Nội','TP.HCM','Đà Nẵng','Cần Thơ','Bình Dương','Đồng Nai','Hải Phòng','Nha Trang'];
+  var icons=['🟢','👑','💎','🤝','📈','💬','🚀','🔥','📣','🤖'];
   var used=[];
   function pick(arr){return arr[Math.floor(Math.random()*arr.length)]}
-  function randomName(){var n=pick(first)+' '+pick(last);var guard=0;while(used.indexOf(n)>-1&&guard++<10){n=pick(first)+' '+pick(last)}used.push(n);if(used.length>18)used.shift();return n}
-  function ensureLiveBar(){var el=q('#mktLivePremiumBar');if(!el){el=document.createElement('div');el.id='mktLivePremiumBar';el.innerHTML='<span class="mkt-live-dot"></span><span id="mktLivePremiumText">👥 827 khách hàng đang sử dụng Premium</span>';document.body.appendChild(el)}return el}
-  function rotateLive(){ensureLiveBar();var txt=q('#mktLivePremiumText');if(!txt)return;var total=Number(localStorage.getItem('mkt_premium_total')||827);if(Math.random()>.78){txt.textContent='👥 '+total.toLocaleString('vi-VN')+' khách hàng đang sử dụng Premium'}else{txt.textContent=pick(icons)+' '+randomName()+' '+pick(actions)}txt.style.animation='none';void txt.offsetWidth;txt.style.animation='mktLiveFade .28s ease-out'}
+  function randomName(){var n=pick(first)+' '+pick(last);var guard=0;while(used.indexOf(n)>-1&&guard++<10){n=pick(first)+' '+pick(last)}used.push(n);if(used.length>30)used.shift();return n}
+  function randId(){return String(Math.floor(50+Math.random()*285)).padStart(3,'0')}
+  function randMoney(){return pick(['289.000đ','529.000đ','859.000đ','1.589.000đ','2.589.000đ'])}
+  function liveItem(){
+    var type=Math.floor(Math.random()*6);
+    if(type===0) return pick(['👑','💎','🟢'])+' '+randomName()+' '+pick(premiumActions);
+    if(type===1) return '🤝 CTV #'+randId()+' '+pick(ctvActions)+(Math.random()>.58?' '+randMoney():'');
+    if(type===2) return '📍 Khách hàng tại '+pick(cities)+' vừa kích hoạt Premium';
+    if(type===3) return pick(['📈','💬','🤖','📣'])+' '+pick(aiActions);
+    if(type===4) return '🔥 Hệ thống đã tiết kiệm '+pick(['42','57','63','78'])+' giờ làm việc tháng này';
+    return pick(['🟢 Khách hàng mới đăng ký tài khoản','🚀 Premium Seller Pro vừa được kích hoạt','📊 CRM đang quản lý thêm khách hàng mới','🌐 Đăng đa kênh vừa hoàn tất']);
+  }
+  function ensureLiveBar(){
+    var el=q('#mktLivePremiumBar');
+    if(!el){
+      el=document.createElement('div');
+      el.id='mktLivePremiumBar';
+      el.innerHTML='<span class="mkt-live-dot"></span><div class="mkt-live-viewport"><div id="mktLivePremiumText" class="mkt-live-track"></div></div>';
+      document.body.appendChild(el);
+    }else if(!q('.mkt-live-viewport',el)){
+      el.innerHTML='<span class="mkt-live-dot"></span><div class="mkt-live-viewport"><div id="mktLivePremiumText" class="mkt-live-track"></div></div>';
+    }
+    return el;
+  }
+  function rotateLive(){
+    ensureLiveBar();
+    var txt=q('#mktLivePremiumText');
+    if(!txt)return;
+    var items=[];
+    for(var i=0;i<34;i++){items.push('<span>'+liveItem()+'</span>')}
+    txt.innerHTML=items.join('');
+    txt.style.animation='none';
+    void txt.offsetWidth;
+    txt.style.animation='mktTickerMove 46s linear infinite';
+  }
   function enhancePremiumCompact(){
     var host=q('#sidebarDeviceId')||q('[id*="DeviceId"]')||q('.device-id-box'); if(!host)return;
     var box=q('#mktPremiumCompactUpgrade'); if(!box){box=document.createElement('div');box.id='mktPremiumCompactUpgrade';box.className='mkt-premium-compact-upgrade';host.parentNode.insertBefore(box,host.nextSibling)}
@@ -12507,7 +12551,7 @@ body{background:linear-gradient(135deg,#f8fafc,#eef2ff)!important}
     }
   }
   function insertCEOHint(){var dash=q('#dashboard'); if(!dash||q('#mktDashboardCeoStrip'))return;var title=dash.querySelector('h1,h2,.hero-title');var wrap=document.createElement('div');wrap.id='mktDashboardCeoStrip';wrap.className='mkt-dashboard-ceo-strip';wrap.innerHTML='<div class="ceo-mini"><span>Tổng bài</span><b>Realtime</b></div><div class="ceo-mini"><span>Premium</span><b>Active</b></div><div class="ceo-mini"><span>Omni Channel</span><b>Đa kênh</b></div><div class="ceo-mini"><span>CTV</span><b>Hoa hồng</b></div><div class="ceo-mini"><span>AI Suite</span><b>Enterprise</b></div>'; if(title&&title.parentNode)title.parentNode.insertBefore(wrap,title.nextSibling);}
-  function boot(){ensureLiveBar();rotateLive();setInterval(rotateLive,6500);enhancePremiumCompact();setInterval(enhancePremiumCompact,5000);ensureBell();insertCEOHint();}
+  function boot(){ensureLiveBar();rotateLive();setInterval(rotateLive,46000);enhancePremiumCompact();setInterval(enhancePremiumCompact,5000);ensureBell();insertCEOHint();}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();
 })();
 </script>
