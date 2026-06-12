@@ -1,4 +1,4 @@
-from flask import Flask, request, render_template_string, jsonify, send_file, session
+from flask import Flask, request, render_template_string, jsonify, send_file, session, redirect
 from dotenv import load_dotenv
 import google.generativeai as genai
 from werkzeug.utils import secure_filename
@@ -13272,20 +13272,18 @@ def api_admin_affiliate_withdraw_action(withdraw_id):
 
 @app.route('/ctv/<slug>')
 def affiliate_pretty_link(slug):
+    # Link CTV đẹp dùng cho mobile: mở trang khách và tự nhảy vào CTV Center.
+    # Không đổi cấu trúc menu/cài đặt hiện tại, chỉ giúp /ctv/<slug> hoạt động rõ ràng hơn.
     ensure_affiliate_tables()
     slug = (slug or '').strip().lower()
     conn = db(); c = conn.cursor()
     c.execute('SELECT affiliate_code FROM affiliate_users WHERE lower(custom_slug)=? OR lower(replace(affiliate_code,"-",""))=? LIMIT 1', (slug, slug))
     row = c.fetchone(); conn.close()
     code = row[0] if row else ''
-    resp = home()
     if code:
         record_affiliate_click(code)
-        try:
-            resp.set_cookie('affiliate_code', code, max_age=60*60*24*90)
-        except Exception:
-            pass
-    return resp
+        return redirect('/?ref=' + str(code) + '#affiliate_center')
+    return redirect('/#affiliate_center')
 
 
 
@@ -15712,6 +15710,145 @@ def admin_telegram_admin_help_route():
         'set_webhook': (request.url_root or '').rstrip('/').replace('http://','https://',1) + '/telegram/set_webhook?secret=' + os.getenv('TELEGRAM_WEBHOOK_SECRET',''),
         'commands': ['/cho','/duyet 123','/tuchoi 123','/reply MKT-ABC nội dung','/ngay MKT-ABC','/hethan 5','/ctv CTV-123456']
     })
+
+
+# ============================================================
+# CTV MOBILE DIRECT OPEN + REGISTER BUTTON FIX
+# Giữ nguyên cấu trúc menu/cài đặt hiện tại.
+# Chỉ vá lỗi: link CTV / nút CTV trên điện thoại / nút Tạo link CTV.
+# ============================================================
+@app.after_request
+def _mkt_ctv_mobile_register_fix(response):
+    try:
+        ctype = response.headers.get('Content-Type', '')
+        if 'text/html' not in ctype.lower():
+            return response
+        html = response.get_data(as_text=True)
+        if not html or 'affiliateCenterSection' not in html or 'ctv-mobile-direct-fix-js' in html:
+            return response
+        inject = """
+<style id="ctv-mobile-direct-fix-style">
+  #mobileCtvQuickBtn{z-index:2147483646!important;pointer-events:auto!important;touch-action:manipulation!important}
+  [data-aff-menu="1"],a[href="#affiliate_center"]{pointer-events:auto!important;touch-action:manipulation!important}
+  #affiliateCenterSection.ctv-mobile-open{display:block!important;visibility:visible!important;opacity:1!important}
+  @media(max-width:760px){
+    #mobileCtvQuickBtn{left:12px!important;bottom:84px!important;display:flex!important}
+    #affiliateCenterSection .aff-btn{min-height:44px!important}
+  }
+</style>
+<script id="ctv-mobile-direct-fix-js">
+(function(){
+  'use strict';
+  function qs(s){return document.querySelector(s)}
+  function qsa(s){return Array.prototype.slice.call(document.querySelectorAll(s))}
+  function toast(msg){
+    var t=document.getElementById('affToast');
+    if(!t){t=document.createElement('div');t.id='affToast';t.className='aff-toast';document.body.appendChild(t)}
+    t.textContent=msg;t.style.display='block';setTimeout(function(){t.style.display='none'},2600);
+  }
+  function hideOtherSections(){
+    qsa('main > section, main > div.module, main > div.card, main > div.app-module-section,.module-section,.content-section').forEach(function(el){
+      if(el && el.id!=='affiliateCenterSection' && el.id!=='affiliateAdminSection') el.style.display='none';
+    });
+  }
+  function loadAffiliate(){
+    if(typeof window.affiliateLoadMe==='function'){
+      try{window.affiliateLoadMe()}catch(e){}
+    }
+  }
+  function openCTV(e){
+    if(e){e.preventDefault();e.stopPropagation();if(e.stopImmediatePropagation)e.stopImmediatePropagation();}
+    var sec=qs('#affiliateCenterSection');
+    if(!sec){toast('Chưa tìm thấy khung CTV trong trang.');return false;}
+    hideOtherSections();
+    sec.style.display='block';
+    sec.classList.add('ctv-active','ctv-mobile-open');
+    loadAffiliate();
+    try{history.replaceState(null,'','#affiliate_center')}catch(_e){}
+    setTimeout(function(){try{sec.scrollIntoView({behavior:'smooth',block:'start'})}catch(_e){window.scrollTo(0,0)}},80);
+    return false;
+  }
+  window.openAffiliateCenter=openCTV;
+  var oldOpen=window.openModule;
+  window.openModule=function(name){
+    if(name==='affiliate_center') return openCTV();
+    if(name==='affiliate_admin') return false;
+    if(typeof oldOpen==='function') return oldOpen.apply(this,arguments);
+    return true;
+  };
+  function bindOpeners(){
+    qsa('#mobileCtvQuickBtn,[data-aff-menu="1"],a[href="#affiliate_center"],[onclick*="affiliate_center"]').forEach(function(el){
+      if(!el || el.__ctvBound) return;
+      el.__ctvBound=true;
+      el.style.pointerEvents='auto';
+      el.addEventListener('click',openCTV,true);
+      el.addEventListener('touchstart',function(ev){openCTV(ev)}, {capture:true,passive:false});
+    });
+    var btn=qs('#mobileCtvQuickBtn');
+    if(btn){btn.type='button';btn.style.display='flex';}
+  }
+  window.affiliateSaveProfile=function(){
+    var name=(qs('#affName')&&qs('#affName').value||'').trim();
+    var phone=(qs('#affPhone')&&qs('#affPhone').value||'').trim();
+    var email=(qs('#affEmail')&&qs('#affEmail').value||'').trim();
+    fetch('/api/affiliate/me',{
+      method:'POST',
+      credentials:'same-origin',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({full_name:name,phone:phone,email:email})
+    }).then(function(r){return r.json()}).then(function(d){
+      if(!d || !d.ok){toast((d&&d.message)||'Không tạo được link CTV.');return;}
+      if(qs('#affName')) qs('#affName').value=d.full_name||name;
+      if(qs('#affPhone')) qs('#affPhone').value=d.phone||phone;
+      if(qs('#affEmail')) qs('#affEmail').value=d.email||email;
+      if(qs('#affCode')) qs('#affCode').textContent=d.affiliate_code||'---';
+      if(qs('#affLevel')) qs('#affLevel').textContent=d.level_name||'CTV thường';
+      if(qs('#affPercent')) qs('#affPercent').textContent=d.commission_percent||20;
+      if(qs('#affRefLink')) qs('#affRefLink').value=d.pretty_link||d.ref_link||'';
+      toast('Đã tạo link CTV. Bấm Sao chép để gửi khách.');
+      loadAffiliate();
+    }).catch(function(){
+      toast('Mạng chậm hoặc trình duyệt chặn. Vui lòng bấm lại Tạo link CTV.');
+    });
+    return false;
+  };
+  function bindRegister(){
+    qsa('button').forEach(function(b){
+      var tx=(b.innerText||b.textContent||'').trim();
+      if(/Tạo link CTV miễn phí|Đăng ký CTV|Đăng kí CTV/i.test(tx)){
+        b.type='button';
+        b.onclick=function(e){e.preventDefault();e.stopPropagation();return window.affiliateSaveProfile();};
+        if(!b.__ctvRegTouch){
+          b.__ctvRegTouch=true;
+          b.addEventListener('touchstart',function(e){e.preventDefault(); return window.affiliateSaveProfile();},{passive:false});
+        }
+      }
+    });
+  }
+  function init(){
+    bindOpeners();bindRegister();
+    var url=new URL(location.href);
+    var ref=(url.searchParams.get('ref')||'').trim();
+    if(ref){try{document.cookie='affiliate_code='+encodeURIComponent(ref.toUpperCase())+';path=/;max-age='+(60*60*24*90)+';SameSite=Lax'}catch(e){}}
+    if(location.hash==='#affiliate_center' || /^\/ctv\//i.test(location.pathname)){setTimeout(openCTV,250);}
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
+  setTimeout(init,700);setTimeout(init,1800);setTimeout(init,3500);
+})();
+</script>
+"""
+        if '</body>' in html:
+            html = html.replace('</body>', inject + '</body>', 1)
+        else:
+            html += inject
+        response.set_data(html)
+        response.headers['Content-Length'] = str(len(response.get_data()))
+    except Exception as e:
+        try:
+            print('CTV mobile register fix skipped:', e)
+        except Exception:
+            pass
+    return response
 
 
 if __name__ == "__main__":
