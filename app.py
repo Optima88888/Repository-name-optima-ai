@@ -15409,14 +15409,25 @@ def telegram_set_webhook_route():
     secret = os.getenv('TELEGRAM_WEBHOOK_SECRET', '').strip()
     if secret and (request.args.get('secret') or '') != secret:
         return jsonify({'ok': False, 'message': 'Sai secret'}), 403
+
     token = os.getenv('TELEGRAM_BOT_TOKEN', '').strip()
     if not token:
         return jsonify({'ok': False, 'message': 'Thiếu TELEGRAM_BOT_TOKEN'}), 400
-  base = (request.url_root or '').rstrip('/')
-base = base.replace('http://', 'https://')
-url = base + '/telegram/webhook'
-    res = _mkt_v160_tg_api('setWebhook', {'url': url, 'drop_pending_updates': False})
-    return jsonify({'ok': True, 'webhook_url': url, 'telegram_response': res})
+
+    base = (request.url_root or '').rstrip('/')
+    base = base.replace('http://', 'https://')
+    url = base + '/telegram/webhook'
+
+    res = _mkt_v160_tg_api('setWebhook', {
+        'url': url,
+        'drop_pending_updates': False
+    })
+
+    return jsonify({
+        'ok': True,
+        'webhook_url': url,
+        'telegram_response': res
+    })
 
 
 @app.route('/telegram/help')
