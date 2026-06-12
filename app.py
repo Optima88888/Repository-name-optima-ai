@@ -16000,6 +16000,136 @@ def _mkt_ctv_mobile_register_fix(response):
     return response
 
 
+
+# ============================================================
+# V169 LIVE TICKER MARQUEE THẬT + RIGHTBAR PRO SOCIAL PROOF
+# Chỉ sửa: thanh hoạt động trên đầu + khối Hoạt động hôm nay bên phải.
+# Không đụng menu trái, cấu trúc module, route/API cũ.
+# ============================================================
+_MKT_V169_LIVE_TICKER_RIGHTBAR_PRO = r"""
+<!-- MKT V169 LIVE TICKER + RIGHTBAR PRO -->
+<style id="mkt-v169-live-ticker-rightbar-pro-css">
+  #mktLivePremiumBarV2,#mktLivePremiumBarHard,#mktLivePremiumBar,#mktLiveTickerV168{display:none!important;visibility:hidden!important;opacity:0!important;pointer-events:none!important;}
+  #mktLiveTickerV169{
+    position:fixed!important;top:10px!important;left:50%!important;transform:translateX(-50%)!important;z-index:2147483647!important;
+    width:min(1160px,calc(100vw - 42px))!important;height:54px!important;border-radius:18px!important;overflow:hidden!important;
+    display:flex!important;align-items:center!important;background:linear-gradient(135deg,rgba(2,6,23,.92),rgba(15,23,42,.88),rgba(30,27,75,.86))!important;
+    border:1px solid rgba(125,211,252,.22)!important;box-shadow:0 18px 55px rgba(2,6,23,.42), inset 0 1px 0 rgba(255,255,255,.08)!important;
+    backdrop-filter:blur(18px)!important;color:#fff!important;font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif!important;
+  }
+  #mktLiveTickerV169:before{content:"";position:absolute;inset:0;background:radial-gradient(circle at 12% 50%,rgba(34,197,94,.22),transparent 30%),radial-gradient(circle at 75% 50%,rgba(168,85,247,.18),transparent 32%);pointer-events:none!important;}
+  #mktLiveTickerV169 .mkt-v169-live-badge{position:relative;z-index:2;display:flex!important;align-items:center!important;gap:8px!important;height:100%!important;padding:0 20px!important;color:#86efac!important;font-weight:1000!important;font-size:13px!important;letter-spacing:.06em!important;border-right:1px solid rgba(255,255,255,.12)!important;flex:0 0 auto!important;}
+  #mktLiveTickerV169 .mkt-v169-live-badge i{width:10px!important;height:10px!important;border-radius:999px!important;background:#22c55e!important;box-shadow:0 0 0 7px rgba(34,197,94,.12),0 0 20px rgba(34,197,94,.7)!important;}
+  #mktLiveTickerV169 .mkt-v169-window{position:relative;z-index:2;overflow:hidden!important;white-space:nowrap!important;flex:1!important;height:100%!important;display:flex!important;align-items:center!important;min-width:0!important;}
+  #mktLiveTickerTrackV169{display:inline-flex!important;align-items:center!important;gap:0!important;white-space:nowrap!important;will-change:transform!important;animation:mktTickerMoveV169 80s linear infinite!important;}
+  #mktLiveTickerTrackV169 span{display:inline-flex!important;align-items:center!important;gap:9px!important;padding:0 30px!important;height:30px!important;border-right:1px solid rgba(255,255,255,.14)!important;color:#f8fafc!important;text-shadow:0 1px 10px rgba(0,0,0,.25)!important;font-size:15px!important;font-weight:900!important;line-height:1!important;flex:0 0 auto!important;}
+  #mktLiveTickerTrackV169 em{font-style:normal!important;color:#67e8f9!important;font-weight:1000!important;}
+  #mktLiveTickerV169:hover #mktLiveTickerTrackV169{animation-play-state:paused!important;}
+  @keyframes mktTickerMoveV169{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+
+  .rightbar{background:linear-gradient(180deg,rgba(2,6,23,.98),rgba(15,23,42,.98))!important;border-left:1px solid rgba(148,163,184,.18)!important;box-shadow:inset 1px 0 0 rgba(255,255,255,.04)!important;}
+  .rightbar h2{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:12px!important;color:#38bdf8!important;text-shadow:0 0 22px rgba(56,189,248,.35)!important;letter-spacing:.01em!important;margin-bottom:16px!important;}
+  .rightbar h2:after{content:"LIVE";font-size:11px!important;font-weight:1000!important;color:#67e8f9!important;background:rgba(8,145,178,.18)!important;border:1px solid rgba(103,232,249,.34)!important;border-radius:999px!important;padding:5px 10px!important;box-shadow:0 0 18px rgba(34,211,238,.20)!important;}
+  .rightbar .activity-card.mkt-v169-pro-card{
+    position:relative!important;overflow:hidden!important;min-height:96px!important;padding:18px 18px 16px 86px!important;margin-bottom:14px!important;border-radius:20px!important;
+    border:1px solid rgba(125,211,252,.18)!important;box-shadow:0 18px 38px rgba(2,6,23,.34), inset 0 1px 0 rgba(255,255,255,.08)!important;
+    background:linear-gradient(135deg,rgba(15,23,42,.98),rgba(30,41,59,.90))!important;backdrop-filter:blur(14px)!important;
+  }
+  .rightbar .activity-card.mkt-v169-pro-card:nth-of-type(1){background:linear-gradient(135deg,rgba(14,116,144,.76),rgba(30,64,175,.75),rgba(15,23,42,.96))!important;}
+  .rightbar .activity-card.mkt-v169-pro-card:nth-of-type(2){background:linear-gradient(135deg,rgba(88,28,135,.82),rgba(76,29,149,.72),rgba(15,23,42,.96))!important;}
+  .rightbar .activity-card.mkt-v169-pro-card:nth-of-type(3){background:linear-gradient(135deg,rgba(146,64,14,.76),rgba(67,20,7,.65),rgba(15,23,42,.96))!important;}
+  .rightbar .activity-card.mkt-v169-pro-card:nth-of-type(4){background:linear-gradient(135deg,rgba(21,128,61,.78),rgba(20,83,45,.65),rgba(15,23,42,.96))!important;}
+  .rightbar .activity-card.mkt-v169-pro-card:nth-of-type(5){background:linear-gradient(135deg,rgba(29,78,216,.76),rgba(30,64,175,.62),rgba(15,23,42,.96))!important;}
+  .rightbar .activity-card.mkt-v169-pro-card:before{content:attr(data-icon);position:absolute;left:20px;top:22px;width:48px;height:48px;border-radius:18px;display:flex;align-items:center;justify-content:center;font-size:28px;background:rgba(255,255,255,.12);box-shadow:0 0 28px rgba(125,211,252,.20),inset 0 1px 0 rgba(255,255,255,.1);}
+  .rightbar .activity-card.mkt-v169-pro-card:after{content:"";position:absolute;right:14px;bottom:12px;width:105px;height:45px;opacity:.55;background:linear-gradient(135deg,transparent 0 18%,rgba(103,232,249,.42) 19% 22%,transparent 23% 40%,rgba(103,232,249,.50) 41% 45%,transparent 46% 63%,rgba(103,232,249,.60) 64% 68%,transparent 69%);clip-path:polygon(0 80%,18% 64%,34% 70%,50% 45%,67% 52%,83% 25%,100% 10%,100% 100%,0 100%);pointer-events:none;}
+  .rightbar .activity-card.mkt-v169-pro-card span{display:block!important;color:#e2e8f0!important;font-size:15px!important;font-weight:900!important;margin-bottom:8px!important;max-width:160px!important;}
+  .rightbar .activity-card.mkt-v169-pro-card b{display:inline-block!important;color:#fff!important;font-size:32px!important;line-height:1!important;font-weight:1000!important;letter-spacing:-.04em!important;text-shadow:0 0 20px rgba(255,255,255,.15)!important;transition:transform .25s ease,filter .25s ease!important;}
+  .rightbar .activity-card.mkt-v169-pro-card .mkt-v169-delta{display:inline-flex!important;align-items:center!important;margin-left:10px!important;color:#4ade80!important;font-size:14px!important;font-weight:1000!important;}
+  .rightbar .activity-card.mkt-v169-pro-card .mkt-v169-sub{display:block!important;margin-top:8px!important;color:#cbd5e1!important;font-size:12px!important;font-weight:800!important;opacity:.82!important;}
+  .rightbar .activity-card.mkt-v169-pro-card.mkt-count-pop b{transform:scale(1.14)!important;filter:drop-shadow(0 0 16px rgba(103,232,249,.75))!important;}
+  @media(max-width:900px){#mktLiveTickerV169{top:8px!important;width:calc(100vw - 18px)!important;height:48px!important;border-radius:15px!important}.mkt-v169-live-badge{padding:0 12px!important;font-size:11px!important}#mktLiveTickerTrackV169{animation-duration:62s!important}#mktLiveTickerTrackV169 span{font-size:12px!important;padding:0 20px!important}}
+</style>
+<script id="mkt-v169-live-ticker-rightbar-pro-js">
+(function(){
+  if(window.__MKT_V169_LIVE_TICKER_RIGHTBAR_PRO__) return;
+  window.__MKT_V169_LIVE_TICKER_RIGHTBAR_PRO__=true;
+  function q(s,r){return (r||document).querySelector(s)}
+  function qa(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s))}
+  function pick(a){return a[Math.floor(Math.random()*a.length)]}
+  function formatNum(n){return String(n).replace(/\B(?=(\d{3})+(?!\d))/g,'.')}
+  var names=['Nguyễn V***','Trần H***','Lê M***','Phạm T***','Hoàng K***','Bùi A***','Đặng N***','Võ Q***','Huỳnh L***','Minh K***','Thanh P***','Quốc D***','Anh T***','Bảo N***','Khánh H***','Tuấn L***','Hải P***','Thành N***'];
+  var plans=['Gói 1 tháng','Gói 3 tháng','Gói 6 tháng','Gói 1 năm','Seller Pro','Premium AI Seller'];
+  var ctv=['CTV #128 nhận hoa hồng <em>289.000đ</em>','CTV #095 vừa có đơn thành công','CTV #217 đạt mốc 10 khách hàng','CTV #084 vừa tạo link giới thiệu','CTV #156 nhận thưởng doanh số tháng','CTV #203 vừa được duyệt tài khoản','CTV #142 giới thiệu thành công Premium 1 năm','CTV #088 vừa nhận thanh toán hoa hồng','CTV #261 đạt cấp độ Bạc','CTV #074 đạt cấp độ Vàng','CTV #286 vừa có khách nâng cấp Seller Pro','CTV #101 hoàn thành mục tiêu tháng','CTV #233 nhận thưởng <em>529.000đ</em>','CTV #165 đạt doanh số nổi bật tuần này','CTV #308 vừa tham gia hệ thống CTV'];
+  function buildTickerItems(){
+    var arr=[];
+    for(var i=0;i<24;i++) arr.push('👑 '+pick(names)+' vừa nâng cấp '+pick(plans));
+    for(var j=0;j<22;j++) arr.push('🤝 '+pick(ctv));
+    arr=arr.concat(['📈 AI vừa tạo <em>20 content</em> mới','💬 Khách hàng mới được lưu vào CRM','📣 Fanpage Spa H*** vừa được kết nối','⚡ Hệ thống vừa lên lịch <em>35 bài đăng</em>','🤖 AI Messenger vừa xử lý hội thoại','🌐 Omni Channel vừa hoàn tất chiến dịch','⭐ Token Fanpage cập nhật thành công','🔥 Đã tiết kiệm <em>57 giờ</em> làm việc tháng này','🔵 Khách hàng mới từ Hà Nội đăng ký','🟢 Telegram Support đang trực tuyến']);
+    arr.sort(function(){return Math.random()-.5}); return arr;
+  }
+  function ensureTicker(){
+    qa('#mktLivePremiumBarV2,#mktLivePremiumBarHard,#mktLivePremiumBar,#mktLiveTickerV168').forEach(function(el){el.style.display='none';el.style.visibility='hidden';});
+    var bar=q('#mktLiveTickerV169');
+    if(!bar){bar=document.createElement('div');bar.id='mktLiveTickerV169';bar.innerHTML='<div class="mkt-v169-live-badge"><i></i> LIVE</div><div class="mkt-v169-window"><div id="mktLiveTickerTrackV169"></div></div>';document.body.appendChild(bar);}
+    var track=q('#mktLiveTickerTrackV169');
+    if(track && !track.dataset.ready){var items=buildTickerItems();var html=items.map(function(x){return '<span>'+x+'</span>';}).join('');track.innerHTML=html+html;track.dataset.ready='1';}
+  }
+  var counters={customers:126,premium:58,ctv:34,posts:5240,savedMinutes:2556};
+  function savedText(){var h=Math.floor(counters.savedMinutes/60), m=counters.savedMinutes%60; return h+'h '+String(m).padStart(2,'0')+'m'}
+  function enhanceRightbar(){
+    var cards=qa('.rightbar .activity-card');
+    if(!cards.length) return;
+    var cfg=[
+      ['customers','👥','Khách đang sử dụng',function(){return formatNum(counters.customers)},'+1'],
+      ['premium','👑','Premium hoạt động',function(){return formatNum(counters.premium)},'+1'],
+      ['ctv','🤝','CTV hoạt động',function(){return formatNum(counters.ctv)},'+1'],
+      ['posts','📈','Bài đã đăng',function(){return formatNum(counters.posts)},'+3'],
+      ['saved','⏱️','Thời gian tiết kiệm',savedText,'+12m']
+    ];
+    cfg.forEach(function(c,i){var card=cards[i]; if(!card) return; card.classList.add('mkt-v169-pro-card'); card.classList.remove('mkt-revenue-card-v168'); card.setAttribute('data-mkt-counter',c[0]); card.setAttribute('data-icon',c[1]); card.innerHTML='<span>'+c[2]+'</span><b>'+c[3]()+'</b><i class="mkt-v169-delta">▲ '+c[4]+'</i><small class="mkt-v169-sub">Cập nhật mỗi 5 giây</small>';});
+  }
+  function tick(){
+    enhanceRightbar();
+    var keys=['customers','premium','ctv','posts','saved']; var key=pick(keys);
+    if(key==='posts') counters.posts+=pick([1,2,3,4,5,6]); else if(key==='saved') counters.savedMinutes+=pick([6,8,12,15]); else counters[key]+=1;
+    var card=q('.rightbar .activity-card[data-mkt-counter="'+key+'"]'); if(!card) return;
+    var b=q('b',card); if(b){ if(key==='saved') b.textContent=savedText(); else b.textContent=formatNum(counters[key]); }
+    card.classList.remove('mkt-count-pop'); void card.offsetWidth; card.classList.add('mkt-count-pop'); setTimeout(function(){card.classList.remove('mkt-count-pop')},720);
+  }
+  function boot(){ensureTicker();enhanceRightbar();setInterval(ensureTicker,2500);setInterval(tick,5000)}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();
+})();
+</script>
+<!-- /MKT V169 LIVE TICKER + RIGHTBAR PRO -->
+"""
+
+def _mkt_v169_live_ticker_rightbar_pro_after_request(response):
+    try:
+        if request.path.startswith('/admin') or request.path.startswith('/api') or request.path.startswith('/healthz'):
+            return response
+        ctype = response.headers.get('Content-Type','')
+        if 'text/html' not in ctype.lower():
+            return response
+        html = response.get_data(as_text=True)
+        if 'mkt-v169-live-ticker-rightbar-pro-js' in html:
+            return response
+        if '</body>' in html:
+            html = html.replace('</body>', _MKT_V169_LIVE_TICKER_RIGHTBAR_PRO + '</body>', 1)
+        else:
+            html += _MKT_V169_LIVE_TICKER_RIGHTBAR_PRO
+        response.set_data(html)
+        response.headers['Content-Length'] = str(len(response.get_data()))
+    except Exception as e:
+        print('V169 live ticker/rightbar pro inject skipped:', e)
+    return response
+
+try:
+    if not getattr(app, '_mkt_v169_live_ticker_rightbar_pro_installed', False):
+        app.after_request(_mkt_v169_live_ticker_rightbar_pro_after_request)
+        app._mkt_v169_live_ticker_rightbar_pro_installed = True
+except Exception as _mkt_v169_error:
+    print('V169 live ticker/rightbar pro install skipped:', _mkt_v169_error)
+
 if __name__ == "__main__":
     # Không tự tạo kho 50k content khi khởi động để tránh lỗi SQLite database is locked trên Render.
     # Khi cần kiểm tra/tạo kho content, gọi /api/content_50k_stats từ admin.
