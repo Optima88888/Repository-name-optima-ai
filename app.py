@@ -15556,59 +15556,27 @@ def telegram_webhook_route():
             if ok and _device_for_reply:
                 try:
                     save_support_message(_device_for_reply, 'admin', 'Gói Premium của anh/chị đã được kích hoạt thành công. Anh/chị tải lại trang hoặc chờ vài giây để hệ thống tự mở khóa nhé.')
-               if low.startswith('/duyet') or low.startswith('duyet'):
-    parts = text.split()
-
-    if len(parts) < 2 or not parts[1].isdigit():
-        _mkt_v160_tg_send(chat_id, '❌ Sai cú pháp. Ví dụ đúng: /duyet 2')
-        return jsonify({'ok': True})
-
-    req_id = int(parts[1])
-
-    try:
-        ok = approve_premium_request(
-            req_id,
-            status='Đã duyệt',
-            admin_note='Duyệt từ Telegram'
-        )
-
-        if ok:
-            try:
-                conn = db()
-                c = conn.cursor()
-                c.execute("""
-                    SELECT device_id, package_name, amount
-                    FROM premium_upgrade_requests
-                    WHERE id=?
-                """, (req_id,))
-                row = c.fetchone()
-                conn.close()
-
-                if row:
-                    device_id, package_name, amount = row
-                    save_support_message(
-                        device_id,
-                        'admin',
-                        f'Gói {package_name} đã được kích hoạt thành công. Anh/chị vui lòng tải lại trang để hệ thống cập nhật Premium.'
-                    )
-            except Exception as _e:
-                print('Telegram /duyet customer notify skipped:', _e)
-
-            _mkt_v160_tg_send(chat_id, f'✅ Đã duyệt Premium #{req_id}')
-        else:
-            _mkt_v160_tg_send(
-                chat_id,
-                f'❌ Không duyệt được yêu cầu #{req_id}. Kiểm tra lại mã bằng lệnh: /cho'
-            )
-
-    except Exception as e:
-        print('Telegram /duyet error:', e)
-        _mkt_v160_tg_send(
-            chat_id,
-            f'❌ Lỗi khi duyệt #{req_id}: {str(e)[:300]}'
-        )
-
-    return jsonify({'ok': True})
+                except Exception as _e:
+                    print('Telegram /duyet customer notify skipped:', _e)
+            _mkt_v160_tg_send(chat_id, '✅ Đã duyệt Premium #' + str(req_id) if ok else '❌ Không duyệt được. Dùng: /duyet 123')
+            return jsonify({'ok': True})
+        if low.startswith('/tuchoi') or low.startswith('/reject') or low.startswith('tuchoi') or low.startswith('reject'):
+            parts = text.split()
+            req_id = int(parts[1]) if len(parts) > 1 and parts[1].isdigit() else 0
+            ok = approve_premium_request(req_id, status='Từ chối', admin_note='Từ chối từ Telegram') if req_id else False
+            _mkt_v160_tg_send(chat_id, '⚠️ Đã từ chối #' + str(req_id) if ok else '❌ Không xử lý được. Dùng: /tuchoi 123')
+            return jsonify({'ok': True})
+        if low.startswith('/reply') or low.startswith('reply'):
+            # /reply MKT-ABC nội dung
+            rest = text.split(maxsplit=2)
+            if len(rest) >= 3:
+                device = rest[1].strip().upper()
+                body = rest[2].strip()
+                save_support_message(device, 'admin', body)
+                _mkt_v160_tg_send(chat_id, f"✅ Đã gửi phản hồi cho khách <b>{tg_safe(device)}</b>\n\n{tg_safe(body)}")
+            else:
+                _mkt_v160_tg_send(chat_id, 'Cú pháp: /reply MKT-ABC nội dung cần gửi\nHoặc: reply MKT-ABC nội dung cần gửi')
+            return jsonify({'ok': True})
 
         # Nếu admin reply trực tiếp vào tin Telegram có chứa ID máy, tự gửi về chat web.
         device = _mkt_v160_find_device(reply_text)
