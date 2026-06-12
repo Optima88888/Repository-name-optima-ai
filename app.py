@@ -14381,7 +14381,7 @@ _MKT_V147_SUPPORT_CONTACT_PATCH = """
 .mkt-v147-support-box b{color:#1d4ed8}.mkt-v147-support-box a{color:#2563eb;text-decoration:none;font-weight:1000}.mkt-v147-mini{font-size:13px;color:#475569;font-weight:700}
 .mkt-v147-chat-banner{margin:8px 10px 10px;padding:10px 12px;border-radius:14px;border:1px solid #c7d2fe;background:#eef2ff;color:#1e1b4b;font-weight:900;line-height:1.45;font-size:13px}
 #mktV147ZaloFloat{position:fixed;right:18px;bottom:154px;z-index:2147483000;display:flex;align-items:center;gap:7px;border-radius:999px;padding:11px 14px;background:linear-gradient(135deg,#06b6d4,#2563eb);color:#fff;text-decoration:none;font-weight:1000;box-shadow:0 16px 38px rgba(37,99,235,.28)}
-@media(max-width:768px){#mktV147ZaloFloat{right:14px;bottom:138px;font-size:13px;padding:10px 12px}.mkt-v147-support-box{font-size:13px}}
+@media(max-width:768px){ #mktV147ZaloFloat{right:14px;bottom:138px;font-size:13px;padding:10px 12px}.mkt-v147-support-box{font-size:13px}}
 </style>
 <a id="mktV147ZaloFloat" href="https://zalo.me/0363382629" target="_blank" rel="noopener">📱 Zalo hỗ trợ</a>
 <script id="mkt-v147-support-contact-js">
