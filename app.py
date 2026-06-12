@@ -4887,7 +4887,9 @@ body{
 .gf-stat b{font-size:24px;display:block;color:#1E1B4B}.gf-stat span{font-size:12px;color:#64748B;font-weight:800}
 .gf-warning{background:#FFF7ED;border:1px solid #FED7AA;color:#9A3412;border-radius:16px;padding:12px;margin:10px 0;font-size:13px;line-height:1.5}
 .gf-table{width:100%;border-collapse:separate;border-spacing:0 8px;font-size:13px}.gf-table th{text-align:left;color:#475569;padding:8px}.gf-table td{background:white;border-top:1px solid #E5E7EB;border-bottom:1px solid #E5E7EB;padding:10px}.gf-table td:first-child{border-left:1px solid #E5E7EB;border-radius:12px 0 0 12px}.gf-table td:last-child{border-right:1px solid #E5E7EB;border-radius:0 12px 12px 0}
-@media(max-width:900px){.gf-grid,.gf-grid-3{grid-template-columns:1fr}}
+@media(max-width:900px){
+  body #mktVipDownloadBtn, body #mktSmoothInstallBtn, body #mktMobileInstallQuickRestore, body #mktMobileInstallQuick, body #gptMktInstallFinal, body #mktTopDownloadBar, body #mktDownloadAppV130, body .mkt-phone-download, body .mkt-phone-gpt, body .mkt-dock-download, body .mkt-dock-gpt{display:none!important;visibility:hidden!important;opacity:0!important;pointer-events:none!important;width:0!important;height:0!important;overflow:hidden!important;}
+.gf-grid,.gf-grid-3{grid-template-columns:1fr}}
 
 .payment-form-grid{display:grid;grid-template-columns:1fr;gap:8px;margin-top:8px}.payment-form-grid input{width:100%;box-sizing:border-box;border:1px solid #d1d5db;border-radius:10px;padding:11px 12px;font-size:14px}.primary{background:linear-gradient(135deg,#facc15,#f97316);border:0;border-radius:12px;padding:12px 16px;font-weight:800;color:#111827;cursor:pointer}
 .admin-table{width:100%;border-collapse:collapse;background:white;border-radius:14px;overflow:hidden}.admin-table th,.admin-table td{border-bottom:1px solid #e5e7eb;padding:10px;text-align:left;font-size:13px}.admin-badge{display:inline-block;padding:4px 8px;border-radius:999px;background:#fef3c7;color:#92400e;font-weight:700}
@@ -14729,59 +14731,101 @@ _MKT_V154_SAFE_MOBILE_PATCH = r"""
   }
 
 
-  body #mktVipDownloadBtn{
+
+  body #mktVipGreenDotInstall{
     display:flex!important;
     visibility:visible!important;
     opacity:1!important;
     pointer-events:auto!important;
     position:fixed!important;
-    left:14px!important;
-    bottom:calc(env(safe-area-inset-bottom,0px) + 18px)!important;
+    left:16px!important;
+    bottom:calc(env(safe-area-inset-bottom,0px) + 22px)!important;
     right:auto!important;
     top:auto!important;
-    width:auto!important;
-    height:58px!important;
-    min-width:158px!important;
-    max-width:210px!important;
-    padding:9px 16px 9px 12px!important;
+    width:54px!important;
+    height:54px!important;
+    min-width:54px!important;
+    max-width:54px!important;
+    min-height:54px!important;
+    max-height:54px!important;
+    padding:0!important;
     margin:0!important;
     overflow:visible!important;
-    border:1px solid rgba(255,255,255,.28)!important;
+    border:1px solid rgba(134,239,172,.55)!important;
     border-radius:999px!important;
-    background:linear-gradient(135deg,#0ea5e9 0%,#2563eb 42%,#7c3aed 100%)!important;
+    background:
+      radial-gradient(circle at 34% 30%,rgba(255,255,255,.95) 0 9%,rgba(187,247,208,.95) 10% 20%,rgba(34,197,94,.98) 21% 48%,rgba(21,128,61,.98) 49% 100%)!important;
     color:#fff!important;
-    box-shadow:0 18px 45px rgba(37,99,235,.42), inset 0 1px 0 rgba(255,255,255,.26)!important;
+    box-shadow:
+      0 0 0 6px rgba(34,197,94,.10),
+      0 0 28px rgba(34,197,94,.72),
+      0 18px 42px rgba(2,6,23,.35),
+      inset 0 2px 4px rgba(255,255,255,.42),
+      inset 0 -8px 14px rgba(5,46,22,.34)!important;
     z-index:2147483550!important;
     align-items:center!important;
-    justify-content:flex-start!important;
-    gap:10px!important;
+    justify-content:center!important;
+    gap:0!important;
     font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif!important;
     text-decoration:none!important;
     cursor:pointer!important;
     transform:translateZ(0)!important;
-    animation:mktVipDownloadPulse 2.4s ease-in-out infinite!important;
+    animation:mktVipGreenDotAlert 5s ease-in-out infinite!important;
     -webkit-tap-highlight-color:transparent!important;
   }
-  body #mktVipDownloadBtn .mkt-vip-download-icon{
-    width:38px!important;height:38px!important;min-width:38px!important;border-radius:14px!important;
-    display:flex!important;align-items:center!important;justify-content:center!important;
-    background:rgba(255,255,255,.18)!important;
-    box-shadow:inset 0 1px 0 rgba(255,255,255,.22)!important;
-    font-size:19px!important;line-height:1!important;
+  body #mktVipGreenDotInstall::before{
+    content:""!important;
+    position:absolute!important;
+    inset:-8px!important;
+    border-radius:999px!important;
+    border:1px solid rgba(34,197,94,.26)!important;
+    box-shadow:0 0 0 0 rgba(34,197,94,.30)!important;
+    animation:mktVipGreenDotRing 5s ease-in-out infinite!important;
+    pointer-events:none!important;
   }
-  body #mktVipDownloadBtn .mkt-vip-download-text{
-    display:flex!important;flex-direction:column!important;align-items:flex-start!important;justify-content:center!important;
-    line-height:1.05!important;white-space:nowrap!important;
+  body #mktVipGreenDotInstall::after{
+    content:""!important;
+    position:absolute!important;
+    width:14px!important;
+    height:14px!important;
+    right:8px!important;
+    bottom:8px!important;
+    border-radius:999px!important;
+    background:radial-gradient(circle,#ffffff 0 22%,#bbf7d0 23% 45%,#22c55e 46% 100%)!important;
+    box-shadow:0 0 16px rgba(34,197,94,.95),0 0 28px rgba(34,197,94,.55)!important;
+    pointer-events:none!important;
   }
-  body #mktVipDownloadBtn .mkt-vip-download-title{
-    display:block!important;font-size:14px!important;font-weight:1000!important;letter-spacing:.2px!important;color:#fff!important;
+  body #mktVipDownloadBtn,
+  body #mktSmoothInstallBtn,
+  body #mktMobileInstallQuickRestore,
+  body #mktMobileInstallQuick,
+  body #gptMktInstallFinal,
+  body .mkt-vip-download-icon,
+  body .mkt-vip-download-text,
+  body .mkt-vip-download-title,
+  body .mkt-vip-download-sub{
+    display:none!important;
   }
-  body #mktVipDownloadBtn .mkt-vip-download-sub{
-    display:block!important;margin-top:3px!important;font-size:11px!important;font-weight:900!important;color:rgba(255,255,255,.9)!important;
+  body #mktVipGreenDotInstall .mkt-green-dot-core{
+    display:block!important;
+    width:22px!important;
+    height:22px!important;
+    border-radius:999px!important;
+    background:radial-gradient(circle at 35% 30%,#ffffff 0 12%,#dcfce7 13% 28%,#22c55e 29% 100%)!important;
+    box-shadow:0 0 18px rgba(255,255,255,.92),0 0 24px rgba(34,197,94,.9)!important;
   }
-  @keyframes mktVipDownloadPulse{
-    0%,100%{transform:translateY(0) scale(1)}
-    50%{transform:translateY(-3px) scale(1.025)}
+  @keyframes mktVipGreenDotAlert{
+    0%,82%,100%{transform:translateY(0) scale(1);filter:brightness(1)}
+    86%{transform:translateX(-2px) rotate(-5deg) scale(1.08);filter:brightness(1.28)}
+    88%{transform:translateX(2px) rotate(5deg) scale(1.10);filter:brightness(1.36)}
+    90%{transform:translateX(-2px) rotate(-4deg) scale(1.08);filter:brightness(1.28)}
+    92%{transform:translateX(2px) rotate(4deg) scale(1.10);filter:brightness(1.36)}
+    94%{transform:translateX(0) rotate(0) scale(1.03);filter:brightness(1.12)}
+  }
+  @keyframes mktVipGreenDotRing{
+    0%,80%,100%{opacity:.35;transform:scale(.92);box-shadow:0 0 0 0 rgba(34,197,94,.18)}
+    86%{opacity:1;transform:scale(1);box-shadow:0 0 0 8px rgba(34,197,94,.12)}
+    92%{opacity:.82;transform:scale(1.08);box-shadow:0 0 0 14px rgba(34,197,94,0)}
   }
 
   body #mktNotifyBell .mkt-bell-count,
@@ -14812,7 +14856,7 @@ _MKT_V154_SAFE_MOBILE_PATCH = r"""
   }
   function hardHide(el){
     if(!el || !mobile()) return;
-    if(el.id === 'mktVipDownloadBtn' || (el.closest && el.closest('#mktVipDownloadBtn'))) return;
+    if(el.id === 'mktVipGreenDotInstall' || (el.closest && el.closest('#mktVipGreenDotInstall'))) return;
     el.classList.add('mkt-v154-hide-mobile');
     var styles = {
       display:'none', visibility:'hidden', opacity:'0', pointerEvents:'none',
@@ -14827,11 +14871,11 @@ _MKT_V154_SAFE_MOBILE_PATCH = r"""
   function hideDownloads(){
     if(!mobile()) return;
     var selectors = [
-      '#gptMktLeftDockFinal','#gptMktInstallFinal','#mktTopDownloadBar','#mktMobileActionDock',
+      '#gptMktLeftDockFinal','#gptMktInstallFinal','#mktVipDownloadBtn','#mktSmoothInstallBtn','#mktTopDownloadBar','#mktMobileActionDock',
       '#mktMobileQuickActionsRestore','#mktMobileQuickActions','#mktMobileInstallQuickRestore',
       '#mktMobileInstallQuick','#mktPhoneInstallFloat','#mktPhoneInstallEntry','#mktDownloadAppV130',
       '#mktMobileInstallMenu','#mktInstallFloat','#mktInstallPanel','#mktMobileCtvQuick','#mobileCtvQuickBtn',
-      '.gptmkt-install-btn-final','.mkt-dock-download','.mkt-mobile-install-menu',
+      '.gptmkt-install-btn-final','.mkt-dock-download','.mkt-phone-download','.mkt-phone-gpt','.mkt-dock-gpt','.mkt-mobile-install-menu',
       '.mkt-mobile-download-v130','.mkt-mobile-download','.mkt-top-download-bar','.mkt-install-top',
       '.mkt-install-btn','.app-install-banner','.app-install-card','.v2-install-box',
       '[data-install-app]','[data-mkt-install-app]','[data-install]','[data-pwa-install]'
@@ -14840,7 +14884,7 @@ _MKT_V154_SAFE_MOBILE_PATCH = r"""
     qa('button,a,div,span').forEach(function(el){
       var t = (el.textContent || '').replace(/\s+/g,' ').trim().toLowerCase();
       if(!t) return;
-      if(el.id === 'mktVipDownloadBtn' || (el.closest && el.closest('#mktVipDownloadBtn'))) return;
+      if(el.id === 'mktVipGreenDotInstall' || (el.closest && el.closest('#mktVipGreenDotInstall'))) return;
       if((t.indexOf('gpt mkt') >= 0 && t.indexOf('tải xuống') >= 0) ||
          (t.indexOf('tải xuống') >= 0 && (el.offsetWidth < 260 || el.getBoundingClientRect().bottom > window.innerHeight - 160)) ||
          (t.indexOf('cài ứng dụng') >= 0 && el.offsetWidth < 260)){
@@ -14892,16 +14936,21 @@ _MKT_V154_SAFE_MOBILE_PATCH = r"""
   }
   function ensureVipDownload(){
     if(!mobile()) return;
-    var btn = document.getElementById('mktVipDownloadBtn');
+    ['mktVipDownloadBtn','mktSmoothInstallBtn','mktMobileInstallQuickRestore','mktMobileInstallQuick','gptMktInstallFinal','mktDownloadAppV130','mktTopDownloadBar'].forEach(function(id){
+      var old=document.getElementById(id);
+      if(old){ try{ old.remove(); }catch(_e){ hardHide(old); } }
+    });
+    var btn = document.getElementById('mktVipGreenDotInstall');
     if(!btn){
       btn = document.createElement('button');
       btn.type = 'button';
-      btn.id = 'mktVipDownloadBtn';
-      btn.setAttribute('aria-label','Tải xuống GPT MKT');
-      btn.innerHTML = '<span class="mkt-vip-download-icon">⬇️</span><span class="mkt-vip-download-text"><span class="mkt-vip-download-title">GPT MKT</span><span class="mkt-vip-download-sub">Tải xuống</span></span>';
+      btn.id = 'mktVipGreenDotInstall';
+      btn.setAttribute('aria-label','Cài GPT MKT');
+      btn.title = 'Cài GPT MKT lên điện thoại';
       btn.addEventListener('click', function(e){ e.preventDefault(); openVipInstallGuide(); }, true);
       document.body.appendChild(btn);
     }
+    btn.innerHTML = '<span class="mkt-green-dot-core" aria-hidden="true"></span>';
     btn.classList.remove('mkt-v154-hide-mobile');
     btn.removeAttribute('aria-hidden');
     btn.style.setProperty('display','flex','important');
@@ -14909,15 +14958,17 @@ _MKT_V154_SAFE_MOBILE_PATCH = r"""
     btn.style.setProperty('opacity','1','important');
     btn.style.setProperty('pointer-events','auto','important');
     btn.style.setProperty('position','fixed','important');
-    btn.style.setProperty('left','14px','important');
-    btn.style.setProperty('bottom','calc(env(safe-area-inset-bottom,0px) + 18px)','important');
+    btn.style.setProperty('left','16px','important');
+    btn.style.setProperty('bottom','calc(env(safe-area-inset-bottom,0px) + 22px)','important');
     btn.style.setProperty('right','auto','important');
     btn.style.setProperty('top','auto','important');
-    btn.style.setProperty('width','auto','important');
-    btn.style.setProperty('height','58px','important');
-    btn.style.setProperty('min-width','158px','important');
-    btn.style.setProperty('max-width','210px','important');
-    btn.style.setProperty('padding','9px 16px 9px 12px','important');
+    btn.style.setProperty('width','54px','important');
+    btn.style.setProperty('height','54px','important');
+    btn.style.setProperty('min-width','54px','important');
+    btn.style.setProperty('min-height','54px','important');
+    btn.style.setProperty('max-height','54px','important');
+    btn.style.setProperty('max-width','54px','important');
+    btn.style.setProperty('padding','0','important');
     btn.style.setProperty('border-radius','999px','important');
     btn.style.setProperty('z-index','2147483550','important');
   }
