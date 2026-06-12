@@ -13587,7 +13587,41 @@ def _mkt_enterprise_admin_html(error=""):
         html += f'<div class="plan"><small>{_mkt_html_escape(pl.get("discount","GIẢM 35%"))}</small><b>{_mkt_html_escape(pl.get("name"))}</b><p>{_mkt_html_escape(pl.get("price"))}</p><div>{("Forever" if int(pl.get("days",0))>=3000 else str(pl.get("days"))+" ngày")}</div></div>'
     html += '</div></section>'
     html += '<section class="card" id="admin-enterprise"><h2>🏢 SaaS Admin Center</h2><div class="hint">Các mục quản trị chỉ hiển thị tại Web Admin, không hiện ở trang khách.</div><div class="grid"><div class="kpi"><div class="ic">👑</div><span>Dashboard Doanh Thu Premium</span><b>Admin</b></div><div class="kpi"><div class="ic">💰</div><span>Dashboard Doanh Thu CTV</span><b>Admin</b></div><div class="kpi"><div class="ic">🆔</div><span>Quản lý khách theo Device ID</span><b>Admin</b></div><div class="kpi"><div class="ic">🎫</div><span>Ticket Hỗ Trợ Khách Hàng</span><b>Admin</b></div><div class="kpi"><div class="ic">🔄</div><span>Gia hạn Premium</span><b>Admin</b></div><div class="kpi"><div class="ic">🏢</div><span>SaaS Admin Center</span><b>Admin</b></div></div></section>'
-    html += '<section class="card" id="ctv"><h2>🤝 CTV Hoa Hồng Enterprise</h2><div class="hint">Mục này giữ sẵn giao diện quản lý CTV: mã giới thiệu, link giới thiệu, doanh thu, hoa hồng chờ duyệt và hoa hồng đã thanh toán.</div></section>'
+    try:
+        ensure_affiliate_tables()
+        _conn = db(); _c = _conn.cursor()
+        _c.execute("""
+            SELECT u.id,u.device_id,u.full_name,u.phone,u.email,u.affiliate_code,u.level_name,u.commission_percent,u.status,u.created_at,
+                   COALESCE(COUNT(r.id),0) AS orders,
+                   COALESCE(SUM(CASE WHEN r.status IN ('Đã duyệt','Đã thanh toán') THEN r.amount ELSE 0 END),0) AS revenue,
+                   COALESCE(SUM(CASE WHEN r.status IN ('Đã duyệt','Đã thanh toán') THEN r.commission_amount ELSE 0 END),0) AS commission
+            FROM affiliate_users u
+            LEFT JOIN affiliate_referrals r ON r.affiliate_code=u.affiliate_code
+            GROUP BY u.id ORDER BY u.id DESC LIMIT 200
+        """)
+        _ctv_users = _c.fetchall()
+        _c.execute("SELECT id,affiliate_code,amount,bank_name,bank_number,account_name,status,created_at,paid_at FROM affiliate_withdrawals ORDER BY id DESC LIMIT 100")
+        _ctv_withdrawals = _c.fetchall()
+        _conn.close()
+    except Exception as _ctv_err:
+        _ctv_users = []; _ctv_withdrawals = []; error = error or _ctv_err
+    html += '<section class="card" id="ctv"><h2>🤝 CTV Hoa Hồng Enterprise</h2><div class="hint">Danh sách CTV đã đăng ký, mã giới thiệu, doanh thu, hoa hồng chờ duyệt và hoa hồng đã thanh toán.</div>'
+    html += '<div class="table-wrap"><table><thead><tr><th>ID</th><th>CTV</th><th>SĐT</th><th>Gmail</th><th>Mã CTV</th><th>Cấp</th><th>%</th><th>Đơn</th><th>Doanh thu</th><th>Hoa hồng</th><th>Trạng thái</th><th>Ngày tạo</th></tr></thead><tbody>'
+    if not _ctv_users:
+        html += '<tr><td colspan="12">Chưa có CTV nào đăng ký.</td></tr>'
+    for u in _ctv_users:
+        html += '<tr>'
+        html += f'<td class="mono">{_mkt_html_escape(u[0])}</td><td><b>{_mkt_html_escape(u[2] or u[5])}</b><br><span class="mono">{_mkt_html_escape(u[1])}</span></td><td>{_mkt_html_escape(u[3])}</td><td>{_mkt_html_escape(u[4])}</td><td class="mono"><b>{_mkt_html_escape(u[5])}</b></td><td>{_mkt_html_escape(u[6])}</td><td><b>{_mkt_html_escape(u[7])}%</b></td><td>{_mkt_html_escape(u[10])}</td><td><b>{_mkt_money_vnd(u[11])}</b></td><td><b>{_mkt_money_vnd(u[12])}</b></td><td><span class="status">{_mkt_html_escape(u[8])}</span></td><td>{_mkt_html_escape(u[9])}</td>'
+        html += '</tr>'
+    html += '</tbody></table></div>'
+    html += '<h2 style="margin-top:22px">💸 Yêu cầu rút hoa hồng</h2><div class="table-wrap"><table><thead><tr><th>ID</th><th>Mã CTV</th><th>Số tiền</th><th>Ngân hàng</th><th>STK</th><th>Chủ TK</th><th>Trạng thái</th><th>Ngày tạo</th><th>Đã thanh toán</th></tr></thead><tbody>'
+    if not _ctv_withdrawals:
+        html += '<tr><td colspan="9">Chưa có yêu cầu rút tiền.</td></tr>'
+    for w in _ctv_withdrawals:
+        cls = 'pending' if 'Chờ' in str(w[6] or '') else ''
+        html += f'<tr><td class="mono">{_mkt_html_escape(w[0])}</td><td class="mono"><b>{_mkt_html_escape(w[1])}</b></td><td><b>{_mkt_money_vnd(w[2])}</b></td><td>{_mkt_html_escape(w[3])}</td><td class="mono">{_mkt_html_escape(w[4])}</td><td>{_mkt_html_escape(w[5])}</td><td><span class="status {cls}">{_mkt_html_escape(w[6])}</span></td><td>{_mkt_html_escape(w[7])}</td><td>{_mkt_html_escape(w[8])}</td></tr>'
+    html += '</tbody></table></div></section>'
+
     html += '<div class="footer-note">Web Admin Enterprise Fix: không render qua ADMIN_HTML nên không còn lỗi Jinja Missing end of comment tag.</div></main></div></body></html>'
     return html
 
@@ -15444,6 +15478,38 @@ def _mkt_v160_ctv_summary(key):
     )
 
 
+
+def _mkt_v164_ctv_registered_list(limit=20):
+    """Danh sách CTV đã đăng ký để xem nhanh trên Telegram."""
+    try:
+        ensure_affiliate_tables()
+        conn = db(); c = conn.cursor()
+        c.execute("""
+            SELECT u.id,u.full_name,u.phone,u.email,u.affiliate_code,u.level_name,u.commission_percent,u.status,u.created_at,
+                   COALESCE(COUNT(r.id),0) AS orders,
+                   COALESCE(SUM(CASE WHEN r.status IN ('Đã duyệt','Đã thanh toán') THEN r.amount ELSE 0 END),0) AS revenue,
+                   COALESCE(SUM(CASE WHEN r.status IN ('Đã duyệt','Đã thanh toán') THEN r.commission_amount ELSE 0 END),0) AS commission
+            FROM affiliate_users u
+            LEFT JOIN affiliate_referrals r ON r.affiliate_code=u.affiliate_code
+            GROUP BY u.id
+            ORDER BY u.id DESC LIMIT ?
+        """, (int(limit or 20),))
+        rows = c.fetchall(); conn.close()
+        if not rows:
+            return '🤝 Chưa có CTV nào đăng ký.'
+        lines = ['🤝 <b>DANH SÁCH CTV ĐÃ ĐĂNG KÝ</b>']
+        for r in rows:
+            lines.append(
+                f"\n#{r[0]} • <b>{tg_safe(r[1] or r[4])}</b>"
+                f"\nMã: <code>{tg_safe(r[4])}</code> • Cấp: {tg_safe(r[5])} • {r[6]}%"
+                f"\nSĐT: {tg_safe(r[2]) or '-'} • Gmail: {tg_safe(r[3]) or '-'}"
+                f"\nĐơn: <b>{r[9]}</b> • Doanh thu: <b>{_mkt_v160_money(r[10])}</b> • Hoa hồng: <b>{_mkt_v160_money(r[11])}</b>"
+                f"\nLệnh xem chi tiết: <code>/ctv {tg_safe(r[4])}</code>"
+            )
+        return '\n'.join(lines)[:3900]
+    except Exception as e:
+        return '❌ Không tải được danh sách CTV: ' + tg_safe(e)
+
 def _mkt_v160_pending_premium_list(limit=10):
     conn = db(); c = conn.cursor()
     c.execute("""
@@ -15556,7 +15622,7 @@ def telegram_help_route():
             '/reply MKT-ABC nội dung - trả lời khách trên web chat',
             '/ngay MKT-ABC - xem ngày còn hạn Premium',
             '/hethan 5 - xem khách sắp hết hạn trong 5 ngày',
-            '/ctv CTV-123456 - xem hoa hồng CTV'
+            '/ctv - danh sách CTV đã đăng ký', '/ctv CTV-123456 - xem chi tiết hoa hồng CTV'
         ]
     })
 
@@ -15627,7 +15693,8 @@ def telegram_webhook_route():
                 "• /reply MKT-ABC nội dung - trả lời khách\n"
                 "• /ngay MKT-ABC - xem ngày còn hạn\n"
                 "• /hethan 5 - khách sắp hết hạn\n"
-                "• /ctv CTV-123456 - xem hoa hồng CTV"
+                "• /ctv - danh sách CTV đã đăng ký\n"
+                "• /ctv CTV-123456 - xem chi tiết hoa hồng CTV"
             )
             return jsonify({'ok': True})
 
@@ -15645,7 +15712,10 @@ def telegram_webhook_route():
             return jsonify({'ok': True})
         if low.startswith('/ctv') or low.startswith('ctv'):
             key = text.split(maxsplit=1)[1] if len(text.split(maxsplit=1)) > 1 else ''
-            _mkt_v160_tg_send(chat_id, _mkt_v160_ctv_summary(key))
+            if key:
+                _mkt_v160_tg_send(chat_id, _mkt_v160_ctv_summary(key))
+            else:
+                _mkt_v160_tg_send(chat_id, _mkt_v164_ctv_registered_list(20))
             return jsonify({'ok': True})
         if low.startswith('/duyet') or low.startswith('duyet'):
             parts = text.split()
