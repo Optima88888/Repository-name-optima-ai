@@ -15207,6 +15207,351 @@ def _mkt_v159_support_chat_after_request(response):
 
 
 
+# ============================================================
+# V160 TELEGRAM ADMIN CENTER
+# Không dùng Casso. Duyệt Premium, trả lời khách, xem CTV và ngày còn hạn ngay trên Telegram.
+# Cần cấu hình Render Environment:
+# TELEGRAM_BOT_TOKEN=...
+# TELEGRAM_CHAT_ID=...
+# TELEGRAM_WEBHOOK_SECRET=chuoi_bi_mat_tuy_chon
+# Sau deploy mở: /telegram/set_webhook?secret=TELEGRAM_WEBHOOK_SECRET
+# ============================================================
+
+def _mkt_v160_tg_api(method, payload=None):
+    token = os.getenv('TELEGRAM_BOT_TOKEN', '').strip()
+    if not token:
+        return None
+    try:
+        url = f'https://api.telegram.org/bot{token}/{method}'
+        res = requests.post(url, json=payload or {}, timeout=15)
+        try:
+            return res.json()
+        except Exception:
+            return {'ok': res.status_code < 400, 'text': res.text[:500]}
+    except Exception as e:
+        print('Telegram API error:', e)
+        return {'ok': False, 'error': str(e)}
+
+
+def _mkt_v160_tg_send(chat_id, text, buttons=None):
+    if not chat_id:
+        chat_id = os.getenv('TELEGRAM_CHAT_ID', '').strip()
+    payload = {
+        'chat_id': chat_id,
+        'text': str(text or '')[:3900],
+        'parse_mode': 'HTML',
+        'disable_web_page_preview': True
+    }
+    if buttons:
+        payload['reply_markup'] = {'inline_keyboard': [[{'text': b[0], 'callback_data': b[1]} for b in row] for row in buttons]}
+    return _mkt_v160_tg_api('sendMessage', payload)
+
+
+def _mkt_v160_tg_answer_callback(callback_id, text='Đã xử lý'):
+    if callback_id:
+        _mkt_v160_tg_api('answerCallbackQuery', {'callback_query_id': callback_id, 'text': text[:180], 'show_alert': False})
+
+
+def _mkt_v160_money(v):
+    try:
+        return f"{int(v):,}".replace(',', '.') + 'đ'
+    except Exception:
+        return str(v or '0') + 'đ'
+
+
+def _mkt_v160_find_device(text):
+    import re
+    m = re.search(r'(MKT-[A-Z0-9\-]+)', str(text or '').upper())
+    return m.group(1) if m else ''
+
+
+def _mkt_v160_subscription_summary(device_id):
+    device_id = (device_id or '').strip().upper()
+    if not device_id:
+        return 'Thiếu ID máy. Ví dụ: /ngay MKT-ABC123'
+    conn = db(); c = conn.cursor()
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS device_subscriptions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            device_id TEXT UNIQUE, phone TEXT, email TEXT, package_key TEXT, package_name TEXT,
+            start_date TEXT, end_date TEXT, status TEXT DEFAULT 'premium', last_renewal_notice_at TEXT,
+            created_at TEXT, updated_at TEXT
+        )
+    """)
+    c.execute("SELECT phone,email,package_key,package_name,start_date,end_date,status FROM device_subscriptions WHERE device_id=?", (device_id,))
+    row = c.fetchone(); conn.close()
+    if not row:
+        return f"🔎 <b>KHÔNG THẤY PREMIUM</b>\nID máy: <b>{tg_safe(device_id)}</b>\n\nKhách có thể chưa được duyệt hoặc dùng sai ID máy."
+    phone,email,package_key,package_name,start_date,end_date,status = row
+    days_left = 0
+    try:
+        end_dt = datetime.datetime.strptime(end_date, '%Y-%m-%d %H:%M:%S')
+        days_left = max(0, (end_dt - datetime.datetime.now()).days)
+    except Exception:
+        pass
+    return (
+        f"👑 <b>THÔNG TIN PREMIUM</b>\n\n"
+        f"ID máy: <b>{tg_safe(device_id)}</b>\n"
+        f"Gói: <b>{tg_safe(package_name)}</b>\n"
+        f"Trạng thái: <b>{tg_safe(status)}</b>\n"
+        f"Còn lại: <b>{days_left} ngày</b>\n"
+        f"Hết hạn: <b>{tg_safe(end_date)}</b>\n"
+        f"SĐT: {tg_safe(phone)}\nGmail: {tg_safe(email)}"
+    )
+
+
+def _mkt_v160_ctv_summary(key):
+    ensure_affiliate_tables()
+    key = (key or '').strip().upper()
+    if not key:
+        return 'Thiếu mã CTV hoặc ID máy. Ví dụ: /ctv CTV-123456'
+    conn = db(); c = conn.cursor()
+    if key.startswith('CTV'):
+        if not key.startswith('CTV-') and len(key) > 3:
+            key = 'CTV-' + key.replace('CTV','',1)
+        c.execute('SELECT device_id,full_name,phone,email,affiliate_code,level_name,commission_percent,status FROM affiliate_users WHERE affiliate_code=?', (key,))
+    else:
+        c.execute('SELECT device_id,full_name,phone,email,affiliate_code,level_name,commission_percent,status FROM affiliate_users WHERE device_id=?', (key,))
+    u = c.fetchone()
+    if not u:
+        conn.close(); return f"🔎 Không tìm thấy CTV: <b>{tg_safe(key)}</b>"
+    device_id,full_name,phone,email,code,level,pct,status = u
+    def one(sql, params=()):
+        c.execute(sql, params); r=c.fetchone(); return r[0] if r and r[0] is not None else 0
+    orders = one("SELECT COUNT(*) FROM affiliate_referrals WHERE affiliate_code=?", (code,))
+    approved = one("SELECT COUNT(*) FROM affiliate_referrals WHERE affiliate_code=? AND status IN ('Đã duyệt','Đã thanh toán')", (code,))
+    revenue = one("SELECT COALESCE(SUM(amount),0) FROM affiliate_referrals WHERE affiliate_code=? AND status IN ('Đã duyệt','Đã thanh toán')", (code,))
+    commission = one("SELECT COALESCE(SUM(commission_amount),0) FROM affiliate_referrals WHERE affiliate_code=? AND status IN ('Đã duyệt','Đã thanh toán')", (code,))
+    pending_wd = one("SELECT COALESCE(SUM(amount),0) FROM affiliate_withdrawals WHERE affiliate_code=? AND status='Chờ duyệt'", (code,))
+    conn.close()
+    return (
+        f"🤝 <b>THỐNG KÊ CTV</b>\n\n"
+        f"CTV: <b>{tg_safe(full_name or code)}</b>\n"
+        f"Mã: <code>{tg_safe(code)}</code>\n"
+        f"Cấp: <b>{tg_safe(level)}</b> • Hoa hồng: <b>{pct}%</b>\n"
+        f"Trạng thái: <b>{tg_safe(status)}</b>\n"
+        f"Tổng đơn: <b>{orders}</b> • Đã duyệt: <b>{approved}</b>\n"
+        f"Doanh thu: <b>{_mkt_v160_money(revenue)}</b>\n"
+        f"Hoa hồng: <b>{_mkt_v160_money(commission)}</b>\n"
+        f"Rút tiền chờ duyệt: <b>{_mkt_v160_money(pending_wd)}</b>\n"
+        f"SĐT: {tg_safe(phone)}\nGmail: {tg_safe(email)}"
+    )
+
+
+def _mkt_v160_pending_premium_list(limit=10):
+    conn = db(); c = conn.cursor()
+    c.execute("""
+        SELECT id,device_id,phone,email,package_name,amount,created_at
+        FROM premium_upgrade_requests
+        WHERE status='Chờ duyệt'
+        ORDER BY id DESC LIMIT ?
+    """, (int(limit),))
+    rows = c.fetchall(); conn.close()
+    if not rows:
+        return '✅ Không có yêu cầu Premium đang chờ duyệt.'
+    lines = ['📌 <b>PREMIUM CHỜ DUYỆT</b>']
+    for r in rows:
+        lines.append(f"\n#{r[0]} • <b>{tg_safe(r[1])}</b>\nGói: {tg_safe(r[4])} • {_mkt_v160_money(r[5])}\nSĐT: {tg_safe(r[2])} • Gmail: {tg_safe(r[3])}\nLệnh: /duyet {r[0]} hoặc /tuchoi {r[0]}")
+    return '\n'.join(lines)[:3900]
+
+
+def _mkt_v160_expiring_list(days=5):
+    conn = db(); c = conn.cursor()
+    now = datetime.datetime.now()
+    end = now + datetime.timedelta(days=int(days or 5))
+    c.execute("""
+        SELECT device_id,phone,email,package_name,end_date,status
+        FROM device_subscriptions
+        WHERE status='premium' AND end_date!='' AND end_date BETWEEN ? AND ?
+        ORDER BY end_date ASC LIMIT 20
+    """, (now.strftime('%Y-%m-%d %H:%M:%S'), end.strftime('%Y-%m-%d %H:%M:%S')))
+    rows = c.fetchall(); conn.close()
+    if not rows:
+        return f'✅ Không có khách sắp hết hạn trong {days} ngày tới.'
+    lines=[f'⏰ <b>KHÁCH SẮP HẾT HẠN {days} NGÀY</b>']
+    for device_id,phone,email,package_name,end_date,status in rows:
+        dleft=0
+        try: dleft=max(0,(datetime.datetime.strptime(end_date,'%Y-%m-%d %H:%M:%S')-now).days)
+        except Exception: pass
+        lines.append(f"\n<b>{tg_safe(device_id)}</b> • còn <b>{dleft} ngày</b>\nGói: {tg_safe(package_name)}\nHết hạn: {tg_safe(end_date)}\nSĐT: {tg_safe(phone)} • Gmail: {tg_safe(email)}")
+    return '\n'.join(lines)[:3900]
+
+
+# Bọc create_premium_request để gửi thêm nút duyệt nhanh trên Telegram, không đổi UI web.
+try:
+    _mkt_v160_original_create_premium_request = create_premium_request
+    def create_premium_request(device_id, phone, email, package_key):
+        item = _mkt_v160_original_create_premium_request(device_id, phone, email, package_key)
+        try:
+            req_id = item.get('id')
+            device = item.get('device_id') or device_id
+            _mkt_v160_tg_send('',
+                "⚡ <b>DUYỆT NHANH PREMIUM</b>\n\n"
+                f"Mã yêu cầu: <b>#{req_id}</b>\n"
+                f"ID máy: <b>{tg_safe(device)}</b>\n"
+                f"Gói: <b>{tg_safe(item.get('package_name'))}</b>\n"
+                f"Số tiền: <b>{_mkt_v160_money(item.get('amount'))}</b>\n\n"
+                "Bấm nút bên dưới để duyệt ngay trên Telegram.",
+                buttons=[
+                    [('✅ Duyệt Premium', f'approve:{req_id}'), ('❌ Từ chối', f'reject:{req_id}')],
+                    [('⏰ Xem ngày còn lại', f'days:{device}'), ('💬 Cách trả lời khách', f'replyhint:{device}')]
+                ]
+            )
+        except Exception as e:
+            print('V160 premium quick buttons skipped:', e)
+        return item
+except Exception as e:
+    print('V160 create_premium_request wrapper skipped:', e)
+
+
+@app.route('/telegram/set_webhook')
+def telegram_set_webhook_route():
+    secret = os.getenv('TELEGRAM_WEBHOOK_SECRET', '').strip()
+    if secret and (request.args.get('secret') or '') != secret:
+        return jsonify({'ok': False, 'message': 'Sai secret'}), 403
+    token = os.getenv('TELEGRAM_BOT_TOKEN', '').strip()
+    if not token:
+        return jsonify({'ok': False, 'message': 'Thiếu TELEGRAM_BOT_TOKEN'}), 400
+    base = (request.url_root or '').rstrip('/')
+    url = base + '/telegram/webhook'
+    res = _mkt_v160_tg_api('setWebhook', {'url': url, 'drop_pending_updates': False})
+    return jsonify({'ok': True, 'webhook_url': url, 'telegram_response': res})
+
+
+@app.route('/telegram/help')
+def telegram_help_route():
+    return jsonify({
+        'ok': True,
+        'commands': [
+            '/cho - xem yêu cầu Premium chờ duyệt',
+            '/duyet 123 - duyệt Premium theo mã yêu cầu',
+            '/tuchoi 123 - từ chối yêu cầu',
+            '/reply MKT-ABC nội dung - trả lời khách trên web chat',
+            '/ngay MKT-ABC - xem ngày còn hạn Premium',
+            '/hethan 5 - xem khách sắp hết hạn trong 5 ngày',
+            '/ctv CTV-123456 - xem hoa hồng CTV'
+        ]
+    })
+
+
+@app.route('/telegram/webhook', methods=['POST'])
+def telegram_webhook_route():
+    data = request.get_json(silent=True) or {}
+    try:
+        # Callback nút bấm inline
+        cb = data.get('callback_query') or {}
+        if cb:
+            cb_id = cb.get('id')
+            action = cb.get('data') or ''
+            msg = cb.get('message') or {}
+            chat_id = ((msg.get('chat') or {}).get('id')) or os.getenv('TELEGRAM_CHAT_ID','').strip()
+            parts = action.split(':', 1)
+            cmd = parts[0]
+            arg = parts[1] if len(parts) > 1 else ''
+            if cmd == 'approve':
+                ok = approve_premium_request(int(arg), status='Đã duyệt', admin_note='Duyệt từ Telegram')
+                _mkt_v160_tg_answer_callback(cb_id, 'Đã duyệt Premium' if ok else 'Không duyệt được')
+                _mkt_v160_tg_send(chat_id, '✅ Đã duyệt Premium yêu cầu #' + tg_safe(arg) if ok else '❌ Không tìm thấy yêu cầu #' + tg_safe(arg))
+            elif cmd == 'reject':
+                ok = approve_premium_request(int(arg), status='Từ chối', admin_note='Từ chối từ Telegram')
+                _mkt_v160_tg_answer_callback(cb_id, 'Đã từ chối' if ok else 'Không xử lý được')
+                _mkt_v160_tg_send(chat_id, '⚠️ Đã từ chối yêu cầu #' + tg_safe(arg) if ok else '❌ Không tìm thấy yêu cầu #' + tg_safe(arg))
+            elif cmd == 'days':
+                _mkt_v160_tg_answer_callback(cb_id, 'Đang lấy ngày còn hạn')
+                _mkt_v160_tg_send(chat_id, _mkt_v160_subscription_summary(arg))
+            elif cmd == 'ctv':
+                _mkt_v160_tg_answer_callback(cb_id, 'Đang lấy CTV')
+                _mkt_v160_tg_send(chat_id, _mkt_v160_ctv_summary(arg))
+            elif cmd == 'replyhint':
+                _mkt_v160_tg_answer_callback(cb_id, 'Hướng dẫn trả lời')
+                _mkt_v160_tg_send(chat_id, f"💬 Trả lời khách bằng lệnh:\n<code>/reply {tg_safe(arg)} nội dung cần gửi cho khách</code>")
+            return jsonify({'ok': True})
+
+        message = data.get('message') or data.get('edited_message') or {}
+        chat_id = ((message.get('chat') or {}).get('id')) or os.getenv('TELEGRAM_CHAT_ID','').strip()
+        text = (message.get('text') or '').strip()
+        reply_text = ((message.get('reply_to_message') or {}).get('text') or '')
+        if not text:
+            return jsonify({'ok': True})
+
+        low = text.lower()
+        if low in ['/start', '/help']:
+            _mkt_v160_tg_send(chat_id,
+                "🤖 <b>GPTMini Telegram Admin</b>\n\n"
+                "Lệnh nhanh:\n"
+                "• /cho - xem Premium chờ duyệt\n"
+                "• /duyet 123 - duyệt gói\n"
+                "• /tuchoi 123 - từ chối\n"
+                "• /reply MKT-ABC nội dung - trả lời khách\n"
+                "• /ngay MKT-ABC - xem ngày còn hạn\n"
+                "• /hethan 5 - khách sắp hết hạn\n"
+                "• /ctv CTV-123456 - xem hoa hồng CTV"
+            )
+            return jsonify({'ok': True})
+
+        if low.startswith('/cho'):
+            _mkt_v160_tg_send(chat_id, _mkt_v160_pending_premium_list())
+            return jsonify({'ok': True})
+        if low.startswith('/hethan'):
+            parts = text.split()
+            days = int(parts[1]) if len(parts) > 1 and parts[1].isdigit() else 5
+            _mkt_v160_tg_send(chat_id, _mkt_v160_expiring_list(days))
+            return jsonify({'ok': True})
+        if low.startswith('/ngay') or low.startswith('/han'):
+            device = _mkt_v160_find_device(text)
+            _mkt_v160_tg_send(chat_id, _mkt_v160_subscription_summary(device))
+            return jsonify({'ok': True})
+        if low.startswith('/ctv'):
+            key = text.split(maxsplit=1)[1] if len(text.split(maxsplit=1)) > 1 else ''
+            _mkt_v160_tg_send(chat_id, _mkt_v160_ctv_summary(key))
+            return jsonify({'ok': True})
+        if low.startswith('/duyet'):
+            parts = text.split()
+            req_id = int(parts[1]) if len(parts) > 1 and parts[1].isdigit() else 0
+            ok = approve_premium_request(req_id, status='Đã duyệt', admin_note='Duyệt từ Telegram') if req_id else False
+            _mkt_v160_tg_send(chat_id, '✅ Đã duyệt Premium #' + str(req_id) if ok else '❌ Không duyệt được. Dùng: /duyet 123')
+            return jsonify({'ok': True})
+        if low.startswith('/tuchoi') or low.startswith('/reject'):
+            parts = text.split()
+            req_id = int(parts[1]) if len(parts) > 1 and parts[1].isdigit() else 0
+            ok = approve_premium_request(req_id, status='Từ chối', admin_note='Từ chối từ Telegram') if req_id else False
+            _mkt_v160_tg_send(chat_id, '⚠️ Đã từ chối #' + str(req_id) if ok else '❌ Không xử lý được. Dùng: /tuchoi 123')
+            return jsonify({'ok': True})
+        if low.startswith('/reply'):
+            # /reply MKT-ABC nội dung
+            rest = text.split(maxsplit=2)
+            if len(rest) >= 3:
+                device = rest[1].strip().upper()
+                body = rest[2].strip()
+                save_support_message(device, 'admin', body)
+                _mkt_v160_tg_send(chat_id, f"✅ Đã gửi phản hồi cho khách <b>{tg_safe(device)}</b>\n\n{tg_safe(body)}")
+            else:
+                _mkt_v160_tg_send(chat_id, 'Cú pháp: /reply MKT-ABC nội dung cần gửi')
+            return jsonify({'ok': True})
+
+        # Nếu admin reply trực tiếp vào tin Telegram có chứa ID máy, tự gửi về chat web.
+        device = _mkt_v160_find_device(reply_text)
+        if device and str(chat_id) == str(os.getenv('TELEGRAM_CHAT_ID','').strip()):
+            save_support_message(device, 'admin', text)
+            _mkt_v160_tg_send(chat_id, f"✅ Đã gửi phản hồi cho khách <b>{tg_safe(device)}</b>")
+            return jsonify({'ok': True})
+
+        return jsonify({'ok': True, 'ignored': True})
+    except Exception as e:
+        print('Telegram webhook error:', e)
+        return jsonify({'ok': False, 'error': str(e)}), 200
+
+
+@app.route('/admin/telegram_admin_help')
+def admin_telegram_admin_help_route():
+    return jsonify({
+        'success': True,
+        'message': 'Telegram Admin Center đã sẵn sàng.',
+        'set_webhook': (request.url_root or '').rstrip('/') + '/telegram/set_webhook?secret=' + os.getenv('TELEGRAM_WEBHOOK_SECRET',''),
+        'commands': ['/cho','/duyet 123','/tuchoi 123','/reply MKT-ABC nội dung','/ngay MKT-ABC','/hethan 5','/ctv CTV-123456']
+    })
+
+
 if __name__ == "__main__":
     # Không tự tạo kho 50k content khi khởi động để tránh lỗi SQLite database is locked trên Render.
     # Khi cần kiểm tra/tạo kho content, gọi /api/content_50k_stats từ admin.
