@@ -12648,6 +12648,16 @@ def admin_telegram_test_route():
     return jsonify({"success": bool(ok), "telegram_enabled": telegram_enabled()})
 
 
+@app.route("/admin/telegram_status")
+def admin_telegram_status_route():
+    return jsonify({
+        "success": True,
+        "telegram_enabled": telegram_enabled(),
+        "has_token": bool(os.getenv("TELEGRAM_BOT_TOKEN", "").strip()),
+        "has_chat_id": bool(os.getenv("TELEGRAM_CHAT_ID", "").strip())
+    })
+
+
 @app.route("/support_poll")
 def support_poll_route():
     device_id = (request.args.get("device_id") or get_device_id()).strip().upper()
@@ -12663,13 +12673,44 @@ def support_send_route():
     device_id = (data.get("device_id") or get_device_id()).strip().upper()
     message = (data.get("message") or "").strip()
     sender = (data.get("sender") or "user").strip().lower()
+    phone = (data.get("phone") or "").strip()
+    email = (data.get("email") or "").strip()
     msg_id = save_support_message(device_id, sender, message)
     if not msg_id:
         return jsonify({"success": False, "message": "Tin nhắn trống."}), 400
+
     auto_id = None
+    auto_message = ""
     if sender == "user":
-        auto_id = save_support_auto_reply(device_id, message)
-    return jsonify({"success": True, "id": msg_id, "auto_id": auto_id, "message": ""})
+        try:
+            auto_message = support_auto_reply_text(message) or ""
+            if auto_message:
+                auto_id = save_support_message(device_id, "admin", auto_message)
+        except Exception as e:
+            print("support auto reply route error:", e)
+            auto_message = "Dạ em đã nhận được tin nhắn rồi ạ. Anh/chị gửi thêm ID máy/Gmail để bên em kiểm tra nhanh nhé."
+
+        # Báo Telegram thêm SĐT/Gmail nếu khách có nhập, không làm hỏng chat nếu Telegram thiếu cấu hình.
+        try:
+            extra = ""
+            if phone:
+                extra += f"\\nSĐT/Zalo: <b>{tg_safe(phone)}</b>"
+            if email:
+                extra += f"\\nGmail: <b>{tg_safe(email)}</b>"
+            send_telegram_message(
+                "🎫 <b>TICKET HỖ TRỢ MỚI</b> / <b>GPTMINI.PRO</b>\\n\\n"
+                f"ID máy: <b>{tg_safe(device_id)}</b>{extra}\\n"
+                f"Nội dung: {tg_safe(message)}"
+            )
+        except Exception as _tg_err:
+            print("Telegram support notify skipped:", _tg_err)
+
+    return jsonify({"success": True, "id": msg_id, "auto_id": auto_id, "auto_message": auto_message, "message": ""})
+
+@app.route("/support_message", methods=["POST"])
+def support_message_alias_route():
+    # Alias tương thích với các đoạn JS cũ từng gọi /support_message.
+    return support_send_route()
 
 @app.route("/admin/support_reply", methods=["POST"])
 def admin_support_reply_route():
@@ -15027,6 +15068,141 @@ def _mkt_v154_safe_mobile_cleanup_after_request(response):
                 response.headers["Content-Length"] = str(len(response.get_data()))
     except Exception as _e:
         print("V154 safe mobile cleanup skipped:", _e)
+    return response
+
+
+
+# ============================================================
+# V159 SUPPORT CHAT + TELEGRAM SAFETY PATCH
+# Giữ nguyên menu/giao diện hiện tại. Chỉ sửa luồng gửi chat:
+# - Quick button gửi luôn.
+# - Sau khi gửi hiển thị phản hồi tự nhiên ngay, không phụ thuộc poll.
+# - /support_send vẫn lưu DB và báo Telegram nếu đã cấu hình.
+# ============================================================
+_MKT_V159_SUPPORT_CHAT_PATCH = r"""
+<script id="mkt-v159-support-chat-fixed-js">
+(function(){
+  'use strict';
+
+  function byId(id){ return document.getElementById(id); }
+
+  function getDeviceId(){
+    try{
+      var saved = localStorage.getItem('mkt_device_id') || localStorage.getItem('MKT_DEVICE_ID') || '';
+      if(saved) return saved;
+      var txt = (document.body && document.body.innerText || '').match(/MKT-[A-Z0-9]+/);
+      if(txt && txt[0]) return txt[0];
+    }catch(e){}
+    return 'MKT-WEB';
+  }
+
+  function bubble(type, text){
+    var log = byId('mktFixSupportLog');
+    if(!log) return;
+    var div = document.createElement('div');
+    div.className = type === 'admin' ? 'ad' : 'me';
+    div.innerText = String(text || '');
+    log.appendChild(div);
+    log.scrollTop = log.scrollHeight;
+  }
+
+  function naturalLocalReply(msg){
+    var low = String(msg || '').toLowerCase();
+    function has(list){ return list.some(function(w){ return low.indexOf(w) >= 0; }); }
+
+    if(has(['xin chào','chào','hello','hi','alo','a lô'])){
+      return 'Chào anh/chị 👋\n\nAnh/chị cần hỗ trợ Premium, thanh toán hay sử dụng tính năng nào ạ?';
+    }
+    if(has(['premium','nâng cấp','nang cap','kích hoạt','kich hoat','mở gói','mo goi','gia hạn','gia han'])){
+      return 'Dạ, em nhận được yêu cầu Premium rồi ạ.\n\nAnh/chị gửi giúp em ID máy, Gmail hoặc số điện thoại đăng ký để em kiểm tra nhanh nhé.';
+    }
+    if(has(['thanh toán','thanh toan','chuyển khoản','chuyen khoan','qr','momo','mb bank','vietqr','đã thanh toán','da thanh toan'])){
+      return 'Dạ em nhận thông tin thanh toán rồi ạ.\n\nThông thường hệ thống xử lý trong 1–5 phút. Nếu quá 5 phút chưa kích hoạt, anh/chị bấm biểu tượng Zalo bên cạnh khung chat để được hỗ trợ nhanh hơn nhé.';
+    }
+    if(has(['lỗi','loi','không đăng','khong dang','fanpage','token','page','đăng bài','dang bai'])){
+      return 'Dạ anh/chị gửi giúp em ảnh lỗi hoặc ID Page/Fanpage để em kiểm tra nhanh nhé.';
+    }
+    if(has(['zalo','số điện thoại','so dien thoai','sdt','gmail','email','liên hệ','lien he'])){
+      return 'Dạ anh/chị có thể nhắn trực tiếp tại khung chat này.\n\nNếu cần xử lý gấp, bấm biểu tượng Zalo tròn bên cạnh khung chat để gặp kỹ thuật nhanh hơn.';
+    }
+    return 'Dạ em đã nhận được tin nhắn rồi ạ.\n\nAnh/chị mô tả thêm giúp em vấn đề đang gặp, hoặc gửi ID máy/Gmail để bên em kiểm tra nhanh nhé.';
+  }
+
+  window.sendSupportMessage = async function(){
+    var input = byId('mktFixSupportMessage');
+    var phone = byId('mktFixSupportPhone');
+    var email = byId('mktFixSupportEmail');
+    var msg = (input && input.value || '').trim();
+    if(!msg){
+      alert('Vui lòng nhập nội dung cần hỗ trợ.');
+      return false;
+    }
+
+    bubble('user', msg);
+    if(input) input.value = '';
+
+    var fallbackReply = naturalLocalReply(msg);
+    try{
+      var res = await fetch('/support_send', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({
+          device_id: getDeviceId(),
+          sender: 'user',
+          message: msg,
+          phone: phone ? phone.value : '',
+          email: email ? email.value : ''
+        })
+      });
+      var data = await res.json().catch(function(){ return {}; });
+      if(data && data.auto_message){
+        bubble('admin', data.auto_message);
+      }else{
+        bubble('admin', fallbackReply);
+      }
+      var note = byId('mktFixSupportNote');
+      if(note) note.innerText = '';
+    }catch(e){
+      bubble('admin', fallbackReply);
+      var note2 = byId('mktFixSupportNote');
+      if(note2) note2.innerText = 'Kết nối đang chậm, tin nhắn đã hiển thị tạm thời. Anh/chị thử gửi lại sau ít phút nếu cần.';
+    }
+    return false;
+  };
+
+  window.quickSupportText = function(text){
+    var input = byId('mktFixSupportMessage');
+    if(input){
+      input.value = text || '';
+      setTimeout(function(){
+        if(window.sendSupportMessage) window.sendSupportMessage();
+      }, 120);
+    }
+  };
+
+  window.toggleSupportChat = window.toggleSupportChat || function(){
+    var p = byId('mktFixSupportPanel');
+    if(p) p.classList.toggle('open');
+  };
+})();
+</script>
+"""
+
+@app.after_request
+def _mkt_v159_support_chat_after_request(response):
+    try:
+        content_type = response.headers.get("Content-Type", "")
+        if response.status_code == 200 and "text/html" in content_type.lower():
+            html = response.get_data(as_text=True)
+            if "mkt-v159-support-chat-fixed-js" not in html:
+                if "</body>" in html:
+                    html = html.replace("</body>", _MKT_V159_SUPPORT_CHAT_PATCH + "</body>")
+                else:
+                    html = html + _MKT_V159_SUPPORT_CHAT_PATCH
+                response.set_data(html)
+                response.headers["Content-Length"] = str(len(response.get_data()))
+    except Exception as _e:
+        print("V159 support chat patch skipped:", _e)
     return response
 
 
