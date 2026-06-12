@@ -14728,6 +14728,62 @@ _MKT_V154_SAFE_MOBILE_PATCH = r"""
     transform:none!important;
   }
 
+
+  body #mktVipDownloadBtn{
+    display:flex!important;
+    visibility:visible!important;
+    opacity:1!important;
+    pointer-events:auto!important;
+    position:fixed!important;
+    left:14px!important;
+    bottom:calc(env(safe-area-inset-bottom,0px) + 18px)!important;
+    right:auto!important;
+    top:auto!important;
+    width:auto!important;
+    height:58px!important;
+    min-width:158px!important;
+    max-width:210px!important;
+    padding:9px 16px 9px 12px!important;
+    margin:0!important;
+    overflow:visible!important;
+    border:1px solid rgba(255,255,255,.28)!important;
+    border-radius:999px!important;
+    background:linear-gradient(135deg,#0ea5e9 0%,#2563eb 42%,#7c3aed 100%)!important;
+    color:#fff!important;
+    box-shadow:0 18px 45px rgba(37,99,235,.42), inset 0 1px 0 rgba(255,255,255,.26)!important;
+    z-index:2147483550!important;
+    align-items:center!important;
+    justify-content:flex-start!important;
+    gap:10px!important;
+    font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif!important;
+    text-decoration:none!important;
+    cursor:pointer!important;
+    transform:translateZ(0)!important;
+    animation:mktVipDownloadPulse 2.4s ease-in-out infinite!important;
+    -webkit-tap-highlight-color:transparent!important;
+  }
+  body #mktVipDownloadBtn .mkt-vip-download-icon{
+    width:38px!important;height:38px!important;min-width:38px!important;border-radius:14px!important;
+    display:flex!important;align-items:center!important;justify-content:center!important;
+    background:rgba(255,255,255,.18)!important;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.22)!important;
+    font-size:19px!important;line-height:1!important;
+  }
+  body #mktVipDownloadBtn .mkt-vip-download-text{
+    display:flex!important;flex-direction:column!important;align-items:flex-start!important;justify-content:center!important;
+    line-height:1.05!important;white-space:nowrap!important;
+  }
+  body #mktVipDownloadBtn .mkt-vip-download-title{
+    display:block!important;font-size:14px!important;font-weight:1000!important;letter-spacing:.2px!important;color:#fff!important;
+  }
+  body #mktVipDownloadBtn .mkt-vip-download-sub{
+    display:block!important;margin-top:3px!important;font-size:11px!important;font-weight:900!important;color:rgba(255,255,255,.9)!important;
+  }
+  @keyframes mktVipDownloadPulse{
+    0%,100%{transform:translateY(0) scale(1)}
+    50%{transform:translateY(-3px) scale(1.025)}
+  }
+
   body #mktNotifyBell .mkt-bell-count,
   body #mktNotifyBellV2 .mkt-notify-count-v2,
   body .mkt-notify-count-v2,
@@ -14756,6 +14812,7 @@ _MKT_V154_SAFE_MOBILE_PATCH = r"""
   }
   function hardHide(el){
     if(!el || !mobile()) return;
+    if(el.id === 'mktVipDownloadBtn' || (el.closest && el.closest('#mktVipDownloadBtn'))) return;
     el.classList.add('mkt-v154-hide-mobile');
     var styles = {
       display:'none', visibility:'hidden', opacity:'0', pointerEvents:'none',
@@ -14783,6 +14840,7 @@ _MKT_V154_SAFE_MOBILE_PATCH = r"""
     qa('button,a,div,span').forEach(function(el){
       var t = (el.textContent || '').replace(/\s+/g,' ').trim().toLowerCase();
       if(!t) return;
+      if(el.id === 'mktVipDownloadBtn' || (el.closest && el.closest('#mktVipDownloadBtn'))) return;
       if((t.indexOf('gpt mkt') >= 0 && t.indexOf('tải xuống') >= 0) ||
          (t.indexOf('tải xuống') >= 0 && (el.offsetWidth < 260 || el.getBoundingClientRect().bottom > window.innerHeight - 160)) ||
          (t.indexOf('cài ứng dụng') >= 0 && el.offsetWidth < 260)){
@@ -14817,9 +14875,57 @@ _MKT_V154_SAFE_MOBILE_PATCH = r"""
       bell.style.setProperty('transform','none','important');
     });
   }
+
+  function openVipInstallGuide(){
+    var ua = (navigator.userAgent || '').toLowerCase();
+    var isiOS = /iphone|ipad|ipod/.test(ua);
+    var isAndroid = /android/.test(ua);
+    var msg = '';
+    if(isAndroid){
+      msg = 'Cài GPT MKT lên điện thoại:\n\n1. Bấm dấu 3 chấm trên Chrome\n2. Chọn “Thêm vào màn hình chính”\n3. Mở GPT MKT như một app riêng.';
+    }else if(isiOS){
+      msg = 'Cài GPT MKT trên iPhone:\n\n1. Mở bằng Safari\n2. Bấm nút Chia sẻ\n3. Chọn “Thêm vào Màn hình chính”\n4. Mở GPT MKT như app.';
+    }else{
+      msg = 'Cài GPT MKT:\n\nTrên Chrome/Edge, mở menu trình duyệt và chọn cài đặt ứng dụng hoặc thêm vào màn hình chính.';
+    }
+    alert(msg);
+  }
+  function ensureVipDownload(){
+    if(!mobile()) return;
+    var btn = document.getElementById('mktVipDownloadBtn');
+    if(!btn){
+      btn = document.createElement('button');
+      btn.type = 'button';
+      btn.id = 'mktVipDownloadBtn';
+      btn.setAttribute('aria-label','Tải xuống GPT MKT');
+      btn.innerHTML = '<span class="mkt-vip-download-icon">⬇️</span><span class="mkt-vip-download-text"><span class="mkt-vip-download-title">GPT MKT</span><span class="mkt-vip-download-sub">Tải xuống</span></span>';
+      btn.addEventListener('click', function(e){ e.preventDefault(); openVipInstallGuide(); }, true);
+      document.body.appendChild(btn);
+    }
+    btn.classList.remove('mkt-v154-hide-mobile');
+    btn.removeAttribute('aria-hidden');
+    btn.style.setProperty('display','flex','important');
+    btn.style.setProperty('visibility','visible','important');
+    btn.style.setProperty('opacity','1','important');
+    btn.style.setProperty('pointer-events','auto','important');
+    btn.style.setProperty('position','fixed','important');
+    btn.style.setProperty('left','14px','important');
+    btn.style.setProperty('bottom','calc(env(safe-area-inset-bottom,0px) + 18px)','important');
+    btn.style.setProperty('right','auto','important');
+    btn.style.setProperty('top','auto','important');
+    btn.style.setProperty('width','auto','important');
+    btn.style.setProperty('height','58px','important');
+    btn.style.setProperty('min-width','158px','important');
+    btn.style.setProperty('max-width','210px','important');
+    btn.style.setProperty('padding','9px 16px 9px 12px','important');
+    btn.style.setProperty('border-radius','999px','important');
+    btn.style.setProperty('z-index','2147483550','important');
+  }
+
   function run(){
     hideDownloads();
     moveBell();
+    ensureVipDownload();
   }
   if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', run);
   run();
