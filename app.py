@@ -13889,7 +13889,7 @@ _MKT_CUSTOMER_SMOOTH_V142_ADDON = r"""
       'library':'content_library','content':'content_library','plan':'marketing_plan','history':'history',
       'page_center':'page_center_total','fanpage':'fanpage_manager','group_marketing':'group_suite','group_finder':'group_suite','group_uid_splitter':'group_suite','group_join_queue':'group_suite','group_post_filter':'group_suite',
       'page_comment_pro':'page_center_total','page_comment_queue':'page_center_total',
-      'omni':'omni_channel_center','omnichannel':'omni_channel_center','premium_center':'premium','pricing':'premium','payment':'premium'
+      'omni':'omni_channel_center','omnichannel':'omni_channel_center','premium_center':'premium','pricing':'premium','payment':'premium','ctv':'affiliate_center','affiliate':'affiliate_center','affiliate_center':'affiliate_center'
     };
     var id=alias[moduleId]||moduleId||'dashboard';
     var premiumOnly=['messenger_ai','crm_sales','marketing_director','creative_center','ai_studio','omni_channel_center','ai_video','ai_image','ai_voice','analytics_center','automation_center'];
@@ -13936,7 +13936,7 @@ _MKT_CUSTOMER_SMOOTH_V142_ADDON = r"""
   function buildDock(){
     if(!/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) return; if(byId('mktSmoothMobileDock')) return;
     var d=document.createElement('div'); d.id='mktSmoothMobileDock';
-    d.innerHTML='<button type="button" id="mktSmoothInstallBtn"><span>⬇️</span><span>GPT MKT<br><small>Tải xuống</small></span></button><a id="mktSmoothCtvBtn" href="#ctv" onclick="return openModule(\'ctv\')"><span>🤝</span><span>CTV<br><small>Đăng ký</small></span></a>';
+    d.innerHTML='<button type="button" id="mktSmoothInstallBtn"><span>⬇️</span><span>GPT MKT<br><small>Tải xuống</small></span></button>';
     document.body.appendChild(d); byId('mktSmoothInstallBtn').onclick=window.showInstallGuide;
   }
   function buildChat(){
@@ -13995,6 +13995,169 @@ except Exception as _mkt_customer_smooth_v142_error:
     print('Customer Smooth V142 install skipped:', _mkt_customer_smooth_v142_error)
 # ============================================================
 # /CUSTOMER SMOOTH FIX V142
+# ============================================================
+
+
+# ============================================================
+# HOTFIX V144: Remove external mobile CTV, robust CTV menu, robust Premium approval
+# ============================================================
+
+def _mkt_v144_approve_premium_request(request_id, status="Đã duyệt"):
+    """Duyệt Premium trực tiếp, không phụ thuộc JS cũ / form cũ."""
+    ensure_admin_safe_schema()
+    request_id = str(request_id or "").strip()
+    if not request_id:
+        return False
+    now_dt = datetime.datetime.now()
+    now_s = now_dt.strftime("%Y-%m-%d %H:%M:%S")
+    conn = db(); c = conn.cursor()
+    c.execute("""
+        SELECT device_id,phone,email,package_key,package_name,amount
+        FROM premium_upgrade_requests WHERE id=? LIMIT 1
+    """, (request_id,))
+    row = c.fetchone()
+    if not row:
+        conn.close(); return False
+    device_id, phone, email, package_key, package_name, amount = row
+    device_id = (device_id or "").strip().upper()
+    package_key = normalize_package_key(package_key or "monthly")
+    plan = PREMIUM_PACKAGES.get(package_key, PREMIUM_PACKAGES.get("monthly", {}))
+    package_name = package_name or plan.get("name", "Premium")
+    days = int(plan.get("days", 30) or 30)
+    if status == "Đã duyệt":
+        base_dt = now_dt
+        c.execute("SELECT end_date,status FROM device_subscriptions WHERE device_id=? LIMIT 1", (device_id,))
+        old = c.fetchone()
+        if old and old[0] and str(old[0]).lower() not in ("forever", "lifetime", "không giới hạn", "khong gioi han"):
+            try:
+                old_end = datetime.datetime.strptime(str(old[0])[:19], "%Y-%m-%d %H:%M:%S")
+                if str(old[1] or "").lower() in ("premium", "active", "premium active") and old_end > now_dt:
+                    base_dt = old_end
+            except Exception:
+                pass
+        end_s = "Forever" if package_key in ("sellerpro", "lifetime", "forever") or days >= 3000 else (base_dt + datetime.timedelta(days=days)).strftime("%Y-%m-%d %H:%M:%S")
+        c.execute("""
+            INSERT INTO device_subscriptions(device_id,phone,email,package_key,package_name,start_date,end_date,status,last_renewal_notice_at,created_at,updated_at)
+            VALUES(?,?,?,?,?,?,?,?,?,?,?)
+            ON CONFLICT(device_id) DO UPDATE SET
+              phone=excluded.phone,
+              email=excluded.email,
+              package_key=excluded.package_key,
+              package_name=excluded.package_name,
+              end_date=excluded.end_date,
+              status='premium',
+              last_renewal_notice_at='',
+              updated_at=excluded.updated_at
+        """, (device_id, phone, email, package_key, package_name, now_s, end_s, "premium", "", now_s, now_s))
+        try:
+            ensure_user_notification_table(c)
+            c.execute("""
+                INSERT INTO user_notifications(device_id,title,message,level,is_read,created_at)
+                VALUES(?,?,?,?,0,?)
+            """, (device_id, "🎉 Premium đã kích hoạt", f"Gói {package_name} đã được Admin duyệt. Hạn dùng: {end_s}.", "success", now_s))
+        except Exception as _nerr:
+            print("user notification skipped:", _nerr)
+        try:
+            create_affiliate_commission_for_request(c, request_id)
+        except Exception as _aerr:
+            print("affiliate commission skipped:", _aerr)
+    c.execute("UPDATE premium_upgrade_requests SET status=?, admin_note=?, approved_at=? WHERE id=?", (status, "Duyệt từ Web Admin V144", now_s, request_id))
+    conn.commit(); conn.close()
+    try:
+        send_telegram_message(("✅" if status == "Đã duyệt" else "⚠️") + f" <b>PREMIUM {tg_safe(status)}</b>\nID máy: <b>{tg_safe(device_id)}</b>\nGói: <b>{tg_safe(package_name)}</b>")
+    except Exception:
+        pass
+    return True
+
+def _mkt_v144_admin_premium_action():
+    try:
+        ensure_admin_safe_schema()
+        if request.method == "POST":
+            ok = _mkt_v144_approve_premium_request(request.form.get("request_id"), request.form.get("status", "Đã duyệt"))
+            if not ok:
+                return _mkt_enterprise_admin_html("Không tìm thấy yêu cầu Premium cần duyệt."), 200
+    except Exception as e:
+        print("V144 admin premium action error:", e)
+        return _mkt_enterprise_admin_html(e), 200
+    return _mkt_enterprise_admin_html(), 200
+
+try:
+    app.view_functions["admin_premium_action"] = _mkt_v144_admin_premium_action
+except Exception as _mkt_v144_admin_err:
+    print("V144 admin action override skipped:", _mkt_v144_admin_err)
+
+_MKT_V144_FRONT_PATCH = r"""
+<!-- HOTFIX V144: CTV only inside menu + robust open -->
+<style id="mkt-v144-no-floating-ctv-css">
+  #mktSmoothCtvBtn,#mktMobileCtvLiveBtn,#mktMobileCtvQuick,#mktMobileCtvQuickRestore,#mobileCtvQuickBtn,#mktPhoneCtvDockFinal,#mktMobileActionDock .mkt-dock-ctv,.mkt-phone-ctv,button[aria-label="CTV"]{
+    display:none!important;visibility:hidden!important;opacity:0!important;pointer-events:none!important;width:0!important;height:0!important;overflow:hidden!important;
+  }
+  #mktSmoothMobileDock{grid-template-columns:1fr!important;max-width:180px!important}
+  #affiliateCenterSection.mkt-v144-ctv-open{display:block!important;visibility:visible!important;opacity:1!important;position:relative!important;z-index:30!important;min-height:420px!important}
+</style>
+<script id="mkt-v144-ctv-menu-open-js">
+(function(){if(window.__MKT_V144_CTV_PATCH__)return;window.__MKT_V144_CTV_PATCH__=1;
+  function q(s,r){return(r||document).querySelector(s)}
+  function qa(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s))}
+  function removeFloatingCtv(){
+    qa('#mktSmoothCtvBtn,#mktMobileCtvLiveBtn,#mktMobileCtvQuick,#mktMobileCtvQuickRestore,#mobileCtvQuickBtn,#mktPhoneCtvDockFinal,.mkt-phone-ctv,.mkt-dock-ctv,button[aria-label="CTV"]').forEach(function(el){try{el.remove()}catch(e){el.style.display='none'}});
+  }
+  function openCtv(){
+    removeFloatingCtv();
+    var sec=q('#affiliateCenterSection')||q('[data-module-section="affiliate_center"]')||q('#affiliate_center')||q('[id*="affiliate" i]');
+    if(!sec){alert('Chưa tìm thấy giao diện CTV Hoa Hồng trong file.');return false;}
+    qa('.module-section,.content-section,[data-module-section],[data-section]').forEach(function(el){
+      if(el!==sec){el.classList.remove('active','active-module','show','ctv-active','mkt-ctv-show','mkt-v144-ctv-open'); if(el.classList.contains('module-section')) el.style.display='none';}
+    });
+    sec.classList.add('active','active-module','show','ctv-active','mkt-ctv-show','mkt-v144-ctv-open');
+    sec.style.display='block'; sec.style.visibility='visible'; sec.style.opacity='1';
+    try{history.replaceState(null,'','#affiliate_center')}catch(e){}
+    setTimeout(function(){try{sec.scrollIntoView({behavior:'smooth',block:'start'})}catch(e){}},50);
+    if(typeof window.affiliateLoadMe==='function'){try{window.affiliateLoadMe()}catch(e){}}
+    return false;
+  }
+  var oldOpen=window.openModule;
+  window.openModule=function(id){
+    id=String(id||'').replace('#','');
+    if(id==='ctv'||id==='affiliate'||id==='affiliate_center') return openCtv();
+    return typeof oldOpen==='function' ? oldOpen.apply(this,arguments) : false;
+  };
+  document.addEventListener('click',function(e){
+    var c=e.target.closest&&e.target.closest('a[href="#affiliate_center"],a[href="#ctv"],[data-module="affiliate_center"],[data-aff-menu="1"],[data-open-ctv]');
+    if(c){e.preventDefault();e.stopPropagation();return openCtv();}
+  },true);
+  removeFloatingCtv();
+  setInterval(removeFloatingCtv,1200);
+})();
+</script>
+<!-- /HOTFIX V144 -->
+"""
+
+def _mkt_v144_after_request(response):
+    try:
+        if request.path.startswith('/admin') or request.path.startswith('/api') or request.path.startswith('/healthz'):
+            return response
+        ctype = response.headers.get('Content-Type','')
+        if 'text/html' not in ctype.lower():
+            return response
+        data = response.get_data(as_text=True)
+        if 'mkt-v144-ctv-menu-open-js' in data:
+            return response
+        data = data.replace('</body>', _MKT_V144_FRONT_PATCH + '</body>', 1) if '</body>' in data else data + _MKT_V144_FRONT_PATCH
+        response.set_data(data)
+        response.headers['Content-Length'] = str(len(response.get_data()))
+    except Exception as e:
+        print('V144 front patch skipped:', e)
+    return response
+
+try:
+    if not getattr(app, '_mkt_v144_patch_installed', False):
+        app.after_request(_mkt_v144_after_request)
+        app._mkt_v144_patch_installed = True
+except Exception as _mkt_v144_install_err:
+    print('V144 patch install skipped:', _mkt_v144_install_err)
+# ============================================================
+# /HOTFIX V144
 # ============================================================
 
 
