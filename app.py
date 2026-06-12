@@ -5299,17 +5299,32 @@ function closeLockedFeature(){
 </style>
 
 
+<style id="mkt-dashboard-value-upgrade-v166-css">
+  .mkt-value-grid-v166{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin:16px 0 18px!important}
+  .mkt-value-card-v166{display:flex;gap:12px;align-items:flex-start;padding:16px;border-radius:24px;background:linear-gradient(135deg,rgba(255,255,255,.98),rgba(239,246,255,.94));border:1px solid rgba(96,165,250,.22);box-shadow:0 18px 40px rgba(15,23,42,.14)}
+  .mkt-value-ico-v166{width:46px;height:46px;border-radius:16px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#2563eb,#7c3aed);color:#fff;font-size:22px;flex:0 0 auto;box-shadow:0 12px 28px rgba(37,99,235,.25)}
+  .mkt-value-card-v166 b{display:block;color:#0f172a;font-size:16px;font-weight:1000;margin-bottom:5px}.mkt-value-card-v166 span{display:block;color:#52637a;font-size:13px;font-weight:700;line-height:1.45}
+  .mkt-before-after-v166{display:grid;grid-template-columns:1fr auto 1fr;gap:12px;align-items:stretch;margin:0 0 18px;padding:13px;border-radius:26px;background:rgba(15,23,42,.42);border:1px solid rgba(148,163,184,.18);box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
+  .mkt-before-after-v166>div:not(.mkt-arrow-v166){border-radius:20px;padding:14px 16px;background:rgba(255,255,255,.96);border:1px solid rgba(226,232,240,.75)}
+  .mkt-before-after-v166 b{display:block;color:#1e3a8a;font-size:15px;font-weight:1000;margin-bottom:5px}.mkt-before-after-v166 span{display:block;color:#475569;font-size:13px;font-weight:750;line-height:1.45}.mkt-arrow-v166{display:flex!important;align-items:center;justify-content:center;color:#fff;font-weight:1000;font-size:25px;padding:0 5px}
+  .mkt-impact-grid-v166{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin:20px 0 22px}.mkt-impact-grid-v166>div{padding:15px;border-radius:22px;background:linear-gradient(135deg,#111827,#1e1b4b);border:1px solid rgba(96,165,250,.25);box-shadow:0 18px 42px rgba(2,6,23,.22)}
+  .mkt-impact-grid-v166 span{display:block;color:#c7d2fe;font-size:12px;font-weight:900}.mkt-impact-grid-v166 b{display:block;color:#67e8f9;font-size:24px;font-weight:1000;margin:4px 0}.mkt-impact-grid-v166 small{display:block;color:#dbeafe;font-size:11px;font-weight:700;line-height:1.35}
+  .rightbar .activity-card.mkt-revenue-card-v166{background:linear-gradient(135deg,rgba(30,41,59,.98),rgba(30,27,75,.98))!important;border-color:rgba(96,165,250,.28)!important;box-shadow:0 18px 45px rgba(2,6,23,.26)!important}.rightbar .activity-card.mkt-revenue-card-v166 b{color:#67e8f9!important;text-shadow:0 0 18px rgba(34,211,238,.35)!important}
+  #mktDeviceInlineFinal{background:linear-gradient(135deg,rgba(15,23,42,.92),rgba(30,27,75,.92))!important;border-color:rgba(96,165,250,.55)!important}#mktDeviceInlineFinal:before{content:"🟢 Trạng thái: Premium AI Seller";display:block;margin-bottom:7px;color:#bfdbfe;font-size:11px;font-weight:1000;letter-spacing:.01em}
+  @media(max-width:1050px){.mkt-value-grid-v166{grid-template-columns:1fr}.mkt-impact-grid-v166{grid-template-columns:repeat(2,minmax(0,1fr))}.mkt-before-after-v166{grid-template-columns:1fr}.mkt-arrow-v166{transform:rotate(90deg);padding:0}}@media(max-width:640px){.mkt-impact-grid-v166{grid-template-columns:1fr}.mkt-value-card-v166{border-radius:20px}.mkt-value-card-v166 b{font-size:15px}}
+</style>
+
 <style id="chat-device-menu-fix">
 /* Bản sửa: chỉ dọn icon menu, tăng ưu tiên chat, hiển thị ID thiết bị rõ ràng */
 .v2-nav-ico{display:none!important;width:0!important;min-width:0!important;margin:0!important;padding:0!important;overflow:hidden!important}
 .v2-nav-link{cursor:pointer!important;pointer-events:auto!important}
 .activity-card span{font-size:0!important}
 .activity-card span::before{font-size:16px!important}
-.activity-card:nth-of-type(1) span::before{content:"Tổng bài"}
-.activity-card:nth-of-type(2) span::before{content:"Đã đăng"}
-.activity-card:nth-of-type(3) span::before{content:"Chờ đăng"}
-.activity-card:nth-of-type(4) span::before{content:"Lead CRM"}
-.activity-card:nth-of-type(5) span::before{content:"Chiến dịch"}
+.activity-card:nth-of-type(1) span::before{content:"Doanh thu hôm nay"}
+.activity-card:nth-of-type(2) span::before{content:"Premium hiện tại"}
+.activity-card:nth-of-type(3) span::before{content:"Khách hàng CRM"}
+.activity-card:nth-of-type(4) span::before{content:"Bài AI đã tạo"}
+.activity-card:nth-of-type(5) span::before{content:"Thời gian tiết kiệm"}
 #sidebarDeviceId{display:inline-block!important;color:#fff!important;font-weight:900!important;font-size:14px!important;letter-spacing:.4px;margin:4px 0}
 /* Đã loại bỏ bot cũ bị trùng, chỉ giữ bot hỗ trợ mới #mktFixSupportFloat */
 .floating-bot{display:none!important;visibility:hidden!important;opacity:0!important;pointer-events:none!important}
@@ -5438,6 +5453,18 @@ function closeLockedFeature(){
 <section class="top-hero" id="dashboard">
   <h1>Mkt Automation Pro V5 Seller AI Suite</h1>
 
+  <div class="mkt-value-grid-v166">
+    <div class="mkt-value-card-v166"><div class="mkt-value-ico-v166">💰</div><div><b>Tăng khách hàng tiềm năng</b><span>Đăng đồng thời Fanpage, Group, Facebook, Telegram và Zalo để tăng độ phủ mỗi ngày.</span></div></div>
+    <div class="mkt-value-card-v166"><div class="mkt-value-ico-v166">⏰</div><div><b>Tiết kiệm 40-60 giờ/tháng</b><span>Tự động hóa đăng bài, AI trả lời comment/inbox và lưu khách vào CRM.</span></div></div>
+    <div class="mkt-value-card-v166"><div class="mkt-value-ico-v166">🚀</div><div><b>Tăng tỷ lệ chốt đơn</b><span>AI Messenger + CRM Kanban giúp theo dõi khách mới, tư vấn, báo giá và chốt đơn.</span></div></div>
+  </div>
+
+  <div class="mkt-before-after-v166">
+    <div><b>Trước đây</b><span>Đăng thủ công 20 group, trả lời từng comment/inbox, dễ bỏ sót khách.</span></div>
+    <div class="mkt-arrow-v166">→</div>
+    <div><b>Sau khi dùng GPTMini Pro</b><span>Đăng đa kênh trong vài phút, AI hỗ trợ phản hồi, CRM tự gom khách hàng.</span></div>
+  </div>
+
 <div class="app-quick-grid">
   <div class="app-quick-card" onclick="return openModule('post')">
     <div class="app-ico">📢</div>
@@ -5535,6 +5562,14 @@ function closeLockedFeature(){
     <div class="module-card" onclick="return openModule('ai_studio')"><div class="icon">🎨</div><h3>AI Studio</h3><p>Gộp AI Facebook, AI Image, AI Video, AI Giọng Nói và AI Livestream vào một khu vực.</p><span class="module-pill">Mở AI Studio</span></div>
     <div class="module-card" onclick="return openModule('affiliate_center')"><div class="icon">🤝</div><h3>CTV Hoa Hồng</h3><p>Tạo link giới thiệu, xem doanh thu, hoa hồng và lịch sử khách nâng cấp.</p><span class="module-pill">Mở CTV</span></div>
     <div class="module-card" onclick="return openModule('premium')"><div class="icon">💎</div><h3>Premium</h3><p>Mở khóa hạn mức cao hơn, module nâng cao và hỗ trợ ưu tiên.</p><span class="module-pill">Xem gói</span></div>
+  </div>
+
+  <div class="mkt-impact-grid-v166">
+    <div><span>Bài đăng AI</span><b>{{ s.total }}</b><small>Đã tạo/lưu trong hệ thống</small></div>
+    <div><span>Tin nhắn AI</span><b>{{ analytics.summary.messenger_total }}</b><small>Kịch bản inbox & chăm sóc</small></div>
+    <div><span>Khách hàng CRM</span><b>{{ s.crm }}</b><small>Lead được lưu để chốt đơn</small></div>
+    <div><span>Thời gian tiết kiệm</span><b>40-60h</b><small>Mỗi tháng cho shop online</small></div>
+    <div><span>Khác biệt</span><b>All-in-one</b><small>Đa kênh + AI + CRM + CTV</small></div>
   </div>
 </section>
 
@@ -7041,20 +7076,20 @@ Thời gian tạo: {{ h[9] }}
 
 <aside class="rightbar">
   <h2>Hoạt động hôm nay</h2>
-  <div class="activity-card">
-    <span>Tổng bài</span><b>{{ s.total }}</b>
+  <div class="activity-card mkt-revenue-card-v166">
+    <span>Doanh thu hôm nay</span><b>{{ analytics.summary.total_value }}đ</b>
   </div>
-  <div class="activity-card">
-    <span>Đã đăng</span><b>{{ s.posted }}</b>
+  <div class="activity-card mkt-revenue-card-v166">
+    <span>Premium hiện tại</span><b>{{ 'Active' if is_device_premium else 'Trial' }}</b>
   </div>
-  <div class="activity-card">
-    <span>Chờ đăng</span><b>{{ s.scheduled }}</b>
+  <div class="activity-card mkt-revenue-card-v166">
+    <span>Khách hàng CRM</span><b>{{ s.crm }}</b>
   </div>
-  <div class="activity-card">
-    <span>Lead CRM</span><b>{{ s.crm }}</b>
+  <div class="activity-card mkt-revenue-card-v166">
+    <span>Bài AI đã tạo</span><b>{{ s.total }}</b>
   </div>
-  <div class="activity-card">
-    <span>Chiến dịch</span><b>{{ s.campaigns }}</b>
+  <div class="activity-card mkt-revenue-card-v166">
+    <span>Thời gian tiết kiệm</span><b>40-60h</b>
   </div>
 
   <div class="{{ 'free-status-card free-expired' if free_status.is_expired else 'free-status-card' }}">
