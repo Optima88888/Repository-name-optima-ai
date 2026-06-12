@@ -14649,3 +14649,27 @@ if __name__ == "__main__":
     threading.Thread(target=scheduler_loop, daemon=True).start()
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port, debug=False)
+
+
+# ============================================================
+# V152 MOBILE CLEANUP PATCH - remove duplicate install button + move notify bell
+# ============================================================
+try:
+    _old_home_v152 = home
+    @app.route('/__v152_mobile_fix_status')
+    def __v152_mobile_fix_status():
+        return jsonify({"ok": True, "patch": "v152_mobile_cleanup"})
+    def home():
+        res = _old_home_v152()
+        try:
+            html = str(res)
+            patch = '\n<style id="mkt-v152-mobile-cleanup-final">\n@media(max-width:900px){\n  #gptMktLeftDockFinal,#mktMobileQuickActionsRestore,#mktTopDownloadBar,#mktMobileInstallMenu,#mktMobileCtvQuick,#mobileCtvQuickBtn,.mkt-mobile-install-menu,.mkt-mobile-download,.mkt-top-download-bar,.mkt-install-top,.mkt-install-btn,.app-install-banner,.v2-install-box,[data-install],[data-pwa-install]{display:none!important;visibility:hidden!important;opacity:0!important;pointer-events:none!important;width:0!important;height:0!important;overflow:hidden!important;}\n  #mktNotifyBell,#mktNotifyBellV2,.mkt-notify-bell,.mkt-notify-bell-v2{position:fixed!important;top:76px!important;right:14px!important;left:auto!important;bottom:auto!important;width:54px!important;height:54px!important;border-radius:999px!important;z-index:2147483500!important;transform:none!important;}\n  #mktNotifyBell .mkt-bell-count,#mktNotifyBellV2 .mkt-notify-count-v2,.mkt-notify-count-v2{position:absolute!important;top:-8px!important;right:-8px!important;z-index:2147483600!important;}\n}\n</style>\n<script id="mkt-v152-mobile-cleanup-final-js">\n(function(){\n  function hideDownloadButtons(){\n    if(!window.matchMedia || !window.matchMedia(\'(max-width: 900px)\').matches) return;\n    var selectors=[\'#gptMktLeftDockFinal\',\'#mktMobileQuickActionsRestore\',\'#mktTopDownloadBar\',\'#mktMobileInstallMenu\',\'#mktMobileCtvQuick\',\'#mobileCtvQuickBtn\',\'.mkt-mobile-install-menu\',\'.mkt-mobile-download\',\'.mkt-top-download-bar\',\'.mkt-install-top\',\'.mkt-install-btn\',\'.app-install-banner\',\'.v2-install-box\',\'[data-install]\',\'[data-pwa-install]\'];\n    selectors.forEach(function(sel){document.querySelectorAll(sel).forEach(function(el){[\'display:none\',\'visibility:hidden\',\'opacity:0\',\'pointer-events:none\',\'width:0\',\'height:0\',\'overflow:hidden\'].forEach(function(rule){var p=rule.split(\':\');el.style.setProperty(p[0],p[1],\'important\');});});});\n  }\n  function moveBell(){\n    if(!window.matchMedia || !window.matchMedia(\'(max-width: 900px)\').matches) return;\n    var bells=[document.getElementById(\'mktNotifyBell\'),document.getElementById(\'mktNotifyBellV2\')].filter(Boolean);\n    document.querySelectorAll(\'.mkt-notify-bell,.mkt-notify-bell-v2\').forEach(function(b){bells.push(b)});\n    bells.forEach(function(bell){\n      bell.style.setProperty(\'position\',\'fixed\',\'important\');bell.style.setProperty(\'top\',\'76px\',\'important\');bell.style.setProperty(\'right\',\'14px\',\'important\');bell.style.setProperty(\'left\',\'auto\',\'important\');bell.style.setProperty(\'bottom\',\'auto\',\'important\');bell.style.setProperty(\'z-index\',\'2147483500\',\'important\');bell.style.setProperty(\'transform\',\'none\',\'important\');\n    });\n  }\n  function run(){hideDownloadButtons();moveBell();}\n  run();document.addEventListener(\'DOMContentLoaded\',run);window.addEventListener(\'load\',run);setInterval(run,700);\n})();\n</script>\n'
+            if '</body>' in html:
+                html = html.replace('</body>', patch + '</body>')
+            else:
+                html += patch
+            return html
+        except Exception:
+            return res
+except Exception as _e:
+    print('V152 mobile cleanup patch skipped:', _e)
