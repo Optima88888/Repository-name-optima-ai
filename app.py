@@ -19766,3 +19766,148 @@ def mkt_v201_facebook_personal_pro_after_request(response):
     except Exception as _e:
         print('mkt_v201_facebook_personal_pro_after_request skipped:', _e)
     return response
+
+# ============================================================
+# V202 - FINAL FIX: Đăng cá nhân trực tiếp + ép logo Omni Channel
+# ============================================================
+
+def _mkt_v202_create_fb_jobs(direct_now=False):
+    try:
+        mkt_v197_init_fb_personal_fixed_center()
+    except Exception:
+        try:
+            mkt_v196_init_fb_full_center()
+        except Exception:
+            pass
+    device_id = mkt_v196_get_device_id()
+    account_ids = [int(x) for x in request.form.getlist('account_ids') if str(x).isdigit()]
+    asset_ids = [int(x) for x in request.form.getlist('asset_ids') if str(x).isdigit()]
+    destination = (request.form.get('destination') or 'personal').strip().lower()
+    if destination not in ['personal', 'page', 'group', 'all']:
+        destination = 'personal'
+    contents = mkt_v196_split_lines(request.form.get('content_bulk') or '')
+    if not account_ids:
+        return jsonify({'ok': False, 'message': 'Chưa chọn tài khoản Facebook.'})
+    if not contents:
+        return jsonify({'ok': False, 'message': 'Chưa nhập bài đăng.'})
+    if destination in ['page', 'group'] and not asset_ids:
+        return jsonify({'ok': False, 'message': 'Bạn đang chọn Page/Group nên cần tick Page/Group. Nếu đăng tường cá nhân hãy chọn Cá nhân.'})
+    media_paths = []
+    media_dir = os.path.join(UPLOAD_DIR, 'fb_v202_media')
+    os.makedirs(media_dir, exist_ok=True)
+    for f in request.files.getlist('media_files'):
+        if not f or not getattr(f, 'filename', ''):
+            continue
+        fn = secure_filename(f.filename)
+        if not fn:
+            continue
+        ext = os.path.splitext(fn)[1].lower()
+        if ext not in ['.jpg','.jpeg','.png','.webp','.gif','.mp4','.mov','.avi','.mkv']:
+            continue
+        final = datetime.datetime.now().strftime('%Y%m%d%H%M%S%f') + '_' + fn
+        path = os.path.join(media_dir, final)
+        f.save(path)
+        media_paths.append(path)
+    start_raw = (request.form.get('start_time') or '').strip()
+    try:
+        gap_minutes = max(0, int(request.form.get('gap_minutes') or 0))
+    except Exception:
+        gap_minutes = 0
+    try:
+        start_dt = datetime.datetime.fromisoformat(start_raw) if start_raw else datetime.datetime.now()
+    except Exception:
+        start_dt = datetime.datetime.now()
+    now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    conn = db(); c = conn.cursor()
+    acc_map = {}
+    for aid in account_ids:
+        c.execute("SELECT account_name FROM fb_desktop_sessions WHERE id=? AND device_id=? LIMIT 1", (aid, device_id))
+        r = c.fetchone()
+        if r:
+            acc_map[aid] = r[0]
+    if not acc_map:
+        conn.close(); return jsonify({'ok': False, 'message': 'Không tìm thấy tài khoản đã chọn.'})
+    target_rows = []
+    if destination in ['personal', 'all']:
+        target_rows.append(('personal', 'personal_wall', '👤 Trang cá nhân', 'https://www.facebook.com/me'))
+    if asset_ids and destination in ['page', 'group', 'all']:
+        q = ','.join(['?'] * len(asset_ids))
+        c.execute(f"SELECT id,asset_type,asset_name,asset_uid,asset_url FROM fb_account_assets_v196 WHERE device_id=? AND id IN ({q})", [device_id] + asset_ids)
+        for rid, typ, name, uid, url in c.fetchall():
+            if destination == 'all' or destination == typ:
+                target_rows.append((typ, uid or str(rid), name or typ, url or ''))
+    if not target_rows:
+        conn.close(); return jsonify({'ok': False, 'message': 'Chưa có nơi đăng phù hợp.'})
+    media_json = json.dumps(media_paths, ensure_ascii=False)
+    count = 0
+    direct_personal = bool(direct_now and destination == 'personal' and gap_minutes == 0 and not start_raw)
+    for aid, acc_name in acc_map.items():
+        for target in target_rows:
+            content = contents[count % len(contents)]
+            schedule_at = (start_dt + datetime.timedelta(minutes=gap_minutes * count)).strftime('%Y-%m-%d %H:%M:%S')
+            if direct_personal:
+                status = 'Đã gửi lệnh đăng ngay'
+                result = 'Đăng cá nhân: đã gửi lệnh cho Desktop/App worker. Không cần Group/Page.'
+            elif gap_minutes == 0 and not start_raw:
+                status = 'Chờ đăng ngay'
+                result = 'Sẵn sàng đăng ngay bằng Desktop/App worker.'
+            else:
+                status = 'Chờ đăng'
+                result = 'Đã xếp lịch đăng.'
+            c.execute("""INSERT INTO fb_publish_jobs_v196(device_id,account_id,account_name,destination,target_id,target_name,target_url,content,media_paths,schedule_at,status,result_message,created_at,updated_at)
+                         VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)""", (device_id, aid, acc_name, target[0], target[1], target[2], target[3], content, media_json, schedule_at, status, result, now, now))
+            count += 1
+    conn.commit(); conn.close()
+    label = {'personal':'trang cá nhân','page':'Page','group':'Group','all':'cá nhân/Page/Group'}.get(destination, destination)
+    if direct_personal:
+        return jsonify({'ok': True, 'direct': True, 'message': f'Đã gửi {count} bài đăng ngay lên {label}. Có {len(media_paths)} ảnh/video kèm theo. Không cần chọn Group/Page.'})
+    return jsonify({'ok': True, 'direct': False, 'message': f'Đã tạo {count} bài đăng lên {label}. Có {len(media_paths)} ảnh/video kèm theo.'})
+
+@app.route('/api/fb_v202_publish_now', methods=['POST'])
+def api_fb_v202_publish_now():
+    return _mkt_v202_create_fb_jobs(direct_now=True)
+
+try:
+    app.view_functions['api_fb_v197_queue_create'] = lambda: _mkt_v202_create_fb_jobs(direct_now=False)
+except Exception as _e:
+    print('V202 override api_fb_v197_queue_create skipped:', _e)
+
+MKT_V202_PERSONAL_DIRECT_OMNI = r'''
+<style id="mkt-v202-personal-direct-omni-css">
+#mktV193FbCenter,#mktV194FbCenter,#mktV195DesktopLoginCenter,#mktV196FbFullCenter,#mktV197FbCenter,#mktV198PersonalQuick,#mktV199FbFinalCenter,#mktV200FbCenter{display:none!important;visibility:hidden!important;max-height:0!important;overflow:hidden!important;margin:0!important;padding:0!important;border:0!important}
+#mktV201FbCenter .v201-mainbtn{background:linear-gradient(135deg,#16a34a,#2563eb)!important;font-size:18px!important;box-shadow:0 18px 42px rgba(22,163,74,.20)!important}
+#mktV201FbCenter .v201-mainbtn::after{content:'  • Cá nhân đăng ngay';font-size:13px!important;opacity:.95!important;margin-left:4px!important}
+.v202-personal-direct-note{margin:10px 0!important;padding:12px 14px!important;border-radius:18px!important;background:linear-gradient(135deg,#ecfdf5,#eff6ff)!important;border:1px solid #bbf7d0!important;color:#065f46!important;font-weight:1000!important;line-height:1.45!important}
+.v202-omni-logo{width:48px!important;height:48px!important;min-width:48px!important;border-radius:16px!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;margin-right:12px!important;vertical-align:middle!important;box-shadow:0 14px 32px rgba(15,23,42,.16)!important;overflow:hidden!important;background:#fff!important;flex:0 0 48px!important}.v202-omni-logo svg{width:100%!important;height:100%!important;display:block!important}.v202-omni-wrap{display:flex!important;align-items:center!important;gap:10px!important}.v202-omni-name{font-weight:1000!important;color:#0f172a!important}.v202-omni-status{font-size:13px!important;color:#64748b!important;font-weight:900!important}
+</style>
+<script id="mkt-v202-personal-direct-omni-js">
+(function(){
+  function qs(s,r){return(r||document).querySelector(s)}function qsa(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s))}
+  function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+  function device(){try{var v=localStorage.getItem('gptmini_device_id')||localStorage.getItem('mkt_device_id');if(!v){v='MKT-'+Math.random().toString(16).slice(2,9).toUpperCase();localStorage.setItem('gptmini_device_id',v)}return v}catch(e){return'MKT-WEB'}}
+  function api(url,opt){opt=opt||{};opt.headers=Object.assign({'X-Device-Id':device()},opt.headers||{});return fetch(url,opt).then(function(r){return r.json()})}
+  function logo(type){var m={facebook_page:'<span class="v202-omni-logo"><svg viewBox="0 0 32 32"><circle cx="16" cy="16" r="16" fill="#1877F2"/><path d="M20.7 17.1l.6-4.1h-3.9v-2.7c0-1.1.5-2.2 2.3-2.2h1.8V4.6s-1.6-.3-3.1-.3c-3.2 0-5.3 1.9-5.3 5.5V13H9.6v4.1h3.5V27h4.3v-9.9h3.3z" fill="#fff"/></svg></span>',facebook_group:'<span class="v202-omni-logo"><svg viewBox="0 0 32 32"><rect width="32" height="32" rx="9" fill="#1877F2"/><circle cx="12" cy="13" r="4" fill="#fff"/><circle cx="21" cy="14" r="3.3" fill="#dbeafe"/><path d="M5 25c.8-5 4-7.5 7-7.5s6.2 2.5 7 7.5H5z" fill="#fff"/><path d="M17 25c.6-3.8 2.8-5.8 5-5.8 2.3 0 4.6 2 5 5.8H17z" fill="#dbeafe"/></svg></span>',tiktok:'<span class="v202-omni-logo"><svg viewBox="0 0 32 32"><rect width="32" height="32" rx="8" fill="#050505"/><path d="M19.8 6.2c.5 3.2 2.3 5.1 5.2 5.4v4.1c-1.8.1-3.5-.5-5.1-1.5v6.7c0 4.2-2.8 6.8-6.9 6.8-3.6 0-6.2-2.4-6.2-5.8 0-3.8 3.1-6.2 7.5-5.8v4.2c-1.8-.5-3.2.4-3.2 1.8 0 1.1.9 1.8 2.1 1.8 1.5 0 2.3-.9 2.3-2.7v-15h4.3z" fill="#fff"/></svg></span>',tiktok_shop:'<span class="v202-omni-logo"><svg viewBox="0 0 32 32"><rect width="32" height="32" rx="8" fill="#050505"/><path d="M9 12h14l-1.2 13H10.2L9 12z" fill="#fff"/><path d="M12 12c.2-3 1.9-5 4-5s3.8 2 4 5" fill="none" stroke="#25F4EE" stroke-width="2"/><circle cx="13" cy="17" r="1.2" fill="#FE2C55"/><circle cx="19" cy="17" r="1.2" fill="#25F4EE"/></svg></span>',instagram:'<span class="v202-omni-logo"><svg viewBox="0 0 32 32"><defs><linearGradient id="igv202" x1="0" x2="1" y1="1" y2="0"><stop offset="0" stop-color="#FEDA75"/><stop offset=".35" stop-color="#FA7E1E"/><stop offset=".6" stop-color="#D62976"/><stop offset=".8" stop-color="#962FBF"/><stop offset="1" stop-color="#4F5BD5"/></linearGradient></defs><rect width="32" height="32" rx="8" fill="url(#igv202)"/><rect x="8" y="8" width="16" height="16" rx="5" fill="none" stroke="#fff" stroke-width="2.2"/><circle cx="16" cy="16" r="4" fill="none" stroke="#fff" stroke-width="2.2"/><circle cx="21.5" cy="10.5" r="1.5" fill="#fff"/></svg></span>',youtube:'<span class="v202-omni-logo"><svg viewBox="0 0 32 32"><rect x="3" y="8" width="26" height="16" rx="5" fill="#FF0000"/><path d="M14 12.2v7.6l6.6-3.8L14 12.2z" fill="#fff"/></svg></span>',telegram:'<span class="v202-omni-logo"><svg viewBox="0 0 32 32"><circle cx="16" cy="16" r="16" fill="#229ED9"/><path d="M24.8 9.1L21.9 23c-.2 1-1 .9-1.6.5l-4.5-3.3-2.2 2.1c-.2.2-.4.4-.9.4l.3-4.6 8.4-7.6c.4-.3-.1-.5-.6-.2l-10.4 6.5-4.5-1.4c-1-.3-1-1 .2-1.5l17.6-6.8c.8-.3 1.5.2 1.2 1.9z" fill="#fff"/></svg></span>',zalo_oa:'<span class="v202-omni-logo"><svg viewBox="0 0 32 32"><rect width="32" height="32" rx="8" fill="#0068FF"/><text x="16" y="20" text-anchor="middle" font-family="Arial" font-size="10.5" font-weight="900" fill="#fff">Zalo</text></svg></span>'};return m[type]||''}
+  function typeFromText(t){t=(t||'').toLowerCase();if(t.indexOf('facebook page')>-1)return'facebook_page';if(t.indexOf('facebook group')>-1)return'facebook_group';if(t.indexOf('tiktok shop')>-1)return'tiktok_shop';if(t.indexOf('tiktok')>-1)return'tiktok';if(t.indexOf('instagram')>-1)return'instagram';if(t.indexOf('youtube')>-1)return'youtube';if(t.indexOf('telegram')>-1)return'telegram';if(t.indexOf('zalo')>-1)return'zalo_oa';return''}
+  function cleanName(type,txt){var map={facebook_page:'Facebook Page',facebook_group:'Facebook Group',tiktok:'TikTok',tiktok_shop:'TikTok Shop',instagram:'Instagram',youtube:'YouTube',telegram:'Telegram',zalo_oa:'Zalo OA'};return map[type]||txt}
+  function forceOmniLogos(){qsa('input[name="selected_channels"]').forEach(function(inp){var lab=inp.closest('label');if(!lab)return;var type=inp.value||typeFromText(lab.textContent);if(!type)return;if(lab.getAttribute('data-v202-logo')==='1')return;var checked=inp.checked?' checked':'';lab.innerHTML='<input type="checkbox" name="selected_channels" value="'+esc(inp.value||type)+'"'+checked+'><span class="v202-omni-wrap">'+logo(type)+'<span><span class="v202-omni-name">'+esc(cleanName(type,lab.textContent))+'</span><br><span class="v202-omni-status">Chưa kết nối</span></span></span>';lab.setAttribute('data-v202-logo','1')});qsa('#omni_channel label,#omni_channel .v3-feature-card,#omni_channel .channel-card,#omni_channel .omni-card,#omni_channel .page-item,.module-section label,.module-section .channel-card').forEach(function(el){if(el.querySelector('.v202-omni-logo'))return;var type=typeFromText(el.textContent);if(!type)return;var title=el.querySelector('h3,b,.title,.name')||el;title.insertAdjacentHTML('afterbegin',logo(type));})}
+  function note(){var post=qs('#v201Post .v201-card');if(post&&!qs('#v202PersonalDirectNote')){var d=document.createElement('div');d.id='v202PersonalDirectNote';d.className='v202-personal-direct-note';d.innerHTML='✅ Chọn <b>Cá nhân</b> thì không cần Group/Page. Bấm <b>Đăng ngay</b> sẽ gửi lệnh đăng trực tiếp, không tự chuyển sang Hàng chờ.';var h=post.querySelector('h4');if(h)h.parentNode.insertBefore(d,h.nextSibling)}}
+  function buildForm(){var fd=new FormData();var dest=(qs('#mktV201FbCenter input[name="v201Dest"]:checked')||{}).value||'personal';var content=(qs('#v201Content')||{}).value||'';if(!content.trim()){alert('Chưa nhập bài đăng.');return null}fd.set('destination',dest);fd.set('content_bulk',content);fd.set('start_time',(qs('#v201Start')||{}).value||'');fd.set('gap_minutes',(qs('#v201Gap')||{}).value||'0');qsa('#v201AccountsListPost input[name=account_ids]:checked').forEach(function(x){fd.append('account_ids',x.value)});if(!fd.getAll('account_ids').length){alert('Chưa chọn tài khoản Facebook.');return null}if(dest!=='personal'){qsa('#v201PagesListPost input[name=asset_ids]:checked,#v201GroupsListPost input[name=asset_ids]:checked').forEach(function(x){fd.append('asset_ids',x.value)});if(dest!=='all'&&!fd.getAll('asset_ids').length){alert('Bạn đang chọn Page/Group nên cần tick Page/Group. Nếu đăng tường cá nhân hãy chọn Cá nhân.');return null}}var files=(qs('#v201Media')||{}).files||[];for(var i=0;i<files.length;i++)fd.append('media_files',files[i]);return {fd:fd,dest:dest,gap:fd.get('gap_minutes'),start:fd.get('start_time')}}
+  function overridePublish(){window.mktV201CreateQueue=function(){var b=buildForm();if(!b)return;var direct=(b.dest==='personal'&&(String(b.gap||'0')==='0')&&!b.start);api(direct?'/api/fb_v202_publish_now':'/api/fb_v197_queue_create',{method:'POST',body:b.fd}).then(function(d){var m=qs('#v201Msg');if(m)m.textContent=d.message||'';alert(d.message||'Đã xử lý');if(window.mktV201Refresh)window.mktV201Refresh();if(!direct){try{qsa('#mktV201FbCenter .v201-tabs button').forEach(function(btn){if(btn.getAttribute('data-tab')==='Queue')btn.click()})}catch(e){}}}).catch(function(){alert('Lỗi xử lý đăng bài. Kiểm tra tài khoản và nội dung.')})};window.mktV200CreateQueue=window.mktV201CreateQueue;window.mktV199CreateQueue=window.mktV201CreateQueue;window.mktV197CreateQueue=window.mktV201CreateQueue;window.mktV196CreateQueue=window.mktV201CreateQueue;}
+  function run(){overridePublish();note();forceOmniLogos()}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',run);else run();setTimeout(run,500);setTimeout(run,1500);setTimeout(run,3500);setInterval(function(){overridePublish();forceOmniLogos()},2500);
+})();
+</script>
+'''
+
+@app.after_request
+def mkt_v202_personal_direct_omni_after_request(response):
+    try:
+        ctype = (response.headers.get('Content-Type') or '').lower()
+        if 'text/html' in ctype:
+            body = response.get_data(as_text=True)
+            if 'mkt-v202-personal-direct-omni-js' not in body and '</body>' in body:
+                body = body.replace('</body>', MKT_V202_PERSONAL_DIRECT_OMNI + '</body>')
+                response.set_data(body)
+                response.headers['Content-Length'] = str(len(body.encode('utf-8')))
+    except Exception as _e:
+        print('mkt_v202_personal_direct_omni_after_request skipped:', _e)
+    return response
