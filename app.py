@@ -17468,6 +17468,73 @@ MKT_V189_DUAL_ANDROID_DESKTOP_UI = '\n<style id="mkt-v189-dual-android-desktop-u
 # V189 ghi đè UI V188: giữ Android Companion và khôi phục Desktop Playwright cho khách có máy tính.
 MKT_V186_PLAYWRIGHT_UI = MKT_V189_DUAL_ANDROID_DESKTOP_UI
 
+
+
+# V190 - Facebook Login Choice Modal: giữ menu hiện tại, không render login trực tiếp làm tràn layout
+MKT_V190_FACEBOOK_LOGIN_CHOICE_UI = """
+<style id="mkt-v190-facebook-login-choice-ui">
+#mktV190FbBox{margin:18px 0;padding:18px;border-radius:26px;border:1px solid rgba(59,130,246,.20);background:linear-gradient(135deg,#ffffff,#eff6ff,#f5f3ff);box-shadow:0 22px 54px rgba(37,99,235,.12);color:#0f172a;overflow:hidden}
+#mktV190FbBox h3{margin:0 0 8px;color:#123b7a;font-size:24px;font-weight:1000}#mktV190FbBox .mkt-fb-sub{color:#64748b;font-weight:800;line-height:1.55;margin-bottom:14px}.mkt-fb-choice-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}.mkt-fb-choice-card{border:1px solid #dbeafe;border-radius:22px;background:rgba(255,255,255,.94);padding:18px;box-shadow:0 16px 38px rgba(15,23,42,.08);cursor:pointer;transition:.2s ease}.mkt-fb-choice-card:hover{transform:translateY(-3px);border-color:#93c5fd;box-shadow:0 24px 54px rgba(37,99,235,.14)}.mkt-fb-choice-icon{width:56px;height:56px;border-radius:20px;display:flex;align-items:center;justify-content:center;font-size:28px;background:linear-gradient(135deg,#dbeafe,#ede9fe,#fce7f3);box-shadow:0 14px 30px rgba(124,58,237,.16);margin-bottom:10px}.mkt-fb-choice-card b{display:block;color:#0f172a;font-size:18px;margin-bottom:6px}.mkt-fb-choice-card span{display:block;color:#64748b;font-weight:800;line-height:1.5}.mkt-fb-choice-card button{width:100%;margin-top:14px;border:0;border-radius:16px;padding:13px 15px;font-weight:1000;color:#fff;background:linear-gradient(90deg,#2563eb,#7c3aed);box-shadow:0 14px 30px rgba(37,99,235,.24)}
+#mktV190FbModal{position:fixed;inset:0;z-index:999999;display:none;align-items:center;justify-content:center;background:rgba(2,6,23,.58);backdrop-filter:blur(12px);padding:18px}#mktV190FbModal.open{display:flex}.mkt-fb-modal-card{width:min(860px,96vw);max-height:92vh;overflow:auto;border-radius:28px;background:linear-gradient(135deg,#fff,#f8fbff);border:1px solid rgba(219,234,254,.95);box-shadow:0 35px 110px rgba(0,0,0,.35);padding:22px;color:#0f172a}.mkt-fb-modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:16px}.mkt-fb-modal-title{font-size:24px;font-weight:1000;color:#123b7a}.mkt-fb-close{width:42px;height:42px;border-radius:999px;border:0;background:#eef2ff!important;color:#1e3a8a!important;font-weight:1000;box-shadow:none!important}.mkt-fb-safe{border-radius:18px;padding:12px 14px;background:#ecfdf5;border:1px solid #bbf7d0;color:#047857;font-weight:900;line-height:1.5;margin:12px 0}.mkt-fb-actions{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}.mkt-fb-actions a,.mkt-fb-actions button{display:flex;align-items:center;justify-content:center;text-align:center;text-decoration:none;border:0;border-radius:18px;padding:15px 16px;font-weight:1000;color:#fff;background:linear-gradient(90deg,#1877f2,#2563eb);box-shadow:0 16px 36px rgba(37,99,235,.22)}.mkt-fb-actions .secondary{background:linear-gradient(90deg,#fff7d6,#ffe7a3)!important;color:#92400e!important}.mkt-fb-frame-note{font-size:13px;color:#64748b;font-weight:800;line-height:1.5;margin-top:10px}.mkt-fb-hidden-top{display:none!important;visibility:hidden!important;height:0!important;overflow:hidden!important;margin:0!important;padding:0!important;border:0!important}
+@media(max-width:820px){.mkt-fb-choice-grid,.mkt-fb-actions{grid-template-columns:1fr}#mktV190FbBox{border-radius:22px;padding:15px}.mkt-fb-modal-card{padding:18px;border-radius:24px}.mkt-fb-modal-title{font-size:21px}.mkt-fb-choice-card{padding:16px}.mkt-fb-choice-card button,.mkt-fb-actions a,.mkt-fb-actions button{padding:15px;font-size:15px}}
+</style>
+<script id="mkt-v190-facebook-login-choice-js">
+(function(){
+  function qs(s,r){return (r||document).querySelector(s)}
+  function qsa(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s))}
+  function getDeviceId(){try{var v=localStorage.getItem('gptmini_device_id')||localStorage.getItem('mkt_device_id');if(!v){v='GPTM-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,8).toUpperCase();localStorage.setItem('gptmini_device_id',v)}return v}catch(e){return 'GPTM-WEB'}}
+  function api(url,opt){opt=opt||{};opt.headers=Object.assign({'X-Device-Id':getDeviceId()},opt.headers||{});return fetch(url,opt).then(function(r){return r.json()})}
+  function openModal(mode){
+    ensureModal();var m=qs('#mktV190FbModal'),title=qs('#mktV190FbTitle'),body=qs('#mktV190FbBody');
+    if(!m||!body)return;
+    if(mode==='mobile'){
+      if(title)title.textContent='📱 Đăng nhập Facebook bằng điện thoại';
+      body.innerHTML='<div class="mkt-fb-safe">Khách dùng điện thoại: đăng nhập Facebook trên app/trình duyệt điện thoại. Web không hỏi và không lưu mật khẩu Facebook.</div><div class="mkt-fb-actions"><button type="button" onclick="mktV190AndroidPairStart()">Tạo mã kết nối 6 số</button><a target="_blank" rel="noopener" href="https://m.facebook.com/login">Mở Facebook Mobile</a></div><div id="mktV190AndroidStatus" class="mkt-fb-frame-note">Bấm tạo mã kết nối, sau đó khách mở App Android GPTMini để nhập mã và đăng nhập Facebook.</div>';
+    }else{
+      if(title)title.textContent='💻 Đăng nhập Facebook bằng máy tính';
+      body.innerHTML='<div class="mkt-fb-safe">Khách dùng máy tính: mở Facebook Desktop hoặc mở phiên Playwright trên máy có Chrome thật. Không nhập mật khẩu Facebook vào web.</div><div class="mkt-fb-actions"><button type="button" onclick="mktV190DesktopLoginStart()">Mở phiên Desktop Playwright</button><a target="_blank" rel="noopener" href="https://www.facebook.com/login">Mở Facebook Desktop</a><button class="secondary" type="button" onclick="location.href=\'/desktop_playwright_guide\'">Hướng dẫn cài Playwright</button><button class="secondary" type="button" onclick="mktV190DesktopRunJobs()">Chạy hàng chờ</button></div><div id="mktV190DesktopStatus" class="mkt-fb-frame-note">Chế độ Desktop phù hợp máy tính/VPS có Chrome thật.</div>';
+    }
+    m.classList.add('open');
+  }
+  function closeModal(){var m=qs('#mktV190FbModal');if(m)m.classList.remove('open')}
+  function ensureModal(){if(qs('#mktV190FbModal'))return;var d=document.createElement('div');d.id='mktV190FbModal';d.innerHTML='<div class="mkt-fb-modal-card"><div class="mkt-fb-modal-head"><div><div id="mktV190FbTitle" class="mkt-fb-modal-title">Đăng nhập Facebook</div><div class="mkt-fb-frame-note">Chọn đúng thiết bị khách đang sử dụng để tránh tràn giao diện.</div></div><button type="button" class="mkt-fb-close" onclick="mktV190FbClose()">×</button></div><div id="mktV190FbBody"></div></div>';document.body.appendChild(d);d.addEventListener('click',function(e){if(e.target===d)closeModal()})}
+  function injectPanel(){
+    var host=qs('#post .panel-body')||qs('#post')||qs('[data-module="post"]')||qs('.main,.content,main');
+    if(!host||qs('#mktV190FbBox'))return;
+    var div=document.createElement('div');div.id='mktV190FbBox';div.innerHTML='<h3>📘 Đăng nhập Facebook</h3><div class="mkt-fb-sub">Chọn giao diện phù hợp với thiết bị của khách. Phần đăng nhập được mở trong popup riêng nên không còn tràn ra ngoài và không đẩy bố cục lên trên.</div><div class="mkt-fb-choice-grid"><div class="mkt-fb-choice-card" data-v190-mode="mobile"><div class="mkt-fb-choice-icon">📱</div><b>Khách dùng điện thoại</b><span>Đăng nhập Facebook Mobile / App Android, phù hợp khách bán hàng thao tác bằng điện thoại.</span><button type="button">📱 Đăng nhập Facebook</button></div><div class="mkt-fb-choice-card" data-v190-mode="desktop"><div class="mkt-fb-choice-icon">💻</div><b>Khách dùng máy tính</b><span>Đăng nhập Facebook Desktop / Playwright trên máy tính có Chrome thật.</span><button type="button">💻 Đăng nhập Facebook</button></div></div>';
+    if(host.firstChild)host.insertBefore(div,host.firstChild);else host.appendChild(div);
+    qsa('[data-v190-mode]',div).forEach(function(c){c.addEventListener('click',function(e){e.preventDefault();e.stopPropagation();openModal(c.getAttribute('data-v190-mode'))})});
+  }
+  function bindFacebookCard(){
+    qsa('.app-quick-card').forEach(function(card){var t=(card.textContent||'').toLowerCase();if(t.indexOf('đăng bài facebook')>-1&&!card.dataset.v190FbBound){card.dataset.v190FbBound='1';card.style.cursor='pointer';card.addEventListener('click',function(e){e.preventDefault();e.stopPropagation();location.hash='post';setTimeout(function(){injectPanel();openModal(/mobi|android|iphone/i.test(navigator.userAgent||'')?'mobile':'desktop')},120)},true)}})
+  }
+  function cleanTopOverflow(){['#mktV189DualGroupBox','#mktV188AndroidBox'].forEach(function(sel){var box=qs(sel);if(box){var inGroup=box.closest('#group_suite');if(!inGroup){box.classList.add('mkt-fb-hidden-top')}}})}
+  window.mktV190FbClose=closeModal;
+  window.mktV190AndroidPairStart=function(){api('/api/android_pair_start',{method:'POST',body:new URLSearchParams({device_id:getDeviceId()})}).then(function(d){var s=qs('#mktV190AndroidStatus');if(s)s.innerHTML='<b>Mã kết nối:</b> '+(d.pair_code||d.code||'Đã tạo')+'<br>'+(d.message||'Mở App Android GPTMini và nhập mã này.');}).catch(function(){alert('Không tạo được mã kết nối')})};
+  window.mktV190DesktopLoginStart=function(){api('/api/fb_personal_login_start',{method:'POST',body:new URLSearchParams({device_id:getDeviceId()})}).then(function(d){var s=qs('#mktV190DesktopStatus');if(s)s.textContent=d.message||'Đã gửi lệnh mở trình duyệt';}).catch(function(){alert('Không mở được phiên Desktop')})};
+  window.mktV190DesktopRunJobs=function(){api('/api/fb_group_playwright_run',{method:'POST',body:new URLSearchParams({device_id:getDeviceId()})}).then(function(d){var s=qs('#mktV190DesktopStatus');if(s)s.textContent=d.message||'Đã chạy hàng chờ';}).catch(function(){alert('Không chạy được hàng chờ')})};
+  function run(){ensureModal();injectPanel();bindFacebookCard();cleanTopOverflow()}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',run);else run();
+  setTimeout(run,600);setTimeout(run,1600);setTimeout(run,3200);setInterval(function(){bindFacebookCard();cleanTopOverflow()},2500);
+})();
+</script>
+"""
+
+@app.after_request
+def mkt_v190_facebook_login_choice_after_request(response):
+    try:
+        ctype = (response.headers.get("Content-Type") or "").lower()
+        if "text/html" in ctype:
+            body = response.get_data(as_text=True)
+            if "mkt-v190-facebook-login-choice-ui" not in body and "</body>" in body:
+                body = body.replace("</body>", MKT_V190_FACEBOOK_LOGIN_CHOICE_UI + "</body>")
+                response.set_data(body)
+                response.headers["Content-Length"] = str(len(body.encode("utf-8")))
+    except Exception as _e:
+        print("mkt_v190_facebook_login_choice_after_request skipped:", _e)
+    return response
+
+
 if __name__ == "__main__":
     # Không tự tạo kho 50k content khi khởi động để tránh lỗi SQLite database is locked trên Render.
     # Khi cần kiểm tra/tạo kho content, gọi /api/content_50k_stats từ admin.
