@@ -16801,4 +16801,49 @@ if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port, debug=False)
 
+# ============================================================
+# FIX 404 FACEBOOK OLD API FALLBACK
+# Chặn lỗi frontend gọi API cũ: fb_v207, fb_v210, fb_multi_center
+# ============================================================
+
+@app.route("/api/fb_v207_state")
+def api_fb_v207_state_fallback():
+    device_id = request.args.get("device_id", "")
+    return jsonify({
+        "ok": True,
+        "device_id": device_id,
+        "connected": False,
+        "status": "idle",
+        "message": "Facebook cá nhân đang dùng chế độ PC + Mobile Extension.",
+        "accounts": [],
+        "queue": []
+    })
+
+
+@app.route("/api/fb_v210_runner_status")
+def api_fb_v210_runner_status_fallback():
+    return jsonify({
+        "ok": True,
+        "running": False,
+        "status": "idle",
+        "message": "Runner cũ đã được chuyển sang Facebook cá nhân PC + Mobile.",
+        "posted": 0,
+        "pending": 0,
+        "error": 0
+    })
+
+
+@app.route("/api/fb_multi_center_state")
+def api_fb_multi_center_state_fallback():
+    device_id = request.args.get("device_id", "")
+    return jsonify({
+        "ok": True,
+        "device_id": device_id,
+        "status": "ready",
+        "message": "Facebook Multi Center fallback active.",
+        "accounts": [],
+        "posts": [],
+        "logs": []
+    })
+
 
