@@ -18446,6 +18446,132 @@ def mkt_v194_personal_group_media_after_request(response):
     except Exception as _e: print('mkt_v194_personal_group_media_after_request skipped:', _e)
     return response
 
+# ============================================================
+# V210 - Facebook Login Prepare Fix
+# Chỉ bổ sung đúng luồng đăng nhập Facebook: tự tạo tài khoản nếu khách chưa thêm,
+# đăng ký Runner, chuyển trạng thái Đang đăng nhập và hướng dẫn khách bấm Kiểm tra Session.
+# Không đụng menu/cấu trúc cũ.
+# ============================================================
+
+@app.route('/api/fb_v210_login_prepare', methods=['POST'])
+def api_fb_v210_login_prepare():
+    mkt_v209_init()
+    device_id = mkt_v207_device_id()
+    now = mkt_v207_now()
+    runner_type = (request.form.get('runner_type') or 'desktop').strip().lower()
+    if runner_type not in ['desktop', 'android']:
+        runner_type = 'desktop'
+    account_name = (request.form.get('account_name') or '').strip()[:160]
+    ids = [int(x) for x in request.form.getlist('account_ids') if str(x).isdigit()]
+
+    conn = db(); c = conn.cursor()
+    touched = []
+    if ids:
+        q = ','.join(['?'] * len(ids))
+        c.execute(f"SELECT id,account_name FROM fb_desktop_sessions WHERE device_id=? AND id IN ({q})", [device_id] + ids)
+        touched = c.fetchall()
+    if not touched:
+        if not account_name:
+            account_name = 'Nick Facebook của khách - ' + device_id
+        c.execute("SELECT id,account_name FROM fb_desktop_sessions WHERE device_id=? ORDER BY id DESC LIMIT 1", (device_id,))
+        row = c.fetchone()
+        if row:
+            touched = [row]
+            c.execute("""UPDATE fb_desktop_sessions
+                         SET login_mode=?, status=?, session_note=?, last_checked_at=?, updated_at=?
+                         WHERE id=?""",
+                      (runner_type + '_browser', 'Đang đăng nhập', 'Đã mở Facebook Login. Khách đăng nhập xong quay lại bấm Kiểm tra Session.', now, now, row[0]))
+        else:
+            c.execute("""INSERT INTO fb_desktop_sessions(device_id,account_name,login_mode,status,session_note,last_checked_at,created_at,updated_at)
+                         VALUES(?,?,?,?,?,?,?,?)""",
+                      (device_id, account_name, runner_type + '_browser', 'Đang đăng nhập', 'Đã tạo tự động để khách đăng nhập Facebook thuận tiện.', now, now, now))
+            touched = [(c.lastrowid, account_name)]
+    else:
+        q = ','.join(['?'] * len(touched))
+        c.execute(f"""UPDATE fb_desktop_sessions
+                     SET login_mode=?, status=?, session_note=?, last_checked_at=?, updated_at=?
+                     WHERE device_id=? AND id IN ({q})""",
+                  [runner_type + '_browser', 'Đang đăng nhập', 'Đã mở Facebook Login. Khách đăng nhập xong quay lại bấm Kiểm tra Session.', now, now, device_id] + [r[0] for r in touched])
+
+    try:
+        c.execute("""
+            INSERT INTO fb_runner_devices_v206(device_id, runner_type, runner_name, status, phone_model, last_seen, note, created_at, updated_at)
+            VALUES(?,?,?,?,?,?,?,?,?)
+            ON CONFLICT(device_id, runner_type) DO UPDATE SET
+                status='online', last_seen=excluded.last_seen, note=excluded.note, updated_at=excluded.updated_at
+        """, (device_id, runner_type, 'Desktop Runner' if runner_type == 'desktop' else 'Android Runner', 'online', '', now, 'Đã chuẩn bị phiên đăng nhập từ V210.', now, now))
+    except Exception:
+        pass
+    conn.commit(); conn.close()
+    login_url = 'https://m.facebook.com/login' if runner_type == 'android' else 'https://www.facebook.com/login'
+    return jsonify({'ok': True, 'device_id': device_id, 'runner_type': runner_type, 'login_url': login_url, 'account_ids': [r[0] for r in touched], 'message': 'Đã chuẩn bị tài khoản đăng nhập. Cửa sổ Facebook sẽ mở ra, đăng nhập xong quay lại bấm Kiểm tra Session.'})
+
+MKT_V210_FACEBOOK_LOGIN_FIX_UI = r'''
+<style id="mkt-v210-facebook-login-fix-css">
+#mktV209LoginCenter .v210-login-helper{margin:12px 0!important;padding:13px!important;border-radius:18px!important;background:linear-gradient(135deg,#eff6ff,#f5f3ff)!important;border:1px solid #bfdbfe!important;color:#0f172a!important;font-weight:900!important;line-height:1.45!important}
+#mktV209LoginCenter .v210-login-helper b{color:#1d4ed8!important}.v210-mini-status{display:inline-flex!important;align-items:center!important;gap:7px!important;margin-top:8px!important;padding:8px 10px!important;border-radius:999px!important;background:#ecfdf5!important;color:#047857!important;border:1px solid #bbf7d0!important;font-weight:1000!important}
+</style>
+<script id="mkt-v210-facebook-login-fix-js">
+(function(){
+  function qs(s,r){return(r||document).querySelector(s)}
+  function qsa(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s))}
+  function device(){try{var v=localStorage.getItem('gptmini_device_id')||localStorage.getItem('mkt_device_id');if(!v){v='MKT-'+Math.random().toString(16).slice(2,9).toUpperCase();localStorage.setItem('gptmini_device_id',v)}return v}catch(e){return'MKT-WEB'}}
+  function api(url,opt){opt=opt||{};opt.headers=Object.assign({'X-Device-Id':device()},opt.headers||{});return fetch(url,opt).then(function(r){return r.json()})}
+  function msg(t,k){var m=qs('#v209GlobalMsg');if(m){m.className='v209-msg '+(k||'');m.textContent=t||''}}
+  function runner(){return (qs('#v209RunnerType')||{}).value||'desktop'}
+  function selected(root){var arr=[];qsa('input[name=account_ids]:checked',root||document).forEach(function(x){arr.push(x.value)});return arr}
+  function refresh(){try{if(typeof window.mktV209Refresh==='function')window.mktV209Refresh()}catch(e){}}
+  function enhanceBox(){
+    var c=qs('#mktV209LoginCenter'); if(!c || qs('.v210-login-helper',c)) return;
+    var card=qs('.v209-card',c); if(!card) return;
+    var div=document.createElement('div'); div.className='v210-login-helper';
+    div.innerHTML='<b>V210 sửa lỗi đăng nhập:</b> Không cần nhập cookie/mật khẩu vào web. Nếu khách chưa thêm tài khoản, hệ thống tự tạo 1 nick theo ID máy rồi mở Facebook. Sau khi đăng nhập xong, quay lại bấm <b>Kiểm tra Session</b> để chuyển sang trạng thái xanh.<br><span class="v210-mini-status">🟢 Luồng: Lưu nick → Mở Facebook → Kiểm tra Session → Load Group/Fanpage</span>';
+    card.insertBefore(div, card.querySelector('.v209-actions') || null);
+  }
+  function prepareAndOpen(rt){
+    var root=qs('#mktV209LoginCenter'); var f=new FormData(); rt=rt||runner();
+    f.set('device_id',device()); f.set('runner_type',rt);
+    selected(root).forEach(function(id){f.append('account_ids',id)});
+    var typed=(qs('#v209Accounts')||{}).value||''; if(typed.trim()) f.set('account_name',typed.split('\n')[0].trim());
+    msg('🟡 Đang chuẩn bị phiên đăng nhập Facebook...');
+    api('/api/fb_v210_login_prepare',{method:'POST',body:f}).then(function(d){
+      if(d&&d.ok){
+        msg(d.message,'ok');
+        window.open(d.login_url || (rt==='android'?'https://m.facebook.com/login':'https://www.facebook.com/login'),'_blank');
+        setTimeout(function(){msg('Sau khi đăng nhập Facebook xong, quay lại bấm Kiểm tra Session để xác nhận xanh.','ok');refresh()},1200);
+      }else{msg((d&&d.message)||'Không chuẩn bị được phiên đăng nhập.','err')}
+    }).catch(function(){msg('Lỗi chuẩn bị đăng nhập Facebook. Kiểm tra mạng hoặc server.','err')});
+  }
+  function override(){
+    enhanceBox();
+    window.mktV209OpenLogin=function(rt){prepareAndOpen(rt)};
+    window.mktV209Refresh=window.mktV209Refresh||function(){};
+    window.mktV209CheckSession=function(){
+      var root=qs('#mktV209LoginCenter');var f=new FormData();f.set('device_id',device());f.set('runner_type',runner());selected(root).forEach(function(id){f.append('account_ids',id)});
+      msg('🟡 Đang xác nhận Session Facebook...');
+      api('/api/fb_v209_session_check',{method:'POST',body:f}).then(function(d){msg(d.message,d.ok?'ok':'err');refresh();setTimeout(refresh,1200)}).catch(function(){msg('Lỗi kiểm tra Session.','err')});
+    };
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',override);else override();
+  setTimeout(override,500);setTimeout(override,1500);setInterval(override,4000);
+})();
+</script>
+'''
+
+@app.after_request
+def mkt_v210_facebook_login_fix_after_request(response):
+    try:
+        ctype = (response.headers.get('Content-Type') or '').lower()
+        if 'text/html' in ctype:
+            body = response.get_data(as_text=True)
+            if 'mkt-v210-facebook-login-fix-js' not in body and '</body>' in body:
+                body = body.replace('</body>', MKT_V210_FACEBOOK_LOGIN_FIX_UI + '</body>')
+                response.set_data(body)
+                response.headers['Content-Length'] = str(len(body.encode('utf-8')))
+    except Exception as _e:
+        print('mkt_v210_facebook_login_fix_after_request skipped:', _e)
+    return response
+
 if __name__ == "__main__":
     # Không tự tạo kho 50k content khi khởi động để tránh lỗi SQLite database is locked trên Render.
     # Khi cần kiểm tra/tạo kho content, gọi /api/content_50k_stats từ admin.
