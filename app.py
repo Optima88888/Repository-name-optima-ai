@@ -21396,161 +21396,102 @@ def mkt_v211_runner_login_post_after_request(response):
 
 
 # ============================================================
-# V212 - FINAL LAYOUT HOTFIX
-# Sửa lỗi dashboard bị lệch, chữ hero tràn sang cột phải,
-# ticker/live bar che nội dung, icon nổi Facebook/Zalo chồng giao diện.
-# Giữ nguyên menu, dữ liệu, route và toàn bộ chức năng cũ.
+# V213 - SAFE LAYOUT FIX
+# Sửa lỗi lệch bố cục nhưng không ép lại toàn bộ giao diện.
+# Giữ nguyên menu, route, dữ liệu và chức năng cũ.
 # ============================================================
-MKT_V212_LAYOUT_FINAL_FIX = r"""
-<style id="mkt-v212-layout-final-fix">
-  html,body{width:100%!important;max-width:100%!important;overflow-x:hidden!important;}
-  body{padding-top:72px!important;background:linear-gradient(135deg,#eef5ff 0%,#f7fbff 45%,#eef2ff 100%)!important;color:#0f172a!important;}
+MKT_V213_SAFE_LAYOUT_FIX = r"""
+<style id="mkt-v213-safe-layout-fix">
+  html,body{max-width:100%!important;overflow-x:hidden!important;}
+  body{padding-top:72px!important;background:linear-gradient(135deg,#eef5ff 0%,#f8fbff 55%,#f3f0ff 100%)!important;}
 
-  /* Bố cục 3 cột cố định, không cho cột phải đè vào dashboard */
+  /* Giữ 3 cột gọn, không để cột phải đè dashboard */
   .layout{
-    width:min(1540px,calc(100vw - 32px))!important;
-    max-width:1540px!important;
+    box-sizing:border-box!important;
+    width:min(1480px,calc(100vw - 28px))!important;
+    max-width:1480px!important;
     margin:0 auto!important;
-    padding:0 0 24px!important;
     display:grid!important;
-    grid-template-columns:300px minmax(0,1fr) 330px!important;
-    gap:20px!important;
+    grid-template-columns:minmax(260px,300px) minmax(0,1fr) minmax(260px,320px)!important;
+    gap:18px!important;
     align-items:start!important;
   }
-  .main{min-width:0!important;width:100%!important;max-width:100%!important;overflow:visible!important;display:block!important;}
-  .sidebar,.rightbar{position:sticky!important;top:84px!important;height:calc(100vh - 104px)!important;max-height:calc(100vh - 104px)!important;overflow:auto!important;z-index:20!important;}
-  .sidebar{grid-column:1!important;width:300px!important;margin:0!important;border-radius:28px!important;}
-  .main{grid-column:2!important;}
-  .rightbar{grid-column:3!important;width:330px!important;margin:0!important;border-radius:28px!important;}
+  .sidebar{grid-column:1!important;width:auto!important;max-width:300px!important;margin:0!important;position:sticky!important;top:82px!important;max-height:calc(100vh - 96px)!important;overflow:auto!important;z-index:30!important;}
+  .main{grid-column:2!important;min-width:0!important;width:100%!important;max-width:100%!important;overflow:visible!important;}
+  .rightbar{grid-column:3!important;width:auto!important;max-width:320px!important;margin:0!important;position:sticky!important;top:82px!important;max-height:calc(100vh - 96px)!important;overflow:auto!important;z-index:25!important;}
 
-  /* Dashboard hero trở lại giữa màn hình, không bị đẩy sang phải */
-  #dashboard.top-hero,
-  .top-hero#dashboard{
-    display:block!important;
-    position:relative!important;
-    left:auto!important;right:auto!important;top:auto!important;bottom:auto!important;
+  /* Chỉ sửa hero dashboard, không đụng các module khác */
+  #dashboard.top-hero,.top-hero#dashboard{
+    position:relative!important;left:auto!important;right:auto!important;top:auto!important;
     width:100%!important;max-width:100%!important;min-width:0!important;
-    margin:0 0 20px!important;
-    padding:28px!important;
-    border-radius:30px!important;
-    background:linear-gradient(135deg,rgba(255,255,255,.98),rgba(239,246,255,.96))!important;
-    border:1px solid rgba(191,219,254,.95)!important;
-    box-shadow:0 22px 55px rgba(30,64,175,.12)!important;
-    color:#0f172a!important;
-    overflow:hidden!important;
+    margin:0 0 18px!important;padding:26px!important;border-radius:28px!important;
+    overflow:hidden!important;box-sizing:border-box!important;
   }
-  #dashboard.top-hero h1,
-  .top-hero#dashboard h1{
-    display:block!important;
-    width:100%!important;max-width:760px!important;
-    margin:0 0 16px!important;
-    font-size:clamp(30px,3.1vw,48px)!important;
-    line-height:1.08!important;
-    letter-spacing:-.7px!important;
-    color:#0f172a!important;
-    -webkit-text-fill-color:transparent!important;
-    background:linear-gradient(90deg,#0e3a80,#2563eb,#7c3aed)!important;
-    -webkit-background-clip:text!important;background-clip:text!important;
-    text-shadow:none!important;
-    word-break:normal!important;overflow-wrap:break-word!important;
+  #dashboard.top-hero h1,.top-hero#dashboard h1{
+    max-width:760px!important;font-size:clamp(30px,3vw,46px)!important;line-height:1.08!important;
+    word-break:normal!important;overflow-wrap:break-word!important;text-shadow:none!important;
   }
-  #dashboard.top-hero p,.top-hero#dashboard p{color:#334155!important;font-weight:750!important;line-height:1.55!important;max-width:760px!important;}
+  #dashboard.top-hero p,.top-hero#dashboard p{max-width:760px!important;line-height:1.55!important;}
+  #dashboard .mkt-channel-strip{max-width:100%!important;width:100%!important;box-sizing:border-box!important;flex-wrap:wrap!important;border-radius:22px!important;}
 
-  /* Strip kênh trong hero: không bung thành mảng trắng lớn bên phải */
-  #dashboard .mkt-channel-strip{
-    width:100%!important;max-width:100%!important;
-    display:flex!important;flex-wrap:wrap!important;align-items:center!important;
-    gap:10px 12px!important;margin:12px 0 18px!important;padding:12px!important;
-    border-radius:24px!important;background:rgba(255,255,255,.84)!important;
-    border:1px solid rgba(191,219,254,.9)!important;box-shadow:0 12px 30px rgba(30,64,175,.08)!important;
+  /* Module card không bị cắt đầu và không bị đẩy sang phải */
+  .module-section,.enterprise-hub,.enterprise-module-wrap{width:100%!important;max-width:100%!important;box-sizing:border-box!important;overflow:visible!important;}
+  .module-section.active{display:block!important;}
+  .enterprise-grid,.app-grid,.quick-grid,.mkt-card-grid{max-width:100%!important;box-sizing:border-box!important;}
+  .enterprise-card,.app-quick-card{min-width:0!important;box-sizing:border-box!important;}
+
+  /* Ticker nằm trên cùng, không che nội dung chính quá nhiều */
+  #mktLivePremiumBar,#mktLivePremiumBarV2,#mktLivePremiumBarHard,#mktLiveTickerV168,#mktLiveTickerV169,#mktLiveTickerV171{display:none!important;}
+  #mktLiveTickerV172{
+    position:fixed!important;top:10px!important;left:50%!important;transform:translateX(-50%)!important;
+    width:min(1120px,calc(100vw - 260px))!important;height:54px!important;border-radius:20px!important;z-index:99990!important;
   }
-  #dashboard .mkt-channel-pill{font-size:13px!important;font-weight:950!important;color:#0f172a!important;line-height:1!important;background:#fff!important;border:1px solid #e5edff!important;border-radius:999px!important;padding:7px 10px!important;}
-  #dashboard .mkt-brand-logo{width:22px!important;height:22px!important;min-width:22px!important;margin-right:6px!important;}
 
-  /* Các card dashboard sáng lại, chữ rõ */
-  .mkt-value-grid-v166{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:14px!important;}
-  .mkt-before-after-v166{background:rgba(15,23,42,.06)!important;border-color:rgba(148,163,184,.16)!important;}
-  .mkt-before-after-v166>div:not(.mkt-arrow-v166){background:#fff!important;}
-  .mkt-arrow-v166{color:#2563eb!important;}
-  .mkt-impact-grid-v166{grid-template-columns:repeat(5,minmax(0,1fr))!important;}
-
-  /* Rightbar không ăn style h1 dashboard, nội dung nằm gọn trong cột phải */
-  .rightbar h1,.rightbar h2,.rightbar h3{word-break:normal!important;overflow-wrap:break-word!important;max-width:100%!important;}
-  .rightbar h2{font-size:24px!important;line-height:1.15!important;}
+  /* Dọn icon logo rơi lẻ ở mép màn hình, giữ bot/Zalo chính */
+  body > .mkt-brand-logo,body > [aria-label="Facebook"]{display:none!important;visibility:hidden!important;pointer-events:none!important;}
   .rightbar .mkt-channel-strip{display:none!important;}
 
-  /* Ticker chỉ còn 1 thanh, nằm trên cùng không che sidebar */
-  #mktLivePremiumBar,#mktLivePremiumBarV2,#mktLivePremiumBarHard,#mktLiveTickerV168,#mktLiveTickerV169,#mktLiveTickerV171{display:none!important;visibility:hidden!important;opacity:0!important;pointer-events:none!important;}
-  #mktLiveTickerV172{
-    top:10px!important;height:54px!important;width:min(1120px,calc(100vw - 320px))!important;max-width:1120px!important;
-    left:50%!important;transform:translateX(-50%)!important;border-radius:20px!important;z-index:99990!important;
-  }
-
-  /* Dọn icon mạng xã hội nổi đang chồng giao diện */
-  body > .mkt-brand-logo,
-  body > .mkt-logo-facebook,
-  body > .mkt-logo-zalo,
-  body > [aria-label="Facebook"],
-  body > [aria-label="Zalo"]{display:none!important;visibility:hidden!important;pointer-events:none!important;}
-  .mkt-social-float,.social-float,.fb-floating,.facebook-floating,.zalo-floating{display:none!important;visibility:hidden!important;pointer-events:none!important;}
-
   @media(max-width:1180px){
-    body{padding-top:66px!important;}
-    .layout{width:calc(100vw - 24px)!important;grid-template-columns:280px minmax(0,1fr)!important;gap:16px!important;}
+    .layout{grid-template-columns:minmax(250px,285px) minmax(0,1fr)!important;width:calc(100vw - 22px)!important;gap:14px!important;}
     .rightbar{display:none!important;}
-    .sidebar{width:280px!important;}
-    #mktLiveTickerV172{width:calc(100vw - 26px)!important;}
-    .mkt-value-grid-v166,.mkt-impact-grid-v166{grid-template-columns:repeat(2,minmax(0,1fr))!important;}
+    #mktLiveTickerV172{width:calc(100vw - 24px)!important;}
   }
   @media(max-width:820px){
     body{padding-top:58px!important;padding-bottom:82px!important;}
-    .layout{display:block!important;width:calc(100vw - 20px)!important;padding:0 0 18px!important;}
+    .layout{display:block!important;width:calc(100vw - 18px)!important;margin:0 auto!important;}
     .sidebar,.rightbar{display:none!important;}
-    #dashboard.top-hero{padding:18px!important;border-radius:24px!important;}
-    #dashboard.top-hero h1{font-size:28px!important;max-width:100%!important;}
-    #dashboard .mkt-channel-strip{border-radius:18px!important;gap:8px!important;}
-    #dashboard .mkt-channel-pill{font-size:12px!important;padding:6px 8px!important;}
-    .mkt-value-grid-v166,.mkt-impact-grid-v166,.mkt-before-after-v166{grid-template-columns:1fr!important;}
-    #mktLiveTickerV172{top:7px!important;height:44px!important;width:calc(100vw - 16px)!important;border-radius:15px!important;}
+    #dashboard.top-hero,.top-hero#dashboard{padding:18px!important;border-radius:22px!important;}
+    #dashboard.top-hero h1,.top-hero#dashboard h1{font-size:28px!important;max-width:100%!important;}
+    #mktLiveTickerV172{top:7px!important;width:calc(100vw - 14px)!important;height:44px!important;border-radius:15px!important;}
   }
 </style>
-<script id="mkt-v212-layout-final-js">
+<script id="mkt-v213-safe-layout-js">
 (function(){
-  if(window.__MKT_V212_LAYOUT_FINAL__) return;
-  window.__MKT_V212_LAYOUT_FINAL__=true;
-  function q(s,r){return (r||document).querySelector(s)}
-  function qa(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s))}
-  function cleanFloating(){
-    qa('body > .mkt-brand-logo, body > [aria-label="Facebook"], body > [aria-label="Zalo"], .mkt-social-float,.social-float,.fb-floating,.facebook-floating,.zalo-floating').forEach(function(el){el.remove();});
-    qa('#mktLivePremiumBar,#mktLivePremiumBarV2,#mktLivePremiumBarHard,#mktLiveTickerV168,#mktLiveTickerV169,#mktLiveTickerV171').forEach(function(el){el.remove();});
+  if(window.__MKT_V213_SAFE_LAYOUT__) return; window.__MKT_V213_SAFE_LAYOUT__=true;
+  function qa(s){return Array.prototype.slice.call(document.querySelectorAll(s));}
+  function fix(){
+    qa('#mktLivePremiumBar,#mktLivePremiumBarV2,#mktLivePremiumBarHard,#mktLiveTickerV168,#mktLiveTickerV169,#mktLiveTickerV171').forEach(function(x){x.style.display='none';});
+    var main=document.querySelector('.main'); if(main){main.style.minWidth='0';main.style.maxWidth='100%';}
+    var dash=document.querySelector('#dashboard.top-hero'); if(dash && location.hash==='#dashboard'){dash.style.display='block';}
   }
-  function restoreDashboard(){
-    var dash=q('#dashboard');
-    if(dash){dash.style.display='block';dash.classList.add('active-module');}
-    var main=q('.main');
-    if(main){main.style.display='block';main.style.minWidth='0';}
-    var layout=q('.layout');
-    if(layout){layout.style.display=window.innerWidth>820?'grid':'block';}
-  }
-  function boot(){cleanFloating();restoreDashboard();}
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();
-  setTimeout(boot,500);setTimeout(boot,1500);setInterval(cleanFloating,4000);
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',fix);else fix();
+  setTimeout(fix,400);setTimeout(fix,1400);
 })();
 </script>
 """
 
 @app.after_request
-def mkt_v212_layout_final_after_request(response):
+def mkt_v213_safe_layout_after_request(response):
     try:
         ctype = (response.headers.get('Content-Type') or '').lower()
         if 'text/html' in ctype:
             body = response.get_data(as_text=True)
-            if 'mkt-v212-layout-final-fix' not in body and '</body>' in body:
-                body = body.replace('</body>', MKT_V212_LAYOUT_FINAL_FIX + '</body>', 1)
+            if 'mkt-v213-safe-layout-fix' not in body and '</body>' in body:
+                body = body.replace('</body>', MKT_V213_SAFE_LAYOUT_FIX + '</body>', 1)
                 response.set_data(body)
                 response.headers['Content-Length'] = str(len(body.encode('utf-8')))
     except Exception as _e:
-        print('mkt_v212_layout_final_after_request skipped:', _e)
+        print('mkt_v213_safe_layout_after_request skipped:', _e)
     return response
 
 if __name__ == "__main__":
