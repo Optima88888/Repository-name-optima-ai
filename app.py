@@ -5451,11 +5451,11 @@ function closeLockedFeature(){
 <main class="main">
 
 <section class="top-hero" id="dashboard">
-  <h1>Mkt Automation Pro V5 Seller AI Suite</h1>
+  <h1>GPTMini Pro - AI Marketing Automation Platform</h1>
 
   <div class="mkt-value-grid-v166">
     <div class="mkt-value-card-v166"><div class="mkt-value-ico-v166">💰</div><div><b>Tăng khách hàng tiềm năng</b><span>Đăng đồng thời Fanpage, Group, Facebook, Telegram và Zalo để tăng độ phủ mỗi ngày.</span></div></div>
-    <div class="mkt-value-card-v166"><div class="mkt-value-ico-v166">⏰</div><div><b>Tiết kiệm 40-60 giờ/tháng</b><span>Tự động hóa đăng bài, AI trả lời comment/inbox và lưu khách vào CRM.</span></div></div>
+    <div class="mkt-value-card-v166"><div class="mkt-value-ico-v166">⏰</div><div><h3>Tiết kiệm 5 - 8 giờ hàng ngày . 40+ giờ mỗi tuần</h3><p>Tự động đăng bài, AI trả lời comment/inbox và lưu khách vào CRM.</p></div></div>
     <div class="mkt-value-card-v166"><div class="mkt-value-ico-v166">🚀</div><div><b>Tăng tỷ lệ chốt đơn</b><span>AI Messenger + CRM Kanban giúp theo dõi khách mới, tư vấn, báo giá và chốt đơn.</span></div></div>
   </div>
 
