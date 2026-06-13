@@ -17852,9 +17852,6 @@ def mkt_v193_multi_account_center_after_request(response):
         print('mkt_v193_multi_account_center_after_request skipped:', _e)
     return response
 
-
-
-
 # ============================================================
 # V171 RIGHTBAR MOBILE FIX + SLOW LIVE TICKER
 # Chỉ sửa: thanh ticker trên đầu + khối "Hoạt động hôm nay".
@@ -18448,14 +18445,6 @@ def mkt_v194_personal_group_media_after_request(response):
                 body=body.replace('</body>', MKT_V194_PERSONAL_GROUP_MEDIA_UI+'</body>', 1); response.set_data(body); response.headers['Content-Length']=str(len(body.encode('utf-8')))
     except Exception as _e: print('mkt_v194_personal_group_media_after_request skipped:', _e)
     return response
-
-if __name__ == "__main__":
-    # Không tự tạo kho 50k content khi khởi động để tránh lỗi SQLite database is locked trên Render.
-    # Khi cần kiểm tra/tạo kho content, gọi /api/content_50k_stats từ admin.
-    threading.Thread(target=scheduler_loop, daemon=True).start()
-    port = int(os.environ.get("PORT", 10000))
-    app.run(host="0.0.0.0", port=port, debug=False)
-
 
 # V183 - Premium Pastel Glass color-only override
 # Giữ nguyên nội dung/cài đặt/menu; chỉ phủ lại màu sắc để giao diện sáng, sang và đồng bộ hơn.
@@ -21324,6 +21313,86 @@ def mkt_v210_convenience_after_request(response):
         print('mkt_v210_convenience_after_request skipped:', _e)
     return response
 
+# ============================================================
+# V211 - Runner Login Center + two clear post buttons
+# Mục tiêu: hiển thị rõ Đăng nhập Facebook, Kiểm tra Session,
+# Load Group/Fanpage, tách Đăng ngay và Tạo hàng chờ.
+# Không nhận/lưu mật khẩu, cookie, 2FA. Khách tự đăng nhập trên Chrome/App thật.
+# ============================================================
+MKT_V211_RUNNER_LOGIN_POST_UI = r"""
+<style id="mkt-v211-runner-login-post-css">
+#mktV211RunnerCenter{margin:18px 0 22px!important;padding:18px!important;border-radius:28px!important;background:linear-gradient(135deg,#ffffff,#eff6ff 55%,#f5f3ff)!important;border:1px solid #dbeafe!important;box-shadow:0 24px 70px rgba(37,99,235,.14)!important;color:#0f172a!important}
+#mktV211RunnerCenter *{box-sizing:border-box!important}
+#mktV211RunnerCenter .v211-head{display:flex!important;align-items:flex-start!important;justify-content:space-between!important;gap:14px!important;margin-bottom:14px!important;flex-wrap:wrap!important}
+#mktV211RunnerCenter h3{margin:0!important;font-size:24px!important;font-weight:1000!important;color:#0f172a!important;line-height:1.15!important}
+#mktV211RunnerCenter .v211-sub{margin:6px 0 0!important;color:#64748b!important;font-weight:850!important;line-height:1.45!important}
+#mktV211RunnerCenter .v211-status{display:inline-flex!important;align-items:center!important;gap:8px!important;border-radius:999px!important;padding:10px 14px!important;background:#fff!important;border:1px solid #dbeafe!important;font-weight:1000!important;color:#334155!important;box-shadow:0 10px 26px rgba(15,23,42,.06)!important}
+#mktV211RunnerCenter .v211-dot{width:11px!important;height:11px!important;border-radius:999px!important;background:#ef4444!important;box-shadow:0 0 14px rgba(239,68,68,.55)!important}
+#mktV211RunnerCenter .v211-dot.ok{background:#22c55e!important;box-shadow:0 0 14px rgba(34,197,94,.55)!important}
+#mktV211RunnerCenter .v211-grid{display:grid!important;grid-template-columns:1fr 1fr!important;gap:14px!important;margin-top:14px!important}
+#mktV211RunnerCenter .v211-card{background:rgba(255,255,255,.92)!important;border:1px solid #dbeafe!important;border-radius:22px!important;padding:16px!important;box-shadow:0 16px 40px rgba(37,99,235,.08)!important}
+#mktV211RunnerCenter .v211-card b{display:block!important;font-size:18px!important;margin-bottom:6px!important;color:#0f172a!important}
+#mktV211RunnerCenter .v211-card p{margin:0 0 12px!important;color:#64748b!important;font-weight:800!important;line-height:1.45!important}
+#mktV211RunnerCenter textarea{width:100%!important;min-height:94px!important;border:1px solid #bfdbfe!important;border-radius:18px!important;padding:13px!important;font-weight:850!important;outline:none!important;background:#fff!important;color:#0f172a!important;resize:vertical!important}
+#mktV211RunnerCenter .v211-actions{display:flex!important;flex-wrap:wrap!important;gap:10px!important;margin-top:12px!important}
+#mktV211RunnerCenter button,.mkt-v211-post-actions button{border:0!important;border-radius:16px!important;padding:12px 16px!important;font-weight:1000!important;cursor:pointer!important;color:#fff!important;background:linear-gradient(135deg,#2563eb,#7c3aed)!important;box-shadow:0 14px 30px rgba(37,99,235,.18)!important}
+#mktV211RunnerCenter button.dark,.mkt-v211-post-actions button.dark{background:linear-gradient(135deg,#111827,#020617)!important}
+#mktV211RunnerCenter button.green,.mkt-v211-post-actions button.green{background:linear-gradient(135deg,#16a34a,#22c55e)!important}
+#mktV211RunnerCenter button.gold,.mkt-v211-post-actions button.gold{background:linear-gradient(135deg,#f59e0b,#d97706)!important}
+#mktV211RunnerCenter .v211-note{margin-top:12px!important;background:#ecfdf5!important;border:1px solid #bbf7d0!important;color:#065f46!important;border-radius:16px!important;padding:12px!important;font-weight:900!important;line-height:1.45!important}
+#mktV211RunnerLog{margin-top:12px!important;display:grid!important;gap:8px!important;max-height:170px!important;overflow:auto!important}
+#mktV211RunnerLog .row{background:#fff!important;border:1px solid #e2e8f0!important;border-radius:14px!important;padding:10px 12px!important;font-weight:850!important;color:#334155!important}
+.mkt-v211-post-actions{margin:16px 0!important;padding:16px!important;border-radius:24px!important;background:linear-gradient(135deg,#ffffff,#eef6ff)!important;border:1px solid #dbeafe!important;box-shadow:0 16px 40px rgba(37,99,235,.10)!important}
+.mkt-v211-post-actions .title{font-size:20px!important;font-weight:1000!important;color:#0f172a!important;margin-bottom:8px!important}
+.mkt-v211-post-actions .hint{color:#64748b!important;font-weight:850!important;margin-bottom:12px!important;line-height:1.45!important}
+.mkt-v211-post-actions .btns{display:flex!important;gap:10px!important;flex-wrap:wrap!important}
+#mktV211PostStatus{margin-top:12px!important;padding:12px!important;border-radius:16px!important;background:#f8fafc!important;border:1px solid #dbeafe!important;color:#334155!important;font-weight:900!important;line-height:1.45!important;white-space:pre-wrap!important}
+@media(max-width:860px){#mktV211RunnerCenter .v211-grid{grid-template-columns:1fr!important}#mktV211RunnerCenter h3{font-size:21px!important}}
+</style>
+<script id="mkt-v211-runner-login-post-js">
+(function(){
+  if(window.__mktV211RunnerPatchDone) return; window.__mktV211RunnerPatchDone=true;
+  function qs(s,r){return(r||document).querySelector(s)}
+  function qsa(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s))}
+  function txt(n){return (n&&n.textContent||'').trim()}
+  function device(){try{return localStorage.getItem('gptmini_device_id')||localStorage.getItem('mkt_device_id')||document.body.getAttribute('data-device-id')||'MKT-WEB'}catch(e){return'MKT-WEB'}}
+  function headers(){return {'X-Device-Id':device()}}
+  function api(url,fd){return fetch(url,{method:'POST',headers:headers(),body:fd||new FormData()}).then(function(r){return r.json()})}
+  function setMsg(m,k){var el=qs('#mktV211Msg'); if(el){el.textContent=m||''; el.style.color=k==='err'?'#991b1b':'#065f46';}}
+  function findMain(){var found=null;qsa('h1,h2,h3,.enterprise-module-title,.main-card,.app-card').some(function(el){if(txt(el).indexOf('Facebook Multi Account Center')>-1 || txt(el).indexOf('Đăng nhiều bài')>-1){found=el;return true}return false;});if(found){return found.closest('.enterprise-module-wrap,.module-section,.main-card,.card,.content,section,div')||found.parentElement}return qs('#group_suite')||qs('[data-section="group_suite"]')||qs('main')||document.body;}
+  function selectedAccountIds(){var root=findMain();return qsa('input[name="account_ids"]:checked,input[data-account-id]:checked',root).map(function(x){return x.value||x.getAttribute('data-account-id')}).filter(Boolean)}
+  function selectedAssetIds(){var root=findMain();return qsa('input[name="asset_ids"]:checked,input[name="group_ids"]:checked,input[data-asset-id]:checked',root).map(function(x){return x.value||x.getAttribute('data-asset-id')}).filter(Boolean)}
+  function selectedDestination(){var v=(qs('input[name="destination"]:checked',findMain())||{}).value; if(v) return v; var text=txt(findMain()).toLowerCase(); if(text.indexOf('trang cá nhân')>-1) return 'personal'; return 'group'}
+  function firstPostText(){var root=findMain(); var best=''; qsa('textarea',root).some(function(t){var v=(t.value||'').trim(); if(v && v.length>1 && !/nick bán hàng/i.test(v)){best=v;return true}return false}); return best;}
+  function buildPostFD(direct){var root=findMain(); var fd=new FormData();fd.append('device_id',device()); fd.append('runner_type',(qs('input[name="v211_runner_type"]:checked')||{}).value||'desktop');fd.append('destination',selectedDestination()); fd.append('direct',direct?'1':'0'); fd.append('mode',direct?'now':'queue');fd.append('content_bulk',firstPostText());var st=(qs('input[name="start_time"]',root)||qs('input[type="datetime-local"]',root)||{}).value||''; fd.append('start_time',st);selectedAccountIds().forEach(function(id){fd.append('account_ids',id)}); selectedAssetIds().forEach(function(id){fd.append('asset_ids',id);fd.append('group_ids',id)});qsa('input[type="file"]',root).forEach(function(inp){Array.prototype.forEach.call(inp.files||[],function(f){fd.append('media_files',f)})});return fd;}
+  function insertLoginCenter(){if(qs('#mktV211RunnerCenter')) return;var root=findMain(); if(!root) return;var html='<div id="mktV211RunnerCenter"><div class="v211-head"><div><h3>🖥📱 Facebook Login Center</h3><div class="v211-sub">Khách tự đăng nhập Facebook trên Chrome thật hoặc App Android. Web không hỏi mật khẩu/cookie/2FA.</div></div><div class="v211-status"><span id="mktV211Dot" class="v211-dot"></span><span id="mktV211StatusText">🔴 Chưa đăng nhập</span></div></div><div class="v211-grid"><div class="v211-card"><b>🖥 Desktop Login Center</b><p>Mở Chrome thật, khách tự đăng nhập Facebook, sau đó bấm Kiểm tra Session.</p><label style="font-weight:1000"><input type="radio" name="v211_runner_type" value="desktop" checked> Máy tính / Chrome</label><div class="v211-actions"><button type="button" id="v211SaveDesktop">Lưu tài khoản Desktop</button><button type="button" id="v211OpenDesktop" class="dark">Mở Chrome đăng nhập</button></div></div><div class="v211-card"><b>📱 Điện thoại / App Android</b><p>Khách đăng nhập Facebook trên điện thoại/App thật, web chỉ gửi lệnh đăng và nhận trạng thái.</p><label style="font-weight:1000"><input type="radio" name="v211_runner_type" value="android"> Điện thoại / App Android</label><div class="v211-actions"><button type="button" id="v211SaveAndroid">Lưu tài khoản Android</button><button type="button" id="v211OpenAndroid" class="dark">Mở Facebook Mobile</button></div></div></div><div style="margin-top:14px"><b style="display:block;margin-bottom:8px;font-size:17px">Danh sách nick cần thêm</b><textarea id="v211Accounts" placeholder="Mỗi dòng 1 nick hoặc UID. Không nhập mật khẩu. Ví dụ:\nNick bán hàng 1\nNick bán hàng 2"></textarea></div><div class="v211-actions"><button type="button" id="v211Check" class="green">✅ Kiểm tra Session</button><button type="button" id="v211LoadGroups">👥 Load Group</button><button type="button" id="v211LoadPages">📄 Load Fanpage</button><button type="button" id="v211Refresh" class="gold">🔄 Làm mới trạng thái</button></div><div id="mktV211Msg" class="v211-note">Sẵn sàng. Bước 1: lưu tài khoản → mở Chrome/App đăng nhập → kiểm tra session → load Group/Fanpage.</div><div id="mktV211RunnerLog"></div></div>';var h=null; qsa('h1,h2,h3',root).some(function(x){if(txt(x).indexOf('Facebook Multi Account Center')>-1){h=x;return true}return false});if(h && h.parentElement){h.parentElement.insertAdjacentHTML('afterend',html)} else {root.insertAdjacentHTML('afterbegin',html)}}
+  function insertPostActions(){if(qs('#mktV211PostActions')) return;var root=findMain(); if(!root) return;var anchor=null; qsa('textarea',root).some(function(t){if(/Bài số|xin chào|hello/i.test((t.placeholder||'')+' '+(t.value||''))){anchor=t;return true}return false});var html='<div id="mktV211PostActions" class="mkt-v211-post-actions"><div class="title">🚀 Thao tác đăng bài</div><div class="hint">Tách riêng 2 luồng để khách dễ dùng: Đăng ngay gửi lệnh chạy liền; Tạo hàng chờ chỉ lưu vào queue để chạy sau.</div><div class="btns"><button type="button" id="v211PostNow" class="green">🚀 Đăng ngay</button><button type="button" id="v211QueueOnly" class="gold">📥 Tạo hàng chờ</button></div><div id="mktV211PostStatus">Chưa có thao tác.</div></div>';if(anchor){(anchor.closest('div')||anchor).insertAdjacentHTML('afterend',html)} else {root.insertAdjacentHTML('beforeend',html)}}
+  function runnerType(){return (qs('input[name="v211_runner_type"]:checked')||{}).value||'desktop'}
+  function saveAccounts(rt){var accounts=(qs('#v211Accounts')||{}).value||''; if(!accounts.trim()){var old=qs('textarea',findMain()); if(old && /nick bán hàng/i.test(old.placeholder||old.value||'')) accounts=old.value||'';}var fd=new FormData(); fd.append('runner_type',rt||runnerType()); fd.append('accounts',accounts); fd.append('device_id',device());setMsg('🟡 Đang lưu tài khoản...');return api('/api/fb_multi_login',fd).then(function(j){setMsg((j.ok?'🟢 ':'🔴 ')+(j.message||''),j.ok?'ok':'err'); if(j.login_url) window.open(j.login_url,'_blank'); refreshStatus(); return j}).catch(function(e){setMsg('🔴 Lỗi lưu tài khoản: '+e,'err')})}
+  function checkSession(){var fd=new FormData();fd.append('runner_type',runnerType());fd.append('device_id',device());selectedAccountIds().forEach(function(id){fd.append('account_ids',id)});setMsg('🟡 Đang kiểm tra Session...');api('/api/fb_multi_check_session',fd).then(function(j){setMsg((j.ok?'🟢 ':'🔴 ')+(j.message||''),j.ok?'ok':'err');refreshStatus();setTimeout(function(){location.reload()},700)}).catch(function(e){setMsg('🔴 Lỗi kiểm tra Session: '+e,'err')})}
+  function loadAssets(type){var fd=new FormData();fd.append('runner_type',runnerType());fd.append('device_id',device());selectedAccountIds().forEach(function(id){fd.append('account_ids',id)});setMsg('🟡 Đang gửi lệnh Load '+(type==='groups'?'Group':'Fanpage')+'...');api(type==='groups'?'/api/fb_multi_load_groups':'/api/fb_multi_load_pages',fd).then(function(j){setMsg((j.ok?'🟢 ':'🔴 ')+(j.message||''),j.ok?'ok':'err');refreshStatus()}).catch(function(e){setMsg('🔴 Lỗi Load: '+e,'err')})}
+  function postNow(){var st=qs('#mktV211PostStatus'); if(st)st.textContent='🟡 Đang đăng...'; api('/api/fb_multi_post_now',buildPostFD(true)).then(function(j){if(st)st.textContent=(j.ok?'🟢 Thành công: ':'🔴 Lỗi: ')+(j.message||''); refreshStatus()}).catch(function(e){if(st)st.textContent='🔴 Lỗi đăng: '+e})}
+  function queueOnly(){var fd=buildPostFD(false); var st=qs('#mktV211PostStatus'); if(st)st.textContent='🟡 Đang tạo hàng chờ...'; api('/api/fb_multi_post_now',fd).then(function(j){if(st)st.textContent=(j.ok?'🟢 Đã tạo hàng chờ: ':'🔴 Lỗi: ')+(j.message||''); refreshStatus()}).catch(function(e){if(st)st.textContent='🔴 Lỗi tạo hàng chờ: '+e})}
+  function refreshStatus(){fetch('/api/fb_v210_runner_status',{headers:headers()}).then(function(r){return r.json()}).then(function(j){if(!j.ok)return; var ok=(j.logged_in_accounts||0)>0; var dot=qs('#mktV211Dot'), tx=qs('#mktV211StatusText'); if(dot)dot.classList.toggle('ok',ok); if(tx)tx.textContent=(ok?'🟢 Đã đăng nhập':'🔴 Chưa đăng nhập')+' • Nick OK: '+(j.logged_in_accounts||0)+' • Hàng chờ: '+(j.pending_jobs||0); var log=qs('#mktV211RunnerLog'); if(log){log.innerHTML=(j.events||[]).slice(0,8).map(function(e){return '<div class="row">'+(e[4]||'')+' • '+(e[0]||'')+' • '+(e[1]||'')+' • '+(e[2]||'')+'<br><span style="color:#64748b">'+(e[3]||'')+'</span></div>'}).join('')}}).catch(function(){})}
+  function bind(){insertLoginCenter(); insertPostActions();var m={v211SaveDesktop:function(){saveAccounts('desktop')},v211SaveAndroid:function(){saveAccounts('android')},v211OpenDesktop:function(){saveAccounts('desktop')},v211OpenAndroid:function(){saveAccounts('android')},v211Check:checkSession,v211LoadGroups:function(){loadAssets('groups')},v211LoadPages:function(){loadAssets('pages')},v211Refresh:refreshStatus,v211PostNow:postNow,v211QueueOnly:queueOnly};Object.keys(m).forEach(function(id){var el=qs('#'+id); if(el && !el.dataset.v211){el.dataset.v211='1'; el.addEventListener('click',m[id])}});refreshStatus();}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bind);else bind();setTimeout(bind,600); setTimeout(bind,1800); setInterval(refreshStatus,5000);
+})();
+</script>
+"""
+
+@app.after_request
+def mkt_v211_runner_login_post_after_request(response):
+    try:
+        ctype = (response.headers.get('Content-Type') or '').lower()
+        if 'text/html' in ctype:
+            body = response.get_data(as_text=True)
+            if 'mkt-v211-runner-login-post-js' not in body and '</body>' in body:
+                body = body.replace('</body>', MKT_V211_RUNNER_LOGIN_POST_UI + '</body>', 1)
+                response.set_data(body)
+                response.headers['Content-Length'] = str(len(body.encode('utf-8')))
+    except Exception as _e:
+        print('mkt_v211_runner_login_post_after_request skipped:', _e)
+    return response
 if __name__ == "__main__":
     # Không tự tạo kho 50k content khi khởi động để tránh lỗi SQLite database is locked trên Render.
     # Khi cần kiểm tra/tạo kho content, gọi /api/content_50k_stats từ admin.
