@@ -16942,6 +16942,528 @@ def mkt_v144_api_fb_multi_center_state_fallback():
     })
 
 
+
+
+# ============================================================
+# MKT_V145_FACEBOOK_PERSONAL_MOBILE_MENU_PATCH
+# Chỉ bổ sung nút/menu Facebook cá nhân cho giao diện điện thoại.
+# Giữ nguyên cấu trúc, nội dung và cài đặt hiện tại.
+# ============================================================
+
+MKT_V145_FB_PERSONAL_MOBILE_MENU_PATCH = r"""
+<script id="mkt-v145-fb-personal-mobile-menu-js">
+(function(){
+  function qs(s,r){return (r||document).querySelector(s)}
+  function qsa(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s))}
+  function isMobile(){
+    return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || window.innerWidth <= 820;
+  }
+  function log(msg){try{console.log('[MKT FB Mobile]',msg)}catch(e){}}
+
+  function showFacebookPersonal(){
+    try{
+      var section = document.getElementById('facebook_personal');
+      if(!section){
+        alert('Chưa tìm thấy mục Facebook cá nhân. Vui lòng tải lại trang.');
+        return false;
+      }
+
+      if(typeof window.openModule === 'function'){
+        try{ window.openModule('facebook_personal'); }catch(e){}
+      }
+
+      qsa('.module-section').forEach(function(el){
+        el.classList.remove('active-module','active','show');
+        el.style.display = 'none';
+      });
+
+      section.classList.add('active-module','active','show');
+      section.style.setProperty('display','block','important');
+      section.style.setProperty('visibility','visible','important');
+      section.style.setProperty('opacity','1','important');
+
+      qsa('.v2-nav-link,.mobile-nav-link,.mkt-mobile-fb-personal-entry').forEach(function(a){a.classList.remove('active')});
+      qsa('[data-module="facebook_personal"],[href="#facebook_personal"]').forEach(function(a){a.classList.add('active')});
+
+      // Đóng sidebar/menu mobile nếu theme có class mở.
+      qsa('.sidebar,.mkt-clean-nav,.mobile-menu,.drawer').forEach(function(el){
+        el.classList.remove('open','show','active','mobile-open');
+      });
+      document.body.classList.remove('menu-open','sidebar-open','nav-open');
+
+      setTimeout(function(){
+        section.scrollIntoView({behavior:'smooth',block:'start'});
+      },80);
+      return false;
+    }catch(e){
+      log(e);
+      return false;
+    }
+  }
+
+  function forceMobileModeInsideSection(){
+    try{
+      if(!isMobile()) return;
+      window.mktFbIsMobile = true;
+
+      var device = document.getElementById('mktFbDeviceStatus');
+      if(device){
+        device.innerHTML = '📱 Thiết bị: Điện thoại';
+        device.className = 'mkt-fb-pill warn';
+      }
+
+      var pcActions = document.getElementById('mktPcActions');
+      var mobileActions = document.getElementById('mktMobileActions');
+      if(pcActions) pcActions.classList.add('hide');
+      if(mobileActions) mobileActions.classList.remove('hide');
+
+      var ext = document.getElementById('mktFbExtStatus');
+      if(ext) ext.innerHTML = '🔌 Extension: Không cần trên điện thoại';
+
+      var modeBox = document.getElementById('mktModeBox');
+      if(modeBox){
+        modeBox.innerHTML = '<b>Chế độ điện thoại:</b> Khách bấm <b>📱 Copy & Mở Facebook</b>, sau đó dán nội dung vào app Facebook và tự bấm Đăng.';
+      }
+
+      // Nếu bản giao diện cũ chưa có nút mobile riêng thì bổ sung 1 nút ngay cạnh các nút PC.
+      var host = document.getElementById('mktPcActions') || document.querySelector('#facebook_personal .mkt-fb-actions');
+      if(host && !document.getElementById('mktMobileQuickPostBtn')){
+        var btn = document.createElement('button');
+        btn.id = 'mktMobileQuickPostBtn';
+        btn.type = 'button';
+        btn.className = 'mkt-fb-btn mobile';
+        btn.innerHTML = '📱 Đăng bằng điện thoại';
+        btn.onclick = function(e){
+          if(e) e.preventDefault();
+          if(typeof window.mktMobileCopyAndOpen === 'function'){
+            window.mktMobileCopyAndOpen();
+          }else if(typeof window.mktFbCopyOnly === 'function'){
+            window.mktFbCopyOnly();
+            setTimeout(function(){ window.open('https://m.facebook.com/','_blank'); },250);
+          }else{
+            alert('Hãy copy nội dung rồi mở Facebook để đăng.');
+            window.open('https://m.facebook.com/','_blank');
+          }
+          return false;
+        };
+        host.insertBefore(btn, host.firstChild);
+      }
+    }catch(e){log(e)}
+  }
+
+  function createMobileMenuLink(){
+    try{
+      if(!isMobile()) return;
+
+      var nav = qs('.mkt-clean-nav') || qs('.sidebar') || qs('.mobile-menu') || qs('.nav');
+      if(!nav) return;
+
+      var exists = qs('.mkt-mobile-fb-personal-entry,[data-module="facebook_personal_mobile"]', nav);
+      if(exists){
+        exists.onclick = function(e){ if(e)e.preventDefault(); return showFacebookPersonal(); };
+        return;
+      }
+
+      var link = document.createElement('a');
+      link.href = '#facebook_personal';
+      link.className = 'v2-nav-link mkt-mobile-fb-personal-entry';
+      link.setAttribute('data-module','facebook_personal_mobile');
+      link.innerHTML = '<span class="v2-nav-text">📱 Facebook cá nhân</span><span class="mkt-dot-tag pro"><i></i><span>Mobile</span></span>';
+      link.onclick = function(e){ if(e)e.preventDefault(); return showFacebookPersonal(); };
+
+      var ref =
+        qs('[data-module="facebook_personal"]', nav) ||
+        qs('[data-module="fanpage_manager"]', nav) ||
+        qs('[data-module="post"]', nav) ||
+        qs('.v2-nav-link', nav);
+
+      if(ref && ref.parentNode){
+        ref.parentNode.insertBefore(link, ref.nextSibling);
+      }else{
+        nav.appendChild(link);
+      }
+    }catch(e){log(e)}
+  }
+
+  function addFloatingMobileShortcut(){
+    try{
+      if(!isMobile()) return;
+      if(document.getElementById('mktFbMobileFloatBtn')) return;
+
+      var btn = document.createElement('button');
+      btn.id = 'mktFbMobileFloatBtn';
+      btn.type = 'button';
+      btn.innerHTML = '📱 Facebook cá nhân';
+      btn.onclick = function(e){ if(e)e.preventDefault(); return showFacebookPersonal(); };
+      document.body.appendChild(btn);
+    }catch(e){log(e)}
+  }
+
+  function run(){
+    createMobileMenuLink();
+    forceMobileModeInsideSection();
+    addFloatingMobileShortcut();
+  }
+
+  window.mktOpenFacebookPersonalMobile = showFacebookPersonal;
+
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', run);
+  }else{
+    run();
+  }
+  window.addEventListener('resize', run);
+  setTimeout(run,300);
+  setTimeout(run,900);
+  setTimeout(run,1800);
+  setInterval(run,3500);
+})();
+</script>
+
+<style id="mkt-v145-fb-personal-mobile-menu-css">
+/* Desktop giữ nguyên, chỉ ẩn shortcut điện thoại */
+#mktFbMobileFloatBtn{display:none}
+
+@media(max-width:820px){
+  .mkt-mobile-fb-personal-entry{
+    display:flex!important;
+    align-items:center!important;
+    justify-content:space-between!important;
+    gap:10px!important;
+    margin:8px 10px!important;
+    padding:13px 14px!important;
+    border-radius:16px!important;
+    background:linear-gradient(135deg,#2563eb,#7c3aed)!important;
+    color:#fff!important;
+    border:1px solid rgba(255,255,255,.18)!important;
+    box-shadow:0 14px 28px rgba(37,99,235,.28)!important;
+    font-weight:1000!important;
+    text-decoration:none!important;
+  }
+  .mkt-mobile-fb-personal-entry .v2-nav-text{
+    color:#fff!important;
+    -webkit-text-fill-color:#fff!important;
+    font-weight:1000!important;
+  }
+  .mkt-mobile-fb-personal-entry .mkt-dot-tag{
+    background:rgba(15,23,42,.8)!important;
+    color:#fff!important;
+  }
+
+  #mktFbMobileFloatBtn{
+    display:block!important;
+    position:fixed!important;
+    left:12px!important;
+    bottom:86px!important;
+    z-index:2147483000!important;
+    border:0!important;
+    border-radius:999px!important;
+    padding:12px 15px!important;
+    color:#fff!important;
+    font-weight:1000!important;
+    background:linear-gradient(135deg,#0ea5e9,#22c55e)!important;
+    box-shadow:0 18px 38px rgba(14,165,233,.36)!important;
+  }
+
+  #facebook_personal .mkt-fb-grid{
+    grid-template-columns:1fr!important;
+  }
+  #facebook_personal .mkt-fb-actions{
+    gap:8px!important;
+  }
+  #facebook_personal .mkt-fb-btn{
+    width:100%!important;
+  }
+  #mktMobileActions{
+    display:flex!important;
+  }
+  #mktPcActions.hide{
+    display:none!important;
+  }
+}
+</style>
+"""
+
+@app.after_request
+def mkt_v145_facebook_personal_mobile_menu_after_request(response):
+    try:
+        ctype = (response.headers.get('Content-Type') or '').lower()
+        if 'text/html' in ctype:
+            body = response.get_data(as_text=True)
+            if 'mkt-v145-fb-personal-mobile-menu-js' not in body and '</body>' in body:
+                body = body.replace('</body>', MKT_V145_FB_PERSONAL_MOBILE_MENU_PATCH + '</body>')
+                response.set_data(body)
+                response.headers['Content-Length'] = str(len(body.encode('utf-8')))
+    except Exception as _e:
+        print('mkt_v145_facebook_personal_mobile_menu_after_request skipped:', _e)
+    return response
+
+
+# ============================================================
+# MKT_V146_FACEBOOK_PERSONAL_REAL_READY_PATCH
+# Nâng cấp Facebook cá nhân từ bản demo thành bản dùng thật an toàn:
+# - Lưu hàng chờ bài viết vào SQLite theo Device ID.
+# - Dashboard: tổng bài, chờ đăng, hẹn giờ, đã đăng.
+# - PC: dùng Extension mở Facebook + dán nội dung.
+# - Mobile: luôn có nút Đăng bằng điện thoại, Copy + mở m.facebook.com.
+# - Hẹn giờ lưu DB + nhắc trên tab web; không lấy UID/MK/2FA/cookie, không tự bấm Đăng.
+# ============================================================
+
+def _mkt_v146_now():
+    return datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+def _mkt_v146_device_id():
+    return str(
+        request.args.get('device_id')
+        or request.form.get('device_id')
+        or (request.get_json(silent=True) or {}).get('device_id')
+        or 'MKT-WEB'
+    ).strip()[:80]
+
+def _mkt_v146_split_posts(raw):
+    raw = str(raw or '').replace('\r', '\n').strip()
+    if not raw:
+        return []
+    parts = []
+    buf = []
+    for line in raw.split('\n'):
+        if line.strip() == '':
+            if buf:
+                parts.append('\n'.join(buf).strip())
+                buf = []
+        else:
+            buf.append(line.rstrip())
+    if buf:
+        parts.append('\n'.join(buf).strip())
+    return [p for p in parts if p][:300]
+
+def mkt_v146_fb_personal_init():
+    conn = db(); c = conn.cursor()
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS fb_personal_jobs_v146 (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            device_id TEXT,
+            content TEXT,
+            target_url TEXT,
+            mode TEXT DEFAULT 'now',
+            status TEXT DEFAULT 'Chờ đăng',
+            scheduled_at TEXT,
+            posted_at TEXT,
+            note TEXT,
+            created_at TEXT,
+            updated_at TEXT
+        )
+    """)
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS fb_personal_activity_v146 (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            device_id TEXT,
+            action TEXT,
+            detail TEXT,
+            created_at TEXT
+        )
+    """)
+    conn.commit(); conn.close()
+
+def mkt_v146_fb_log(device_id, action, detail=''):
+    try:
+        mkt_v146_fb_personal_init()
+        conn = db(); c = conn.cursor()
+        c.execute('INSERT INTO fb_personal_activity_v146(device_id,action,detail,created_at) VALUES(?,?,?,?)',
+                  (str(device_id)[:80], str(action)[:80], str(detail)[:500], _mkt_v146_now()))
+        conn.commit(); conn.close()
+    except Exception as e:
+        print('mkt_v146_fb_log skipped:', e)
+
+@app.route('/api/fb_personal_v146/state', methods=['GET'])
+def api_fb_personal_v146_state():
+    mkt_v146_fb_personal_init()
+    device_id = _mkt_v146_device_id()
+    conn = db(); c = conn.cursor()
+    c.execute('SELECT COUNT(*) FROM fb_personal_jobs_v146 WHERE device_id=?', (device_id,)); total = c.fetchone()[0]
+    c.execute("SELECT COUNT(*) FROM fb_personal_jobs_v146 WHERE device_id=? AND status='Chờ đăng'", (device_id,)); pending = c.fetchone()[0]
+    c.execute("SELECT COUNT(*) FROM fb_personal_jobs_v146 WHERE device_id=? AND status='Đã đăng'", (device_id,)); done = c.fetchone()[0]
+    c.execute("SELECT COUNT(*) FROM fb_personal_jobs_v146 WHERE device_id=? AND mode='schedule' AND status='Chờ đăng'", (device_id,)); scheduled = c.fetchone()[0]
+    c.execute("""SELECT id,substr(content,1,120),target_url,mode,status,scheduled_at,posted_at,created_at
+                 FROM fb_personal_jobs_v146 WHERE device_id=? ORDER BY CASE WHEN status='Chờ đăng' THEN 0 ELSE 1 END, id DESC LIMIT 80""", (device_id,))
+    jobs = c.fetchall()
+    c.execute('SELECT action,detail,created_at FROM fb_personal_activity_v146 WHERE device_id=? ORDER BY id DESC LIMIT 40', (device_id,))
+    logs = c.fetchall()
+    conn.close()
+    return jsonify({'ok': True, 'device_id': device_id, 'stats': {'total': total, 'pending': pending, 'done': done, 'scheduled': scheduled}, 'jobs': jobs, 'logs': logs})
+
+@app.route('/api/fb_personal_v146/queue_create', methods=['POST'])
+def api_fb_personal_v146_queue_create():
+    mkt_v146_fb_personal_init()
+    data = request.get_json(silent=True) or request.form
+    device_id = str(data.get('device_id') or _mkt_v146_device_id()).strip()[:80]
+    content_bulk = data.get('content_bulk') or data.get('content') or ''
+    target_url = str(data.get('target_url') or data.get('url') or 'https://www.facebook.com/').strip()[:500]
+    mode = str(data.get('mode') or 'now').strip()[:30]
+    delay = int(data.get('delay_minutes') or 0)
+    posts = _mkt_v146_split_posts(content_bulk)
+    if not posts:
+        return jsonify({'ok': False, 'message': 'Chưa có nội dung bài viết.'})
+    now_dt = datetime.datetime.now()
+    now = now_dt.strftime('%Y-%m-%d %H:%M:%S')
+    conn = db(); c = conn.cursor(); saved = 0
+    for idx, post in enumerate(posts):
+        scheduled_at = ''
+        if mode == 'schedule' and delay > 0:
+            scheduled_at = (now_dt + datetime.timedelta(minutes=delay * (idx + 1))).strftime('%Y-%m-%d %H:%M:%S')
+        c.execute("""INSERT INTO fb_personal_jobs_v146(device_id,content,target_url,mode,status,scheduled_at,note,created_at,updated_at)
+                     VALUES(?,?,?,?,?,?,?,?,?)""",
+                  (device_id, post[:10000], target_url, mode, 'Chờ đăng', scheduled_at, 'Tạo từ Facebook cá nhân V146', now, now))
+        saved += 1
+    conn.commit(); conn.close()
+    mkt_v146_fb_log(device_id, 'queue_create', f'Tạo {saved} bài chờ đăng')
+    return jsonify({'ok': True, 'message': f'Đã lưu {saved} bài vào hàng chờ.', 'saved': saved})
+
+@app.route('/api/fb_personal_v146/next_job', methods=['GET'])
+def api_fb_personal_v146_next_job():
+    mkt_v146_fb_personal_init()
+    device_id = _mkt_v146_device_id()
+    conn = db(); c = conn.cursor()
+    c.execute("""SELECT id,content,target_url,mode,scheduled_at FROM fb_personal_jobs_v146
+                 WHERE device_id=? AND status='Chờ đăng'
+                 ORDER BY CASE WHEN scheduled_at IS NULL OR scheduled_at='' THEN '9999-99-99 99:99:99' ELSE scheduled_at END ASC, id ASC LIMIT 1""", (device_id,))
+    row = c.fetchone(); conn.close()
+    if not row:
+        return jsonify({'ok': False, 'message': 'Không còn bài chờ đăng.'})
+    return jsonify({'ok': True, 'job': {'id': row[0], 'content': row[1], 'target_url': row[2], 'mode': row[3], 'scheduled_at': row[4]}})
+
+@app.route('/api/fb_personal_v146/job_done', methods=['POST'])
+def api_fb_personal_v146_job_done():
+    mkt_v146_fb_personal_init()
+    data = request.get_json(silent=True) or request.form
+    device_id = str(data.get('device_id') or _mkt_v146_device_id()).strip()[:80]
+    job_id = int(data.get('job_id') or 0)
+    if job_id <= 0:
+        return jsonify({'ok': False, 'message': 'Thiếu job_id.'})
+    now = _mkt_v146_now()
+    conn = db(); c = conn.cursor()
+    c.execute("UPDATE fb_personal_jobs_v146 SET status='Đã đăng',posted_at=?,updated_at=? WHERE id=? AND device_id=?", (now, now, job_id, device_id))
+    changed = c.rowcount
+    conn.commit(); conn.close()
+    mkt_v146_fb_log(device_id, 'job_done', f'Đánh dấu đã đăng bài #{job_id}')
+    return jsonify({'ok': bool(changed), 'message': 'Đã đánh dấu bài đã đăng.' if changed else 'Không tìm thấy bài.'})
+
+@app.route('/api/fb_personal_v146/job_delete', methods=['POST'])
+def api_fb_personal_v146_job_delete():
+    mkt_v146_fb_personal_init()
+    data = request.get_json(silent=True) or request.form
+    device_id = str(data.get('device_id') or _mkt_v146_device_id()).strip()[:80]
+    job_id = int(data.get('job_id') or 0)
+    if job_id <= 0:
+        return jsonify({'ok': False, 'message': 'Thiếu job_id.'})
+    conn = db(); c = conn.cursor()
+    c.execute('DELETE FROM fb_personal_jobs_v146 WHERE id=? AND device_id=?', (job_id, device_id))
+    changed = c.rowcount
+    conn.commit(); conn.close()
+    mkt_v146_fb_log(device_id, 'job_delete', f'Xóa bài #{job_id}')
+    return jsonify({'ok': bool(changed), 'message': 'Đã xóa bài.' if changed else 'Không tìm thấy bài.'})
+
+MKT_V146_FB_PERSONAL_REAL_READY_UI = r'''
+<style id="mkt-v146-fb-personal-real-ready-css">
+#mktFbRealPanel{margin-top:16px;padding:16px;border-radius:18px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.13);color:#e5e7eb}
+#mktFbRealStats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:10px 0 14px}
+.mkt-fb-real-stat{border-radius:16px;background:rgba(15,23,42,.72);border:1px solid rgba(147,197,253,.18);padding:12px;font-weight:1000;color:#fff}
+.mkt-fb-real-stat span{display:block;font-size:22px;margin-top:4px;color:#86efac}
+#mktFbRealJobs{display:grid;gap:8px;margin-top:10px;max-height:260px;overflow:auto}
+.mkt-fb-real-job{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;padding:12px;border-radius:14px;background:rgba(2,6,23,.72);border:1px solid rgba(255,255,255,.1)}
+.mkt-fb-real-job b{color:#fff}.mkt-fb-real-job small{display:block;color:#cbd5e1;margin-top:4px}.mkt-fb-real-job .mini{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}.mkt-fb-real-job button{border:0;border-radius:999px;padding:8px 10px;font-weight:900;color:#fff;cursor:pointer;background:linear-gradient(135deg,#2563eb,#7c3aed)}.mkt-fb-real-job button.done{background:linear-gradient(135deg,#16a34a,#22c55e)}.mkt-fb-real-job button.del{background:rgba(255,255,255,.14)}
+#mktFbPhoneDirectBtn{background:linear-gradient(135deg,#0ea5e9,#22c55e)!important}
+#mktFbSaveQueueBtn{background:linear-gradient(135deg,#6366f1,#8b5cf6)!important}
+@media(max-width:768px){#mktFbRealStats{grid-template-columns:repeat(2,minmax(0,1fr))}.mkt-fb-real-job{display:block}.mkt-fb-real-job .mini{margin-top:10px;justify-content:flex-start}.mkt-fb-real-job button{width:100%;margin-top:6px}#mktFbPhoneDirectBtn{display:block!important;width:100%!important}}
+</style>
+<script id="mkt-v146-fb-personal-real-ready-js">
+(function(){
+  function qs(s,r){return (r||document).querySelector(s)}
+  function device(){try{return localStorage.getItem('gptmini_device_id')||localStorage.getItem('mkt_device_id')||localStorage.getItem('device_id')||'MKT-WEB'}catch(e){return'MKT-WEB'}}
+  function posts(){if(window.mktFbPosts) return window.mktFbPosts(); var el=qs('#mktFbContent'); if(!el)return[]; return (el.value||'').split(/\n\s*\n/g).map(function(x){return x.trim()}).filter(Boolean)}
+  function content(){if(window.mktFbCurrentPost) return window.mktFbCurrentPost(); var p=posts(); return p[0]||''}
+  function target(){var el=qs('#mktFbUrl');return (el&&el.value)||'https://www.facebook.com/'}
+  function log(m){try{if(window.mktFbLog) window.mktFbLog(m); else console.log(m)}catch(e){}}
+  function api(url,opt){opt=opt||{};opt.headers=Object.assign({'Content-Type':'application/json'},opt.headers||{});return fetch(url,opt).then(function(r){return r.json()})}
+  async function copyText(t){try{await navigator.clipboard.writeText(t);return true}catch(e){var ta=document.createElement('textarea');ta.value=t;document.body.appendChild(ta);ta.select();var ok=false;try{ok=document.execCommand('copy')}catch(_e){}document.body.removeChild(ta);return ok}}
+  function ensureExtraButtons(){
+    var act=qs('#mktPcActions')||qs('#mktMobileActions')||qs('#facebook_personal .mkt-fb-actions');
+    if(!act || qs('#mktFbPhoneDirectBtn')) return;
+    var phone=document.createElement('button'); phone.id='mktFbPhoneDirectBtn'; phone.className='mkt-fb-btn'; phone.type='button'; phone.innerHTML='📱 Đăng bằng điện thoại'; phone.onclick=phonePost;
+    var save=document.createElement('button'); save.id='mktFbSaveQueueBtn'; save.className='mkt-fb-btn'; save.type='button'; save.innerHTML='💾 Lưu hàng chờ'; save.onclick=saveQueue;
+    act.appendChild(phone); act.appendChild(save);
+  }
+  function ensurePanel(){
+    if(qs('#mktFbRealPanel')) return;
+    var host=qs('#facebook_personal')||qs('#mktFbPersonalBox'); if(!host) return;
+    var panel=document.createElement('div'); panel.id='mktFbRealPanel';
+    panel.innerHTML='<b>📌 Facebook Personal Center - dùng thật</b><div style="font-size:13px;color:#cbd5e1;margin-top:4px">Lưu hàng chờ bài viết, mở Facebook đúng bài tiếp theo, đánh dấu đã đăng và theo dõi lịch sử theo Device ID.</div><div id="mktFbRealStats"><div class="mkt-fb-real-stat">Tổng bài<span id="mktFbStatTotal">0</span></div><div class="mkt-fb-real-stat">Chờ đăng<span id="mktFbStatPending">0</span></div><div class="mkt-fb-real-stat">Hẹn giờ<span id="mktFbStatScheduled">0</span></div><div class="mkt-fb-real-stat">Đã đăng<span id="mktFbStatDone">0</span></div></div><div class="mkt-fb-actions"><button class="mkt-fb-btn" type="button" onclick="mktFbLoadNextRealJob()">🚀 Mở bài tiếp theo</button><button class="mkt-fb-btn gray" type="button" onclick="mktFbRefreshRealState()">🔄 Làm mới hàng chờ</button></div><div id="mktFbRealJobs"></div>';
+    host.appendChild(panel);
+  }
+  window.mktFbRefreshRealState=function(){
+    api('/api/fb_personal_v146/state?device_id='+encodeURIComponent(device())).then(function(res){
+      if(!res||!res.ok) return;
+      var st=res.stats||{}; ['Total','Pending','Scheduled','Done'].forEach(function(k){var el=qs('#mktFbStat'+k); if(el) el.textContent=st[k.toLowerCase()]||0});
+      var box=qs('#mktFbRealJobs'); if(!box) return; box.innerHTML='';
+      (res.jobs||[]).forEach(function(j){
+        var div=document.createElement('div'); div.className='mkt-fb-real-job';
+        div.innerHTML='<div><b>#'+j[0]+' - '+(j[4]||'')+'</b><small>'+String(j[1]||'').replace(/[<>]/g,'')+'</small><small>'+(j[5]?'⏰ '+j[5]:'')+'</small></div><div class="mini"><button onclick="mktFbOpenRealJob('+j[0]+')">Mở</button><button class="done" onclick="mktFbDoneRealJob('+j[0]+')">Đã đăng</button><button class="del" onclick="mktFbDeleteRealJob('+j[0]+')">Xóa</button></div>';
+        box.appendChild(div);
+      });
+      if(!(res.jobs||[]).length) box.innerHTML='<div style="color:#cbd5e1;font-size:13px">Chưa có bài trong hàng chờ. Nhập nội dung rồi bấm 💾 Lưu hàng chờ.</div>';
+    }).catch(function(e){log('Không tải được hàng chờ: '+e)});
+  }
+  function saveQueue(){
+    var raw=(qs('#mktFbContent')||{}).value||content();
+    if(!raw.trim()){alert('Bạn chưa nhập nội dung bài viết.');return}
+    api('/api/fb_personal_v146/queue_create',{method:'POST',body:JSON.stringify({device_id:device(),content_bulk:raw,target_url:target(),mode:'now'})}).then(function(res){alert((res&&res.message)||'Đã lưu hàng chờ.');log((res&&res.message)||'Đã lưu hàng chờ.');mktFbRefreshRealState()})
+  }
+  function phonePost(){
+    var t=content(); if(!t){alert('Bạn chưa nhập nội dung bài viết.');return}
+    copyText(t).then(function(ok){alert(ok?'Đã copy bài viết. Facebook sẽ mở, khách dán nội dung rồi bấm Đăng.':'Không copy tự động được, hãy copy thủ công.'); var u=target().replace('www.facebook.com','m.facebook.com'); window.open(u,'_blank'); log('Đã mở chế độ đăng bằng điện thoại.')})
+  }
+  window.mktFbLoadNextRealJob=function(){
+    api('/api/fb_personal_v146/next_job?device_id='+encodeURIComponent(device())).then(function(res){
+      if(!res||!res.ok){alert((res&&res.message)||'Không còn bài chờ đăng.');return}
+      var job=res.job||{}; var el=qs('#mktFbContent'); if(el) el.value=job.content||''; var url=qs('#mktFbUrl'); if(url) url.value=job.target_url||'https://www.facebook.com/'; window.mktFbCurrentRealJobId=job.id;
+      log('Đã nạp bài #'+job.id+' vào khung soạn.');
+      if(window.mktFbIsMobile) phonePost(); else if(window.mktFbPostNow) window.mktFbPostNow(); else window.open(job.target_url||'https://www.facebook.com/','_blank');
+    })
+  }
+  window.mktFbOpenRealJob=function(id){
+    api('/api/fb_personal_v146/state?device_id='+encodeURIComponent(device())).then(function(res){
+      var row=(res.jobs||[]).filter(function(x){return Number(x[0])===Number(id)})[0]; if(!row)return;
+      var el=qs('#mktFbContent'); if(el) el.value=row[1]||''; window.mktFbCurrentRealJobId=id; if(window.mktFbIsMobile) phonePost(); else if(window.mktFbPostNow) window.mktFbPostNow();
+    })
+  }
+  window.mktFbDoneRealJob=function(id){
+    api('/api/fb_personal_v146/job_done',{method:'POST',body:JSON.stringify({device_id:device(),job_id:id||window.mktFbCurrentRealJobId||0})}).then(function(res){alert((res&&res.message)||'Đã cập nhật.');mktFbRefreshRealState()})
+  }
+  window.mktFbDeleteRealJob=function(id){
+    if(!confirm('Xóa bài này khỏi hàng chờ?'))return;
+    api('/api/fb_personal_v146/job_delete',{method:'POST',body:JSON.stringify({device_id:device(),job_id:id})}).then(function(res){alert((res&&res.message)||'Đã xóa.');mktFbRefreshRealState()})
+  }
+  function boot(){ensureExtraButtons();ensurePanel();mktFbRefreshRealState();setTimeout(ensureExtraButtons,800);setTimeout(ensurePanel,800)}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();
+  setInterval(function(){ensureExtraButtons();},3000)
+})();
+</script>
+'''
+
+@app.after_request
+def mkt_v146_facebook_personal_real_ready_after_request(response):
+    try:
+        ctype = (response.headers.get('Content-Type') or '').lower()
+        if 'text/html' in ctype:
+            body = response.get_data(as_text=True)
+            if 'mkt-v146-fb-personal-real-ready-js' not in body and '</body>' in body:
+                body = body.replace('</body>', MKT_V146_FB_PERSONAL_REAL_READY_UI + '</body>')
+                response.set_data(body)
+                response.headers['Content-Length'] = str(len(body.encode('utf-8')))
+    except Exception as _e:
+        print('mkt_v146_facebook_personal_real_ready_after_request skipped:', _e)
+    return response
+
 if __name__ == "__main__":
     # Không tự tạo kho 50k content khi khởi động để tránh lỗi SQLite database is locked trên Render.
     # Khi cần kiểm tra/tạo kho content, gọi /api/content_50k_stats từ admin.
