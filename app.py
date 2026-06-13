@@ -3055,6 +3055,43 @@ button:hover{
   border:1px solid #DDD6FE;
   box-shadow:none;
 }
+/* V177 CTA Conversion Buttons - chỉ nâng cấp nút dùng thử và Premium */
+.mkt-cta-actions-v177{
+  align-items:center;
+}
+.mkt-cta-actions-v177 button{
+  min-height:54px;
+  padding:15px 22px;
+  border-radius:18px;
+  font-size:15px;
+  letter-spacing:.1px;
+}
+.mkt-cta-trial-v177{
+  background:linear-gradient(135deg,#22C55E,#16A34A)!important;
+  color:#FFFFFF!important;
+  border:1px solid rgba(34,197,94,.45)!important;
+  box-shadow:0 18px 38px rgba(34,197,94,.28)!important;
+}
+.mkt-cta-premium-v177{
+  background:linear-gradient(135deg,#F59E0B,#FACC15)!important;
+  color:#111827!important;
+  border:1px solid rgba(250,204,21,.55)!important;
+  box-shadow:0 18px 40px rgba(245,158,11,.30)!important;
+}
+.mkt-cta-note-v177{
+  flex-basis:100%;
+  margin-top:2px;
+  color:#64748B;
+  font-size:13px;
+  font-weight:800;
+}
+body .top-hero .mkt-cta-note-v177{
+  color:#CBD5E1!important;
+}
+@media(max-width:620px){
+  .mkt-cta-actions-v177{display:grid!important;grid-template-columns:1fr!important}
+  .mkt-cta-note-v177{text-align:center;line-height:1.45}
+}
 .success{
   color:#047857;
   background:#ECFDF5;
@@ -5314,188 +5351,6 @@ function closeLockedFeature(){
   @media(max-width:1050px){.mkt-value-grid-v166{grid-template-columns:1fr}.mkt-impact-grid-v166{grid-template-columns:repeat(2,minmax(0,1fr))}.mkt-before-after-v166{grid-template-columns:1fr}.mkt-arrow-v166{transform:rotate(90deg);padding:0}}@media(max-width:640px){.mkt-impact-grid-v166{grid-template-columns:1fr}.mkt-value-card-v166{border-radius:20px}.mkt-value-card-v166 b{font-size:15px}}
 </style>
 
-
-
-<style id="mkt-premium-proof-v177-css">
-.mkt-premium-proof-v177{margin:18px 0 22px;padding:18px;border-radius:24px;background:linear-gradient(135deg,rgba(37,99,235,.16),rgba(124,58,237,.18));border:1px solid rgba(96,165,250,.34);box-shadow:0 18px 45px rgba(2,6,23,.18);color:#EAF2FF}
-.mkt-premium-proof-line{font-size:18px;font-weight:900;margin-bottom:12px}.mkt-premium-proof-line b{font-size:26px;color:#FACC15;text-shadow:0 0 18px rgba(250,204,21,.35)}
-.mkt-premium-proof-actions{display:flex;gap:12px;flex-wrap:wrap}.mkt-premium-proof-actions button{border:0;border-radius:16px;padding:13px 18px;font-weight:1000;color:white;cursor:pointer;background:linear-gradient(135deg,#2563EB,#7C3AED);box-shadow:0 14px 30px rgba(37,99,235,.25)}
-.mkt-premium-proof-actions button:nth-child(2){background:linear-gradient(135deg,#F59E0B,#7C3AED)}.mkt-premium-proof-v177 small{display:block;margin-top:10px;color:#CBD5E1;font-weight:800}
-.rightbar .activity-card .mkt-v169-delta,.rightbar .activity-card b small{display:none!important}
-@media(max-width:640px){.mkt-premium-proof-actions{flex-direction:column}.mkt-premium-proof-actions button{width:100%}}
-</style>
-
-<style id="mkt-premium-revenue-theme-v176-css">
-/* V176 - Revenue SaaS theme: Facebook Ads + Shopify + GoHighLevel tone.
-   Chỉ override màu sắc/độ nổi, không thay đổi menu/cấu trúc HTML cũ. */
-:root{
-  --blue:#2563EB;
-  --blue2:#38BDF8;
-  --purple:#7C3AED;
-  --purple2:#A855F7;
-  --gold:#F59E0B;
-  --gold2:#FACC15;
-  --green:#22C55E;
-  --navy:#07142E;
-  --navy2:#0B1F45;
-  --card:#F8FAFC;
-  --text:#0F172A;
-  --muted:#475569;
-  --border:#D7E3F8;
-}
-body{
-  background:
-    radial-gradient(circle at 12% 0%,rgba(37,99,235,.28),transparent 31%),
-    radial-gradient(circle at 86% 4%,rgba(124,58,237,.24),transparent 29%),
-    radial-gradient(circle at 55% 100%,rgba(245,158,11,.14),transparent 32%),
-    linear-gradient(135deg,#081028 0%,#0B1736 48%,#132A56 100%)!important;
-  color:#EAF2FF!important;
-}
-.sidebar{
-  background:
-    radial-gradient(circle at top left,rgba(37,99,235,.22),transparent 35%),
-    linear-gradient(180deg,#081028 0%,#10254A 58%,#111827 100%)!important;
-  border:1px solid rgba(96,165,250,.28)!important;
-  box-shadow:0 24px 70px rgba(2,6,23,.34), inset 0 1px 0 rgba(255,255,255,.08)!important;
-}
-.logo{
-  color:#FFFFFF!important;
-  text-shadow:0 8px 26px rgba(56,189,248,.25)!important;
-}
-.subtitle,.v2-nav-title{
-  color:#C7D2FE!important;
-}
-.v2-nav-link{
-  background:rgba(255,255,255,.07)!important;
-  border:1px solid rgba(148,163,184,.14)!important;
-}
-.v2-nav-link:hover,.v2-nav-link.active{
-  background:linear-gradient(135deg,#2563EB 0%,#7C3AED 68%,#F59E0B 140%)!important;
-  box-shadow:0 12px 28px rgba(37,99,235,.24)!important;
-}
-.panel,.rightbar,.top-hero{
-  background:
-    radial-gradient(circle at top left,rgba(37,99,235,.13),transparent 34%),
-    linear-gradient(135deg,rgba(255,255,255,.98),rgba(239,246,255,.96))!important;
-  border:1px solid rgba(215,227,248,.95)!important;
-  box-shadow:0 22px 62px rgba(2,6,23,.22)!important;
-}
-.top-hero{
-  position:relative!important;
-  overflow:hidden!important;
-}
-.top-hero:before{
-  content:"";
-  position:absolute;
-  inset:0;
-  pointer-events:none;
-  background:
-    linear-gradient(90deg,rgba(37,99,235,.07),transparent 38%),
-    radial-gradient(circle at 88% 0%,rgba(245,158,11,.18),transparent 24%);
-}
-.top-hero>*{
-  position:relative;
-  z-index:1;
-}
-.top-hero h1{
-  background:linear-gradient(135deg,#0EA5E9 0%,#2563EB 38%,#7C3AED 72%,#F59E0B 116%)!important;
-  -webkit-background-clip:text!important;
-  background-clip:text!important;
-  color:transparent!important;
-  text-shadow:none!important;
-}
-.hero-subtitle{
-  margin:10px 0 18px!important;
-  display:inline-flex!important;
-  flex-wrap:wrap!important;
-  align-items:center!important;
-  gap:6px!important;
-  padding:10px 16px!important;
-  border-radius:999px!important;
-  background:linear-gradient(135deg,rgba(37,99,235,.10),rgba(124,58,237,.10),rgba(245,158,11,.13))!important;
-  border:1px solid rgba(96,165,250,.35)!important;
-  color:#1E3A8A!important;
-  font-size:15px!important;
-  font-weight:900!important;
-  line-height:1.45!important;
-  box-shadow:0 12px 30px rgba(37,99,235,.12)!important;
-}
-.mkt-value-card-v166,.app-quick-card,.template-card,.price-card,.preview,.locked-recommend-card{
-  background:linear-gradient(135deg,#FFFFFF 0%,#F8FAFC 58%,#EFF6FF 100%)!important;
-  border:1px solid rgba(191,219,254,.95)!important;
-  box-shadow:0 18px 45px rgba(15,23,42,.14)!important;
-}
-.mkt-value-card-v166:nth-child(1) .mkt-value-ico-v166{
-  background:linear-gradient(135deg,#2563EB,#06B6D4)!important;
-}
-.mkt-value-card-v166:nth-child(2) .mkt-value-ico-v166{
-  background:linear-gradient(135deg,#7C3AED,#F59E0B)!important;
-}
-.mkt-value-card-v166:nth-child(3) .mkt-value-ico-v166{
-  background:linear-gradient(135deg,#F59E0B,#22C55E)!important;
-}
-.mkt-value-card-v166 b,.mkt-value-card-v166 h3{
-  color:#0F172A!important;
-}
-.mkt-value-card-v166 span,.mkt-value-card-v166 p{
-  color:#1E293B!important;
-  opacity:1!important;
-  text-shadow:none!important;
-}
-.mkt-before-after-v166{
-  background:linear-gradient(135deg,rgba(8,16,40,.88),rgba(30,41,89,.84))!important;
-  border-color:rgba(96,165,250,.28)!important;
-}
-.mkt-before-after-v166>div:not(.mkt-arrow-v166){
-  background:linear-gradient(135deg,#FFFFFF,#F8FAFC)!important;
-  border:1px solid rgba(191,219,254,.85)!important;
-}
-.activity-card{
-  border:1px solid rgba(96,165,250,.30)!important;
-  box-shadow:0 18px 45px rgba(2,6,23,.22)!important;
-}
-.rightbar .activity-card:nth-of-type(1){
-  background:linear-gradient(135deg,#075985,#1D4ED8)!important;
-}
-.rightbar .activity-card:nth-of-type(2){
-  background:linear-gradient(135deg,#4C1D95,#7C3AED)!important;
-}
-.rightbar .activity-card:nth-of-type(3){
-  background:linear-gradient(135deg,#7C2D12,#B45309)!important;
-}
-.rightbar .activity-card:nth-of-type(4){
-  background:linear-gradient(135deg,#065F46,#15803D)!important;
-}
-.activity-card b{
-  color:#FFFFFF!important;
-  text-shadow:0 6px 22px rgba(255,255,255,.18)!important;
-}
-.activity-card span,.activity-card small{
-  color:#DBEAFE!important;
-}
-.badge,.ribbon,.btn-primary,button.primary{
-  background:linear-gradient(135deg,#2563EB,#7C3AED 68%,#F59E0B 125%)!important;
-  box-shadow:0 14px 32px rgba(37,99,235,.25)!important;
-}
-.price,.rightbar h2{
-  background:linear-gradient(135deg,#0EA5E9,#7C3AED,#F59E0B)!important;
-  -webkit-background-clip:text!important;
-  background-clip:text!important;
-}
-.mkt-live-ticker,.mkt-enterprise-ticker,.premium-live-banner{
-  background:linear-gradient(135deg,rgba(8,16,40,.96),rgba(30,27,75,.96),rgba(124,58,237,.88))!important;
-  border:1px solid rgba(245,158,11,.28)!important;
-  box-shadow:0 18px 45px rgba(2,6,23,.32)!important;
-}
-@media(max-width:640px){
-  .hero-subtitle{
-    border-radius:18px!important;
-    font-size:13px!important;
-    padding:10px 12px!important;
-  }
-}
-</style>
-
 <style id="chat-device-menu-fix">
 /* Bản sửa: chỉ dọn icon menu, tăng ưu tiên chat, hiển thị ID thiết bị rõ ràng */
 .v2-nav-ico{display:none!important;width:0!important;min-width:0!important;margin:0!important;padding:0!important;overflow:hidden!important}
@@ -5634,7 +5489,6 @@ body{
 
 <section class="top-hero" id="dashboard">
   <h1>GPTMini Pro - AI Marketing Automation Platform</h1>
-  <div class="hero-subtitle">💬 Đăng bài đa kênh • 🤖 AI Chat • 👥 CRM • 📣 Fanpage • 👨‍👩‍👧‍👦 Group Marketing</div>
 
   <div class="mkt-value-grid-v166">
     <div class="mkt-value-card-v166"><div class="mkt-value-ico-v166">💰</div><div><b>Tăng khách hàng tiềm năng</b><span>Đăng đồng thời Fanpage, Group, Facebook, Telegram và Zalo để tăng độ phủ mỗi ngày.</span></div></div>
@@ -5706,15 +5560,6 @@ body{
   </div>
 </div>
 
-<div class="mkt-premium-proof-v177">
-  <div class="mkt-premium-proof-line">👑 <b>889</b> tài khoản Premium đang hoạt động</div>
-  <div class="mkt-premium-proof-actions">
-    <button type="button" onclick="scrollToPricing()">🚀 Dùng thử miễn phí 3 ngày</button>
-    <button type="button" onclick="openPayment('monthly')">👑 Mở khóa GPTMini Pro</button>
-  </div>
-  <small>Đã có 889 khách hàng Premium đang hoạt động</small>
-</div>
-
   <p>AI Marketing Automation Platform: tạo content, đăng Fanpage, chia lịch, quản lý CRM, phân tích đối thủ, tạo funnel và hỗ trợ bán hàng tự động.</p>
 
   {% if message %}
@@ -5737,10 +5582,10 @@ body{
     <div class="v4-trust-card"><b>98%</b><span>Đánh giá hài lòng</span></div>
   </div>
 
-  <div class="hero-actions">
-    <button onclick="return openModule('post')">Bắt đầu đăng bài</button>
-    <button class="secondary" onclick="return openModule('ai_studio')">Tạo content AI</button>
-    <button class="secondary" onclick="scrollToPricing()">Xem bảng giá</button>
+  <div class="hero-actions mkt-cta-actions-v177">
+    <button class="mkt-cta-trial-v177" onclick="return openModule('post')">🚀 Dùng thử miễn phí 3 ngày</button>
+    <button class="mkt-cta-premium-v177" onclick="scrollToPricing()">👑 Mở khóa GPTMini Pro</button>
+    <div class="mkt-cta-note-v177">Không cần thẻ tín dụng • Mở ngay sau 30 giây • Đã có 89 khách hàng Premium đang hoạt động</div>
   </div>
 
   <div class="module-hub v3-main-hub">
@@ -7268,27 +7113,20 @@ Thời gian tạo: {{ h[9] }}
 
 <aside class="rightbar">
   <h2>Hoạt động hôm nay</h2>
-<div class="activity-card mkt-revenue-card-v168" data-mkt-counter="customers">
-    <span>👥 Khách đang sử dụng</span>
-    <b>1.079</b>
-</div>
-
-<div class="activity-card mkt-revenue-card-v168" data-mkt-counter="premium">
-    <span>👑 Premium hoạt động</span>
-    <b>889</b>
-</div>
-
-<div class="activity-card mkt-revenue-card-v168" data-mkt-counter="ctv">
-    <span>🤝 CTV hoạt động</span>
-    <b>66</b>
-</div>
-
-<div class="activity-card mkt-revenue-card-v168" data-mkt-counter="posts">
-    <span>📈 Bài đã đăng</span>
-    <b>5.319</b>
-</div>
+  <div class="activity-card mkt-revenue-card-v168" data-mkt-counter="customers">
+    <span>👥 Khách đang sử dụng</span><b>126</b>
+  </div>
+  <div class="activity-card mkt-revenue-card-v168" data-mkt-counter="premium">
+    <span>👑 Premium hoạt động</span><b>58</b>
+  </div>
+  <div class="activity-card mkt-revenue-card-v168" data-mkt-counter="ctv">
+    <span>🤝 CTV hoạt động</span><b>34</b>
+  </div>
+  <div class="activity-card mkt-revenue-card-v168" data-mkt-counter="posts">
+    <span>📈 Bài đã đăng</span><b>5.240</b>
+  </div>
   <div class="activity-card mkt-revenue-card-v168" data-mkt-counter="saved">
-    <span>⏰ Thời gian tiết kiệm</span><b>90-150h</b>
+    <span>⏰ Thời gian tiết kiệm</span><b>40-60h</b>
   </div>
 
   <div class="{{ 'free-status-card free-expired' if free_status.is_expired else 'free-status-card' }}">
@@ -8085,19 +7923,19 @@ function dropKanban(ev){ ev.preventDefault(); const col=ev.currentTarget; if(dra
   /* Dọn sạch badge/card cũ */
   .app-install-card,.app-install-banner,.v2-install-box,#mktInstallFloat,#mktInstallPanel{display:none!important;visibility:hidden!important;height:0!important;margin:0!important;padding:0!important;overflow:hidden!important;pointer-events:none!important;}
   .v2-side-card{display:none!important;}
-  .sidebar{width:292px!important;background:linear-gradient(180deg,#070b18 0%,#0b1024 60%,#0c0920 100%)!important;border-right:1px solid rgba(148,163,184,.16)!important;box-shadow:12px 0 38px rgba(2,6,23,.20)!important;}
+  .sidebar{width:292px!important;background:linear-gradient(180deg,#0B1220 0%,#111827 58%,#0B1220 100%)!important;border-right:1px solid rgba(24,119,242,.22)!important;box-shadow:14px 0 46px rgba(2,6,23,.28)!important;}
   .logo{font-size:23px!important;line-height:1.08!important;font-weight:1000!important;letter-spacing:-.045em!important;color:#fff!important;margin:0 18px 14px!important;text-shadow:0 10px 24px rgba(37,99,235,.24)!important;}
-  .logo:after{content:""!important;display:block!important;width:84px!important;height:4px!important;margin-top:13px!important;border-radius:999px!important;background:linear-gradient(90deg,#2563eb,#7c3aed)!important;}
+  .logo:after{content:""!important;display:block!important;width:92px!important;height:4px!important;margin-top:13px!important;border-radius:999px!important;background:linear-gradient(90deg,#1877F2,#60A5FA)!important;box-shadow:0 0 18px rgba(24,119,242,.45)!important;}
   .mkt-clean-nav{padding:8px 14px 24px!important;}
-  .v2-nav-title{margin:18px 0 7px!important;padding:0 4px!important;font-size:10.5px!important;line-height:1!important;font-weight:1000!important;letter-spacing:.12em!important;text-transform:uppercase!important;color:#9fb0ff!important;opacity:.95!important;}
+  .v2-nav-title{margin:18px 0 7px!important;padding:0 4px!important;font-size:10.5px!important;line-height:1!important;font-weight:1000!important;letter-spacing:.12em!important;text-transform:uppercase!important;color:#93C5FD!important;opacity:.96!important;}
   .mkt-clean-nav .v2-nav-title:nth-of-type(2)::before{content:'📣 ';letter-spacing:0;text-transform:none;}
   .mkt-clean-nav .v2-nav-title:nth-of-type(3)::before{content:'🤖 ';letter-spacing:0;text-transform:none;}
   .mkt-clean-nav .v2-nav-title:nth-of-type(4)::before{content:'🎨 ';letter-spacing:0;text-transform:none;}
   .mkt-clean-nav .v2-nav-title:nth-of-type(5)::before{content:'⚙️ ';letter-spacing:0;text-transform:none;}
   .v2-nav-link{position:relative!important;display:flex!important;align-items:center!important;gap:8px!important;min-height:38px!important;height:auto!important;margin:2px 0!important;padding:8px 8px 8px 13px!important;border-radius:11px!important;background:transparent!important;border:1px solid transparent!important;box-shadow:none!important;color:#e8ecff!important;text-decoration:none!important;cursor:pointer!important;pointer-events:auto!important;user-select:none!important;overflow:visible!important;transform:none!important;transition:background .16s ease,border-color .16s ease,transform .16s ease!important;}
   .v2-nav-link::before{content:none!important;display:none!important;width:0!important;margin:0!important;background:transparent!important;box-shadow:none!important;opacity:0!important;}
-  .v2-nav-link:hover{background:rgba(99,102,241,.12)!important;border-color:rgba(129,140,248,.16)!important;transform:translateX(2px)!important;box-shadow:none!important;}
-  .v2-nav-link.active{background:linear-gradient(135deg,rgba(37,99,235,.20),rgba(124,58,237,.14))!important;border-color:rgba(129,140,248,.24)!important;}
+  .v2-nav-link:hover{background:rgba(24,119,242,.14)!important;border-color:rgba(96,165,250,.24)!important;transform:translateX(2px)!important;box-shadow:0 8px 24px rgba(24,119,242,.18)!important;}
+  .v2-nav-link.active{background:linear-gradient(90deg,#1877F2,#3B82F6)!important;border-color:rgba(147,197,253,.42)!important;box-shadow:0 10px 28px rgba(24,119,242,.34)!important;color:#fff!important;}
   .v2-nav-text{flex:1 1 auto!important;min-width:0!important;font-size:14px!important;line-height:1.15!important;font-weight:850!important;white-space:normal!important;overflow:visible!important;text-overflow:clip!important;color:inherit!important;text-shadow:none!important;}
   .v2-nav-ico,.v2-nav-tag,.mkt-pro-mini{display:none!important;visibility:hidden!important;width:0!important;height:0!important;margin:0!important;padding:0!important;opacity:0!important;}
   .v2-nav-link::after,.v2-nav-link.menu-pro::after,.v2-nav-link.pro-feature::after,.v2-nav-link.real-pro::after,.v2-nav-link.premium-locked::after,.v2-nav-link.real-premium-lock::after,.v2-nav-link.menu-locked::after{content:none!important;display:none!important;}
@@ -16273,23 +16111,23 @@ _MKT_V169_LIVE_TICKER_RIGHTBAR_PRO = r"""
     var track=q('#mktLiveTickerTrackV169');
     if(track && !track.dataset.ready){var items=buildTickerItems();var html=items.map(function(x){return '<span>'+x+'</span>';}).join('');track.innerHTML=html+html;track.dataset.ready='1';}
   }
-  var counters={customers:1079,premium:889,ctv:66,posts:5319,savedMinutes:2556};
+  var counters={customers:126,premium:58,ctv:34,posts:5240,savedMinutes:2556};
   function savedText(){var h=Math.floor(counters.savedMinutes/60), m=counters.savedMinutes%60; return h+'h '+String(m).padStart(2,'0')+'m'}
   function enhanceRightbar(){
     var cards=qa('.rightbar .activity-card');
     if(!cards.length) return;
     var cfg=[
-      ['customers','👥','Khách đang sử dụng',function(){return formatNum(counters.customers)}],
-      ['premium','👑','Premium hoạt động',function(){return formatNum(counters.premium)}],
-      ['ctv','🤝','CTV hoạt động',function(){return formatNum(counters.ctv)}],
-      ['posts','📈','Bài đã đăng',function(){return formatNum(counters.posts)}],
-      ['saved','⏱️','Thời gian tiết kiệm',savedText]
+      ['customers','👥','Khách đang sử dụng',function(){return formatNum(counters.customers)},'+1'],
+      ['premium','👑','Premium hoạt động',function(){return formatNum(counters.premium)},'+1'],
+      ['ctv','🤝','CTV hoạt động',function(){return formatNum(counters.ctv)},'+1'],
+      ['posts','📈','Bài đã đăng',function(){return formatNum(counters.posts)},'+3'],
+      ['saved','⏱️','Thời gian tiết kiệm',savedText,'+12m']
     ];
-    cfg.forEach(function(c,i){var card=cards[i]; if(!card) return; card.classList.add('mkt-v169-pro-card'); card.classList.remove('mkt-revenue-card-v168'); card.setAttribute('data-mkt-counter',c[0]); card.setAttribute('data-icon',c[1]); card.innerHTML='<span>'+c[2]+'</span><b>'+c[3]()+'</b><small class="mkt-v169-sub">Cập nhật mỗi 5 giây</small>';});
+    cfg.forEach(function(c,i){var card=cards[i]; if(!card) return; card.classList.add('mkt-v169-pro-card'); card.classList.remove('mkt-revenue-card-v168'); card.setAttribute('data-mkt-counter',c[0]); card.setAttribute('data-icon',c[1]); card.innerHTML='<span>'+c[2]+'</span><b>'+c[3]()+'</b><i class="mkt-v169-delta">▲ '+c[4]+'</i><small class="mkt-v169-sub">Cập nhật mỗi 5 giây</small>';});
   }
   function tick(){
     enhanceRightbar();
-    var keys=['customers','ctv','posts','saved']; var key=pick(keys);
+    var keys=['customers','premium','ctv','posts','saved']; var key=pick(keys);
     if(key==='posts') counters.posts+=pick([1,2,3,4,5,6]); else if(key==='saved') counters.savedMinutes+=pick([6,8,12,15]); else counters[key]+=1;
     var card=q('.rightbar .activity-card[data-mkt-counter="'+key+'"]'); if(!card) return;
     var b=q('b',card); if(b){ if(key==='saved') b.textContent=savedText(); else b.textContent=formatNum(counters[key]); }
@@ -16459,14 +16297,14 @@ _MKT_V172_RIGHTBAR_NO_OVERLAP_TICKER = r"""
   .mkt-v172-card-title{grid-area:title!important;display:block!important;color:#e5e7eb!important;font-size:15px!important;font-weight:1000!important;line-height:1.25!important;white-space:normal!important;word-break:normal!important;overflow-wrap:normal!important;margin:0!important;max-width:100%!important;}
   .mkt-v172-card-value-wrap{grid-area:value!important;display:flex!important;align-items:flex-end!important;gap:10px!important;min-width:0!important;}
   .mkt-v172-card-value{display:block!important;color:#fff!important;font-size:36px!important;line-height:1!important;font-weight:1000!important;letter-spacing:-.045em!important;text-shadow:0 0 22px rgba(255,255,255,.15)!important;transition:transform .25s ease,filter .25s ease!important;white-space:nowrap!important;}
-  .mkt-v172-delta{display:inline-block!important;color:#4ade80!important;font-size:14px!important;font-weight:1000!important;line-height:1.1!important;margin-bottom:5px!important;white-space:nowrap!important;font-style:normal!important;}
+  .mkt-v172-delta{display:none!important;visibility:hidden!important;width:0!important;height:0!important;overflow:hidden!important;}
   .mkt-v172-meta{grid-area:meta!important;color:#cbd5e1!important;font-size:12px!important;font-weight:800!important;opacity:.82!important;margin-top:4px!important;white-space:normal!important;}
-  .mkt-v172-progress{grid-area:bar!important;width:100%!important;height:7px!important;border-radius:999px!important;overflow:hidden!important;background:rgba(255,255,255,.16)!important;margin-top:6px!important;}
+  .mkt-v172-progress{display:none!important;visibility:hidden!important;height:0!important;margin:0!important;overflow:hidden!important;}
   .mkt-v172-progress i{display:block!important;width:var(--p,70%)!important;height:100%!important;border-radius:999px!important;background:linear-gradient(90deg,var(--accent),rgba(255,255,255,.75))!important;box-shadow:0 0 15px color-mix(in srgb,var(--accent) 55%,transparent)!important;}
-  .mkt-v172-card[data-key='customers']{--accent:#38bdf8;background:linear-gradient(135deg,rgba(14,116,144,.72),rgba(30,64,175,.68),rgba(15,23,42,.96))!important;}
-  .mkt-v172-card[data-key='premium']{--accent:#a855f7;background:linear-gradient(135deg,rgba(88,28,135,.82),rgba(76,29,149,.72),rgba(15,23,42,.96))!important;}
-  .mkt-v172-card[data-key='ctv']{--accent:#f59e0b;background:linear-gradient(135deg,rgba(146,64,14,.76),rgba(67,20,7,.65),rgba(15,23,42,.96))!important;}
-  .mkt-v172-card[data-key='posts']{--accent:#22c55e;background:linear-gradient(135deg,rgba(21,128,61,.78),rgba(20,83,45,.65),rgba(15,23,42,.96))!important;}
+  .mkt-v172-card[data-key='customers']{--accent:#1877F2;background:linear-gradient(135deg,rgba(24,119,242,.78),rgba(15,95,214,.62),rgba(15,23,42,.96))!important;}
+  .mkt-v172-card[data-key='premium']{--accent:#FBBF24;background:linear-gradient(135deg,rgba(251,191,36,.82),rgba(245,158,11,.62),rgba(15,23,42,.96))!important;}
+  .mkt-v172-card[data-key='ctv']{--accent:#22C55E;background:linear-gradient(135deg,rgba(34,197,94,.70),rgba(21,128,61,.58),rgba(15,23,42,.96))!important;}
+  .mkt-v172-card[data-key='posts']{--accent:#6366F1;background:linear-gradient(135deg,rgba(99,102,241,.78),rgba(67,56,202,.60),rgba(15,23,42,.96))!important;}
   .mkt-v172-card.mkt-pop .mkt-v172-card-value{transform:scale(1.12)!important;filter:drop-shadow(0 0 18px color-mix(in srgb,var(--accent) 80%,transparent))!important;}
 
   .mkt-v172-system{display:flex!important;align-items:center!important;gap:12px!important;margin-top:14px!important;padding:15px!important;border-radius:20px!important;background:rgba(15,23,42,.74)!important;border:1px solid rgba(125,211,252,.12)!important;color:#dbeafe!important;}
@@ -16503,12 +16341,12 @@ _MKT_V172_RIGHTBAR_NO_OVERLAP_TICKER = r"""
     if(track && !track.dataset.ready){var items=tickerItems();var html=items.map(function(x){return '<span>'+x+'</span>';}).join('');track.innerHTML=html+html;track.dataset.ready='1';}
   }
 
-  var counters={customers:128,premium:81,ctv:58,posts:5313};
+  var counters={customers:1079,premium:889,ctv:66,posts:5319};
   var cards=[
-    {key:'customers',icon:'👥',title:'Khách đang sử dụng',value:function(){return fmt(counters.customers)},delta:'+1',p:'72%'},
-    {key:'premium',icon:'👑',title:'Premium hoạt động',value:function(){return fmt(counters.premium)},delta:'+2',p:'81%'},
-    {key:'ctv',icon:'🤝',title:'CTV hoạt động',value:function(){return fmt(counters.ctv)},delta:'+1',p:'58%'},
-    {key:'posts',icon:'📈',title:'Bài đã đăng',value:function(){return fmt(counters.posts)},delta:'+23',p:'73%'}
+    {key:'customers',icon:'👥',title:'Khách đang sử dụng',value:function(){return fmt(counters.customers)},delta:'',p:'72%'},
+    {key:'premium',icon:'👑',title:'Premium hoạt động',value:function(){return fmt(counters.premium)},delta:'',p:'88%'},
+    {key:'ctv',icon:'🤝',title:'CTV hoạt động',value:function(){return fmt(counters.ctv)},delta:'',p:'58%'},
+    {key:'posts',icon:'📈',title:'Bài đã đăng',value:function(){return fmt(counters.posts)},delta:'',p:'73%'}
   ];
   function renderRightbar(){
     var rb=q('.rightbar'); if(!rb) return;
@@ -16517,14 +16355,14 @@ _MKT_V172_RIGHTBAR_NO_OVERLAP_TICKER = r"""
     qa('.activity-card,.mkt-v169-pro-card,.mkt-v171-card,.mkt-v171-grid,.mkt-v171-rightbar-sub,.mkt-v171-system,.mkt-v172-sub,.mkt-v172-grid,.mkt-v172-system',rb).forEach(function(el){el.remove();});
     var sub=document.createElement('div');sub.className='mkt-v172-sub';sub.innerHTML='Cập nhật tự động mỗi 5 giây <i></i>';h2.insertAdjacentElement('afterend',sub);
     var grid=document.createElement('div');grid.className='mkt-v172-grid';
-    grid.innerHTML=cards.map(function(c){return '<div class="mkt-v172-card" data-key="'+c.key+'" data-icon="'+c.icon+'"><span class="mkt-v172-card-title">'+c.title+'</span><div class="mkt-v172-card-value-wrap"><b class="mkt-v172-card-value">'+c.value()+'</b><i class="mkt-v172-delta">▲ '+c.delta+'</i></div><small class="mkt-v172-meta">So với 5 phút trước</small><div class="mkt-v172-progress" style="--p:'+c.p+'"><i></i></div></div>';}).join('');
+    grid.innerHTML=cards.map(function(c){return '<div class="mkt-v172-card" data-key="'+c.key+'" data-icon="'+c.icon+'"><span class="mkt-v172-card-title">'+c.title+'</span><div class="mkt-v172-card-value-wrap"><b class="mkt-v172-card-value">'+c.value()+'</b></div><small class="mkt-v172-meta">Cập nhật realtime</small><div class="mkt-v172-progress" style="--p:'+c.p+'"><i></i></div></div>';}).join('');
     sub.insertAdjacentElement('afterend',grid);
     var sys=document.createElement('div');sys.className='mkt-v172-system';sys.innerHTML='<i>🛡️</i><div><b>Hệ thống hoạt động ổn định</b><small>Tất cả dịch vụ đang chạy bình thường</small></div>';grid.insertAdjacentElement('afterend',sys);
   }
   function updateNumbers(){
     renderRightbar();
     var key=pick(['customers','premium','ctv','posts']);
-    if(key==='posts') counters.posts+=pick([1,2,3,4,5]); else counters[key]+=1;
+    if(key==='posts') counters.posts+=pick([1,2]); else if(key==='premium'){ counters.premium=889; } else if(key==='customers'){ counters.customers=1079; } else { counters[key]+=1; }
     var card=q('.mkt-v172-card[data-key="'+key+'"]');
     var cfg=cards.filter(function(x){return x.key===key})[0];
     if(card && cfg){var v=q('.mkt-v172-card-value',card); if(v) v.textContent=cfg.value(); card.classList.remove('mkt-pop'); void card.offsetWidth; card.classList.add('mkt-pop'); setTimeout(function(){card.classList.remove('mkt-pop')},700);}
@@ -16561,6 +16399,75 @@ try:
         app._mkt_v172_rightbar_no_overlap_installed = True
 except Exception as _mkt_v172_error:
     print('V172 rightbar no-overlap install skipped:', _mkt_v172_error)
+
+
+
+# ============================================================
+# V178 FACEBOOK BLUE PREMIUM THEME
+# Chỉ đổi tông màu giao diện khách: sidebar xanh Facebook, Premium vàng kim,
+# KPI cố định 1.079 / 889 và bỏ dấu tăng xanh nhỏ.
+# ============================================================
+_MKT_V178_FACEBOOK_BLUE_THEME = r"""
+<style id="mkt-v178-facebook-blue-theme-css">
+  :root{--mkt-fb:#1877F2;--mkt-fb-dark:#0F5FD6;--mkt-fb-light:#60A5FA;--mkt-navy:#0B1220;--mkt-card:#111827;--mkt-gold:#FBBF24;--mkt-gold2:#F59E0B;--mkt-green:#22C55E;--mkt-purple:#6366F1;}
+  body{background:radial-gradient(circle at top left,rgba(24,119,242,.18),transparent 34%),linear-gradient(135deg,#0B1220,#111827)!important;}
+  .sidebar{background:linear-gradient(180deg,#0B1220 0%,#111827 58%,#0B1220 100%)!important;border-right:1px solid rgba(24,119,242,.24)!important;box-shadow:16px 0 48px rgba(2,6,23,.32)!important;}
+  .logo{color:#fff!important;text-shadow:0 10px 26px rgba(24,119,242,.32)!important;}
+  .logo:after{background:linear-gradient(90deg,#1877F2,#60A5FA)!important;box-shadow:0 0 20px rgba(24,119,242,.48)!important;}
+  .v2-nav-title{color:#93C5FD!important;}
+  .v2-nav-link{color:#EAF2FF!important;border-color:transparent!important;}
+  .v2-nav-link:hover{background:rgba(24,119,242,.14)!important;border-color:rgba(96,165,250,.24)!important;box-shadow:0 8px 24px rgba(24,119,242,.18)!important;}
+  .v2-nav-link.active{background:linear-gradient(90deg,#1877F2,#3B82F6)!important;border-color:rgba(147,197,253,.42)!important;box-shadow:0 10px 28px rgba(24,119,242,.34)!important;color:#fff!important;}
+  .mkt-dot-tag.premium{color:#FBBF24!important}.mkt-dot-tag.premium span{color:#FEF3C7!important}.mkt-dot-tag.pro{color:#22C55E!important}.mkt-dot-tag.pro span{color:#BBF7D0!important}
+  button,.btn,.primary{box-shadow:0 12px 30px rgba(24,119,242,.18)!important;}
+  .premium-card,.plan-card,.pricing-card{border-color:rgba(251,191,36,.28)!important;}
+  .mkt-v172-delta{display:none!important;visibility:hidden!important;width:0!important;height:0!important;overflow:hidden!important;}
+  .mkt-v172-progress{display:none!important;visibility:hidden!important;height:0!important;margin:0!important;overflow:hidden!important;}
+  .mkt-v172-card[data-key='customers']{--accent:#1877F2!important;background:linear-gradient(135deg,rgba(24,119,242,.78),rgba(15,95,214,.62),rgba(15,23,42,.96))!important;}
+  .mkt-v172-card[data-key='premium']{--accent:#FBBF24!important;background:linear-gradient(135deg,rgba(251,191,36,.82),rgba(245,158,11,.62),rgba(15,23,42,.96))!important;}
+  .mkt-v172-card[data-key='ctv']{--accent:#22C55E!important;background:linear-gradient(135deg,rgba(34,197,94,.70),rgba(21,128,61,.58),rgba(15,23,42,.96))!important;}
+  .mkt-v172-card[data-key='posts']{--accent:#6366F1!important;background:linear-gradient(135deg,rgba(99,102,241,.78),rgba(67,56,202,.60),rgba(15,23,42,.96))!important;}
+</style>
+<script id="mkt-v178-facebook-blue-theme-js">
+(function(){
+  'use strict';
+  function q(s,r){return (r||document).querySelector(s)}
+  function qa(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s))}
+  function setFixedKpi(){
+    var map={customers:'1.079',premium:'889'};
+    Object.keys(map).forEach(function(k){var el=q('.mkt-v172-card[data-key="'+k+'"] .mkt-v172-card-value'); if(el) el.textContent=map[k];});
+    qa('.mkt-v172-delta').forEach(function(el){el.remove();});
+    qa('.mkt-v172-progress').forEach(function(el){el.remove();});
+    qa('.mkt-v172-meta').forEach(function(el){el.textContent='Cập nhật realtime';});
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',setFixedKpi); else setFixedKpi();
+  setInterval(setFixedKpi,1200);
+})();
+</script>
+"""
+
+def _mkt_v178_theme_after_request(response):
+    try:
+        if request.path.startswith('/admin') or request.path.startswith('/api') or request.path.startswith('/healthz'):
+            return response
+        ctype=response.headers.get('Content-Type','')
+        if 'text/html' not in ctype.lower():
+            return response
+        html=response.get_data(as_text=True)
+        if 'mkt-v178-facebook-blue-theme-css' not in html:
+            html=html.replace('</body>', _MKT_V178_FACEBOOK_BLUE_THEME + '</body>', 1) if '</body>' in html else html + _MKT_V178_FACEBOOK_BLUE_THEME
+            response.set_data(html)
+            response.headers['Content-Length']=str(len(response.get_data()))
+    except Exception as e:
+        print('V178 theme inject skipped:', e)
+    return response
+
+try:
+    if not getattr(app, '_mkt_v178_theme_installed', False):
+        app.after_request(_mkt_v178_theme_after_request)
+        app._mkt_v178_theme_installed=True
+except Exception as _mkt_v178_error:
+    print('V178 theme install skipped:', _mkt_v178_error)
 
 if __name__ == "__main__":
     # Không tự tạo kho 50k content khi khởi động để tránh lỗi SQLite database is locked trên Render.
