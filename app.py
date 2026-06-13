@@ -142,6 +142,123 @@ def admin_logout():
 # V184 - Enterprise Blue Sidebar + Omni Channel bot icon injection
 MKT_V182_PASTEL_UI_INJECTION = "\n<style id=\"mkt-v182-pastel-gradient-ui\">\n:root{\n  --pastel-blue:#DBEAFE;--pastel-blue-2:#BFDBFE;--pastel-lavender:#EDE9FE;\n  --pastel-pink:#FCE7F3;--pastel-cream:#FEF3C7;--pastel-mint:#D1FAE5;\n  --pastel-text:#0F172A;--pastel-muted:#64748B;--pastel-border:#E8EEF8;\n}\nbody{\n  background:\n    radial-gradient(circle at 10% 0%,rgba(191,219,254,.72),transparent 34%),\n    radial-gradient(circle at 72% 4%,rgba(237,233,254,.72),transparent 34%),\n    radial-gradient(circle at 42% 100%,rgba(252,231,243,.62),transparent 36%),\n    linear-gradient(135deg,#F8FBFF 0%,#F5F7FF 42%,#FFF7ED 100%)!important;\n  color:var(--pastel-text)!important;\n}\n.sidebar,.mkt-clean-nav{\n  background:linear-gradient(180deg,#0E3A80 0%,#123F88 55%,#174A9A 100%)!important;\n  border-right:1px solid rgba(255,255,255,.10)!important;\n  box-shadow:18px 0 50px rgba(14,58,128,.24)!important;\n  color:#FFFFFF!important;\n}\n.mkt-clean-nav .v2-nav-link,.sidebar .v2-nav-link,.mkt-clean-nav a,.sidebar a{color:#EAF2FF!important;text-shadow:none!important;}\n.mkt-clean-nav .v2-nav-link.active,.mkt-clean-nav .v2-nav-link:hover,.sidebar .v2-nav-link.active,.sidebar .v2-nav-link:hover{\n  background:linear-gradient(90deg,#2563EB,#3B82F6)!important;color:#FFFFFF!important;\n  box-shadow:0 14px 30px rgba(37,99,235,.32)!important;\n}\n.hero,.dashboard-hero,.main-card,.app-quick-card,.enterprise-hub,.enterprise-module-wrap,.premium-card,.trial-card{\n  background:linear-gradient(135deg,rgba(255,255,255,.98),rgba(248,251,255,.96))!important;\n  border:1px solid rgba(219,234,254,.95)!important;box-shadow:0 22px 54px rgba(148,163,184,.16)!important;color:#0F172A!important;\n}\n.app-quick-card:nth-of-type(3n+1){background:linear-gradient(135deg,#FFFFFF,#EFF6FF)!important;}\n.app-quick-card:nth-of-type(3n+2){background:linear-gradient(135deg,#FFFFFF,#F5F3FF)!important;}\n.app-quick-card:nth-of-type(3n+3){background:linear-gradient(135deg,#FFFFFF,#FDF2F8)!important;}\n.app-quick-card b,.enterprise-card b,.enterprise-card h3{color:#0F172A!important;}\n.app-quick-card span,.enterprise-card p,.enterprise-hub-head p{color:#64748B!important;}\n.enterprise-hub{background:linear-gradient(135deg,#FFFFFF 0%,#F0F7FF 36%,#F8F3FF 66%,#FFF7ED 100%)!important;border-color:rgba(196,181,253,.55)!important;}\n.enterprise-hub-head h2,.enterprise-module-title,.dashboard-hero h1,.hero h1{\n  background:linear-gradient(90deg,#0E3A80,#2563EB,#7C3AED)!important;-webkit-background-clip:text!important;background-clip:text!important;color:transparent!important;\n}\n.enterprise-card{background:linear-gradient(180deg,#FFFFFF,#F8FBFF)!important;border:1px solid rgba(219,234,254,.98)!important;box-shadow:0 18px 42px rgba(148,163,184,.14)!important;}\n.enterprise-card:hover,.app-quick-card:hover{transform:translateY(-4px)!important;border-color:#C4B5FD!important;box-shadow:0 26px 60px rgba(147,197,253,.22)!important;}\n.mkt-channel-strip,.topbar,.ticker,.live-bar{\n  background:rgba(255,255,255,.88)!important;border:1px solid rgba(219,234,254,.9)!important;box-shadow:0 16px 40px rgba(148,163,184,.14)!important;backdrop-filter:blur(16px)!important;\n}\n.mkt-dot-tag.enterprise,.v2-nav-link .mkt-dot-tag,.mkt-dot-tag{\n  background:rgba(254,243,199,.92)!important;color:#92400E!important;border:1px solid rgba(251,191,36,.38)!important;box-shadow:0 0 18px rgba(251,191,36,.16)!important;\n}\n.mkt-dot-tag.enterprise i,.mkt-dot-tag i{background:#FBBF24!important;box-shadow:0 0 12px #FBBF24!important;}\n.kpi-card,.stat-card{background:linear-gradient(135deg,#FFFFFF,#EFF6FF)!important;color:#0F172A!important;border:1px solid rgba(191,219,254,.72)!important;box-shadow:0 20px 50px rgba(147,197,253,.18)!important;}\n.kpi-card:nth-child(2),.stat-card:nth-child(2){background:linear-gradient(135deg,#FFFFFF,#FEF3C7)!important;}\n.kpi-card:nth-child(3),.stat-card:nth-child(3){background:linear-gradient(135deg,#FFFFFF,#D1FAE5)!important;}\n.kpi-card:nth-child(4),.stat-card:nth-child(4){background:linear-gradient(135deg,#FFFFFF,#EDE9FE)!important;}\n.mkt-bot-app-icon{\n  display:inline-flex!important;align-items:center!important;justify-content:center!important;width:46px!important;height:46px!important;min-width:46px!important;max-width:46px!important;max-height:46px!important;\n  border-radius:18px!important;background:linear-gradient(135deg,#DBEAFE,#EDE9FE,#FCE7F3)!important;box-shadow:0 14px 28px rgba(124,58,237,.18)!important;overflow:hidden!important;\n}\n.mkt-bot-app-icon svg{width:40px!important;height:40px!important;display:block!important;}\n.app-quick-card .app-ico.mkt-omni-bot-ico{\n  width:58px!important;height:58px!important;min-width:58px!important;border-radius:20px!important;background:linear-gradient(135deg,#DBEAFE,#EDE9FE,#FCE7F3)!important;box-shadow:0 14px 30px rgba(124,58,237,.16)!important;\n}\n.app-quick-card .app-ico.mkt-omni-bot-ico .mkt-bot-app-icon{width:48px!important;height:48px!important;min-width:48px!important;box-shadow:none!important;background:transparent!important;}\n.enterprise-card .ec-icon .mkt-brand-logo,.enterprise-module-title .mkt-brand-logo,.app-quick-card .app-ico .mkt-brand-logo{max-width:42px!important;max-height:42px!important;object-fit:contain!important;}\n.mkt-logo-stack{max-width:74px!important;gap:4px!important}.mkt-logo-stack .mkt-brand-logo{width:18px!important;height:18px!important;min-width:18px!important;max-width:18px!important;max-height:18px!important;margin:0!important}\n</style>\n\n<script id=\"mkt-v182-omni-bot-fix\">\n(function(){\n  var botHtml = \"<span class=\\\"mkt-bot-app-icon\\\" aria-label=\\\"GPTMini Bot\\\">\\n<svg viewBox=\\\"0 0 64 64\\\" role=\\\"img\\\" xmlns=\\\"http://www.w3.org/2000/svg\\\">\\n  <defs>\\n    <linearGradient id=\\\"botPastelG\\\" x1=\\\"0\\\" y1=\\\"0\\\" x2=\\\"1\\\" y2=\\\"1\\\">\\n      <stop offset=\\\"0\\\" stop-color=\\\"#93C5FD\\\"/>\\n      <stop offset=\\\".45\\\" stop-color=\\\"#C4B5FD\\\"/>\\n      <stop offset=\\\".75\\\" stop-color=\\\"#F9A8D4\\\"/>\\n      <stop offset=\\\"1\\\" stop-color=\\\"#A7F3D0\\\"/>\\n    </linearGradient>\\n  </defs>\\n  <rect x=\\\"10\\\" y=\\\"14\\\" width=\\\"44\\\" height=\\\"38\\\" rx=\\\"16\\\" fill=\\\"url(#botPastelG)\\\"/>\\n  <rect x=\\\"17\\\" y=\\\"22\\\" width=\\\"30\\\" height=\\\"21\\\" rx=\\\"10\\\" fill=\\\"#fff\\\"/>\\n  <circle cx=\\\"26\\\" cy=\\\"32\\\" r=\\\"3.2\\\" fill=\\\"#2563EB\\\"/>\\n  <circle cx=\\\"38\\\" cy=\\\"32\\\" r=\\\"3.2\\\" fill=\\\"#EC4899\\\"/>\\n  <path d=\\\"M27 39h10\\\" stroke=\\\"#7C3AED\\\" stroke-width=\\\"3\\\" stroke-linecap=\\\"round\\\"/>\\n  <path d=\\\"M32 8v7\\\" stroke=\\\"#60A5FA\\\" stroke-width=\\\"4\\\" stroke-linecap=\\\"round\\\"/>\\n  <circle cx=\\\"32\\\" cy=\\\"7\\\" r=\\\"3\\\" fill=\\\"#A78BFA\\\"/>\\n</svg></span>\";\n  function fixOmniBotIcon(){\n    document.querySelectorAll('.app-quick-card').forEach(function(card){\n      var title = ((card.querySelector('b')||{}).textContent || '').trim();\n      if(title === 'Omni Channel Center'){\n        var ico = card.querySelector('.app-ico');\n        if(ico){ ico.classList.add('mkt-omni-bot-ico'); ico.innerHTML = botHtml; }\n      }\n    });\n  }\n  if(document.readyState === 'loading'){document.addEventListener('DOMContentLoaded', fixOmniBotIcon);}else{fixOmniBotIcon();}\n  setTimeout(fixOmniBotIcon, 600);\n  setTimeout(fixOmniBotIcon, 1800);\n})();\n</script>\n"
 
+
+
+# V185 FINAL - ép PRO/PREMIUM nền đen + đèn xanh, không cần tìm CSS cũ
+MKT_V185_BLACK_PRO_PREMIUM_INJECTION = """
+<style id="mkt-v185-black-pro-premium-final">
+html body .sidebar .mkt-dot-tag,
+html body .mkt-clean-nav .mkt-dot-tag,
+html body .v2-nav-link .mkt-dot-tag,
+html body .mkt-dot-tag.pro,
+html body .mkt-dot-tag.premium,
+html body .mkt-dot-tag.enterprise,
+html body .premium-badge,
+html body .badge-premium{
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  gap:6px!important;
+  margin-left:auto!important;
+  padding:4px 10px!important;
+  min-height:18px!important;
+  border-radius:999px!important;
+  background:linear-gradient(135deg,#111827 0%,#020617 100%)!important;
+  color:#ffffff!important;
+  border:1px solid rgba(34,197,94,.55)!important;
+  box-shadow:0 0 12px rgba(34,197,94,.38),0 10px 22px rgba(0,0,0,.28)!important;
+  font-size:10.5px!important;
+  font-weight:1000!important;
+  line-height:1!important;
+  letter-spacing:.02em!important;
+  text-transform:uppercase!important;
+  white-space:nowrap!important;
+  opacity:1!important;
+  visibility:visible!important;
+}
+html body .sidebar .mkt-dot-tag span,
+html body .mkt-clean-nav .mkt-dot-tag span,
+html body .v2-nav-link .mkt-dot-tag span,
+html body .mkt-dot-tag.pro span,
+html body .mkt-dot-tag.premium span,
+html body .mkt-dot-tag.enterprise span,
+html body .premium-badge span,
+html body .badge-premium span{
+  color:#ffffff!important;
+  -webkit-text-fill-color:#ffffff!important;
+  text-shadow:0 1px 8px rgba(0,0,0,.45)!important;
+  font-weight:1000!important;
+}
+html body .sidebar .mkt-dot-tag i,
+html body .mkt-clean-nav .mkt-dot-tag i,
+html body .v2-nav-link .mkt-dot-tag i,
+html body .mkt-dot-tag.pro i,
+html body .mkt-dot-tag.premium i,
+html body .mkt-dot-tag.enterprise i,
+html body .premium-badge i,
+html body .badge-premium i{
+  display:block!important;
+  width:8px!important;
+  height:8px!important;
+  min-width:8px!important;
+  flex:0 0 8px!important;
+  border-radius:999px!important;
+  background:#22C55E!important;
+  color:#22C55E!important;
+  box-shadow:0 0 6px #22C55E,0 0 12px #22C55E,0 0 20px rgba(34,197,94,.9)!important;
+  animation:mktV185GreenPulse 1.6s ease-in-out infinite!important;
+}
+html body .v2-nav-link:hover .mkt-dot-tag,
+html body .v2-nav-link.active .mkt-dot-tag{
+  background:linear-gradient(135deg,#020617 0%,#000000 100%)!important;
+  border-color:#22C55E!important;
+  box-shadow:0 0 16px rgba(34,197,94,.55),0 12px 26px rgba(0,0,0,.35)!important;
+}
+@keyframes mktV185GreenPulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.25);opacity:.82}}
+</style>
+<script id="mkt-v185-black-pro-premium-final-js">
+(function(){
+  function paintBadge(el){
+    if(!el) return;
+    var txt=(el.textContent||'').toLowerCase();
+    if(!(txt.indexOf('pro')>-1 || txt.indexOf('premium')>-1 || el.classList.contains('pro') || el.classList.contains('premium') || el.classList.contains('enterprise'))) return;
+    el.classList.add('mkt-v185-black-badge');
+    var s=el.style;
+    s.setProperty('display','inline-flex','important');
+    s.setProperty('align-items','center','important');
+    s.setProperty('justify-content','center','important');
+    s.setProperty('gap','6px','important');
+    s.setProperty('margin-left','auto','important');
+    s.setProperty('padding','4px 10px','important');
+    s.setProperty('border-radius','999px','important');
+    s.setProperty('background','linear-gradient(135deg,#111827 0%,#020617 100%)','important');
+    s.setProperty('color','#ffffff','important');
+    s.setProperty('border','1px solid rgba(34,197,94,.55)','important');
+    s.setProperty('box-shadow','0 0 12px rgba(34,197,94,.38),0 10px 22px rgba(0,0,0,.28)','important');
+    s.setProperty('font-weight','1000','important');
+    s.setProperty('font-size','10.5px','important');
+    s.setProperty('line-height','1','important');
+    s.setProperty('text-transform','uppercase','important');
+    s.setProperty('visibility','visible','important');
+    s.setProperty('opacity','1','important');
+    el.querySelectorAll('span').forEach(function(x){x.style.setProperty('color','#ffffff','important');x.style.setProperty('-webkit-text-fill-color','#ffffff','important');x.style.setProperty('font-weight','1000','important');});
+    el.querySelectorAll('i').forEach(function(i){
+      i.style.setProperty('display','block','important');
+      i.style.setProperty('width','8px','important');
+      i.style.setProperty('height','8px','important');
+      i.style.setProperty('min-width','8px','important');
+      i.style.setProperty('border-radius','999px','important');
+      i.style.setProperty('background','#22C55E','important');
+      i.style.setProperty('color','#22C55E','important');
+      i.style.setProperty('box-shadow','0 0 6px #22C55E,0 0 12px #22C55E,0 0 20px rgba(34,197,94,.9)','important');
+    });
+  }
+  function run(){document.querySelectorAll('.mkt-dot-tag,.premium-badge,.badge-premium,.v2-nav-link [class*="premium"],.v2-nav-link [class*="pro"]').forEach(paintBadge);}
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',run); else run();
+  setTimeout(run,300);setTimeout(run,1000);setTimeout(run,2500);setInterval(run,3000);
+})();
+</script>
+"""
 @app.after_request
 def mkt_v182_pastel_ui_after_request(response):
     try:
@@ -149,7 +266,7 @@ def mkt_v182_pastel_ui_after_request(response):
         if "text/html" in ctype:
             body = response.get_data(as_text=True)
             if "mkt-v182-pastel-gradient-ui" not in body and "</body>" in body:
-                body = body.replace("</body>", MKT_V182_PASTEL_UI_INJECTION + "</body>")
+                body = body.replace("</body>", MKT_V182_PASTEL_UI_INJECTION + MKT_V185_BLACK_PRO_PREMIUM_INJECTION + "</body>")
                 response.set_data(body)
                 response.headers["Content-Length"] = str(len(body.encode("utf-8")))
     except Exception as _e:
@@ -17085,8 +17202,8 @@ if __name__ == "__main__":
 
 # V183 - Premium Pastel Glass color-only override
 # Giữ nguyên nội dung/cài đặt/menu; chỉ phủ lại màu sắc để giao diện sáng, sang và đồng bộ hơn.
-MKT_V185_BLACK_PRO_PREMIUM_BADGES = """
-<style id="mkt-v185-black-pro-premium-badges">
+MKT_V183_PREMIUM_PASTEL_COLOR_ONLY = """
+<style id="mkt-v183-premium-pastel-color-only">
 :root{
   --lux-blue:#6EA8FF;
   --lux-blue-2:#9CC7FF;
@@ -17183,47 +17300,15 @@ p,small,span,label,li{color:inherit;}
   color:#047857!important;border:1px solid rgba(16,185,129,.25)!important;
 }
 
-/* V185 - Badge PRO/PREMIUM nền đen + chữ trắng + đèn xanh neon */
+/* Badge Premium: vàng kem mềm, không gắt */
 .mkt-dot-tag,.mkt-dot-tag.enterprise,.premium-badge,.badge-premium,
 .v2-nav-link .mkt-dot-tag{
-  display:inline-flex!important;
-  align-items:center!important;
-  gap:6px!important;
-  background:linear-gradient(135deg,#0F172A,#000000)!important;
-  color:#FFFFFF!important;
-  border:1px solid rgba(34,197,94,.48)!important;
-  border-radius:999px!important;
-  padding:4px 10px!important;
-  font-size:11px!important;
-  font-weight:950!important;
-  letter-spacing:.25px!important;
-  line-height:1!important;
-  text-transform:uppercase!important;
-  box-shadow:0 0 12px rgba(34,197,94,.36),0 10px 24px rgba(0,0,0,.30)!important;
+  background:linear-gradient(135deg,#FFF7D6,#FFE7A3)!important;
+  color:#92400E!important;
+  border:1px solid rgba(245,158,11,.25)!important;
+  box-shadow:0 10px 24px rgba(245,158,11,.14)!important;
 }
-.mkt-dot-tag span,.mkt-dot-tag *,.premium-badge span,.premium-badge *,.badge-premium span,.badge-premium *{
-  color:#FFFFFF!important;
-}
-.mkt-dot-tag i,.mkt-dot-tag.enterprise i,.premium-badge i,.badge-premium i{
-  display:block!important;
-  width:7px!important;
-  height:7px!important;
-  min-width:7px!important;
-  border-radius:999px!important;
-  background:#22C55E!important;
-  box-shadow:0 0 6px #22C55E,0 0 12px #22C55E,0 0 22px rgba(34,197,94,.85)!important;
-  animation:mktPremiumGreenPulse 1.6s ease-in-out infinite!important;
-}
-@keyframes mktPremiumGreenPulse{
-  0%,100%{transform:scale(1);opacity:1;}
-  50%{transform:scale(1.28);opacity:.82;}
-}
-.mkt-clean-nav .v2-nav-link:hover .mkt-dot-tag,
-.sidebar .v2-nav-link:hover .mkt-dot-tag,
-.v2-nav-link.active .mkt-dot-tag{
-  border-color:#22C55E!important;
-  box-shadow:0 0 16px rgba(34,197,94,.48),0 14px 30px rgba(0,0,0,.34)!important;
-}
+.mkt-dot-tag i,.mkt-dot-tag.enterprise i{background:#FBBF24!important;box-shadow:0 0 14px rgba(251,191,36,.70)!important;}
 
 /* KPI bên phải: pastel thống nhất */
 .kpi-card,.stat-card,.today-card,.activity-card{
@@ -17276,15 +17361,15 @@ hr,.divider{border-color:#E5EDFF!important;}
 """
 
 @app.after_request
-def mkt_v185_black_pro_premium_badges_after_request(response):
+def mkt_v183_premium_pastel_color_only_after_request(response):
     try:
         ctype = (response.headers.get("Content-Type") or "").lower()
         if "text/html" in ctype:
             body = response.get_data(as_text=True)
-            if "mkt-v185-black-pro-premium-badges" not in body and "</body>" in body:
-                body = body.replace("</body>", MKT_V185_BLACK_PRO_PREMIUM_BADGES + "</body>")
+            if "mkt-v183-premium-pastel-color-only" not in body and "</body>" in body:
+                body = body.replace("</body>", MKT_V183_PREMIUM_PASTEL_COLOR_ONLY + "</body>")
                 response.set_data(body)
                 response.headers["Content-Length"] = str(len(body.encode("utf-8")))
     except Exception as _e:
-        print("mkt_v185_black_pro_premium_badges_after_request skipped:", _e)
+        print("mkt_v183_premium_pastel_color_only_after_request skipped:", _e)
     return response
