@@ -17081,3 +17081,178 @@ if __name__ == "__main__":
     threading.Thread(target=scheduler_loop, daemon=True).start()
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port, debug=False)
+
+
+# V183 - Premium Pastel Glass color-only override
+# Giữ nguyên nội dung/cài đặt/menu; chỉ phủ lại màu sắc để giao diện sáng, sang và đồng bộ hơn.
+MKT_V183_PREMIUM_PASTEL_COLOR_ONLY = """
+<style id="mkt-v183-premium-pastel-color-only">
+:root{
+  --lux-blue:#6EA8FF;
+  --lux-blue-2:#9CC7FF;
+  --lux-lavender:#B9A7FF;
+  --lux-lavender-2:#EDE7FF;
+  --lux-pink:#FFB3D9;
+  --lux-pink-2:#FFF0F7;
+  --lux-cream:#FFF2C7;
+  --lux-mint:#BDF7DC;
+  --lux-mint-2:#ECFFF6;
+  --lux-ink:#10203F;
+  --lux-muted:#64748B;
+  --lux-border:#E5EDFF;
+  --lux-white:rgba(255,255,255,.92);
+}
+html,body{
+  background:
+    radial-gradient(circle at 12% 4%,rgba(110,168,255,.30),transparent 32%),
+    radial-gradient(circle at 76% 0%,rgba(185,167,255,.28),transparent 34%),
+    radial-gradient(circle at 94% 48%,rgba(255,179,217,.24),transparent 28%),
+    linear-gradient(135deg,#F9FCFF 0%,#F4F7FF 42%,#FFF8EF 100%)!important;
+  color:var(--lux-ink)!important;
+}
+body *{text-shadow:none!important;}
+
+/* Sidebar / menu trái: trắng kính, không còn xanh đen nặng */
+.sidebar,.mkt-clean-nav,.left-sidebar,.side-menu,.nav-panel{
+  background:linear-gradient(180deg,rgba(255,255,255,.96) 0%,rgba(246,248,255,.94) 48%,rgba(239,246,255,.96) 100%)!important;
+  border-right:1px solid rgba(229,237,255,.95)!important;
+  box-shadow:18px 0 52px rgba(110,168,255,.12)!important;
+  color:var(--lux-ink)!important;
+}
+.sidebar h1,.sidebar h2,.sidebar h3,.sidebar b,.sidebar strong,
+.mkt-clean-nav h1,.mkt-clean-nav h2,.mkt-clean-nav h3,.mkt-clean-nav b,.mkt-clean-nav strong,
+.sidebar a,.mkt-clean-nav a,.sidebar span,.mkt-clean-nav span{
+  color:var(--lux-ink)!important;
+}
+.sidebar small,.mkt-clean-nav small,.sidebar p,.mkt-clean-nav p{color:var(--lux-muted)!important;}
+
+/* Menu active / hover: xanh pastel + lavender */
+.v2-nav-link.active,.v2-nav-link:hover,
+.sidebar .active,.mkt-clean-nav .active,
+.menu-item.active,.menu-item:hover{
+  background:linear-gradient(90deg,#DCEBFF 0%,#EEE9FF 58%,#FFF0F7 100%)!important;
+  color:#174EA6!important;
+  border-color:rgba(156,199,255,.75)!important;
+  box-shadow:0 14px 32px rgba(110,168,255,.20)!important;
+}
+
+/* Khu vực giữa: đổi xanh đen sang nền kính sáng */
+.main,.content,.module-section,.dashboard,.workspace,.page-wrap,.app-shell,
+main,.center-panel,.main-content{
+  background:transparent!important;
+  color:var(--lux-ink)!important;
+}
+.hero,.dashboard-hero,.enterprise-hub,.enterprise-module-wrap,.main-card,.panel,.section-card,
+.app-quick-card,.enterprise-card,.premium-card,.trial-card,.mkt-card,.feature-card{
+  background:linear-gradient(135deg,rgba(255,255,255,.96),rgba(248,251,255,.92))!important;
+  border:1px solid rgba(229,237,255,.95)!important;
+  box-shadow:0 22px 58px rgba(110,168,255,.14)!important;
+  color:var(--lux-ink)!important;
+}
+.hero::before,.dashboard-hero::before,.enterprise-hub::before,.enterprise-module-wrap::before,
+.main-card::before,.app-quick-card::before{opacity:.18!important;}
+.app-quick-card:nth-of-type(4n+1),.enterprise-card:nth-of-type(4n+1){background:linear-gradient(135deg,#FFFFFF 0%,#EEF6FF 100%)!important;}
+.app-quick-card:nth-of-type(4n+2),.enterprise-card:nth-of-type(4n+2){background:linear-gradient(135deg,#FFFFFF 0%,#F4F0FF 100%)!important;}
+.app-quick-card:nth-of-type(4n+3),.enterprise-card:nth-of-type(4n+3){background:linear-gradient(135deg,#FFFFFF 0%,#FFF0F7 100%)!important;}
+.app-quick-card:nth-of-type(4n+4),.enterprise-card:nth-of-type(4n+4){background:linear-gradient(135deg,#FFFFFF 0%,#ECFFF6 100%)!important;}
+.app-quick-card:hover,.enterprise-card:hover,.main-card:hover{
+  border-color:#B9A7FF!important;
+  box-shadow:0 28px 70px rgba(185,167,255,.22)!important;
+}
+
+/* Chữ tiêu đề: gradient cao cấp */
+.dashboard-hero h1,.hero h1,.enterprise-hub-head h2,.enterprise-module-title,
+.main-title,.page-title,h1.title{
+  background:linear-gradient(90deg,#3B82F6 0%,#7C3AED 52%,#EC4899 100%)!important;
+  -webkit-background-clip:text!important;background-clip:text!important;color:transparent!important;
+}
+h1,h2,h3,h4,b,strong{color:var(--lux-ink)!important;}
+p,small,span,label,li{color:inherit;}
+.app-quick-card span,.enterprise-card p,.card-subtitle,.muted,.desc{color:var(--lux-muted)!important;}
+
+/* Thanh top/ticker/live bar */
+.topbar,.ticker,.live-bar,.mkt-channel-strip,.header-bar,.nav-top,.top-strip{
+  background:rgba(255,255,255,.88)!important;
+  border:1px solid rgba(229,237,255,.95)!important;
+  box-shadow:0 16px 42px rgba(110,168,255,.14)!important;
+  backdrop-filter:blur(18px)!important;
+  color:var(--lux-ink)!important;
+}
+.live,.live-badge,.status-live{
+  background:linear-gradient(135deg,#D1FAE5,#A7F3D0)!important;
+  color:#047857!important;border:1px solid rgba(16,185,129,.25)!important;
+}
+
+/* Badge Premium: vàng kem mềm, không gắt */
+.mkt-dot-tag,.mkt-dot-tag.enterprise,.premium-badge,.badge-premium,
+.v2-nav-link .mkt-dot-tag{
+  background:linear-gradient(135deg,#FFF7D6,#FFE7A3)!important;
+  color:#92400E!important;
+  border:1px solid rgba(245,158,11,.25)!important;
+  box-shadow:0 10px 24px rgba(245,158,11,.14)!important;
+}
+.mkt-dot-tag i,.mkt-dot-tag.enterprise i{background:#FBBF24!important;box-shadow:0 0 14px rgba(251,191,36,.70)!important;}
+
+/* KPI bên phải: pastel thống nhất */
+.kpi-card,.stat-card,.today-card,.activity-card{
+  background:linear-gradient(135deg,#FFFFFF,#EEF6FF)!important;
+  border:1px solid rgba(156,199,255,.65)!important;
+  box-shadow:0 22px 58px rgba(110,168,255,.15)!important;
+  color:var(--lux-ink)!important;
+}
+.kpi-card:nth-child(2),.stat-card:nth-child(2),.activity-card:nth-child(2){background:linear-gradient(135deg,#FFFFFF,#FFF2C7)!important;border-color:rgba(255,217,120,.70)!important;}
+.kpi-card:nth-child(3),.stat-card:nth-child(3),.activity-card:nth-child(3){background:linear-gradient(135deg,#FFFFFF,#ECFFF6)!important;border-color:rgba(189,247,220,.85)!important;}
+.kpi-card:nth-child(4),.stat-card:nth-child(4),.activity-card:nth-child(4){background:linear-gradient(135deg,#FFFFFF,#EDE7FF)!important;border-color:rgba(185,167,255,.70)!important;}
+.kpi-card h3,.stat-card h3,.today-card h3,.activity-card h3,
+.kpi-card .num,.stat-card .num,.kpi-number,.stat-number{
+  color:#10203F!important;
+}
+.kpi-card p,.stat-card p,.today-card p,.activity-card p{color:#64748B!important;}
+
+/* Icon nền pastel */
+.app-ico,.ec-icon,.card-icon,.kpi-icon,.stat-icon{
+  background:linear-gradient(135deg,#DBEAFE,#EDE9FE,#FFF0F7)!important;
+  box-shadow:0 14px 30px rgba(185,167,255,.18)!important;
+}
+.mkt-bot-app-icon,.app-quick-card .app-ico.mkt-omni-bot-ico{
+  background:linear-gradient(135deg,#DBEAFE,#EDE9FE,#FCE7F3,#D1FAE5)!important;
+  box-shadow:0 16px 34px rgba(124,58,237,.16)!important;
+}
+
+/* Nút chính: cao cấp nhưng nhẹ */
+button,.btn,.primary-btn,.upgrade-btn,.premium-btn{
+  border:0!important;
+  background:linear-gradient(90deg,#6EA8FF,#B9A7FF,#FFB3D9)!important;
+  color:#FFFFFF!important;
+  box-shadow:0 16px 36px rgba(110,168,255,.24)!important;
+}
+button.secondary,.btn-secondary{
+  background:linear-gradient(90deg,#FFF7D6,#FFE7A3)!important;
+  color:#92400E!important;
+}
+
+/* Thanh cuộn / đường kẻ / input */
+input,textarea,select{
+  background:rgba(255,255,255,.92)!important;
+  border:1px solid rgba(229,237,255,.95)!important;
+  color:var(--lux-ink)!important;
+  box-shadow:0 10px 24px rgba(148,163,184,.08)!important;
+}
+hr,.divider{border-color:#E5EDFF!important;}
+::-webkit-scrollbar-thumb{background:linear-gradient(180deg,#9CC7FF,#B9A7FF)!important;border-radius:999px!important;}
+</style>
+"""
+
+@app.after_request
+def mkt_v183_premium_pastel_color_only_after_request(response):
+    try:
+        ctype = (response.headers.get("Content-Type") or "").lower()
+        if "text/html" in ctype:
+            body = response.get_data(as_text=True)
+            if "mkt-v183-premium-pastel-color-only" not in body and "</body>" in body:
+                body = body.replace("</body>", MKT_V183_PREMIUM_PASTEL_COLOR_ONLY + "</body>")
+                response.set_data(body)
+                response.headers["Content-Length"] = str(len(body.encode("utf-8")))
+    except Exception as _e:
+        print("mkt_v183_premium_pastel_color_only_after_request skipped:", _e)
+    return response
