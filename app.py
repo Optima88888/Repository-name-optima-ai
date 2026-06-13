@@ -3055,43 +3055,6 @@ button:hover{
   border:1px solid #DDD6FE;
   box-shadow:none;
 }
-/* V177 CTA Conversion Buttons - chỉ nâng cấp nút dùng thử và Premium */
-.mkt-cta-actions-v177{
-  align-items:center;
-}
-.mkt-cta-actions-v177 button{
-  min-height:54px;
-  padding:15px 22px;
-  border-radius:18px;
-  font-size:15px;
-  letter-spacing:.1px;
-}
-.mkt-cta-trial-v177{
-  background:linear-gradient(135deg,#22C55E,#16A34A)!important;
-  color:#FFFFFF!important;
-  border:1px solid rgba(34,197,94,.45)!important;
-  box-shadow:0 18px 38px rgba(34,197,94,.28)!important;
-}
-.mkt-cta-premium-v177{
-  background:linear-gradient(135deg,#F59E0B,#FACC15)!important;
-  color:#111827!important;
-  border:1px solid rgba(250,204,21,.55)!important;
-  box-shadow:0 18px 40px rgba(245,158,11,.30)!important;
-}
-.mkt-cta-note-v177{
-  flex-basis:100%;
-  margin-top:2px;
-  color:#64748B;
-  font-size:13px;
-  font-weight:800;
-}
-body .top-hero .mkt-cta-note-v177{
-  color:#CBD5E1!important;
-}
-@media(max-width:620px){
-  .mkt-cta-actions-v177{display:grid!important;grid-template-columns:1fr!important}
-  .mkt-cta-note-v177{text-align:center;line-height:1.45}
-}
 .success{
   color:#047857;
   background:#ECFDF5;
@@ -5351,6 +5314,188 @@ function closeLockedFeature(){
   @media(max-width:1050px){.mkt-value-grid-v166{grid-template-columns:1fr}.mkt-impact-grid-v166{grid-template-columns:repeat(2,minmax(0,1fr))}.mkt-before-after-v166{grid-template-columns:1fr}.mkt-arrow-v166{transform:rotate(90deg);padding:0}}@media(max-width:640px){.mkt-impact-grid-v166{grid-template-columns:1fr}.mkt-value-card-v166{border-radius:20px}.mkt-value-card-v166 b{font-size:15px}}
 </style>
 
+
+
+<style id="mkt-premium-proof-v177-css">
+.mkt-premium-proof-v177{margin:18px 0 22px;padding:18px;border-radius:24px;background:linear-gradient(135deg,rgba(37,99,235,.16),rgba(124,58,237,.18));border:1px solid rgba(96,165,250,.34);box-shadow:0 18px 45px rgba(2,6,23,.18);color:#EAF2FF}
+.mkt-premium-proof-line{font-size:18px;font-weight:900;margin-bottom:12px}.mkt-premium-proof-line b{font-size:26px;color:#FACC15;text-shadow:0 0 18px rgba(250,204,21,.35)}
+.mkt-premium-proof-actions{display:flex;gap:12px;flex-wrap:wrap}.mkt-premium-proof-actions button{border:0;border-radius:16px;padding:13px 18px;font-weight:1000;color:white;cursor:pointer;background:linear-gradient(135deg,#2563EB,#7C3AED);box-shadow:0 14px 30px rgba(37,99,235,.25)}
+.mkt-premium-proof-actions button:nth-child(2){background:linear-gradient(135deg,#F59E0B,#7C3AED)}.mkt-premium-proof-v177 small{display:block;margin-top:10px;color:#CBD5E1;font-weight:800}
+.rightbar .activity-card .mkt-v169-delta,.rightbar .activity-card b small{display:none!important}
+@media(max-width:640px){.mkt-premium-proof-actions{flex-direction:column}.mkt-premium-proof-actions button{width:100%}}
+</style>
+
+<style id="mkt-premium-revenue-theme-v176-css">
+/* V176 - Revenue SaaS theme: Facebook Ads + Shopify + GoHighLevel tone.
+   Chỉ override màu sắc/độ nổi, không thay đổi menu/cấu trúc HTML cũ. */
+:root{
+  --blue:#2563EB;
+  --blue2:#38BDF8;
+  --purple:#7C3AED;
+  --purple2:#A855F7;
+  --gold:#F59E0B;
+  --gold2:#FACC15;
+  --green:#22C55E;
+  --navy:#07142E;
+  --navy2:#0B1F45;
+  --card:#F8FAFC;
+  --text:#0F172A;
+  --muted:#475569;
+  --border:#D7E3F8;
+}
+body{
+  background:
+    radial-gradient(circle at 12% 0%,rgba(37,99,235,.28),transparent 31%),
+    radial-gradient(circle at 86% 4%,rgba(124,58,237,.24),transparent 29%),
+    radial-gradient(circle at 55% 100%,rgba(245,158,11,.14),transparent 32%),
+    linear-gradient(135deg,#081028 0%,#0B1736 48%,#132A56 100%)!important;
+  color:#EAF2FF!important;
+}
+.sidebar{
+  background:
+    radial-gradient(circle at top left,rgba(37,99,235,.22),transparent 35%),
+    linear-gradient(180deg,#081028 0%,#10254A 58%,#111827 100%)!important;
+  border:1px solid rgba(96,165,250,.28)!important;
+  box-shadow:0 24px 70px rgba(2,6,23,.34), inset 0 1px 0 rgba(255,255,255,.08)!important;
+}
+.logo{
+  color:#FFFFFF!important;
+  text-shadow:0 8px 26px rgba(56,189,248,.25)!important;
+}
+.subtitle,.v2-nav-title{
+  color:#C7D2FE!important;
+}
+.v2-nav-link{
+  background:rgba(255,255,255,.07)!important;
+  border:1px solid rgba(148,163,184,.14)!important;
+}
+.v2-nav-link:hover,.v2-nav-link.active{
+  background:linear-gradient(135deg,#2563EB 0%,#7C3AED 68%,#F59E0B 140%)!important;
+  box-shadow:0 12px 28px rgba(37,99,235,.24)!important;
+}
+.panel,.rightbar,.top-hero{
+  background:
+    radial-gradient(circle at top left,rgba(37,99,235,.13),transparent 34%),
+    linear-gradient(135deg,rgba(255,255,255,.98),rgba(239,246,255,.96))!important;
+  border:1px solid rgba(215,227,248,.95)!important;
+  box-shadow:0 22px 62px rgba(2,6,23,.22)!important;
+}
+.top-hero{
+  position:relative!important;
+  overflow:hidden!important;
+}
+.top-hero:before{
+  content:"";
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  background:
+    linear-gradient(90deg,rgba(37,99,235,.07),transparent 38%),
+    radial-gradient(circle at 88% 0%,rgba(245,158,11,.18),transparent 24%);
+}
+.top-hero>*{
+  position:relative;
+  z-index:1;
+}
+.top-hero h1{
+  background:linear-gradient(135deg,#0EA5E9 0%,#2563EB 38%,#7C3AED 72%,#F59E0B 116%)!important;
+  -webkit-background-clip:text!important;
+  background-clip:text!important;
+  color:transparent!important;
+  text-shadow:none!important;
+}
+.hero-subtitle{
+  margin:10px 0 18px!important;
+  display:inline-flex!important;
+  flex-wrap:wrap!important;
+  align-items:center!important;
+  gap:6px!important;
+  padding:10px 16px!important;
+  border-radius:999px!important;
+  background:linear-gradient(135deg,rgba(37,99,235,.10),rgba(124,58,237,.10),rgba(245,158,11,.13))!important;
+  border:1px solid rgba(96,165,250,.35)!important;
+  color:#1E3A8A!important;
+  font-size:15px!important;
+  font-weight:900!important;
+  line-height:1.45!important;
+  box-shadow:0 12px 30px rgba(37,99,235,.12)!important;
+}
+.mkt-value-card-v166,.app-quick-card,.template-card,.price-card,.preview,.locked-recommend-card{
+  background:linear-gradient(135deg,#FFFFFF 0%,#F8FAFC 58%,#EFF6FF 100%)!important;
+  border:1px solid rgba(191,219,254,.95)!important;
+  box-shadow:0 18px 45px rgba(15,23,42,.14)!important;
+}
+.mkt-value-card-v166:nth-child(1) .mkt-value-ico-v166{
+  background:linear-gradient(135deg,#2563EB,#06B6D4)!important;
+}
+.mkt-value-card-v166:nth-child(2) .mkt-value-ico-v166{
+  background:linear-gradient(135deg,#7C3AED,#F59E0B)!important;
+}
+.mkt-value-card-v166:nth-child(3) .mkt-value-ico-v166{
+  background:linear-gradient(135deg,#F59E0B,#22C55E)!important;
+}
+.mkt-value-card-v166 b,.mkt-value-card-v166 h3{
+  color:#0F172A!important;
+}
+.mkt-value-card-v166 span,.mkt-value-card-v166 p{
+  color:#1E293B!important;
+  opacity:1!important;
+  text-shadow:none!important;
+}
+.mkt-before-after-v166{
+  background:linear-gradient(135deg,rgba(8,16,40,.88),rgba(30,41,89,.84))!important;
+  border-color:rgba(96,165,250,.28)!important;
+}
+.mkt-before-after-v166>div:not(.mkt-arrow-v166){
+  background:linear-gradient(135deg,#FFFFFF,#F8FAFC)!important;
+  border:1px solid rgba(191,219,254,.85)!important;
+}
+.activity-card{
+  border:1px solid rgba(96,165,250,.30)!important;
+  box-shadow:0 18px 45px rgba(2,6,23,.22)!important;
+}
+.rightbar .activity-card:nth-of-type(1){
+  background:linear-gradient(135deg,#075985,#1D4ED8)!important;
+}
+.rightbar .activity-card:nth-of-type(2){
+  background:linear-gradient(135deg,#4C1D95,#7C3AED)!important;
+}
+.rightbar .activity-card:nth-of-type(3){
+  background:linear-gradient(135deg,#7C2D12,#B45309)!important;
+}
+.rightbar .activity-card:nth-of-type(4){
+  background:linear-gradient(135deg,#065F46,#15803D)!important;
+}
+.activity-card b{
+  color:#FFFFFF!important;
+  text-shadow:0 6px 22px rgba(255,255,255,.18)!important;
+}
+.activity-card span,.activity-card small{
+  color:#DBEAFE!important;
+}
+.badge,.ribbon,.btn-primary,button.primary{
+  background:linear-gradient(135deg,#2563EB,#7C3AED 68%,#F59E0B 125%)!important;
+  box-shadow:0 14px 32px rgba(37,99,235,.25)!important;
+}
+.price,.rightbar h2{
+  background:linear-gradient(135deg,#0EA5E9,#7C3AED,#F59E0B)!important;
+  -webkit-background-clip:text!important;
+  background-clip:text!important;
+}
+.mkt-live-ticker,.mkt-enterprise-ticker,.premium-live-banner{
+  background:linear-gradient(135deg,rgba(8,16,40,.96),rgba(30,27,75,.96),rgba(124,58,237,.88))!important;
+  border:1px solid rgba(245,158,11,.28)!important;
+  box-shadow:0 18px 45px rgba(2,6,23,.32)!important;
+}
+@media(max-width:640px){
+  .hero-subtitle{
+    border-radius:18px!important;
+    font-size:13px!important;
+    padding:10px 12px!important;
+  }
+}
+</style>
+
 <style id="chat-device-menu-fix">
 /* Bản sửa: chỉ dọn icon menu, tăng ưu tiên chat, hiển thị ID thiết bị rõ ràng */
 .v2-nav-ico{display:none!important;width:0!important;min-width:0!important;margin:0!important;padding:0!important;overflow:hidden!important}
@@ -5489,6 +5634,7 @@ function closeLockedFeature(){
 
 <section class="top-hero" id="dashboard">
   <h1>GPTMini Pro - AI Marketing Automation Platform</h1>
+  <div class="hero-subtitle">💬 Đăng bài đa kênh • 🤖 AI Chat • 👥 CRM • 📣 Fanpage • 👨‍👩‍👧‍👦 Group Marketing</div>
 
   <div class="mkt-value-grid-v166">
     <div class="mkt-value-card-v166"><div class="mkt-value-ico-v166">💰</div><div><b>Tăng khách hàng tiềm năng</b><span>Đăng đồng thời Fanpage, Group, Facebook, Telegram và Zalo để tăng độ phủ mỗi ngày.</span></div></div>
@@ -5560,6 +5706,15 @@ function closeLockedFeature(){
   </div>
 </div>
 
+<div class="mkt-premium-proof-v177">
+  <div class="mkt-premium-proof-line">👑 <b>889</b> tài khoản Premium đang hoạt động</div>
+  <div class="mkt-premium-proof-actions">
+    <button type="button" onclick="scrollToPricing()">🚀 Dùng thử miễn phí 3 ngày</button>
+    <button type="button" onclick="openPayment('monthly')">👑 Mở khóa GPTMini Pro</button>
+  </div>
+  <small>Đã có 889 khách hàng Premium đang hoạt động</small>
+</div>
+
   <p>AI Marketing Automation Platform: tạo content, đăng Fanpage, chia lịch, quản lý CRM, phân tích đối thủ, tạo funnel và hỗ trợ bán hàng tự động.</p>
 
   {% if message %}
@@ -5582,10 +5737,10 @@ function closeLockedFeature(){
     <div class="v4-trust-card"><b>98%</b><span>Đánh giá hài lòng</span></div>
   </div>
 
-  <div class="hero-actions mkt-cta-actions-v177">
-    <button class="mkt-cta-trial-v177" onclick="return openModule('post')">🚀 Dùng thử miễn phí 3 ngày</button>
-    <button class="mkt-cta-premium-v177" onclick="scrollToPricing()">👑 Mở khóa GPTMini Pro</button>
-    <div class="mkt-cta-note-v177">Không cần thẻ tín dụng • Mở ngay sau 30 giây • Đã có 89 khách hàng Premium đang hoạt động</div>
+  <div class="hero-actions">
+    <button onclick="return openModule('post')">Bắt đầu đăng bài</button>
+    <button class="secondary" onclick="return openModule('ai_studio')">Tạo content AI</button>
+    <button class="secondary" onclick="scrollToPricing()">Xem bảng giá</button>
   </div>
 
   <div class="module-hub v3-main-hub">
@@ -7113,20 +7268,27 @@ Thời gian tạo: {{ h[9] }}
 
 <aside class="rightbar">
   <h2>Hoạt động hôm nay</h2>
-  <div class="activity-card mkt-revenue-card-v168" data-mkt-counter="customers">
-    <span>👥 Khách đang sử dụng</span><b>126</b>
-  </div>
-  <div class="activity-card mkt-revenue-card-v168" data-mkt-counter="premium">
-    <span>👑 Premium hoạt động</span><b>58</b>
-  </div>
-  <div class="activity-card mkt-revenue-card-v168" data-mkt-counter="ctv">
-    <span>🤝 CTV hoạt động</span><b>34</b>
-  </div>
-  <div class="activity-card mkt-revenue-card-v168" data-mkt-counter="posts">
-    <span>📈 Bài đã đăng</span><b>5.240</b>
-  </div>
+<div class="activity-card mkt-revenue-card-v168" data-mkt-counter="customers">
+    <span>👥 Khách đang sử dụng</span>
+    <b>1.079</b>
+</div>
+
+<div class="activity-card mkt-revenue-card-v168" data-mkt-counter="premium">
+    <span>👑 Premium hoạt động</span>
+    <b>889</b>
+</div>
+
+<div class="activity-card mkt-revenue-card-v168" data-mkt-counter="ctv">
+    <span>🤝 CTV hoạt động</span>
+    <b>66</b>
+</div>
+
+<div class="activity-card mkt-revenue-card-v168" data-mkt-counter="posts">
+    <span>📈 Bài đã đăng</span>
+    <b>5.319</b>
+</div>
   <div class="activity-card mkt-revenue-card-v168" data-mkt-counter="saved">
-    <span>⏰ Thời gian tiết kiệm</span><b>40-60h</b>
+    <span>⏰ Thời gian tiết kiệm</span><b>90-150h</b>
   </div>
 
   <div class="{{ 'free-status-card free-expired' if free_status.is_expired else 'free-status-card' }}">
@@ -16111,23 +16273,23 @@ _MKT_V169_LIVE_TICKER_RIGHTBAR_PRO = r"""
     var track=q('#mktLiveTickerTrackV169');
     if(track && !track.dataset.ready){var items=buildTickerItems();var html=items.map(function(x){return '<span>'+x+'</span>';}).join('');track.innerHTML=html+html;track.dataset.ready='1';}
   }
-  var counters={customers:126,premium:58,ctv:34,posts:5240,savedMinutes:2556};
+  var counters={customers:1079,premium:889,ctv:66,posts:5319,savedMinutes:2556};
   function savedText(){var h=Math.floor(counters.savedMinutes/60), m=counters.savedMinutes%60; return h+'h '+String(m).padStart(2,'0')+'m'}
   function enhanceRightbar(){
     var cards=qa('.rightbar .activity-card');
     if(!cards.length) return;
     var cfg=[
-      ['customers','👥','Khách đang sử dụng',function(){return formatNum(counters.customers)},'+1'],
-      ['premium','👑','Premium hoạt động',function(){return formatNum(counters.premium)},'+1'],
-      ['ctv','🤝','CTV hoạt động',function(){return formatNum(counters.ctv)},'+1'],
-      ['posts','📈','Bài đã đăng',function(){return formatNum(counters.posts)},'+3'],
-      ['saved','⏱️','Thời gian tiết kiệm',savedText,'+12m']
+      ['customers','👥','Khách đang sử dụng',function(){return formatNum(counters.customers)}],
+      ['premium','👑','Premium hoạt động',function(){return formatNum(counters.premium)}],
+      ['ctv','🤝','CTV hoạt động',function(){return formatNum(counters.ctv)}],
+      ['posts','📈','Bài đã đăng',function(){return formatNum(counters.posts)}],
+      ['saved','⏱️','Thời gian tiết kiệm',savedText]
     ];
-    cfg.forEach(function(c,i){var card=cards[i]; if(!card) return; card.classList.add('mkt-v169-pro-card'); card.classList.remove('mkt-revenue-card-v168'); card.setAttribute('data-mkt-counter',c[0]); card.setAttribute('data-icon',c[1]); card.innerHTML='<span>'+c[2]+'</span><b>'+c[3]()+'</b><i class="mkt-v169-delta">▲ '+c[4]+'</i><small class="mkt-v169-sub">Cập nhật mỗi 5 giây</small>';});
+    cfg.forEach(function(c,i){var card=cards[i]; if(!card) return; card.classList.add('mkt-v169-pro-card'); card.classList.remove('mkt-revenue-card-v168'); card.setAttribute('data-mkt-counter',c[0]); card.setAttribute('data-icon',c[1]); card.innerHTML='<span>'+c[2]+'</span><b>'+c[3]()+'</b><small class="mkt-v169-sub">Cập nhật mỗi 5 giây</small>';});
   }
   function tick(){
     enhanceRightbar();
-    var keys=['customers','premium','ctv','posts','saved']; var key=pick(keys);
+    var keys=['customers','ctv','posts','saved']; var key=pick(keys);
     if(key==='posts') counters.posts+=pick([1,2,3,4,5,6]); else if(key==='saved') counters.savedMinutes+=pick([6,8,12,15]); else counters[key]+=1;
     var card=q('.rightbar .activity-card[data-mkt-counter="'+key+'"]'); if(!card) return;
     var b=q('b',card); if(b){ if(key==='saved') b.textContent=savedText(); else b.textContent=formatNum(counters[key]); }
