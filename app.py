@@ -21302,17 +21302,16 @@ MKT_V210_CONVENIENCE_PATCH = r"""
 @app.after_request
 def mkt_v210_convenience_after_request(response):
     try:
-        ctype = (response.headers.get('Content-Type') or '').lower()
-        if 'text/html' in ctype:
+        ctype = (response.headers.get("Content-Type") or "").lower()
+        if "text/html" in ctype:
             body = response.get_data(as_text=True)
-           if False and 'mkt-v210-convenience-patch-js' not in body and '</body>' in body:
+            if False and 'mkt-v210-convenience-patch-js' not in body and '</body>' in body:
                 body = body.replace('</body>', MKT_V210_CONVENIENCE_PATCH + '</body>')
                 response.set_data(body)
                 response.headers['Content-Length'] = str(len(body.encode('utf-8')))
     except Exception as _e:
         print('mkt_v210_convenience_after_request skipped:', _e)
     return response
-
 # ============================================================
 # V211 - Runner Login Center + two clear post buttons
 # Mục tiêu: hiển thị rõ Đăng nhập Facebook, Kiểm tra Session,
@@ -21384,19 +21383,44 @@ MKT_V211_RUNNER_LOGIN_POST_UI = r"""
 def mkt_v211_runner_login_post_after_request(response):
     try:
         ctype = (response.headers.get('Content-Type') or '').lower()
+
         if 'text/html' in ctype:
             body = response.get_data(as_text=True)
-            if False and 'mkt-v211-runner-login-post-js' not in body and '</body>' in body:
-                body = body.replace('</body>', MKT_V211_RUNNER_LOGIN_POST_UI + '</body>', 1)
-                response.set_data(body)
-                response.headers['Content-Length'] = str(len(body.encode('utf-8')))
-    except Exception as _e:
-        print('mkt_v211_runner_login_post_after_request skipped:', _e)
-    return response
-if __name__ == "__main__":
-    # Không tự tạo kho 50k content khi khởi động để tránh lỗi SQLite database is locked trên Render.
-    # Khi cần kiểm tra/tạo kho content, gọi /api/content_50k_stats từ admin.
-    threading.Thread(target=scheduler_loop, daemon=True).start()
-    port = int(os.environ.get("PORT", 10000))
-    app.run(host="0.0.0.0", port=port, debug=False)
 
+            # Tạm tắt V211 để debug lỗi giao diện
+            if False and 'mkt-v211-runner-login-post-js' not in body and '</body>' in body:
+                body = body.replace(
+                    '</body>',
+                    MKT_V211_RUNNER_LOGIN_POST_UI + '</body>',
+                    1
+                )
+
+                response.set_data(body)
+                response.headers['Content-Length'] = str(
+                    len(body.encode('utf-8'))
+                )
+
+    except Exception as _e:
+        print(
+            'mkt_v211_runner_login_post_after_request skipped:',
+            _e
+        )
+
+    return response
+
+
+if __name__ == "__main__":
+    # Không tự tạo kho 50k content khi khởi động
+    # để tránh SQLite database is locked trên Render.
+    threading.Thread(
+        target=scheduler_loop,
+        daemon=True
+    ).start()
+
+    port = int(os.environ.get("PORT", 10000))
+
+    app.run(
+        host="0.0.0.0",
+        port=port,
+        debug=False
+    )
