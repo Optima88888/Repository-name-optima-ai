@@ -16794,56 +16794,38 @@ def mkt_v143_facebook_personal_pc_mobile_after_request(response):
         print('mkt_v143_facebook_personal_pc_mobile_after_request skipped:', _e)
     return response
 
+@app.route('/api/fb_multi_center_state', methods=['GET','POST'])
+def api_fb_multi_center_state():
+    return jsonify({
+        'ok': True,
+        'accounts': [],
+        'groups': [],
+        'jobs': [],
+        'message': 'Facebook Multi Center active'
+    })
+
+@app.route('/api/fb_v210_runner_status', methods=['GET'])
+def api_fb_v210_runner_status():
+    return jsonify({
+        'ok': True,
+        'logged_in_accounts': 0,
+        'pending_jobs': 0,
+        'events': []
+    })
+
+@app.route('/api/fb_v207_state', methods=['GET'])
+def api_fb_v207_state():
+    device_id = request.args.get('device_id', '')
+    return jsonify({
+        'ok': True,
+        'device_id': device_id,
+        'status': 'ready'
+    })
+
 if __name__ == "__main__":
     # Không tự tạo kho 50k content khi khởi động để tránh lỗi SQLite database is locked trên Render.
     # Khi cần kiểm tra/tạo kho content, gọi /api/content_50k_stats từ admin.
     threading.Thread(target=scheduler_loop, daemon=True).start()
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port, debug=False)
-
-# ============================================================
-# FIX 404 FACEBOOK OLD API FALLBACK
-# Chặn lỗi frontend gọi API cũ: fb_v207, fb_v210, fb_multi_center
-# ============================================================
-
-@app.route("/api/fb_v207_state")
-def api_fb_v207_state_fallback():
-    device_id = request.args.get("device_id", "")
-    return jsonify({
-        "ok": True,
-        "device_id": device_id,
-        "connected": False,
-        "status": "idle",
-        "message": "Facebook cá nhân đang dùng chế độ PC + Mobile Extension.",
-        "accounts": [],
-        "queue": []
-    })
-
-
-@app.route("/api/fb_v210_runner_status")
-def api_fb_v210_runner_status_fallback():
-    return jsonify({
-        "ok": True,
-        "running": False,
-        "status": "idle",
-        "message": "Runner cũ đã được chuyển sang Facebook cá nhân PC + Mobile.",
-        "posted": 0,
-        "pending": 0,
-        "error": 0
-    })
-
-
-@app.route("/api/fb_multi_center_state")
-def api_fb_multi_center_state_fallback():
-    device_id = request.args.get("device_id", "")
-    return jsonify({
-        "ok": True,
-        "device_id": device_id,
-        "status": "ready",
-        "message": "Facebook Multi Center fallback active.",
-        "accounts": [],
-        "posts": [],
-        "logs": []
-    })
-
 
