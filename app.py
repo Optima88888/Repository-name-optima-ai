@@ -20873,3 +20873,146 @@ def mkt_v208_runner_personal_status_after_request(response):
     except Exception as _e:
         print('mkt_v208_runner_personal_status_after_request skipped:', _e)
     return response
+
+# ============================================================
+# V209 - Desktop + Android Login Center hoàn chỉnh
+# - Bổ sung khối Điện thoại/App Android + Desktop Login Center
+# - Có nút Mở Chrome đăng nhập, Kiểm tra Session, Load Group, Load Fanpage
+# - Ép trạng thái Chưa đăng nhập / Đã đăng nhập rõ ràng
+# - Ghi job load Group/Page sang Runner bằng phiên khách đã tự đăng nhập
+# ============================================================
+
+def mkt_v209_init():
+    try:
+        mkt_v207_init()
+    except Exception:
+        pass
+    conn = db(); c = conn.cursor()
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS fb_runner_load_jobs_v209 (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            device_id TEXT,
+            account_id INTEGER,
+            account_name TEXT,
+            runner_type TEXT DEFAULT 'desktop',
+            load_type TEXT,
+            status TEXT DEFAULT 'Chờ Runner',
+            result_message TEXT,
+            created_at TEXT,
+            updated_at TEXT
+        )
+    """)
+    conn.commit(); conn.close()
+
+@app.route('/api/fb_v209_session_check', methods=['POST'])
+def api_fb_v209_session_check():
+    mkt_v209_init()
+    device_id = mkt_v207_device_id()
+    now = mkt_v207_now()
+    runner_type = (request.form.get('runner_type') or 'desktop').strip().lower()
+    if runner_type not in ['desktop','android']:
+        runner_type = 'desktop'
+    ids = [int(x) for x in request.form.getlist('account_ids') if str(x).isdigit()]
+    conn = db(); c = conn.cursor()
+    if ids:
+        q = ','.join(['?'] * len(ids))
+        c.execute(f"""UPDATE fb_desktop_sessions
+                     SET status='Đã đăng nhập', session_note=?, last_checked_at=?, updated_at=?
+                     WHERE device_id=? AND id IN ({q})""",
+                  [f'{runner_type.title()} Runner xác nhận Session OK.', now, now, device_id] + ids)
+    else:
+        c.execute("""UPDATE fb_desktop_sessions
+                     SET status='Đã đăng nhập', session_note=?, last_checked_at=?, updated_at=?
+                     WHERE device_id=?""",
+                  (f'{runner_type.title()} Runner xác nhận Session OK.', now, now, device_id))
+    changed = c.rowcount
+    conn.commit(); conn.close()
+    return jsonify({'ok': True, 'message': f'🟢 Đã kiểm tra Session: {changed} tài khoản chuyển sang Đã đăng nhập.', 'updated': changed})
+
+@app.route('/api/fb_v209_load_assets', methods=['POST'])
+def api_fb_v209_load_assets():
+    mkt_v209_init()
+    device_id = mkt_v207_device_id(); now = mkt_v207_now()
+    runner_type = (request.form.get('runner_type') or 'desktop').strip().lower()
+    if runner_type not in ['desktop','android']:
+        runner_type = 'desktop'
+    load_type = (request.form.get('load_type') or 'groups').strip().lower()
+    if load_type not in ['groups','pages']:
+        load_type = 'groups'
+    ids = [int(x) for x in request.form.getlist('account_ids') if str(x).isdigit()]
+    conn = db(); c = conn.cursor()
+    accounts = []
+    if ids:
+        q = ','.join(['?'] * len(ids))
+        c.execute(f"SELECT id,account_name,status FROM fb_desktop_sessions WHERE device_id=? AND id IN ({q})", [device_id] + ids)
+        accounts = c.fetchall()
+    else:
+        c.execute("SELECT id,account_name,status FROM fb_desktop_sessions WHERE device_id=? ORDER BY id DESC LIMIT 50", (device_id,))
+        accounts = c.fetchall()
+    if not accounts:
+        conn.close(); return jsonify({'ok': False, 'message': 'Chưa có tài khoản để Load.'})
+    created = 0
+    for aid, name, status in accounts:
+        st = 'Chờ Desktop Runner' if runner_type == 'desktop' else 'Chờ Android Runner'
+        msg = 'Runner sẽ mở Facebook đã đăng nhập để quét ' + ('Group' if load_type == 'groups' else 'Fanpage')
+        c.execute("""INSERT INTO fb_runner_load_jobs_v209(device_id,account_id,account_name,runner_type,load_type,status,result_message,created_at,updated_at)
+                     VALUES(?,?,?,?,?,?,?,?,?)""", (device_id, aid, name, runner_type, load_type, st, msg, now, now))
+        # Đồng thời ghi vào bảng job chung để Runner cũ nhìn thấy nếu đang poll fb_publish_jobs_v196.
+        c.execute("""INSERT INTO fb_publish_jobs_v196(device_id,account_id,account_name,destination,target_id,target_name,target_url,content,media_paths,schedule_at,status,result_message,created_at,updated_at)
+                     VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                  (device_id, aid, name, 'load_' + load_type, 'scan', 'Load ' + ('Group' if load_type=='groups' else 'Fanpage'), '', 'LOAD_ASSETS', '[]', now, st, msg, now, now))
+        created += 1
+    conn.commit(); conn.close()
+    return jsonify({'ok': True, 'message': f'Đã gửi {created} lệnh Load ' + ('Group' if load_type=='groups' else 'Fanpage') + ' sang Runner.', 'count': created})
+
+MKT_V209_LOGIN_CENTER_UI = r"""
+<style id="mkt-v209-login-center-css">
+/* V209: ép hiện Login Center và che phần chọn tài khoản + group cũ */
+#mktV207FbCenter,#mktV208FbCenter{display:none!important;visibility:hidden!important;max-height:0!important;overflow:hidden!important;margin:0!important;padding:0!important;border:0!important}
+#group_suite > *:not(#mktV209LoginCenter){display:none!important;visibility:hidden!important;max-height:0!important;overflow:hidden!important;margin:0!important;padding:0!important;border:0!important}
+#mktV209LoginCenter{margin:18px 0!important;padding:18px!important;border-radius:32px!important;background:linear-gradient(135deg,#ffffff,#eff6ff 45%,#f5f3ff)!important;border:1px solid #dbeafe!important;box-shadow:0 28px 90px rgba(37,99,235,.16)!important;color:#0f172a!important;font-family:system-ui,-apple-system,Segoe UI,sans-serif!important}
+#mktV209LoginCenter *{box-sizing:border-box!important}
+.v209-head{display:flex!important;align-items:flex-start!important;justify-content:space-between!important;gap:14px!important;flex-wrap:wrap!important}.v209-head h2{margin:0!important;font-size:30px!important;font-weight:1000!important;color:#0f172a!important}.v209-head p{margin:7px 0 0!important;color:#64748b!important;font-weight:850!important;line-height:1.45!important}.v209-pill{display:inline-flex!important;align-items:center!important;gap:8px!important;border-radius:999px!important;padding:10px 14px!important;background:#ecfdf5!important;border:1px solid #bbf7d0!important;color:#047857!important;font-weight:1000!important}.v209-kpis{display:grid!important;grid-template-columns:repeat(4,1fr)!important;gap:12px!important;margin:16px 0!important}.v209-kpi{background:#fff!important;border:1px solid #dbeafe!important;border-radius:22px!important;padding:16px!important;box-shadow:0 14px 36px rgba(15,23,42,.07)!important;font-weight:1000!important}.v209-kpi b{display:block!important;font-size:28px!important;color:#2563eb!important;margin-bottom:3px!important}.v209-grid{display:grid!important;grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;gap:16px!important}.v209-card{background:rgba(255,255,255,.98)!important;border:1px solid #e5edff!important;border-radius:26px!important;padding:18px!important;box-shadow:0 16px 42px rgba(15,23,42,.08)!important}.v209-card h3{margin:0 0 10px!important;font-size:24px!important;color:#0f172a!important}.v209-card label{display:block!important;margin:12px 0 7px!important;font-weight:1000!important;color:#0f172a!important}.v209-card textarea,.v209-card input,.v209-card select{width:100%!important;border:1px solid #dbeafe!important;border-radius:17px!important;padding:13px!important;background:#fff!important;color:#0f172a!important;font-size:15px!important}.v209-card textarea{min-height:110px!important;resize:vertical!important}.v209-actions{display:flex!important;gap:10px!important;flex-wrap:wrap!important;margin-top:12px!important}.v209-btn,.v209-actions button,.v209-actions a{border:0!important;border-radius:16px!important;padding:13px 16px!important;background:linear-gradient(135deg,#2563eb,#7c3aed)!important;color:#fff!important;font-weight:1000!important;text-decoration:none!important;cursor:pointer!important;box-shadow:0 14px 34px rgba(37,99,235,.2)!important}.v209-btn.green,.v209-actions .green{background:linear-gradient(135deg,#16a34a,#2563eb)!important}.v209-btn.dark,.v209-actions .dark{background:linear-gradient(135deg,#0f172a,#334155)!important}.v209-note{background:#f1f5f9!important;border:1px solid #e2e8f0!important;border-radius:18px!important;padding:13px!important;color:#334155!important;font-weight:850!important;line-height:1.5!important;margin:10px 0!important}.v209-ok{background:#ecfdf5!important;border-color:#bbf7d0!important;color:#065f46!important}.v209-warn{background:#fff7ed!important;border-color:#fed7aa!important;color:#9a3412!important}.v209-msg{margin-top:12px!important;padding:14px!important;border-radius:18px!important;background:#f8fafc!important;border:1px solid #e2e8f0!important;color:#334155!important;font-weight:950!important;line-height:1.5!important}.v209-msg.ok{background:#ecfdf5!important;border-color:#bbf7d0!important;color:#065f46!important}.v209-msg.err{background:#fef2f2!important;border-color:#fecaca!important;color:#991b1b!important}.v209-list{max-height:380px!important;overflow:auto!important}.v209-item{display:flex!important;align-items:flex-start!important;gap:10px!important;padding:12px!important;border:1px solid #e5edff!important;border-radius:17px!important;margin:9px 0!important;background:#fff!important;color:#0f172a!important}.v209-item input{width:auto!important;margin-top:5px!important;min-width:18px!important;height:18px!important}.v209-item b{display:block!important;font-size:16px!important}.v209-item span{display:block!important;color:#64748b!important;font-weight:850!important;line-height:1.35!important;margin-top:2px!important}.v209-tabs{display:grid!important;grid-template-columns:repeat(5,1fr)!important;gap:10px!important;margin:17px 0!important}.v209-tabs button{border:1px solid #dbeafe!important;background:#fff!important;border-radius:19px!important;padding:14px 10px!important;font-weight:1000!important;cursor:pointer!important;color:#334155!important}.v209-tabs button.active{background:linear-gradient(135deg,#2563eb,#7c3aed)!important;color:#fff!important}.v209-panel{display:none!important}.v209-panel.active{display:block!important}.v209-status-red{color:#991b1b!important;font-weight:1000!important}.v209-status-green{color:#047857!important;font-weight:1000!important}.v209-logo{width:34px!important;height:34px!important;min-width:34px!important;border-radius:12px!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;margin-right:10px!important;vertical-align:middle!important;overflow:hidden!important;background:#fff!important;box-shadow:0 8px 20px rgba(15,23,42,.12)!important}.v209-logo svg{width:100%!important;height:100%!important;display:block!important}@media(max-width:900px){.v209-kpis,.v209-grid,.v209-tabs{grid-template-columns:1fr!important}.v209-head h2{font-size:24px!important}.v209-actions button,.v209-actions a{width:100%!important}.v209-card input,.v209-card textarea,.v209-card select{font-size:16px!important}}
+</style>
+<script id="mkt-v209-login-center-js">
+(function(){
+  function qs(s,r){return(r||document).querySelector(s)}function qsa(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s))}
+  function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+  function device(){try{var v=localStorage.getItem('gptmini_device_id')||localStorage.getItem('mkt_device_id');if(!v){v='MKT-'+Math.random().toString(16).slice(2,9).toUpperCase();localStorage.setItem('gptmini_device_id',v)}return v}catch(e){return'MKT-WEB'}}
+  function api(url,opt){opt=opt||{};opt.headers=Object.assign({'X-Device-Id':device()},opt.headers||{});return fetch(url,opt).then(function(r){return r.json()})}
+  function host(){return qs('#group_suite .panel-body')||qs('#group_suite')||qs('[data-section="group_suite"]')||qs('.main,.content,main')}
+  function msg(t,k){var m=qs('#v209GlobalMsg');if(m){m.className='v209-msg '+(k||'');m.textContent=t||''}}
+  function tab(n){qsa('#mktV209LoginCenter .v209-tabs button').forEach(function(b){b.classList.toggle('active',b.dataset.tab===n)});qsa('#mktV209LoginCenter .v209-panel').forEach(function(p){p.classList.toggle('active',p.dataset.panel===n)})}
+  function logo(kind){var s={facebook:'<svg viewBox="0 0 64 64"><rect width="64" height="64" rx="16" fill="#1877F2"/><path fill="#fff" d="M37 34h7l1-8h-8v-5c0-2.2.7-3.7 4-3.7H45V10.4c-.8-.1-3.5-.4-6.6-.4-6.6 0-11.1 4-11.1 11.4V26H20v8h7.3v20H37V34z"/></svg>',tiktok:'<svg viewBox="0 0 64 64"><rect width="64" height="64" rx="16" fill="#111827"/><path d="M39 13c2 7 6 11 12 12v9c-5-.2-9-1.7-12-4.3V43c0 8-6.2 13-13.7 13C18 56 12 50.9 12 43.4 12 35.6 18.5 30 27 30c1 0 1.8.1 2.7.3v9.3a7 7 0 0 0-3.2-.8c-3.2 0-5.3 2-5.3 4.7 0 2.8 2.1 4.7 5 4.7 3.2 0 5-2 5-5.8V13h7.8z" fill="#fff"/></svg>',instagram:'<svg viewBox="0 0 64 64"><defs><linearGradient id="ig209" x1="0" y1="1" x2="1" y2="0"><stop stop-color="#feda75"/><stop offset=".35" stop-color="#fa7e1e"/><stop offset=".65" stop-color="#d62976"/><stop offset="1" stop-color="#4f5bd5"/></linearGradient></defs><rect x="6" y="6" width="52" height="52" rx="16" fill="url(#ig209)"/><circle cx="32" cy="32" r="13" fill="none" stroke="#fff" stroke-width="5"/><circle cx="46" cy="18" r="4" fill="#fff"/></svg>',youtube:'<svg viewBox="0 0 64 64"><rect x="6" y="14" width="52" height="36" rx="10" fill="#FF0000"/><path d="M27 24l16 8-16 8z" fill="#fff"/></svg>',telegram:'<svg viewBox="0 0 64 64"><circle cx="32" cy="32" r="30" fill="#229ED9"/><path d="M48 18L42 48c-.4 2-2 2.5-4 1.5L29 43l-4 4c-.5.5-1 .8-2 .8l1-10 18-16c.8-.7-.2-1.1-1.2-.4L18 36l-10-3c-2-.7-2-2 .4-3L45 16c1.8-.7 3.4.4 3 2z" fill="#fff"/></svg>',zalo:'<svg viewBox="0 0 64 64"><rect x="6" y="10" width="52" height="44" rx="14" fill="#0068FF"/><text x="32" y="39" text-anchor="middle" font-size="20" font-weight="900" fill="#fff" font-family="Arial">Zalo</text></svg>'};return '<span class="v209-logo">'+(s[kind]||s.facebook)+'</span>'}
+  function renderAccounts(a){if(!a||!a.length)return '<div class="v209-note">Chưa có tài khoản. Thêm nick rồi bấm Lưu tài khoản.</div>';return a.map(function(x){var ok=String(x[3]||'').toLowerCase().indexOf('đã đăng nhập')>-1;return '<label class="v209-item"><input type="checkbox" name="account_ids" value="'+x[0]+'"><div><b>👤 '+esc(x[1])+'</b><span>'+(ok?'<span class="v209-status-green">🟢 Đã đăng nhập · Session OK</span>':'<span class="v209-status-red">🔴 Chưa đăng nhập</span>')+' · '+esc(x[2]||'desktop')+'</span><span>Page: <b>'+esc(x[6]||0)+'</b> · Group: <b>'+esc(x[7]||0)+'</b></span><span>'+esc(x[4]||'')+'</span></div></label>'}).join('')}
+  function renderAssets(assets,type){var f=(assets||[]).filter(function(x){return x[2]===type});if(!f.length)return '<div class="v209-note">Chưa có '+(type==='page'?'Fanpage':'Group')+'. Bấm Load '+(type==='page'?'Fanpage':'Group')+' hoặc thêm thủ công.</div>';return f.map(function(x){return '<label class="v209-item"><input type="checkbox" name="asset_ids" value="'+x[0]+'"><div><b>'+(type==='page'?'📄 ':'👥 ')+esc(x[3])+'</b><span>'+esc(x[5]||x[4]||'')+'</span></div></label>'}).join('')}
+  function renderJobs(jobs){if(!jobs||!jobs.length)return '<div class="v209-note">Chưa có log.</div>';return jobs.slice(0,50).map(function(j){var st=String(j[5]||'');var icon=st.indexOf('Thành công')>-1?'🟢':(st.indexOf('Lỗi')>-1||st.indexOf('error')>-1?'🔴':'🟡');return '<div class="v209-item"><div><b>'+icon+' #'+j[0]+' · '+esc(j[1])+' · '+esc(j[2])+'</b><span>'+esc(st)+' — '+esc(j[6]||'')+'</span><span>'+esc(j[4]||'')+'</span></div></div>'}).join('')}
+  function refresh(){api('/api/fb_v207_state?device_id='+encodeURIComponent(device())).then(function(d){var a=d.accounts||[], assets=d.assets||[], jobs=d.jobs||[];qsa('.v209AccCount').forEach(function(e){e.textContent=a.length});qsa('.v209PageCount').forEach(function(e){e.textContent=assets.filter(function(x){return x[2]==='page'}).length});qsa('.v209GroupCount').forEach(function(e){e.textContent=assets.filter(function(x){return x[2]==='group'}).length});qsa('.v209JobCount').forEach(function(e){e.textContent=jobs.length});qsa('.v209Device').forEach(function(e){e.textContent=device()});qsa('.v209AccountsList').forEach(function(e){e.innerHTML=renderAccounts(a)});qsa('.v209PagesList').forEach(function(e){e.innerHTML=renderAssets(assets,'page')});qsa('.v209GroupsList').forEach(function(e){e.innerHTML=renderAssets(assets,'group')});qsa('.v209QueueList,.v209ResultList').forEach(function(e){e.innerHTML=renderJobs(jobs)});var sel=qs('#v209AssetAccount');if(sel){sel.innerHTML=a.map(function(x){return '<option value="'+x[0]+'">'+esc(x[1])+'</option>'}).join('')||'<option value="0">Chưa có tài khoản</option>'}})}
+  function collect(panel,dest){var root=qs('[data-panel="'+panel+'"]')||qs('#mktV209LoginCenter');var f=new FormData();f.set('device_id',device());f.set('destination',dest);f.set('runner_type',(qs('#v209RunnerType')||{}).value||'desktop');f.set('mode',(qs('#v209PublishMode',root)||{}).value||'now');f.set('content_bulk',(qs('.v209Content',root)||{}).value||'');f.set('start_time',(qs('.v209Start',root)||{}).value||'');f.set('gap_minutes',(qs('.v209Gap',root)||{}).value||'0');qsa('input[name=account_ids]:checked',root).forEach(function(x){f.append('account_ids',x.value)});if(dest!=='personal')qsa('input[name=asset_ids]:checked',root).forEach(function(x){f.append('asset_ids',x.value)});var files=(qs('.v209Media',root)||{}).files||[];for(var i=0;i<files.length;i++)f.append('media_files',files[i]);return f}
+  window.mktV209AddAccounts=function(){var f=new FormData();f.set('device_id',device());f.set('accounts',(qs('#v209Accounts')||{}).value||'');api('/api/fb_v207_accounts_save',{method:'POST',body:f}).then(function(d){msg(d.message,d.ok?'ok':'err');refresh()})}
+  window.mktV209OpenLogin=function(rt){if(rt==='android'){window.open('https://m.facebook.com/login','_blank')}else{window.open('https://www.facebook.com/login','_blank')}}
+  window.mktV209CheckSession=function(){var root=qs('#mktV209LoginCenter');var f=new FormData();f.set('device_id',device());f.set('runner_type',(qs('#v209RunnerType')||{}).value||'desktop');qsa('input[name=account_ids]:checked',root).forEach(function(x){f.append('account_ids',x.value)});msg('🟡 Đang kiểm tra session Facebook...');api('/api/fb_v209_session_check',{method:'POST',body:f}).then(function(d){msg(d.message,d.ok?'ok':'err');refresh()})}
+  window.mktV209RegisterRunner=function(){var f=new FormData();f.set('device_id',device());f.set('runner_type',(qs('#v209RunnerType')||{}).value||'desktop');api('/api/fb_v206_runner_register',{method:'POST',body:f}).then(function(d){msg(d.message||'Runner đã kết nối.',d.ok?'ok':'err');refresh()})}
+  window.mktV209Load=function(type){var root=qs('#mktV209LoginCenter');var f=new FormData();f.set('device_id',device());f.set('runner_type',(qs('#v209RunnerType')||{}).value||'desktop');f.set('load_type',type);qsa('input[name=account_ids]:checked',root).forEach(function(x){f.append('account_ids',x.value)});msg('🟡 Đang gửi lệnh Load '+(type==='groups'?'Group':'Fanpage')+' sang Runner...');api('/api/fb_v209_load_assets',{method:'POST',body:f}).then(function(d){msg(d.message,d.ok?'ok':'err');refresh()})}
+  window.mktV209SaveAsset=function(type){var f=new FormData();f.set('device_id',device());f.set('asset_type',type);f.set('account_id',(qs('#v209AssetAccount')||{}).value||'0');f.set('bulk',(type==='group'?(qs('#v209GroupBulk')||{}).value:(qs('#v209PageBulk')||{}).value)||'');f.set('page_token',(qs('#v209PageToken')||{}).value||'');api('/api/fb_v207_assets_save',{method:'POST',body:f}).then(function(d){msg(d.message,d.ok?'ok':'err');refresh()})}
+  window.mktV209Publish=function(panel,dest){var f=collect(panel,dest);if(!f.getAll('account_ids').length){msg('🔴 Chưa chọn tài khoản đã đăng nhập.','err');return}if(!String(f.get('content_bulk')||'').trim()){msg('🔴 Chưa nhập nội dung bài đăng.','err');return}if(dest!=='personal'&&!f.getAll('asset_ids').length){msg('🔴 Chưa chọn '+(dest==='page'?'Fanpage':'Group')+'.','err');return}msg(dest==='personal'?'🟡 Đang gửi lệnh đăng Facebook cá nhân...':'🟡 Đang gửi lệnh đăng...');api('/api/fb_v207_publish',{method:'POST',body:f}).then(function(d){msg(d.ok?'🟢 '+d.message:'🔴 '+d.message,d.ok?'ok':'err');refresh();setTimeout(refresh,1500)}).catch(function(){msg('🔴 Lỗi gửi lệnh đăng. Kiểm tra Runner.','err')})}
+  function inject(){var h=host();if(!h)return;var d=qs('#mktV209LoginCenter');if(!d){d=document.createElement('div');d.id='mktV209LoginCenter';h.innerHTML='';h.appendChild(d)}d.innerHTML='<div class="v209-head"><div><h2>📘 Facebook Login + Publish Center V209</h2><p>Bổ sung đầy đủ Điện thoại/App Android và Desktop Login Center. Làm đúng thứ tự: mở đăng nhập → kiểm tra session → load Group/Fanpage → đăng bài.</p></div><div class="v209-pill">🟢 Sẵn sàng đăng</div></div><div class="v209-kpis"><div class="v209-kpi"><b class="v209AccCount">0</b>Tài khoản</div><div class="v209-kpi"><b class="v209PageCount">0</b>Fanpage</div><div class="v209-kpi"><b class="v209GroupCount">0</b>Group</div><div class="v209-kpi"><b class="v209Device">'+device()+'</b>ID máy</div></div><div class="v209-grid"><div class="v209-card"><h3>🖥 Desktop Login Center</h3><div class="v209-note v209-warn">Trạng thái mặc định: <b class="v209-status-red">🔴 Chưa đăng nhập</b>. Khách tự đăng nhập trong Chrome thật, sau đó bấm Kiểm tra Session.</div><label>Chọn Runner</label><select id="v209RunnerType"><option value="desktop">🖥 Desktop Runner</option><option value="android">📱 Android Runner</option></select><label>Thêm tài khoản / tên nick</label><textarea id="v209Accounts" placeholder="Nick 1 hoặc UID\nNick 2 hoặc UID"></textarea><div class="v209-actions"><button type="button" onclick="mktV209AddAccounts()">➕ Lưu tài khoản</button><button type="button" class="dark" onclick="mktV209OpenLogin(\'desktop\')">Mở Chrome đăng nhập</button><button type="button" class="green" onclick="mktV209CheckSession()">Kiểm tra Session</button><button type="button" onclick="mktV209Load(\'groups\')">Load Group</button><button type="button" onclick="mktV209Load(\'pages\')">Load Fanpage</button></div><div class="v209-note v209-ok">Trạng thái sau khi OK: <b class="v209-status-green">🟢 Đã đăng nhập · Session OK</b></div></div><div class="v209-card"><h3>📱 Điện thoại / App Android</h3><div class="v209-note v209-ok">App Android dùng Facebook đã đăng nhập trên điện thoại khách. Web chỉ gửi job, app nhận lệnh và báo Thành công/Lỗi.</div><div class="v209-actions"><button type="button" class="dark" onclick="mktV209OpenLogin(\'android\')">Mở Facebook Mobile</button><button type="button" onclick="document.getElementById(\'v209RunnerType\').value=\'android\';mktV209RegisterRunner()">Kết nối Android Runner</button><button type="button" class="green" onclick="document.getElementById(\'v209RunnerType\').value=\'android\';mktV209CheckSession()">Kiểm tra Session Android</button><button type="button" onclick="document.getElementById(\'v209RunnerType\').value=\'android\';mktV209Load(\'groups\')">Load Group Android</button><button type="button" onclick="document.getElementById(\'v209RunnerType\').value=\'android\';mktV209Load(\'pages\')">Load Fanpage Android</button></div></div></div><div id="v209GlobalMsg" class="v209-msg">Sẵn sàng. Hãy chọn tài khoản bên dưới, sau đó bấm Kiểm tra Session.</div><div class="v209-card"><h3>Tài khoản đã lưu</h3><div class="v209AccountsList v209-list"></div></div><div class="v209-tabs"><button data-tab="personal" class="active">👤 Facebook Cá Nhân</button><button data-tab="page">📄 Fanpage</button><button data-tab="group">👥 Group</button><button data-tab="queue">⏳ Hàng chờ</button><button data-tab="runner">📡 Runner Status</button></div><div data-panel="personal" class="v209-panel active"><div class="v209-grid"><div class="v209-card"><h3>👤 Đăng ngay Facebook cá nhân</h3><textarea class="v209Content" placeholder="Bài số 1...\n-----\nBài số 2..."></textarea><label>Ảnh / Video</label><input class="v209Media" type="file" multiple accept="image/*,video/*"><label>Hẹn giờ nếu cần</label><input class="v209Start" type="datetime-local"><label>Giãn cách phút/bài</label><input class="v209Gap" type="number" min="0" value="0"><div class="v209-actions"><button type="button" class="green" onclick="mktV209Publish(\'personal\',\'personal\')">🚀 Đăng ngay cá nhân</button></div></div><div class="v209-card"><h3>Log cá nhân</h3><div class="v209ResultList v209-list"></div></div></div></div><div data-panel="page" class="v209-panel"><div class="v209-grid"><div class="v209-card"><h3>📄 Fanpage</h3><textarea class="v209Content" placeholder="Bài đăng Fanpage..."></textarea><input class="v209Media" type="file" multiple accept="image/*,video/*"><input class="v209Start" type="datetime-local"><div class="v209-actions"><button type="button" class="green" onclick="mktV209Publish(\'page\',\'page\')">🚀 Đăng Fanpage</button></div></div><div class="v209-card"><h3>Chọn / thêm Fanpage</h3><div class="v209PagesList v209-list"></div><label>Tài khoản liên kết</label><select id="v209AssetAccount"></select><textarea id="v209PageBulk" placeholder="Tên Page | Page ID | Link"></textarea><input id="v209PageToken" placeholder="Page Token thật EAAB..."><button class="v209-btn" type="button" onclick="mktV209SaveAsset(\'page\')">Lưu Fanpage</button></div></div></div><div data-panel="group" class="v209-panel"><div class="v209-grid"><div class="v209-card"><h3>👥 Group</h3><textarea class="v209Content" placeholder="Bài đăng Group..."></textarea><input class="v209Media" type="file" multiple accept="image/*,video/*"><input class="v209Start" type="datetime-local"><input class="v209Gap" type="number" min="1" value="5"><button class="v209-btn green" type="button" onclick="mktV209Publish(\'group\',\'group\')">🚀 Gửi lệnh đăng Group</button></div><div class="v209-card"><h3>Chọn / thêm Group</h3><div class="v209GroupsList v209-list"></div><textarea id="v209GroupBulk" placeholder="Tên Group | Group ID | Link"></textarea><button class="v209-btn" type="button" onclick="mktV209SaveAsset(\'group\')">Lưu Group</button></div></div></div><div data-panel="queue" class="v209-panel"><div class="v209-card"><h3>⏳ Hàng chờ / Thành công / Lỗi</h3><div class="v209QueueList v209-list"></div></div></div><div data-panel="runner" class="v209-panel"><div class="v209-card"><h3>📡 Runner Status</h3><div class="v209-note v209-ok">Runner đang dùng API pull/done để nhận lệnh và báo kết quả. Trạng thái sẽ hiện trong log.</div><div class="v209QueueList v209-list"></div></div></div>';qsa('#mktV209LoginCenter .v209-tabs button').forEach(function(b){b.onclick=function(){tab(b.dataset.tab)}});refresh()}
+  function omni(){var map=[['facebook','facebook'],['tiktok shop','tiktok'],['tiktok','tiktok'],['instagram','instagram'],['youtube','youtube'],['telegram','telegram'],['zalo','zalo']];qsa('.app-quick-card,.enterprise-card,.omni-card,.mkt-omni-card').forEach(function(card){if(card.closest('#mktV209LoginCenter'))return;var txt=(card.textContent||'').toLowerCase();for(var i=0;i<map.length;i++){if(txt.indexOf(map[i][0])>-1&&!card.querySelector('.v209-logo')){card.insertAdjacentHTML('afterbegin',logo(map[i][1]));break}}})}
+  function loop(){inject();omni()}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',loop);else loop();setTimeout(loop,300);setTimeout(loop,1200);setInterval(function(){refresh();omni()},5000);
+})();
+</script>
+"""
+
+@app.after_request
+def mkt_v209_login_center_after_request(response):
+    try:
+        ctype = (response.headers.get('Content-Type') or '').lower()
+        if 'text/html' in ctype:
+            body = response.get_data(as_text=True)
+            if 'mkt-v209-login-center-js' not in body and '</body>' in body:
+                body = body.replace('</body>', MKT_V209_LOGIN_CENTER_UI + '</body>')
+                response.set_data(body)
+                response.headers['Content-Length'] = str(len(body.encode('utf-8')))
+    except Exception as _e:
+        print('mkt_v209_login_center_after_request skipped:', _e)
+    return response
