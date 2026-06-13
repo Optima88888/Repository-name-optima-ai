@@ -76,7 +76,39 @@ a{{display:block;text-align:center;margin-top:14px;color:#4f46e5;text-decoration
 @media(max-width:760px){{.mkt-channel-strip{{border-radius:22px!important;gap:10px!important}}.mkt-channel-pill{{font-size:13px!important}}.mkt-brand-logo{{width:22px!important;height:22px!important;min-width:22px!important}}}}
 </style>
 
-</head><body><form class="box" method="post" action="/admin"><h1>🔐 Web Admin</h1><p>Nhập mật khẩu quản trị để xem Premium, CTV, doanh thu và hỗ trợ khách hàng.</p>{err}<input type="password" name="password" placeholder="Mật khẩu quản trị" autofocus><button>Đăng nhập Admin</button><a href="/">← Về trang khách</a></form></body></html>
+</head><body><form class="box" method="post" action="/admin"><h1>🔐 Web Admin</h1><p>Nhập mật khẩu quản trị để xem Premium, CTV, doanh thu và hỗ trợ khách hàng.</p>{err}<input type="password" name="password" placeholder="Mật khẩu quản trị" autofocus><button>Đăng nhập Admin</button><a href="/">← Về trang khách</a></form>
+
+<!-- V181 - bright enterprise theme + logo sizing correction -->
+<style id="mkt-v181-bright-logo-fix">
+:root{--mkt-primary:#1877F2;--mkt-primary2:#3B82F6;--mkt-navy:#0F172A;--mkt-card:#FFFFFF;--mkt-gold:#F59E0B;--mkt-border:#E8EEF8}
+body{background:radial-gradient(circle at 15% 0%,rgba(24,119,242,.11),transparent 34%),radial-gradient(circle at 88% 6%,rgba(124,58,237,.09),transparent 32%),linear-gradient(135deg,#F8FBFF 0%,#EEF5FF 48%,#FFFFFF 100%)!important;color:#0F172A!important;}
+.sidebar,.mkt-clean-nav{background:linear-gradient(180deg,#0F172A 0%,#132238 55%,#172A46 100%)!important;border-right:1px solid rgba(96,165,250,.18)!important;box-shadow:18px 0 48px rgba(15,23,42,.14)!important;}
+.main,.content,.module-section{background:transparent!important;}
+.hero,.dashboard-hero,.main-card,.app-quick-card,.enterprise-hub,.enterprise-module-wrap,.kpi-card,.stat-card{border:1px solid var(--mkt-border)!important;background:linear-gradient(135deg,rgba(255,255,255,.98),rgba(248,251,255,.94))!important;box-shadow:0 18px 48px rgba(24,119,242,.10)!important;}
+.enterprise-hub{background:linear-gradient(135deg,#FFFFFF 0%,#F6FAFF 58%,#F2F7FF 100%)!important;border-color:#DDEBFF!important;}
+.enterprise-hub-head h2,.enterprise-module-title{background:linear-gradient(90deg,#1877F2,#2563EB,#7C3AED)!important;-webkit-background-clip:text!important;background-clip:text!important;color:transparent!important;}
+.enterprise-hub-head p{color:#64748B!important;}
+.enterprise-card{background:linear-gradient(180deg,#FFFFFF,#F9FBFF)!important;border:1px solid #E3EDFB!important;border-radius:22px!important;box-shadow:0 16px 36px rgba(15,23,42,.08)!important;}
+.enterprise-card:hover{transform:translateY(-5px)!important;border-color:#93C5FD!important;box-shadow:0 22px 52px rgba(24,119,242,.16)!important;}
+.enterprise-card .ec-icon{width:46px!important;height:46px!important;display:flex!important;align-items:center!important;justify-content:center!important;margin-bottom:12px!important;font-size:0!important;overflow:hidden!important;border-radius:15px!important;background:#EFF6FF!important;}
+.enterprise-card .ec-icon .mkt-brand-logo{width:36px!important;height:36px!important;min-width:36px!important;max-width:36px!important;max-height:36px!important;margin:0!important;border-radius:12px!important;box-shadow:none!important;}
+.enterprise-module-title .mkt-brand-logo{width:38px!important;height:38px!important;min-width:38px!important;margin-right:0!important;border-radius:13px!important;box-shadow:0 10px 22px rgba(24,119,242,.16)!important;}
+.enterprise-module-title span:first-child{display:inline-flex!important;align-items:center!important;justify-content:center!important;font-size:0!important;}
+.mkt-clean-nav .v2-nav-link{background:transparent!important;color:#E5E7EB!important;}
+.mkt-clean-nav .v2-nav-link.active,.mkt-clean-nav .v2-nav-link:hover{background:linear-gradient(90deg,#1877F2,#3B82F6)!important;color:#FFFFFF!important;box-shadow:0 12px 26px rgba(24,119,242,.28)!important;}
+.mkt-dot-tag.enterprise{background:rgba(251,191,36,.14)!important;color:#FDE68A!important;border:1px solid rgba(251,191,36,.32)!important;box-shadow:0 0 16px rgba(251,191,36,.22)!important;}
+.mkt-dot-tag.enterprise i{background:#FBBF24!important;box-shadow:0 0 12px #FBBF24!important;}
+.mkt-brand-logo{font-size:0!important;line-height:1!important;overflow:hidden!important;}
+.mkt-brand-logo svg{width:100%!important;height:100%!important;display:block!important;}
+.mkt-logo-stack{display:inline-flex!important;align-items:center!important;gap:4px!important;flex-wrap:wrap!important;max-width:72px!important;}
+.mkt-logo-stack .mkt-brand-logo{width:18px!important;height:18px!important;min-width:18px!important;max-width:18px!important;max-height:18px!important;margin:0!important;border-radius:5px!important;box-shadow:none!important;}
+.app-quick-card .app-ico:has(.mkt-logo-stack){width:74px!important;max-width:74px!important;height:44px!important;background:#EFF6FF!important;}
+.app-quick-card .app-ico .mkt-logo-stack{max-width:66px!important;}
+.app-quick-card .app-ico .mkt-logo-stack .mkt-brand-logo{width:18px!important;height:18px!important;min-width:18px!important;}
+.mkt-channel-strip{background:rgba(255,255,255,.92)!important;border-color:#D9EAFE!important;box-shadow:0 18px 42px rgba(24,119,242,.10)!important;}
+</style>
+
+</body></html>
 """
 
 def is_admin_logged_in():
@@ -8628,6 +8660,18 @@ a[href="#premium_auto_renew"],a[data-module="premium_auto_renew"],#premium_auto_
 <script id="gptmini-enterprise-menu-ui-final-js">
 (function(){
   if(window.__gptminiEnterpriseMenuFinal){return;} window.__gptminiEnterpriseMenuFinal=true;
+
+  /* V181 brand logo HTML constants: dùng SVG inline để không cần file static */
+  var BRAND_FACEBOOK='<span class="mkt-brand-logo mkt-logo-facebook" aria-label="Facebook"><svg viewBox="0 0 32 32" role="img"><circle cx="16" cy="16" r="16" fill="#1877F2"/><path d="M20.7 17.1l.6-4.1h-3.9v-2.7c0-1.1.5-2.2 2.3-2.2h1.8V4.6s-1.6-.3-3.1-.3c-3.2 0-5.3 1.9-5.3 5.5V13H9.6v4.1h3.5V27h4.3v-9.9h3.3z" fill="#fff"/></svg></span>';
+  var BRAND_TIKTOK='<span class="mkt-brand-logo mkt-logo-tiktok" aria-label="TikTok"><svg viewBox="0 0 32 32" role="img"><rect width="32" height="32" rx="8" fill="#050505"/><path d="M19.8 6.2c.5 3.2 2.3 5.1 5.2 5.4v4.1c-1.8.1-3.5-.5-5.1-1.5v6.7c0 4.2-2.8 6.8-6.9 6.8-3.6 0-6.2-2.4-6.2-5.8 0-3.8 3.1-6.2 7.5-5.8v4.2c-1.8-.5-3.2.4-3.2 1.8 0 1.1.9 1.8 2.1 1.8 1.5 0 2.3-.9 2.3-2.7v-15h4.3z" fill="#fff"/><path d="M20.9 6.2c.7 2.2 2.1 3.5 4.1 3.9v1.5c-2.9-.3-4.7-2.2-5.2-5.4h1.1z" fill="#25F4EE"/><path d="M15.5 16.1v2.1c-4.1-.3-6.8 1.9-6.8 5.1 0 1.5.6 2.8 1.6 3.6-2.1-.9-3.5-2.7-3.5-5 0-3.8 3.1-6.2 7.5-5.8h1.2z" fill="#FE2C55"/></svg></span>';
+  var BRAND_YOUTUBE='<span class="mkt-brand-logo mkt-logo-youtube" aria-label="YouTube"><svg viewBox="0 0 32 32" role="img"><rect x="3" y="8" width="26" height="16" rx="5" fill="#FF0000"/><path d="M14 12.2v7.6l6.6-3.8L14 12.2z" fill="#fff"/></svg></span>';
+  var BRAND_TELEGRAM='<span class="mkt-brand-logo mkt-logo-telegram" aria-label="Telegram"><svg viewBox="0 0 32 32" role="img"><circle cx="16" cy="16" r="16" fill="#229ED9"/><path d="M24.8 9.1L21.9 23c-.2 1-1 .9-1.6.5l-4.5-3.3-2.2 2.1c-.2.2-.4.4-.9.4l.3-4.6 8.4-7.6c.4-.3-.1-.5-.6-.2l-10.4 6.5-4.5-1.4c-1-.3-1-1 .2-1.5l17.6-6.8c.8-.3 1.5.2 1.2 1.9z" fill="#fff"/></svg></span>';
+  var BRAND_INSTAGRAM='<span class="mkt-brand-logo mkt-logo-instagram" aria-label="Instagram"><svg viewBox="0 0 32 32" role="img"><defs><linearGradient id="igV181" x1="0" x2="1" y1="1" y2="0"><stop offset="0" stop-color="#FEDA75"/><stop offset=".35" stop-color="#FA7E1E"/><stop offset=".6" stop-color="#D62976"/><stop offset=".8" stop-color="#962FBF"/><stop offset="1" stop-color="#4F5BD5"/></linearGradient></defs><rect width="32" height="32" rx="8" fill="url(#igV181)"/><rect x="8" y="8" width="16" height="16" rx="5" fill="none" stroke="#fff" stroke-width="2.2"/><circle cx="16" cy="16" r="4" fill="none" stroke="#fff" stroke-width="2.2"/><circle cx="21.5" cy="10.5" r="1.5" fill="#fff"/></svg></span>';
+  var BRAND_ZALO='<span class="mkt-brand-logo mkt-logo-zalo" aria-label="Zalo"><svg viewBox="0 0 32 32" role="img"><rect width="32" height="32" rx="8" fill="#0068FF"/><text x="16" y="19.8" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="10.5" font-weight="900" fill="#fff">Zalo</text></svg></span>';
+  var BRAND_AI='<span class="mkt-brand-logo mkt-logo-ai" aria-label="AI"><svg viewBox="0 0 32 32" role="img"><rect width="32" height="32" rx="10" fill="#7C3AED"/><rect x="7" y="10" width="18" height="13" rx="4" fill="#fff"/><circle cx="13" cy="16" r="1.8" fill="#1877F2"/><circle cx="19" cy="16" r="1.8" fill="#1877F2"/><path d="M13 20h6" stroke="#1877F2" stroke-width="2" stroke-linecap="round"/><path d="M16 7v3" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg></span>';
+  var BRAND_CRM='<span class="mkt-brand-logo mkt-logo-crm" aria-label="CRM"><svg viewBox="0 0 32 32" role="img"><rect width="32" height="32" rx="10" fill="#6366F1"/><path d="M8 22h4V12H8v10zm6 0h4V8h-4v14zm6 0h4v-7h-4v7z" fill="#fff"/></svg></span>';
+  var BRAND_OMNI='<span class="mkt-logo-stack">'+BRAND_FACEBOOK+BRAND_TIKTOK+BRAND_YOUTUBE+BRAND_TELEGRAM+BRAND_INSTAGRAM+BRAND_ZALO+'</span>';
+
   var modules=[
     {id:'messenger_facebook_real',icon:'🤖',title:'AI Messenger Facebook',tag:'Premium',desc:'Kết nối Fanpage, tạo kịch bản trả lời inbox/comment, thu lead và chuyển khách vào CRM.',features:[['Trả lời 24/7','Tự động phản hồi tin nhắn và bình luận theo kịch bản bán hàng.'],['Thu lead thông minh','Ghi nhận tên, SĐT, nhu cầu và nguồn khách hàng.'],['Chuyển CRM','Đẩy khách quan tâm sang CRM Kanban để chăm sóc tiếp.']]},
     {id:'tiktok_api_center',icon:'🎵',title:'TikTok API Center',tag:'Premium',desc:'Quản lý TikTok, TikTok Shop, video, comment và dữ liệu chiến dịch trong một khu vực.',features:[['Kết nối TikTok','Lưu tài khoản, token/API và trạng thái kết nối.'],['Thống kê video','Theo dõi view, comment, tương tác và hiệu quả nội dung.'],['TikTok Shop','Chuẩn bị khu vực quản lý đơn, sản phẩm và báo cáo shop.']]},
@@ -8641,6 +8685,16 @@ a[href="#premium_auto_renew"],a[data-module="premium_auto_renew"],#premium_auto_
     {id:'premium_auto_renew',adminOnly:true,icon:'🔄',title:'Gia Hạn Tự Động Premium',tag:'Premium',desc:'Nhắc khách trước 7/5/3/1 ngày, tạo QR gia hạn kèm ID máy, Gmail và SĐT.',features:[['Nhắc gia hạn','Tăng tỷ lệ khách quay lại trước khi hết hạn.'],['QR nhanh','Tự điền nội dung chuyển khoản đúng gói.'],['Cộng ngày còn lại','Gia hạn không mất số ngày đang dùng.']]},
     {id:'saas_admin_center',adminOnly:true,icon:'🏢',title:'SaaS Admin Center',tag:'Admin',desc:'Trung tâm điều hành toàn bộ hệ thống: khách hàng, Premium, CTV, ticket, doanh thu và module.',features:[['Dashboard CEO','Tổng quan khách, doanh thu, Premium, CTV và ticket.'],['Quản trị module','Điều hướng nhanh đến các trung tâm chức năng.'],['Vận hành SaaS','Phù hợp bán gói thuê bao theo tháng/năm.']]}
   ];
+
+  var brandIconById={
+    messenger_facebook_real:BRAND_AI,
+    tiktok_api_center:BRAND_TIKTOK,
+    telegram_bot_center:BRAND_TELEGRAM,
+    zalo_oa_center:BRAND_ZALO,
+    crm_kanban_pro:BRAND_CRM
+  };
+  modules.forEach(function(m){ if(brandIconById[m.id]) m.icon=brandIconById[m.id]; });
+
   var customerModules = modules.filter(function(m){return !m.adminOnly;});
   var adminModules = modules.filter(function(m){return !!m.adminOnly;});
   function qs(s,root){return (root||document).querySelector(s)}
