@@ -17259,6 +17259,214 @@ def mkt_v186_playwright_ui_after_request(response):
         print('mkt_v186_playwright_ui_after_request skipped:', _e)
     return response
 
+# ============================================================
+# V188 - ANDROID COMPANION MODE FOR FACEBOOK GROUP POSTING
+# Mục tiêu: khách dùng điện thoại thuận tiện hơn.
+# Web không mở Chrome trên Render nữa. Android App của khách đăng nhập Facebook
+# trên máy khách, sau đó kéo job từ server về để đăng Group.
+# ============================================================
+
+def ensure_android_companion_tables():
+    conn = db(); c = conn.cursor()
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS android_companion_devices (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        device_id TEXT UNIQUE,
+        pair_code TEXT,
+        app_status TEXT DEFAULT 'Chưa kết nối',
+        fb_status TEXT DEFAULT 'Chưa đăng nhập',
+        phone_model TEXT,
+        last_seen TEXT,
+        created_at TEXT,
+        updated_at TEXT
+    )
+    """)
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS android_companion_logs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        device_id TEXT,
+        action TEXT,
+        status TEXT,
+        detail TEXT,
+        created_at TEXT
+    )
+    """)
+    conn.commit(); conn.close()
+
+def _v188_now():
+    return datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+def _v188_pair_code():
+    return str(random.randint(100000, 999999))
+
+def _v188_log(device_id, action, status, detail=''):
+    try:
+        ensure_android_companion_tables()
+        conn=db(); c=conn.cursor()
+        c.execute("INSERT INTO android_companion_logs(device_id,action,status,detail,created_at) VALUES(?,?,?,?,?)", (device_id, action, status, str(detail)[:1000], _v188_now()))
+        conn.commit(); conn.close()
+    except Exception as e:
+        print('android companion log skipped:', e)
+
+@app.route('/api/android_pair_start', methods=['POST'])
+def api_android_pair_start():
+    ensure_android_companion_tables(); ensure_fb_playwright_tables()
+    data = request.get_json(silent=True) or request.form
+    device_id = str(data.get('device_id') or '').strip()
+    if not device_id:
+        return jsonify({'ok': False, 'message': 'Thiếu device_id'})
+    code = _v188_pair_code(); now = _v188_now()
+    conn=db(); c=conn.cursor()
+    c.execute("""
+        INSERT INTO android_companion_devices(device_id,pair_code,app_status,fb_status,created_at,updated_at)
+        VALUES(?,?,?,?,?,?)
+        ON CONFLICT(device_id) DO UPDATE SET pair_code=excluded.pair_code, updated_at=excluded.updated_at
+    """, (device_id, code, 'Chờ kết nối App Android', 'Chưa đăng nhập', now, now))
+    conn.commit(); conn.close()
+    _v188_log(device_id, 'pair_start', 'ok', 'Tạo mã kết nối Android')
+    return jsonify({'ok': True, 'pair_code': code, 'message': 'Mã kết nối App Android: ' + code})
+
+@app.route('/api/android_pair_status', methods=['POST','GET'])
+def api_android_pair_status():
+    ensure_android_companion_tables(); ensure_fb_playwright_tables()
+    device_id = (request.values.get('device_id') or '').strip()
+    conn=db(); c=conn.cursor()
+    c.execute("SELECT app_status,fb_status,phone_model,last_seen,pair_code FROM android_companion_devices WHERE device_id=? LIMIT 1", (device_id,))
+    row = c.fetchone()
+    c.execute("SELECT COUNT(*) FROM fb_group_playwright_jobs WHERE device_id=? AND status IN ('Chờ xử lý','scheduled','Chờ chạy','Lỗi - chạy lại')", (device_id,))
+    pending = c.fetchone()[0]
+    c.execute("SELECT action,status,detail,created_at FROM android_companion_logs WHERE device_id=? ORDER BY id DESC LIMIT 20", (device_id,))
+    logs = c.fetchall(); conn.close()
+    if not row:
+        return jsonify({'ok': True, 'connected': False, 'message': 'Chưa tạo mã kết nối', 'pending_jobs': pending, 'logs': logs})
+    return jsonify({'ok': True, 'connected': row[0] == 'Đã kết nối', 'app_status': row[0], 'fb_status': row[1], 'phone_model': row[2] or '', 'last_seen': row[3] or '', 'pair_code': row[4] or '', 'pending_jobs': pending, 'logs': logs})
+
+@app.route('/api/android_device_register', methods=['POST'])
+def api_android_device_register():
+    ensure_android_companion_tables()
+    data = request.get_json(silent=True) or request.form
+    pair_code = str(data.get('pair_code') or '').strip()
+    phone_model = str(data.get('phone_model') or '').strip()[:200]
+    fb_status = str(data.get('fb_status') or 'Đã đăng nhập Facebook trên điện thoại').strip()[:200]
+    if not pair_code:
+        return jsonify({'ok': False, 'message': 'Thiếu mã kết nối'})
+    conn=db(); c=conn.cursor()
+    c.execute("SELECT device_id FROM android_companion_devices WHERE pair_code=? ORDER BY id DESC LIMIT 1", (pair_code,))
+    row=c.fetchone()
+    if not row:
+        conn.close(); return jsonify({'ok': False, 'message': 'Mã kết nối không đúng hoặc đã hết hạn'})
+    device_id = row[0]; now=_v188_now()
+    c.execute("UPDATE android_companion_devices SET app_status=?, fb_status=?, phone_model=?, last_seen=?, updated_at=? WHERE device_id=?", ('Đã kết nối', fb_status, phone_model, now, now, device_id))
+    conn.commit(); conn.close()
+    _v188_log(device_id, 'android_register', 'ok', phone_model)
+    return jsonify({'ok': True, 'device_id': device_id, 'message': 'App Android đã kết nối với GPTMini'})
+
+@app.route('/api/android_jobs_pull', methods=['POST'])
+def api_android_jobs_pull():
+    ensure_android_companion_tables(); ensure_fb_playwright_tables()
+    data = request.get_json(silent=True) or request.form
+    device_id = str(data.get('device_id') or '').strip()
+    limit = int(data.get('limit') or 10)
+    now = _v188_now()
+    if not device_id:
+        return jsonify({'ok': False, 'message': 'Thiếu device_id'})
+    conn=db(); c=conn.cursor()
+    c.execute("UPDATE android_companion_devices SET last_seen=?, updated_at=? WHERE device_id=?", (now, now, device_id))
+    c.execute("""
+        SELECT id,group_name,group_url,content,min_delay_seconds,max_delay_seconds,schedule_time
+        FROM fb_group_playwright_jobs
+        WHERE device_id=? AND status IN ('Chờ xử lý','scheduled','Chờ chạy','Lỗi - chạy lại')
+        ORDER BY id ASC LIMIT ?
+    """, (device_id, limit))
+    rows = c.fetchall()
+    job_ids = [r[0] for r in rows]
+    if job_ids:
+        q = ','.join(['?'] * len(job_ids))
+        c.execute(f"UPDATE fb_group_playwright_jobs SET status='Đã gửi sang App Android', processed_at=? WHERE id IN ({q})", [now] + job_ids)
+    conn.commit(); conn.close()
+    jobs = [{'id':r[0], 'group_name':r[1], 'group_url':r[2], 'content':r[3], 'min_delay_seconds':r[4], 'max_delay_seconds':r[5], 'schedule_time':r[6]} for r in rows]
+    return jsonify({'ok': True, 'jobs': jobs, 'message': 'Đã lấy ' + str(len(jobs)) + ' job'})
+
+@app.route('/api/android_job_done', methods=['POST'])
+def api_android_job_done():
+    ensure_android_companion_tables(); ensure_fb_playwright_tables()
+    data = request.get_json(silent=True) or request.form
+    device_id = str(data.get('device_id') or '').strip()
+    job_id = str(data.get('job_id') or '').strip()
+    status_in = str(data.get('status') or '').strip().lower()
+    post_url = str(data.get('post_url') or '').strip()[:1000]
+    detail = str(data.get('detail') or '').strip()[:1000]
+    if not device_id or not job_id:
+        return jsonify({'ok': False, 'message': 'Thiếu device_id hoặc job_id'})
+    final_status = 'Đã đăng bằng App Android' if status_in in ['ok','success','done','posted'] else 'Lỗi App Android'
+    conn=db(); c=conn.cursor()
+    c.execute("UPDATE fb_group_playwright_jobs SET status=?, result_message=?, post_url=?, processed_at=? WHERE id=? AND device_id=?", (final_status, detail or final_status, post_url, _v188_now(), job_id, device_id))
+    conn.commit(); conn.close()
+    _v188_log(device_id, 'job_done', final_status, 'Job #' + str(job_id) + ' ' + detail)
+    return jsonify({'ok': True, 'message': final_status})
+
+@app.route('/android_companion_spec')
+def android_companion_spec():
+    return '''<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>GPTMini Android Companion</title><style>body{font-family:system-ui;margin:0;padding:18px;background:#f8fbff;color:#0f172a}pre{white-space:pre-wrap;background:#0f172a;color:white;padding:14px;border-radius:16px}.box{max-width:860px;margin:auto;background:white;border:1px solid #dbeafe;border-radius:24px;padding:20px;box-shadow:0 20px 60px rgba(15,23,42,.08)}</style></head><body><div class="box"><h1>GPTMini Android Companion</h1><p>App Android cần 4 API chính:</p><pre>POST /api/android_device_register\n{pair_code, phone_model, fb_status}\n\nPOST /api/android_jobs_pull\n{device_id, limit}\n\nPOST /api/android_job_done\n{device_id, job_id, status, post_url, detail}\n\nGET /api/android_pair_status?device_id=...</pre><p>Luồng dùng: khách tạo mã trên web → nhập mã trong App Android → App đăng nhập Facebook trên máy khách → App lấy job và đăng Group.</p></div></body></html>'''
+
+MKT_V188_ANDROID_COMPANION_UI = r'''
+<style id="mkt-v188-android-companion-ui">
+.mkt-pw-wrap{margin:18px 0;padding:18px;border-radius:28px;background:linear-gradient(135deg,#F8FBFF,#EEF6FF,#FFF7FB)!important;border:1px solid #DBEAFE;box-shadow:0 22px 60px rgba(37,99,235,.12)}
+.mkt-pw-wrap h3{margin:0 0 8px;color:#0f172a;font-size:24px}.mkt-pw-sub{color:#64748b;font-weight:800;line-height:1.5;margin-bottom:14px}
+.mkt-pw-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}.mkt-pw-card{background:rgba(255,255,255,.96);border:1px solid #E5EDFF;border-radius:24px;padding:18px;box-shadow:0 14px 40px rgba(15,23,42,.08)}
+.mkt-pw-card h4{margin:0 0 12px;color:#111827;font-size:19px}.mkt-pw-card label{display:block;margin:10px 0 6px;font-weight:1000;color:#111827}.mkt-pw-card input,.mkt-pw-card textarea,.mkt-pw-card select{width:100%;box-sizing:border-box;border-radius:16px;padding:13px;border:1px solid #dbeafe;font-size:15px}.mkt-pw-card button{border:0;border-radius:18px;padding:14px 18px;font-weight:1000;background:linear-gradient(90deg,#2563eb,#7c3aed)!important;color:white;box-shadow:0 16px 36px rgba(37,99,235,.2);margin-top:10px}.mkt-pw-note{background:#F1F5F9;border:1px solid #E2E8F0;border-radius:18px;padding:12px;color:#334155;font-weight:800;line-height:1.45}.mkt-android-code{font-size:30px;letter-spacing:6px;font-weight:1000;color:#2563eb;background:#EFF6FF;border:1px dashed #93C5FD;border-radius:18px;text-align:center;padding:14px;margin:10px 0}.mkt-mobile-safe{display:flex;gap:10px;align-items:flex-start;background:#ECFDF5;border:1px solid #BBF7D0;color:#065F46;border-radius:18px;padding:12px;font-weight:900;line-height:1.45}
+@media(max-width:780px){.mkt-pw-grid{grid-template-columns:1fr}.mkt-pw-wrap{margin:10px -4px;padding:14px;border-radius:22px}.mkt-pw-card{padding:15px;border-radius:20px}.mkt-pw-card h4{font-size:18px}.mkt-pw-card button{width:100%;padding:15px}.mkt-pw-card input,.mkt-pw-card textarea,.mkt-pw-card select{font-size:16px}.mkt-android-code{font-size:26px}}
+</style>
+<script id="mkt-v188-android-companion-js">
+(function(){
+  function getDeviceId(){try{var k='gptmini_device_id';var v=localStorage.getItem(k);if(!v){v='GPTM-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,8).toUpperCase();localStorage.setItem(k,v)}return v}catch(e){return 'GPTM-WEB'}}
+  function api(url,opt){return fetch(url,opt||{}).then(function(r){return r.json()})}
+  function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+  function renderGroups(data){var box=document.getElementById('mktPwGroupsBox'); if(!box)return; var arr=data.groups||[]; if(!arr.length){box.innerHTML='Chưa có Group. Dán link hoặc UID Group ở khung bên trên, mỗi dòng một Group.';return;} box.innerHTML=arr.map(function(g){return '<label style="display:block;margin:8px 0"><input type="checkbox" name="personal_group_ids" value="'+esc(g[0])+'"> <b>'+esc(g[1])+'</b><br><small>'+esc(g[2])+'</small></label>'}).join('')}
+  function renderJobs(data){var box=document.getElementById('mktPwJobsBox'); if(!box)return; var arr=data.jobs||[]; if(!arr.length){box.innerHTML='Chưa có hàng chờ đăng Group.';return;} box.innerHTML=arr.slice(0,20).map(function(j){return '<div style="padding:10px;border-bottom:1px solid #e5e7eb"><b>#'+esc(j[0])+' - '+esc(j[1])+'</b><br><small>'+esc(j[3])+'</small><br><b>Trạng thái:</b> '+esc(j[4])+' '+(j[6]?'<br><a target="_blank" href="'+esc(j[6])+'">Mở bài đăng</a>':'')+'</div>'}).join('')}
+  function refresh(){api('/api/fb_personal_status?device_id='+encodeURIComponent(getDeviceId())).then(function(d){renderGroups(d);renderJobs(d)});api('/api/android_pair_status?device_id='+encodeURIComponent(getDeviceId())).then(function(d){var st=document.getElementById('mktAndroidStatus'); if(st){st.innerHTML='<b>App:</b> '+esc(d.app_status||'Chưa kết nối')+'<br><b>Facebook:</b> '+esc(d.fb_status||'Chưa đăng nhập')+'<br><b>Máy:</b> '+esc(d.phone_model||'')+'<br><b>Job chờ:</b> '+esc(d.pending_jobs||0)+'<br><b>Lần cuối:</b> '+esc(d.last_seen||'')}; var code=document.getElementById('mktAndroidCode'); if(code && d.pair_code){code.textContent=d.pair_code}})}
+  function inject(){var host=document.querySelector('.main,.content,main,body'); if(!host||document.getElementById('mktV188AndroidBox'))return; var div=document.createElement('div');div.id='mktV188AndroidBox';div.className='mkt-pw-wrap';div.innerHTML=`
+    <h3>📱 Facebook Group Android App Center V188</h3><div class="mkt-pw-sub">Tối ưu cho khách dùng điện thoại: khách đăng nhập Facebook trên App Android của họ, web chỉ tạo nội dung, chia bài, lưu Group và gửi hàng chờ sang App.</div><div class="mkt-mobile-safe">🔒 Không nhập mật khẩu Facebook vào web. Không mở Chrome trên Render. App Android chạy trên điện thoại khách nên thuận tiện hơn.</div>
+    <div class="mkt-pw-grid">
+      <div class="mkt-pw-card"><h4>1. Kết nối App Android</h4><div id="mktAndroidStatus" class="mkt-pw-note">Đang kiểm tra...</div><div id="mktAndroidCode" class="mkt-android-code">------</div><button type="button" onclick="mktAndroidPairStart()">Tạo mã kết nối 6 số</button><button type="button" onclick="location.href='/android_companion_spec'">Xem cấu trúc App Android</button><p class="mkt-pw-note">Khách mở App Android GPTMini → nhập mã 6 số → đăng nhập Facebook ngay trên điện thoại → App tự lấy hàng chờ để đăng Group.</p></div>
+      <div class="mkt-pw-card"><h4>2. Lưu nhiều Group bằng Link hoặc UID</h4><form method="post" action="/fb_personal_group_save"><input type="hidden" name="device_id" value="${getDeviceId()}"><label>Tên Group mặc định</label><input name="group_name" placeholder="VD: Hội bán hàng online"><label>Link hoặc UID Group</label><input name="group_input" placeholder="https://www.facebook.com/groups/... hoặc 123456789"><label>Dán nhiều Group một lần</label><textarea name="bulk_groups" rows="6" placeholder="Mỗi dòng 1 Group. Ví dụ:\nHội bán hàng | 123456789\nhttps://www.facebook.com/groups/987654321\n123456789"></textarea><label>Ghi chú</label><textarea name="note" rows="2" placeholder="Đã tham gia / cho phép quảng cáo..."></textarea><button>Lưu danh sách Group</button></form></div>
+      <div class="mkt-pw-card"><h4>3. Tạo hàng chờ đăng từ điện thoại</h4><form method="post" action="/fb_group_playwright_job"><input type="hidden" name="device_id" value="${getDeviceId()}"><div id="mktPwGroupsBox" class="mkt-pw-note">Đang tải Group...</div><label>Nhiều bài viết</label><textarea name="content_bulk" rows="8" required placeholder="Mỗi dòng là 1 bài. Ví dụ:\nBài số 1...\nBài số 2...\nBài số 3..."></textarea><label>Cách chia bài</label><select name="split_mode"><option value="rotate">Chia đều: mỗi Group nhận 1 bài, hết bài thì quay vòng</option><option value="all">Mỗi Group đăng tất cả bài trong danh sách</option></select><label>Hẹn giờ</label><input type="datetime-local" name="schedule_time"><label>Giãn cách tối thiểu / tối đa giây</label><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><input type="number" name="min_delay_seconds" value="180"><input type="number" name="max_delay_seconds" value="600"></div><label><input type="checkbox" name="consent" value="yes" required> Tôi xác nhận chỉ đăng vào Group được phép, không spam.</label><button>Tạo hàng chờ cho App Android</button></form></div>
+      <div class="mkt-pw-card"><h4>4. Nhật ký App Android</h4><div id="mktPwJobsBox" class="mkt-pw-note">Đang tải hàng chờ...</div><button type="button" onclick="mktAndroidRefresh()">Làm mới trạng thái</button><p class="mkt-pw-note">Khi App Android đăng xong, trạng thái sẽ đổi thành “Đã đăng bằng App Android” và lưu link bài nếu lấy được.</p></div>
+    </div>`; host.insertBefore(div, host.firstChild); window.mktAndroidRefresh=refresh; window.mktAndroidPairStart=function(){api('/api/android_pair_start',{method:'POST',body:new URLSearchParams({device_id:getDeviceId()})}).then(function(d){alert(d.message||'Đã tạo mã');refresh()})}; refresh(); setInterval(refresh,15000); }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',inject);else inject();
+})();
+</script>
+'''
+
+# Dùng lại injector V186 nhưng thay giao diện sang Android Companion để không còn nút mở Chrome trên Render.
+MKT_V186_PLAYWRIGHT_UI = MKT_V188_ANDROID_COMPANION_UI
+
+
+
+# ============================================================
+# V189 - DUAL MODE: Android App + Desktop Playwright
+# Mục tiêu: khách dùng điện thoại dùng App Android; khách có máy tính dùng Playwright Desktop/Local.
+# Không thay đổi engine cũ, chỉ gom giao diện và thêm hướng dẫn rõ ràng.
+# ============================================================
+
+@app.route('/desktop_playwright_guide')
+def desktop_playwright_guide():
+    return '<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Hướng dẫn Desktop Playwright</title><style>body{font-family:system-ui;margin:0;background:linear-gradient(135deg,#eff6ff,#fff);color:#0f172a;padding:20px}.box{max-width:920px;margin:auto;background:white;border:1px solid #dbeafe;border-radius:26px;padding:24px;box-shadow:0 22px 70px rgba(37,99,235,.12)}h1{margin-top:0;color:#1d4ed8}pre{background:#0f172a;color:#e5e7eb;border-radius:18px;padding:16px;overflow:auto}.step{border:1px solid #e5e7eb;border-radius:18px;padding:14px;margin:12px 0;background:#f8fafc}.warn{background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;border-radius:18px;padding:14px;font-weight:800}.ok{background:#ecfdf5;border:1px solid #bbf7d0;color:#065f46;border-radius:18px;padding:14px;font-weight:800}a{color:#2563eb;font-weight:900}</style></head><body><div class="box"><h1>💻 Desktop Playwright Mode cho GPTMini.pro</h1><p>Chế độ này dành cho khách có máy tính. Facebook sẽ mở trên máy tính đang chạy app/web local, khách tự đăng nhập trực tiếp trong trình duyệt. Hệ thống không hỏi và không lưu mật khẩu Facebook.</p><div class="step"><h3>1. Cài Playwright</h3><pre>pip install playwright\nplaywright install chromium</pre></div><div class="step"><h3>2. Chạy GPTMini trên máy tính khách hoặc máy riêng</h3><pre>python app_141_customer_smooth_v189_android_desktop_playwright.py</pre></div><div class="step"><h3>3. Trên web chọn chế độ “Máy tính / Playwright”</h3><p>Bấm <b>Mở Facebook để đăng nhập</b>, đăng nhập xong quay lại GPTMini, nhập Group và tạo hàng chờ.</p></div><div class="ok">Khách dùng điện thoại vẫn dùng chế độ App Android. Khách có máy tính dùng Desktop Playwright. Hai luồng dùng chung danh sách Group và hàng chờ đăng.</div><div class="warn">Khuyến nghị: không đăng quá nhanh, không đăng nội dung trùng lặp hàng loạt, chỉ đăng vào Group cho phép quảng cáo/bán hàng để giảm rủi ro hạn chế tài khoản.</div><p><a href="/">← Quay lại GPTMini</a></p></div></body></html>'
+
+@app.route('/api/desktop_playwright_health')
+def api_desktop_playwright_health():
+    return jsonify({
+        'ok': True,
+        'installed': fb_playwright_installed(),
+        'headless': os.getenv('PLAYWRIGHT_HEADLESS', 'false'),
+        'profile_dir': os.path.abspath(PLAYWRIGHT_PROFILE_DIR),
+        'message': 'Đã sẵn sàng Desktop Playwright' if fb_playwright_installed() else 'Chưa cài Playwright. Chạy: pip install playwright && playwright install chromium'
+    })
+
+MKT_V189_DUAL_ANDROID_DESKTOP_UI = '\n<style id="mkt-v189-dual-android-desktop-ui">\n.mkt-pw-wrap{margin:18px 0;padding:18px;border-radius:28px;background:linear-gradient(135deg,#F8FBFF,#EEF6FF,#FFF7FB)!important;border:1px solid #DBEAFE;box-shadow:0 22px 60px rgba(37,99,235,.12);color:#0f172a}\n.mkt-pw-wrap h3{margin:0 0 8px;color:#0f172a;font-size:24px}.mkt-pw-sub{color:#64748b;font-weight:800;line-height:1.5;margin-bottom:14px}.mkt-mode-tabs{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0}.mkt-mode-tab{border:1px solid #dbeafe;border-radius:20px;padding:14px;background:white;font-weight:1000;color:#334155;cursor:pointer;text-align:left}.mkt-mode-tab.active{background:linear-gradient(90deg,#2563eb,#7c3aed)!important;color:white;box-shadow:0 14px 34px rgba(37,99,235,.22)}\n.mkt-pw-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}.mkt-pw-card{background:rgba(255,255,255,.96);border:1px solid #E5EDFF;border-radius:24px;padding:18px;box-shadow:0 14px 40px rgba(15,23,42,.08)}\n.mkt-pw-card h4{margin:0 0 12px;color:#111827;font-size:19px}.mkt-pw-card label{display:block;margin:10px 0 6px;font-weight:1000;color:#111827}.mkt-pw-card input,.mkt-pw-card textarea,.mkt-pw-card select{width:100%;box-sizing:border-box;border-radius:16px;padding:13px;border:1px solid #dbeafe;font-size:15px}.mkt-pw-card button{border:0;border-radius:18px;padding:14px 18px;font-weight:1000;background:linear-gradient(90deg,#2563eb,#7c3aed)!important;color:white;box-shadow:0 16px 36px rgba(37,99,235,.2);margin-top:10px;cursor:pointer}.mkt-pw-card button.secondary{background:linear-gradient(90deg,#0f172a,#334155)!important}.mkt-pw-note{background:#F1F5F9;border:1px solid #E2E8F0;border-radius:18px;padding:12px;color:#334155;font-weight:800;line-height:1.45}.mkt-android-code{font-size:30px;letter-spacing:6px;font-weight:1000;color:#2563eb;background:#EFF6FF;border:1px dashed #93C5FD;border-radius:18px;text-align:center;padding:14px;margin:10px 0}.mkt-mobile-safe{display:flex;gap:10px;align-items:flex-start;background:#ECFDF5;border:1px solid #BBF7D0;color:#065F46;border-radius:18px;padding:12px;font-weight:900;line-height:1.45}.mkt-desktop-safe{background:#EEF2FF;border:1px solid #C7D2FE;color:#3730A3;border-radius:18px;padding:12px;font-weight:900;line-height:1.45}.mkt-mode-panel{display:none}.mkt-mode-panel.active{display:block}.mkt-small{font-size:13px;color:#64748b;font-weight:800;line-height:1.45}.mkt-jobs-item{padding:10px;border-bottom:1px solid #e5e7eb}\n@media(max-width:780px){.mkt-mode-tabs,.mkt-pw-grid{grid-template-columns:1fr}.mkt-pw-wrap{margin:10px -4px;padding:14px;border-radius:22px}.mkt-pw-card{padding:15px;border-radius:20px}.mkt-pw-card h4{font-size:18px}.mkt-pw-card button{width:100%;padding:15px}.mkt-pw-card input,.mkt-pw-card textarea,.mkt-pw-card select{font-size:16px}.mkt-android-code{font-size:26px}}\n</style>\n<script id="mkt-v189-dual-android-desktop-js">\n(function(){\n  function getDeviceId(){try{var k=\'gptmini_device_id\';var v=localStorage.getItem(k)||localStorage.getItem(\'mkt_device_id\');if(!v){v=\'GPTM-\'+Date.now().toString(36)+\'-\'+Math.random().toString(36).slice(2,8).toUpperCase();localStorage.setItem(k,v)}return v}catch(e){return \'GPTM-WEB\'}}\n  function api(url,opt){opt=opt||{};opt.headers=Object.assign({\'X-Device-Id\':getDeviceId()},opt.headers||{});return fetch(url,opt).then(function(r){return r.json()})}\n  function esc(s){return String(s==null?\'\':s).replace(/[&<>"\']/g,function(c){return {\'&\':\'&amp;\',\'<\':\'&lt;\',\'>\':\'&gt;\',\'"\':\'&quot;\',"\'":\'&#39;\'}[c]})}\n  function setMode(mode){try{localStorage.setItem(\'mkt_group_mode\',mode)}catch(e){};document.querySelectorAll(\'.mkt-mode-tab\').forEach(function(x){x.classList.toggle(\'active\',x.getAttribute(\'data-mode\')===mode)});document.querySelectorAll(\'.mkt-mode-panel\').forEach(function(x){x.classList.toggle(\'active\',x.id===\'mktMode\'+mode)})}\n  function renderGroups(data){var box=document.getElementById(\'mktPwGroupsBox\'); if(!box)return; var arr=data.groups||[]; if(!arr.length){box.innerHTML=\'Chưa có Group. Dán link hoặc UID Group ở khung bên trên, mỗi dòng một Group.\';return;} box.innerHTML=arr.map(function(g){return \'<label style="display:block;margin:8px 0"><input type="checkbox" name="personal_group_ids" value="\'+esc(g[0])+\'"> <b>\'+esc(g[1])+\'</b><br><small>\'+esc(g[2])+\'</small></label>\'}).join(\'\')}\n  function renderJobs(data){var box=document.getElementById(\'mktPwJobsBox\'); if(!box)return; var arr=data.jobs||[]; if(!arr.length){box.innerHTML=\'Chưa có hàng chờ đăng Group.\';return;} box.innerHTML=arr.slice(0,24).map(function(j){return \'<div class="mkt-jobs-item"><b>#\'+esc(j[0])+\' - \'+esc(j[1])+\'</b><br><small>\'+esc(j[3])+\'</small><br><b>Trạng thái:</b> \'+esc(j[4])+\' \'+(j[6]?\'<br><a target="_blank" href="\'+esc(j[6])+\'">Mở bài đăng</a>\':\'\')+\'</div>\'}).join(\'\')}\n  function refresh(){\n    api(\'/api/fb_personal_status?device_id=\'+encodeURIComponent(getDeviceId())).then(function(d){renderGroups(d);renderJobs(d);var p=d.profile||[];var st=document.getElementById(\'mktDesktopStatus\');if(st){st.innerHTML=\'<b>Playwright:</b> \'+(d.installed?\'Đã cài\':\'Chưa cài\')+\'<br><b>Facebook:</b> \'+esc(p&&p.length?p[2]:\'Chưa tạo phiên\')+\'<br><b>Lỗi:</b> \'+esc(p&&p.length?p[4]||\'\':\'\')}}).catch(function(){})\n    api(\'/api/android_pair_status?device_id=\'+encodeURIComponent(getDeviceId())).then(function(d){var st=document.getElementById(\'mktAndroidStatus\'); if(st){st.innerHTML=\'<b>App:</b> \'+esc(d.app_status||\'Chưa kết nối\')+\'<br><b>Facebook:</b> \'+esc(d.fb_status||\'Chưa đăng nhập\')+\'<br><b>Máy:</b> \'+esc(d.phone_model||\'\')+\'<br><b>Job chờ:</b> \'+esc(d.pending_jobs||0)+\'<br><b>Lần cuối:</b> \'+esc(d.last_seen||\'\')}; var code=document.getElementById(\'mktAndroidCode\'); if(code && d.pair_code){code.textContent=d.pair_code}}).catch(function(){})\n  }\n  function inject(){var host=document.querySelector(\'.main,.content,main,body\'); if(!host||document.getElementById(\'mktV189DualGroupBox\'))return; var div=document.createElement(\'div\');div.id=\'mktV189DualGroupBox\';div.className=\'mkt-pw-wrap\';div.innerHTML=`\n    <h3>📱💻 Facebook Group Center V189</h3><div class="mkt-pw-sub">Một giao diện cho cả khách dùng điện thoại và khách dùng máy tính: điện thoại dùng App Android, máy tính dùng Desktop Playwright. Cả hai dùng chung Group, bài viết và hàng chờ.</div>\n    <div class="mkt-mode-tabs"><button class="mkt-mode-tab active" data-mode="Android" type="button">📱 Khách dùng điện thoại<br><span class="mkt-small">App Android đăng trên máy khách</span></button><button class="mkt-mode-tab" data-mode="Desktop" type="button">💻 Khách dùng máy tính<br><span class="mkt-small">Playwright mở Chrome trên máy tính</span></button></div>\n    <div id="mktModeAndroid" class="mkt-mode-panel active"><div class="mkt-mobile-safe">🔒 Không nhập mật khẩu Facebook vào web. Khách đăng nhập Facebook ngay trên App Android, phù hợp khách bán hàng dùng điện thoại.</div><div class="mkt-pw-grid"><div class="mkt-pw-card"><h4>1. Kết nối App Android</h4><div id="mktAndroidStatus" class="mkt-pw-note">Đang kiểm tra...</div><div id="mktAndroidCode" class="mkt-android-code">------</div><button type="button" onclick="mktAndroidPairStart()">Tạo mã kết nối 6 số</button><button type="button" class="secondary" onclick="location.href=\'/android_companion_spec\'">Xem cấu trúc App Android</button><p class="mkt-pw-note">Khách mở App Android GPTMini → nhập mã 6 số → đăng nhập Facebook trên điện thoại → App tự lấy hàng chờ để đăng Group.</p></div><div class="mkt-pw-card"><h4>2. Trạng thái hàng chờ</h4><div id="mktPwJobsBox" class="mkt-pw-note">Đang tải...</div><button type="button" onclick="mktRefreshAll()">Làm mới</button></div></div></div>\n    <div id="mktModeDesktop" class="mkt-mode-panel"><div class="mkt-desktop-safe">💻 Chế độ máy tính dành cho khách chạy GPTMini/worker trên máy có Chrome thật. Không phù hợp mở Chrome trực tiếp trên Render cho khách nhìn thấy.</div><div class="mkt-pw-grid"><div class="mkt-pw-card"><h4>1. Kết nối Facebook trên máy tính</h4><div id="mktDesktopStatus" class="mkt-pw-note">Đang kiểm tra...</div><button type="button" onclick="mktDesktopLoginStart()">Mở Facebook để đăng nhập</button><button type="button" class="secondary" onclick="mktDesktopRunJobs()">Chạy hàng chờ bằng Playwright</button><button type="button" onclick="location.href=\'/desktop_playwright_guide\'">Hướng dẫn cài Playwright</button><p class="mkt-small">Cần cài: pip install playwright && playwright install chromium</p></div><div class="mkt-pw-card"><h4>2. Lưu ý an toàn</h4><div class="mkt-pw-note">Nên giãn cách 3–10 phút/bài, không đăng trùng nội dung hàng loạt, chỉ đăng vào Group cho phép bán hàng/quảng cáo.</div></div></div></div>\n    <div class="mkt-pw-grid" style="margin-top:18px"><div class="mkt-pw-card"><h4>3. Lưu nhiều Group bằng Link hoặc UID</h4><form method="post" action="/fb_personal_group_save"><input type="hidden" name="device_id" value="${getDeviceId()}"><label>Tên Group mặc định</label><input name="group_name" placeholder="VD: Hội bán hàng online"><label>Link hoặc UID Group</label><input name="group_input" placeholder="https://www.facebook.com/groups/... hoặc 123456789"><label>Dán nhiều Group một lần</label><textarea name="bulk_groups" rows="6" placeholder="Mỗi dòng 1 Group. Ví dụ:\\nHội bán hàng | 123456789\\nhttps://www.facebook.com/groups/987654321\\n123456789"></textarea><label>Ghi chú</label><textarea name="note" rows="2" placeholder="Đã tham gia / cho phép quảng cáo..."></textarea><button>Lưu danh sách Group</button></form></div><div class="mkt-pw-card"><h4>4. Tạo hàng chờ đăng Group</h4><form method="post" action="/fb_group_playwright_job"><input type="hidden" name="device_id" value="${getDeviceId()}"><div id="mktPwGroupsBox" class="mkt-pw-note">Đang tải Group...</div><label>Nhiều bài viết</label><textarea name="content_bulk" rows="8" required placeholder="Mỗi dòng là 1 bài. Ví dụ:\\nBài số 1...\\nBài số 2...\\nBài số 3..."></textarea><label>Cách chia bài</label><select name="split_mode"><option value="rotate">Chia đều: mỗi Group nhận 1 bài, hết bài thì quay vòng</option><option value="all">Mỗi Group đăng tất cả bài trong danh sách</option></select><label>Hẹn giờ</label><input type="datetime-local" name="schedule_time"><label>Giãn cách tối thiểu / tối đa giây</label><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><input type="number" name="min_delay_seconds" value="180"><input type="number" name="max_delay_seconds" value="600"></div><label><input type="checkbox" name="consent" value="yes" required> Tôi xác nhận chỉ đăng vào Group được phép, không spam.</label><button>Tạo hàng chờ</button></form></div></div>`; host.insertBefore(div, host.firstChild);\n    document.querySelectorAll(\'.mkt-mode-tab\').forEach(function(b){b.addEventListener(\'click\',function(){setMode(b.getAttribute(\'data-mode\'))})});\n    window.mktRefreshAll=refresh; window.mktAndroidRefresh=refresh; window.mktAndroidPairStart=function(){api(\'/api/android_pair_start\',{method:\'POST\',body:new URLSearchParams({device_id:getDeviceId()})}).then(function(d){alert(d.message||\'Đã tạo mã\');refresh()})}; window.mktDesktopLoginStart=function(){api(\'/api/fb_personal_login_start\',{method:\'POST\',body:new URLSearchParams({device_id:getDeviceId()})}).then(function(d){alert(d.message||\'Đã gửi lệnh mở trình duyệt\');refresh()})}; window.mktDesktopRunJobs=function(){api(\'/api/fb_group_playwright_run\',{method:\'POST\',body:new URLSearchParams({device_id:getDeviceId()})}).then(function(d){alert(d.message||\'Đã chạy hàng chờ\');refresh()})};\n    var saved=\'Android\';try{saved=localStorage.getItem(\'mkt_group_mode\')||\'Android\'}catch(e){};setMode(saved);refresh();setInterval(refresh,15000);\n  }\n  if(document.readyState===\'loading\')document.addEventListener(\'DOMContentLoaded\',inject);else inject();\n})();\n</script>\n'
+
+# V189 ghi đè UI V188: giữ Android Companion và khôi phục Desktop Playwright cho khách có máy tính.
+MKT_V186_PLAYWRIGHT_UI = MKT_V189_DUAL_ANDROID_DESKTOP_UI
 
 if __name__ == "__main__":
     # Không tự tạo kho 50k content khi khởi động để tránh lỗi SQLite database is locked trên Render.
