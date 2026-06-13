@@ -18637,3 +18637,136 @@ def mkt_v183_premium_pastel_color_only_after_request(response):
     except Exception as _e:
         print("mkt_v183_premium_pastel_color_only_after_request skipped:", _e)
     return response
+
+# ============================================================
+# V195 - Desktop Login Center an toàn
+# Không thu mật khẩu / 2FA / cookie trên web.
+# Khách tự đăng nhập trong trình duyệt thật, sau đó bấm Lưu phiên.
+# ============================================================
+
+def mkt_v195_init_desktop_sessions():
+    conn = db(); c = conn.cursor()
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS fb_desktop_sessions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            device_id TEXT,
+            account_name TEXT,
+            login_mode TEXT DEFAULT 'desktop_browser',
+            status TEXT DEFAULT 'Chưa đăng nhập',
+            session_note TEXT,
+            last_checked_at TEXT,
+            created_at TEXT,
+            updated_at TEXT
+        )
+    """)
+    conn.commit(); conn.close()
+
+@app.route('/api/fb_desktop_accounts_save_v195', methods=['POST'])
+def api_fb_desktop_accounts_save_v195():
+    mkt_v195_init_desktop_sessions()
+    device_id = (request.form.get('device_id') or request.headers.get('X-Device-Id') or 'MKT-WEB').strip()
+    bulk = (request.form.get('accounts') or '').strip()
+    rows = []
+    for line in bulk.splitlines():
+        line = (line or '').strip()
+        if not line:
+            continue
+        for sep in ['|', ',', ';', '\t']:
+            if sep in line:
+                line = line.split(sep)[0].strip()
+                break
+        if line:
+            rows.append(line[:120])
+    if not rows:
+        return jsonify({'ok': False, 'message': 'Vui lòng nhập tên/nhãn tài khoản, mỗi dòng 1 nick. Không nhập mật khẩu hoặc mã 2FA vào web.'})
+    now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    conn = db(); c = conn.cursor()
+    for name in rows:
+        c.execute("SELECT id FROM fb_desktop_sessions WHERE device_id=? AND account_name=? LIMIT 1", (device_id, name))
+        old = c.fetchone()
+        if old:
+            c.execute("UPDATE fb_desktop_sessions SET updated_at=?, login_mode='desktop_browser' WHERE id=?", (now, old[0]))
+        else:
+            c.execute("""INSERT INTO fb_desktop_sessions(device_id,account_name,login_mode,status,session_note,created_at,updated_at)
+                         VALUES(?,?,?,?,?,?,?)""", (device_id, name, 'desktop_browser', 'Chưa đăng nhập', 'Chờ khách tự đăng nhập trong trình duyệt thật.', now, now))
+    conn.commit(); conn.close()
+    return jsonify({'ok': True, 'message': f'Đã lưu {len(rows)} tài khoản. Hệ thống không lưu mật khẩu/2FA/cookie.'})
+
+@app.route('/api/fb_desktop_state_v195')
+def api_fb_desktop_state_v195():
+    mkt_v195_init_desktop_sessions()
+    device_id = (request.args.get('device_id') or request.headers.get('X-Device-Id') or 'MKT-WEB').strip()
+    conn = db(); c = conn.cursor()
+    c.execute("""SELECT id,account_name,status,login_mode,COALESCE(session_note,''),COALESCE(last_checked_at,''),COALESCE(updated_at,'')
+                 FROM fb_desktop_sessions WHERE device_id=? ORDER BY id DESC LIMIT 200""", (device_id,))
+    sessions = c.fetchall(); conn.close()
+    return jsonify({'ok': True, 'device_id': device_id, 'sessions': sessions})
+
+@app.route('/api/fb_desktop_session_update_v195', methods=['POST'])
+def api_fb_desktop_session_update_v195():
+    mkt_v195_init_desktop_sessions()
+    sid = request.form.get('session_id') or ''
+    status = (request.form.get('status') or 'Đã đăng nhập').strip()
+    note = (request.form.get('note') or '').strip()[:500]
+    allowed = ['Đã đăng nhập', 'Hết phiên', 'Chưa đăng nhập', 'Cần đăng lại']
+    if status not in allowed:
+        status = 'Đã đăng nhập'
+    now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    conn = db(); c = conn.cursor()
+    c.execute("UPDATE fb_desktop_sessions SET status=?, session_note=?, last_checked_at=?, updated_at=? WHERE id=?", (status, note or 'Khách đã xác nhận phiên đăng nhập trong trình duyệt.', now, now, sid))
+    conn.commit(); conn.close()
+    return jsonify({'ok': True, 'message': 'Đã cập nhật trạng thái phiên đăng nhập.'})
+
+@app.route('/api/fb_desktop_session_delete_v195', methods=['POST'])
+def api_fb_desktop_session_delete_v195():
+    mkt_v195_init_desktop_sessions()
+    sid = request.form.get('session_id') or ''
+    conn = db(); c = conn.cursor(); c.execute("DELETE FROM fb_desktop_sessions WHERE id=?", (sid,)); conn.commit(); conn.close()
+    return jsonify({'ok': True, 'message': 'Đã xóa phiên/tài khoản khỏi danh sách.'})
+
+@app.route('/api/fb_desktop_session_check_v195', methods=['POST'])
+def api_fb_desktop_session_check_v195():
+    mkt_v195_init_desktop_sessions()
+    sid = request.form.get('session_id') or ''
+    now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    conn = db(); c = conn.cursor()
+    c.execute("UPDATE fb_desktop_sessions SET last_checked_at=?, updated_at=?, session_note=? WHERE id=?", (now, now, 'Đã yêu cầu kiểm tra. Nếu trình duyệt còn đăng nhập, bấm Lưu phiên đăng nhập.', sid))
+    conn.commit(); conn.close()
+    return jsonify({'ok': True, 'message': 'Đã gửi yêu cầu kiểm tra. Mở Facebook để xác nhận phiên còn hoạt động.'})
+
+MKT_V195_DESKTOP_SESSION_CENTER = r'''
+<style id="mkt-v195-desktop-session-center-css">
+#mktV195DesktopLoginCenter{margin:0 0 16px!important;padding:16px!important;border-radius:24px!important;background:linear-gradient(135deg,#fff,#eff6ff,#f5f3ff)!important;border:1px solid #dbeafe!important;box-shadow:0 18px 46px rgba(37,99,235,.12)!important;color:#0f172a!important}.v195-head{display:flex!important;justify-content:space-between!important;gap:12px!important;align-items:flex-start!important;flex-wrap:wrap!important}.v195-head h4{margin:0!important;font-size:22px!important;color:#0f172a!important;font-weight:1000!important}.v195-head p{margin:6px 0 0!important;color:#64748b!important;font-weight:850!important;line-height:1.45!important}.v195-safe{background:#ecfdf5!important;border:1px solid #bbf7d0!important;color:#065f46!important;border-radius:16px!important;padding:10px 12px!important;font-weight:900!important;line-height:1.45!important;margin:12px 0!important}.v195-warn{background:#fff7ed!important;border:1px solid #fed7aa!important;color:#9a3412!important;border-radius:16px!important;padding:10px 12px!important;font-weight:900!important;line-height:1.45!important;margin:12px 0!important}.v195-grid{display:grid!important;grid-template-columns:1fr 1fr!important;gap:14px!important}.v195-card{background:rgba(255,255,255,.96)!important;border:1px solid #e5edff!important;border-radius:20px!important;padding:14px!important}.v195-card label{display:block!important;font-weight:1000!important;margin:8px 0 6px!important}.v195-card textarea,.v195-card input{width:100%!important;box-sizing:border-box!important;border:1px solid #dbeafe!important;border-radius:14px!important;padding:12px!important;font-size:15px!important}.v195-btns{display:flex!important;gap:8px!important;flex-wrap:wrap!important;margin-top:10px!important}.v195-btns button,.v195-btns a{border:0!important;border-radius:14px!important;padding:12px 14px!important;font-weight:1000!important;background:linear-gradient(135deg,#2563eb,#7c3aed)!important;color:white!important;text-decoration:none!important;cursor:pointer!important;display:inline-flex!important;align-items:center!important;justify-content:center!important}.v195-btns .dark{background:linear-gradient(135deg,#0f172a,#334155)!important}.v195-btns .green{background:linear-gradient(135deg,#16a34a,#2563eb)!important}.v195-session{display:block!important;background:#fff!important;border:1px solid #e5edff!important;border-radius:16px!important;padding:10px!important;margin:8px 0!important;font-weight:850!important}.v195-status{display:inline-flex!important;border-radius:999px!important;padding:5px 9px!important;background:#f1f5f9!important;color:#334155!important;font-weight:1000!important;font-size:12px!important}.v195-status.ok{background:#dcfce7!important;color:#166534!important}.v195-status.bad{background:#fee2e2!important;color:#991b1b!important}@media(max-width:860px){.v195-grid{grid-template-columns:1fr!important}.v195-btns button,.v195-btns a{width:100%!important}.v195-card textarea,.v195-card input{font-size:16px!important}}
+</style>
+<script id="mkt-v195-desktop-session-center-js">
+(function(){
+  function qs(s,r){return(r||document).querySelector(s)}
+  function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+  function device(){try{var v=localStorage.getItem('gptmini_device_id')||localStorage.getItem('mkt_device_id');if(!v){v='MKT-'+Math.random().toString(16).slice(2,9).toUpperCase();localStorage.setItem('gptmini_device_id',v)}return v}catch(e){return'MKT-WEB'}}
+  function api(url,opt){opt=opt||{};opt.headers=Object.assign({'X-Device-Id':device()},opt.headers||{});return fetch(url,opt).then(function(r){return r.json()})}
+  function render(d){var box=qs('#v195Sessions');if(!box)return;var arr=d.sessions||[];box.innerHTML=arr.map(function(x){var ok=(x[2]||'').indexOf('Đã đăng nhập')>-1;var bad=(x[2]||'').indexOf('Hết')>-1||(x[2]||'').indexOf('Cần')>-1;return '<div class="v195-session"><b>👤 '+esc(x[1])+'</b> <span class="v195-status '+(ok?'ok':bad?'bad':'')+'">'+esc(x[2])+'</span><br><small>'+esc(x[4]||'')+'<br>Lần kiểm tra: '+esc(x[5]||'Chưa có')+'</small><div class="v195-btns"><a target="_blank" href="https://www.facebook.com/login">Mở trình duyệt đăng nhập</a><button class="green" onclick="mktV195SaveSession('+esc(x[0])+')">Lưu phiên đăng nhập</button><button class="dark" onclick="mktV195CheckSession('+esc(x[0])+')">Kiểm tra trạng thái</button><button class="dark" onclick="mktV195NeedRelogin('+esc(x[0])+')">Đăng lại</button><button class="dark" onclick="mktV195DeleteSession('+esc(x[0])+')">Xóa phiên</button></div></div>'}).join('')||'<div class="v195-safe">Chưa có tài khoản. Nhập tên nick ở khung bên trái, mỗi dòng 1 tài khoản.</div>'}
+  function refresh(){api('/api/fb_desktop_state_v195?device_id='+encodeURIComponent(device())).then(render).catch(function(){})}
+  function inject(){var panel=qs('#v194Connect')||qs('#v193Connect')||qs('.main,.content,main');if(!panel||qs('#mktV195DesktopLoginCenter'))return;var d=document.createElement('div');d.id='mktV195DesktopLoginCenter';d.innerHTML='<div class="v195-head"><div><h4>💻 Desktop Login Center</h4><p>Đăng nhập bằng trình duyệt thật, lưu phiên riêng từng nick, không hiện cookie trên giao diện.</p></div><span class="v195-status ok">Bảo mật hơn cookie</span></div><div class="v195-safe">Luồng đúng: thêm tên nick → mở Facebook → khách tự nhập mật khẩu/2FA trực tiếp trên Facebook → quay lại bấm Lưu phiên đăng nhập.</div><div class="v195-warn">Không nhập mật khẩu, mã 2FA hoặc cookie vào web. Nếu dán nhiều dòng dạng email|pass|2FA, hệ thống chỉ lấy phần đầu làm tên nick và bỏ phần nhạy cảm.</div><div class="v195-grid"><div class="v195-card"><label>Thêm nhiều tài khoản, mỗi dòng 1 tên nick</label><textarea id="v195Accounts" rows="7" placeholder="Nick bán hàng 1\nNick bán hàng 2\nNick bán hàng 3"></textarea><div class="v195-btns"><button type="button" onclick="mktV195AddAccounts()">Lưu danh sách nick</button><a target="_blank" class="dark" href="https://www.facebook.com/login">Mở Facebook Desktop</a></div></div><div class="v195-card"><b>Phiên đăng nhập</b><div id="v195Sessions">Đang tải...</div></div></div>';panel.insertBefore(d,panel.firstChild);refresh()}
+  window.mktV195AddAccounts=function(){api('/api/fb_desktop_accounts_save_v195',{method:'POST',body:new URLSearchParams({device_id:device(),accounts:(qs('#v195Accounts')||{}).value||''})}).then(function(d){alert(d.message||'Đã lưu');refresh()})}
+  window.mktV195SaveSession=function(id){api('/api/fb_desktop_session_update_v195',{method:'POST',body:new URLSearchParams({session_id:id,status:'Đã đăng nhập',note:'Khách đã đăng nhập Facebook trong trình duyệt thật và lưu phiên.'})}).then(function(d){alert(d.message||'Đã lưu phiên');refresh()})}
+  window.mktV195NeedRelogin=function(id){api('/api/fb_desktop_session_update_v195',{method:'POST',body:new URLSearchParams({session_id:id,status:'Cần đăng lại',note:'Phiên cần đăng nhập lại trên trình duyệt.'})}).then(function(){refresh();window.open('https://www.facebook.com/login','_blank')})}
+  window.mktV195CheckSession=function(id){api('/api/fb_desktop_session_check_v195',{method:'POST',body:new URLSearchParams({session_id:id})}).then(function(d){alert(d.message||'Đã kiểm tra');refresh();window.open('https://www.facebook.com/','_blank')})}
+  window.mktV195DeleteSession=function(id){if(!confirm('Xóa tài khoản/phiên này?'))return;api('/api/fb_desktop_session_delete_v195',{method:'POST',body:new URLSearchParams({session_id:id})}).then(function(d){alert(d.message||'Đã xóa');refresh()})}
+  function run(){inject();refresh()} if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',run);else run();setTimeout(run,1000);setTimeout(run,2500);setInterval(refresh,8000);
+})();
+</script>
+'''
+
+@app.after_request
+def mkt_v195_desktop_session_center_after_request(response):
+    try:
+        ctype = (response.headers.get('Content-Type') or '').lower()
+        if 'text/html' in ctype:
+            body = response.get_data(as_text=True)
+            if 'mkt-v195-desktop-session-center-js' not in body and '</body>' in body:
+                body = body.replace('</body>', MKT_V195_DESKTOP_SESSION_CENTER + '</body>')
+                response.set_data(body)
+                response.headers['Content-Length'] = str(len(body.encode('utf-8')))
+    except Exception as _e:
+        print('mkt_v195_desktop_session_center_after_request skipped:', _e)
+    return response
