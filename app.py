@@ -17535,6 +17535,121 @@ def mkt_v190_facebook_login_choice_after_request(response):
     return response
 
 
+# ============================================================
+# V191 - COLLAPSE FACEBOOK ANDROID/DESKTOP CENTER INTO MENU MODAL
+# Mục tiêu: không render khối Facebook lớn trực tiếp trong trang Group nữa.
+# Chỉ hiện card gọn trong menu; khách bấm mới mở popup chọn Điện thoại/Máy tính.
+# Giữ nguyên menu/cài đặt/engine hiện tại.
+# ============================================================
+MKT_V191_GROUP_FACEBOOK_COLLAPSE_UI = """
+<style id="mkt-v191-group-facebook-collapse-ui">
+#mktV189DualGroupBox:not(.mkt-v191-inside-modal),
+#mktV188AndroidBox:not(.mkt-v191-inside-modal),
+#mktFbPersonalPwBox:not(.mkt-v191-inside-modal){
+  display:none!important;
+  visibility:hidden!important;
+  opacity:0!important;
+  height:0!important;
+  max-height:0!important;
+  overflow:hidden!important;
+  margin:0!important;
+  padding:0!important;
+  border:0!important;
+  box-shadow:none!important;
+}
+#mktV191FbLauncher{
+  margin:16px 0 20px!important;
+  padding:18px!important;
+  border-radius:26px!important;
+  border:1px solid rgba(147,197,253,.65)!important;
+  background:linear-gradient(135deg,#ffffff 0%,#eff6ff 52%,#f5f3ff 100%)!important;
+  box-shadow:0 20px 54px rgba(37,99,235,.12)!important;
+  color:#0f172a!important;
+  overflow:hidden!important;
+}
+#mktV191FbLauncher .mkt-v191-head{display:flex!important;align-items:flex-start!important;justify-content:space-between!important;gap:14px!important;flex-wrap:wrap!important}
+#mktV191FbLauncher h3{margin:0!important;font-size:24px!important;font-weight:1000!important;color:#123b7a!important;line-height:1.15!important}
+#mktV191FbLauncher p{margin:8px 0 0!important;color:#64748b!important;font-weight:850!important;line-height:1.45!important;font-size:15px!important}
+#mktV191FbLauncher .mkt-v191-badge{display:inline-flex!important;align-items:center!important;gap:7px!important;padding:8px 12px!important;border-radius:999px!important;background:rgba(34,197,94,.12)!important;color:#047857!important;border:1px solid rgba(34,197,94,.25)!important;font-weight:1000!important;white-space:nowrap!important}
+#mktV191FbLauncher .mkt-v191-actions{display:grid!important;grid-template-columns:1fr 1fr!important;gap:14px!important;margin-top:16px!important}
+#mktV191FbLauncher .mkt-v191-btn{border:1px solid #dbeafe!important;border-radius:22px!important;padding:17px!important;background:rgba(255,255,255,.96)!important;box-shadow:0 14px 34px rgba(15,23,42,.08)!important;cursor:pointer!important;text-align:left!important;color:#0f172a!important;transition:.18s ease!important;font-weight:1000!important}
+#mktV191FbLauncher .mkt-v191-btn:hover{transform:translateY(-3px)!important;border-color:#93c5fd!important;box-shadow:0 22px 48px rgba(37,99,235,.16)!important}
+#mktV191FbLauncher .mkt-v191-btn strong{display:block!important;font-size:18px!important;margin-bottom:5px!important;color:#0f172a!important}
+#mktV191FbLauncher .mkt-v191-btn span{display:block!important;color:#64748b!important;font-size:14px!important;font-weight:850!important;line-height:1.4!important}
+#mktV191FbModal{position:fixed!important;inset:0!important;z-index:2147483646!important;display:none!important;align-items:center!important;justify-content:center!important;padding:18px!important;background:rgba(2,6,23,.64)!important;backdrop-filter:blur(14px)!important}
+#mktV191FbModal.open{display:flex!important}
+#mktV191FbModal .mkt-v191-modal-card{width:min(1180px,96vw)!important;max-height:92vh!important;overflow:auto!important;border-radius:30px!important;background:linear-gradient(135deg,#f8fbff,#ffffff)!important;border:1px solid rgba(219,234,254,.9)!important;box-shadow:0 35px 120px rgba(2,6,23,.45)!important;padding:18px!important;color:#0f172a!important}
+#mktV191FbModal .mkt-v191-modal-head{position:sticky!important;top:0!important;z-index:5!important;display:flex!important;align-items:center!important;justify-content:space-between!important;gap:12px!important;margin:-18px -18px 14px!important;padding:16px 18px!important;background:rgba(255,255,255,.94)!important;backdrop-filter:blur(14px)!important;border-bottom:1px solid #e5edff!important}
+#mktV191FbModal .mkt-v191-modal-title{font-size:24px!important;font-weight:1000!important;color:#0f172a!important}
+#mktV191FbModal .mkt-v191-close{width:42px!important;height:42px!important;border-radius:16px!important;border:0!important;background:#0f172a!important;color:#fff!important;font-size:24px!important;font-weight:1000!important;cursor:pointer!important}
+#mktV191FbModal #mktV189DualGroupBox,
+#mktV191FbModal #mktV188AndroidBox,
+#mktV191FbModal #mktFbPersonalPwBox{display:block!important;visibility:visible!important;opacity:1!important;height:auto!important;max-height:none!important;margin:0!important;padding:18px!important;overflow:visible!important}
+@media(max-width:820px){#mktV191FbLauncher .mkt-v191-actions{grid-template-columns:1fr!important}#mktV191FbLauncher{padding:15px!important;border-radius:22px!important}#mktV191FbModal{padding:10px!important}#mktV191FbModal .mkt-v191-modal-card{border-radius:24px!important;max-height:94vh!important;padding:14px!important}#mktV191FbModal .mkt-v191-modal-head{margin:-14px -14px 12px!important;padding:14px!important}.mkt-pw-grid,.mkt-mode-tabs{grid-template-columns:1fr!important}}
+</style>
+<script id="mkt-v191-group-facebook-collapse-js">
+(function(){
+  function qs(s,r){return (r||document).querySelector(s)}
+  function qsa(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s))}
+  function host(){return qs('#group_suite .panel-body')||qs('#group_suite')||qs('[data-module="group_suite"]')||qs('.main,.content,main')}
+  function ensureModal(){
+    if(qs('#mktV191FbModal'))return qs('#mktV191FbModal');
+    var d=document.createElement('div');d.id='mktV191FbModal';
+    d.innerHTML='<div class="mkt-v191-modal-card"><div class="mkt-v191-modal-head"><div><div class="mkt-v191-modal-title">Facebook Android / Desktop Center</div><div style="color:#64748b;font-weight:850;margin-top:3px">Khách chọn điện thoại hoặc máy tính, giao diện chỉ mở khi cần sử dụng.</div></div><button type="button" class="mkt-v191-close" aria-label="Đóng">×</button></div><div id="mktV191FbModalBody"></div></div>';
+    document.body.appendChild(d);
+    qs('.mkt-v191-close',d).onclick=close;
+    d.addEventListener('click',function(e){if(e.target===d)close()});
+    return d;
+  }
+  function insertLauncher(){
+    var h=host(); if(!h||qs('#mktV191FbLauncher'))return;
+    var d=document.createElement('div');d.id='mktV191FbLauncher';
+    d.innerHTML='<div class="mkt-v191-head"><div><h3>📘 Facebook Login Center</h3><p>Đã gom phần đăng nhập Facebook vào popup riêng. Không còn tràn giao diện, không đẩy layout lên trên. Khách bấm mới mở.</p></div><div class="mkt-v191-badge">● Sẵn sàng</div></div><div class="mkt-v191-actions"><button type="button" class="mkt-v191-btn" data-v191-mode="Android"><strong>📱 Khách dùng điện thoại</strong><span>Đăng nhập Facebook trên App Android của khách.</span></button><button type="button" class="mkt-v191-btn" data-v191-mode="Desktop"><strong>💻 Khách dùng máy tính</strong><span>Đăng nhập Facebook bằng Desktop Playwright / Chrome thật.</span></button></div>';
+    if(h.firstChild)h.insertBefore(d,h.firstChild);else h.appendChild(d);
+    qsa('[data-v191-mode]',d).forEach(function(b){b.onclick=function(e){e.preventDefault();e.stopPropagation();open(b.getAttribute('data-v191-mode'))}});
+  }
+  function getSource(){return qs('#mktV189DualGroupBox')||qs('#mktV188AndroidBox')||qs('#mktFbPersonalPwBox')}
+  function open(mode){
+    var m=ensureModal(), body=qs('#mktV191FbModalBody',m), src=getSource();
+    if(!src){setTimeout(function(){open(mode)},500);return}
+    src.classList.add('mkt-v191-inside-modal');
+    body.appendChild(src);
+    m.classList.add('open');
+    setTimeout(function(){
+      var tab=qs('.mkt-mode-tab[data-mode="'+mode+'"]',src); if(tab)tab.click();
+      var panel=qs('#mktMode'+mode,src); if(panel)panel.classList.add('active');
+    },80);
+  }
+  function close(){var m=qs('#mktV191FbModal');if(m)m.classList.remove('open')}
+  function suppressBigBoxes(){
+    qsa('#mktV189DualGroupBox,#mktV188AndroidBox,#mktFbPersonalPwBox').forEach(function(x){
+      if(!x.closest('#mktV191FbModal')) x.classList.remove('mkt-v191-inside-modal');
+    });
+  }
+  function run(){ensureModal();insertLauncher();suppressBigBoxes()}
+  window.mktV191OpenFacebookCenter=open;
+  window.mktV191CloseFacebookCenter=close;
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',run);else run();
+  setTimeout(run,500);setTimeout(run,1200);setTimeout(run,2500);setInterval(function(){insertLauncher();suppressBigBoxes()},2500);
+})();
+</script>
+"""
+
+@app.after_request
+def mkt_v191_group_facebook_collapse_after_request(response):
+    try:
+        ctype = (response.headers.get("Content-Type") or "").lower()
+        if "text/html" in ctype:
+            body = response.get_data(as_text=True)
+            if "mkt-v191-group-facebook-collapse-ui" not in body and "</body>" in body:
+                body = body.replace("</body>", MKT_V191_GROUP_FACEBOOK_COLLAPSE_UI + "</body>")
+                response.set_data(body)
+                response.headers["Content-Length"] = str(len(body.encode("utf-8")))
+    except Exception as _e:
+        print("mkt_v191_group_facebook_collapse_after_request skipped:", _e)
+    return response
+
+
 if __name__ == "__main__":
     # Không tự tạo kho 50k content khi khởi động để tránh lỗi SQLite database is locked trên Render.
     # Khi cần kiểm tra/tạo kho content, gọi /api/content_50k_stats từ admin.
