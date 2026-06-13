@@ -17085,8 +17085,8 @@ if __name__ == "__main__":
 
 # V183 - Premium Pastel Glass color-only override
 # Giữ nguyên nội dung/cài đặt/menu; chỉ phủ lại màu sắc để giao diện sáng, sang và đồng bộ hơn.
-MKT_V183_PREMIUM_PASTEL_COLOR_ONLY = """
-<style id="mkt-v183-premium-pastel-color-only">
+MKT_V185_BLACK_PRO_PREMIUM_BADGES = """
+<style id="mkt-v185-black-pro-premium-badges">
 :root{
   --lux-blue:#6EA8FF;
   --lux-blue-2:#9CC7FF;
@@ -17183,15 +17183,47 @@ p,small,span,label,li{color:inherit;}
   color:#047857!important;border:1px solid rgba(16,185,129,.25)!important;
 }
 
-/* Badge Premium: vàng kem mềm, không gắt */
+/* V185 - Badge PRO/PREMIUM nền đen + chữ trắng + đèn xanh neon */
 .mkt-dot-tag,.mkt-dot-tag.enterprise,.premium-badge,.badge-premium,
 .v2-nav-link .mkt-dot-tag{
-  background:linear-gradient(135deg,#FFF7D6,#FFE7A3)!important;
-  color:#92400E!important;
-  border:1px solid rgba(245,158,11,.25)!important;
-  box-shadow:0 10px 24px rgba(245,158,11,.14)!important;
+  display:inline-flex!important;
+  align-items:center!important;
+  gap:6px!important;
+  background:linear-gradient(135deg,#0F172A,#000000)!important;
+  color:#FFFFFF!important;
+  border:1px solid rgba(34,197,94,.48)!important;
+  border-radius:999px!important;
+  padding:4px 10px!important;
+  font-size:11px!important;
+  font-weight:950!important;
+  letter-spacing:.25px!important;
+  line-height:1!important;
+  text-transform:uppercase!important;
+  box-shadow:0 0 12px rgba(34,197,94,.36),0 10px 24px rgba(0,0,0,.30)!important;
 }
-.mkt-dot-tag i,.mkt-dot-tag.enterprise i{background:#FBBF24!important;box-shadow:0 0 14px rgba(251,191,36,.70)!important;}
+.mkt-dot-tag span,.mkt-dot-tag *,.premium-badge span,.premium-badge *,.badge-premium span,.badge-premium *{
+  color:#FFFFFF!important;
+}
+.mkt-dot-tag i,.mkt-dot-tag.enterprise i,.premium-badge i,.badge-premium i{
+  display:block!important;
+  width:7px!important;
+  height:7px!important;
+  min-width:7px!important;
+  border-radius:999px!important;
+  background:#22C55E!important;
+  box-shadow:0 0 6px #22C55E,0 0 12px #22C55E,0 0 22px rgba(34,197,94,.85)!important;
+  animation:mktPremiumGreenPulse 1.6s ease-in-out infinite!important;
+}
+@keyframes mktPremiumGreenPulse{
+  0%,100%{transform:scale(1);opacity:1;}
+  50%{transform:scale(1.28);opacity:.82;}
+}
+.mkt-clean-nav .v2-nav-link:hover .mkt-dot-tag,
+.sidebar .v2-nav-link:hover .mkt-dot-tag,
+.v2-nav-link.active .mkt-dot-tag{
+  border-color:#22C55E!important;
+  box-shadow:0 0 16px rgba(34,197,94,.48),0 14px 30px rgba(0,0,0,.34)!important;
+}
 
 /* KPI bên phải: pastel thống nhất */
 .kpi-card,.stat-card,.today-card,.activity-card{
@@ -17244,15 +17276,15 @@ hr,.divider{border-color:#E5EDFF!important;}
 """
 
 @app.after_request
-def mkt_v183_premium_pastel_color_only_after_request(response):
+def mkt_v185_black_pro_premium_badges_after_request(response):
     try:
         ctype = (response.headers.get("Content-Type") or "").lower()
         if "text/html" in ctype:
             body = response.get_data(as_text=True)
-            if "mkt-v183-premium-pastel-color-only" not in body and "</body>" in body:
-                body = body.replace("</body>", MKT_V183_PREMIUM_PASTEL_COLOR_ONLY + "</body>")
+            if "mkt-v185-black-pro-premium-badges" not in body and "</body>" in body:
+                body = body.replace("</body>", MKT_V185_BLACK_PRO_PREMIUM_BADGES + "</body>")
                 response.set_data(body)
                 response.headers["Content-Length"] = str(len(body.encode("utf-8")))
     except Exception as _e:
-        print("mkt_v183_premium_pastel_color_only_after_request skipped:", _e)
+        print("mkt_v185_black_pro_premium_badges_after_request skipped:", _e)
     return response
