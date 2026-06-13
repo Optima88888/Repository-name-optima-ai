@@ -16875,6 +16875,51 @@ def _fb_pw_import_error_text(e):
         return 'Server chưa cài Playwright. Chạy: pip install playwright && playwright install chromium'
     return msg[:1000]
 
+
+def _fb_pw_extract_group_id(value):
+    """Nhận link Group hoặc UID, trả về UID sạch nếu có."""
+    raw = str(value or '').strip()
+    if not raw:
+        return ''
+    # UID thuần
+    if raw.isdigit():
+        return raw[:80]
+    low = raw.lower()
+    try:
+        import re
+        m = re.search(r'/groups/([^/?#]+)', raw)
+        if m:
+            gid = m.group(1).strip()
+            return ''.join(ch for ch in gid if ch.isalnum() or ch in ['.', '-', '_'])[:120]
+        m = re.search(r'group_id=([0-9]+)', raw)
+        if m:
+            return m.group(1)[:80]
+    except Exception:
+        pass
+    if 'facebook.com' not in low and 'fb.com' not in low:
+        return ''.join(ch for ch in raw if ch.isalnum() or ch in ['.', '-', '_'])[:120]
+    return ''
+
+def _fb_pw_group_url_from_input(value):
+    """Cho phép nhập link hoặc UID Group. UID sẽ tự đổi thành link facebook.com/groups/UID."""
+    raw = str(value or '').strip()
+    if not raw:
+        return '', ''
+    gid = _fb_pw_extract_group_id(raw)
+    if raw.startswith('http') and ('facebook.com' in raw.lower() or 'fb.com' in raw.lower()):
+        return raw, gid
+    if gid:
+        return 'https://www.facebook.com/groups/' + gid, gid
+    return '', ''
+
+def _fb_pw_split_lines(text):
+    lines=[]
+    for line in str(text or '').replace('\r','\n').split('\n'):
+        t=line.strip()
+        if t:
+            lines.append(t)
+    return lines
+
 def fb_playwright_installed():
     try:
         import playwright  # noqa
@@ -17082,40 +17127,79 @@ def fb_personal_group_save():
     ensure_fb_playwright_tables()
     device_id = _v186_device_id()
     group_name = (request.form.get('group_name') or '').strip()
-    group_url = (request.form.get('group_url') or '').strip()
+    group_input = (request.form.get('group_input') or request.form.get('group_url') or '').strip()
+    bulk_groups = (request.form.get('bulk_groups') or '').strip()
     note = (request.form.get('note') or '').strip()
-    if not group_url.startswith('http') or 'facebook.com' not in group_url.lower():
+    rows = []
+    if bulk_groups:
+        # Mỗi dòng có thể là: Tên Group | link/uid  hoặc chỉ link/uid
+        for line in _fb_pw_split_lines(bulk_groups):
+            name = ''
+            val = line
+            if '|' in line:
+                parts = [p.strip() for p in line.split('|', 1)]
+                name, val = parts[0], parts[1]
+            url, gid = _fb_pw_group_url_from_input(val)
+            if url:
+                rows.append((name or ('Group ' + (gid or str(len(rows)+1))), url, gid))
+    else:
+        url, gid = _fb_pw_group_url_from_input(group_input)
+        if url:
+            rows.append((group_name or ('Group ' + (gid or 'Facebook')), url, gid))
+    if not rows:
         return redirect('/#group_suite')
-    group_id = normalize_uid(group_url.split('/')[-1]) if 'normalize_uid' in globals() else ''
-    conn=db(); c=conn.cursor()
-    c.execute("INSERT INTO fb_personal_groups(device_id,group_name,group_url,group_id,status,can_post,note,created_at) VALUES(?,?,?,?,?,?,?,?)",
-              (device_id, group_name or group_url, group_url, group_id, 'Đã lưu', 'Chưa kiểm tra', note, _v186_now()))
+    conn=db(); c=conn.cursor(); added=0
+    for name, url, gid in rows[:200]:
+        c.execute("INSERT INTO fb_personal_groups(device_id,group_name,group_url,group_id,status,can_post,note,created_at) VALUES(?,?,?,?,?,?,?,?)",
+                  (device_id, name or url, url, gid, 'Đã lưu', 'Chưa kiểm tra', note, _v186_now()))
+        added += 1
     conn.commit(); conn.close()
+    _fb_pw_log(device_id, None, 'save_groups', 'ok', f'Đã lưu {added} Group cá nhân')
     return redirect('/#group_suite')
 
 @app.route('/fb_group_playwright_job', methods=['POST'])
 def fb_group_playwright_job():
     ensure_fb_playwright_tables()
     device_id = _v186_device_id()
-    content = (request.form.get('content') or '').strip()
+    content_single = (request.form.get('content') or '').strip()
+    content_bulk = (request.form.get('content_bulk') or '').strip()
+    contents = _fb_pw_split_lines(content_bulk) if content_bulk else []
+    if not contents and content_single:
+        # Nếu người dùng xuống dòng trong ô cũ, cũng tự tách nhiều bài.
+        contents = _fb_pw_split_lines(content_single)
     consent = (request.form.get('consent') or '').strip()
-    if consent != 'yes' or not content:
+    if consent != 'yes' or not contents:
         return redirect('/#group_suite')
-    min_delay = max(120, int(request.form.get('min_delay_seconds') or 180))
-    max_delay = max(min_delay, int(request.form.get('max_delay_seconds') or 600))
+    try:
+        min_delay = max(120, int(request.form.get('min_delay_seconds') or 180))
+    except Exception:
+        min_delay = 180
+    try:
+        max_delay = max(min_delay, int(request.form.get('max_delay_seconds') or 600))
+    except Exception:
+        max_delay = 600
     schedule_time = (request.form.get('schedule_time') or '').replace('T', ' ')
     selected = request.form.getlist('personal_group_ids')
-    conn=db(); c=conn.cursor()
-    added = 0
-    for gid in selected[:20]:
+    if not selected:
+        return redirect('/#group_suite')
+    mode = (request.form.get('split_mode') or 'rotate').strip()
+    conn=db(); c=conn.cursor(); added = 0
+    for idx, gid in enumerate(selected[:200]):
         c.execute("SELECT group_name,group_url FROM fb_personal_groups WHERE id=? AND device_id=? LIMIT 1", (gid, device_id))
         row = c.fetchone()
-        if not row: continue
-        c.execute("INSERT INTO fb_group_playwright_jobs(device_id,group_name,group_url,content,min_delay_seconds,max_delay_seconds,schedule_time,status,created_at) VALUES(?,?,?,?,?,?,?,?,?)",
-                  (device_id, row[0], row[1], content, min_delay, max_delay, schedule_time, 'Chờ chạy', _v186_now()))
-        added += 1
+        if not row:
+            continue
+        if mode == 'all':
+            chosen_contents = contents[:50]
+        else:
+            # chia đều: Group 1 nhận dòng 1, Group 2 nhận dòng 2, hết bài thì quay lại dòng 1
+            chosen_contents = [contents[idx % len(contents)]]
+        for content in chosen_contents:
+            c.execute("INSERT INTO fb_group_playwright_jobs(device_id,group_name,group_url,content,min_delay_seconds,max_delay_seconds,schedule_time,status,created_at) VALUES(?,?,?,?,?,?,?,?,?)",
+                      (device_id, row[0], row[1], content, min_delay, max_delay, schedule_time, 'Chờ chạy', _v186_now()))
+            added += 1
     conn.commit(); conn.close()
-    _fb_pw_log(device_id, None, 'create_jobs', 'ok', f'Đã tạo {added} hàng chờ đăng Group')
+    _fb_pw_log(device_id, None, 'create_jobs', 'ok', f'Đã tạo {added} hàng chờ đăng Group từ {len(selected)} Group và {len(contents)} nội dung')
     return redirect('/#group_suite')
 
 @app.route('/api/fb_group_playwright_run', methods=['POST'])
@@ -17135,27 +17219,28 @@ def api_fb_group_playwright_run():
 MKT_V186_PLAYWRIGHT_UI = """
 <style id="mkt-v186-playwright-ui">
 #mktFbPersonalPwBox{margin:18px 0;padding:18px;border-radius:24px;border:1px solid rgba(59,130,246,.22);background:linear-gradient(135deg,#ffffff,#eff6ff,#f5f3ff);box-shadow:0 18px 48px rgba(37,99,235,.12);color:#0f172a}
-#mktFbPersonalPwBox h3{margin:0 0 8px;color:#1e3a8a}.mkt-pw-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}.mkt-pw-card{background:rgba(255,255,255,.92);border:1px solid #dbeafe;border-radius:18px;padding:14px}.mkt-pw-card label{display:block;font-weight:900;margin:8px 0 5px}.mkt-pw-card input,.mkt-pw-card textarea{width:100%;box-sizing:border-box}.mkt-pw-table{width:100%;border-collapse:collapse;margin-top:10px}.mkt-pw-table th,.mkt-pw-table td{border-bottom:1px solid #e5e7eb;padding:8px;text-align:left;font-size:12px}.mkt-pw-note{font-size:13px;color:#475569;font-weight:700;line-height:1.5}.mkt-pw-danger{background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;border-radius:14px;padding:10px;margin:10px 0;font-weight:800}@media(max-width:900px){.mkt-pw-grid{grid-template-columns:1fr}}
+#mktFbPersonalPwBox h3{margin:0 0 8px;color:#1e3a8a}.mkt-pw-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}.mkt-pw-card{background:rgba(255,255,255,.92);border:1px solid #dbeafe;border-radius:18px;padding:14px}.mkt-pw-card label{display:block;font-weight:900;margin:8px 0 5px}.mkt-pw-card input,.mkt-pw-card textarea,.mkt-pw-card select{width:100%;box-sizing:border-box;border-radius:14px;border:1px solid #dbe3ef;padding:12px}.mkt-pw-card button{margin-top:10px}.mkt-pw-table{width:100%;border-collapse:collapse;margin-top:10px}.mkt-pw-table th,.mkt-pw-table td{border-bottom:1px solid #e5e7eb;padding:8px;text-align:left;font-size:12px}.mkt-pw-note{font-size:13px;color:#475569;font-weight:700;line-height:1.5}.mkt-pw-danger{background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;border-radius:14px;padding:10px;margin:10px 0;font-weight:800}.mkt-pw-mini{font-size:12px;color:#64748b;font-weight:800}.mkt-pw-actions{display:flex;gap:8px;flex-wrap:wrap}.mkt-pw-actions a{display:inline-flex;align-items:center;justify-content:center;text-decoration:none;border-radius:16px;padding:12px 16px;font-weight:1000;background:#eef2ff;color:#4338ca}@media(max-width:900px){.mkt-pw-grid{grid-template-columns:1fr}}
 </style>
-<script id="mkt-v186-playwright-ui-js">
+<script id="mkt-v187-playwright-ui-js">
 (function(){
   function getDeviceId(){try{return localStorage.getItem('gptmini_device_id')||localStorage.getItem('mkt_device_id')||'default-device'}catch(e){return 'default-device'}}
+  function esc(s){return String(s||'').replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
   function api(url, opt){opt=opt||{};opt.headers=Object.assign({'X-Device-Id':getDeviceId()}, opt.headers||{});return fetch(url,opt).then(r=>r.json())}
-  function renderStatus(data){var box=document.getElementById('mktPwStatus'); if(!box)return; var p=data.profile||[]; var installed=data.installed?'Đã cài':'Chưa cài'; var status=p&&p.length?p[2]:'Chưa tạo phiên'; var err=p&&p.length&&p[4]?('<br><b>Lỗi:</b> '+p[4]):''; box.innerHTML='<b>Playwright:</b> '+installed+'<br><b>Facebook cá nhân:</b> '+status+err; var jobs=document.getElementById('mktPwJobs'); if(jobs){var html='<table class="mkt-pw-table"><tr><th>Group</th><th>Nội dung</th><th>Trạng thái</th><th>Kết quả</th></tr>'; (data.jobs||[]).slice(0,10).forEach(function(j){html+='<tr><td>'+j[1]+'</td><td>'+j[3]+'</td><td>'+j[4]+'</td><td>'+(j[5]||j[6]||'')+'</td></tr>'}); jobs.innerHTML=html+'</table>'}}
-  function refresh(){api('/api/fb_personal_status?device_id='+encodeURIComponent(getDeviceId())).then(renderStatus).catch(function(){})}
+  function renderStatus(data){var box=document.getElementById('mktPwStatus'); if(!box)return; var p=data.profile||[]; var installed=data.installed?'Đã cài':'Chưa cài'; var status=p&&p.length?p[2]:'Chưa tạo phiên'; var err=p&&p.length&&p[4]?('<br><b>Lỗi:</b> '+esc(p[4])):''; box.innerHTML='<b>Playwright:</b> '+installed+'<br><b>Facebook cá nhân:</b> '+status+err; var jobs=document.getElementById('mktPwJobs'); if(jobs){var html='<table class="mkt-pw-table"><tr><th>Group</th><th>Nội dung</th><th>Trạng thái</th><th>Kết quả</th></tr>'; (data.jobs||[]).slice(0,12).forEach(function(j){html+='<tr><td>'+esc(j[1])+'</td><td>'+esc(j[3])+'</td><td>'+esc(j[4])+'</td><td>'+esc(j[5]||j[6]||'')+'</td></tr>'}); jobs.innerHTML=html+'</table>'}}
+  function refresh(){api('/api/fb_personal_status?device_id='+encodeURIComponent(getDeviceId())).then(function(d){renderStatus(d);renderGroups(d)}).catch(function(){})}
+  function renderGroups(data){var box=document.getElementById('mktPwGroupsBox'); if(!box)return; var arr=data.groups||[]; if(!arr.length){box.innerHTML='Chưa có Group cá nhân. Có thể nhập link hoặc UID Group rồi bấm lưu.';return;} box.innerHTML=arr.map(function(g){return '<label style="display:block;margin:6px 0"><input type="checkbox" name="personal_group_ids" value="'+esc(g[0])+'"> '+esc(g[1])+'<br><small>'+esc(g[2])+'</small></label>'}).join('')}
   function insert(){if(document.getElementById('mktFbPersonalPwBox'))return; var host=document.querySelector('#group_suite .panel-body')||document.querySelector('#group_suite')||document.querySelector('[id*="group"]'); if(!host)return; var div=document.createElement('div'); div.id='mktFbPersonalPwBox'; div.innerHTML=`
-    <h3>👤 Facebook cá nhân + Playwright Group Engine</h3>
-    <div class="mkt-pw-note">Khách tự đăng nhập Facebook trong trình duyệt riêng. Web không hỏi và không lưu mật khẩu. Chỉ dùng cho Group khách đã tham gia và được phép đăng.</div>
-    <div class="mkt-pw-danger">Khuyến nghị an toàn: không đăng spam, không dùng nội dung trùng lặp hàng loạt, giãn cách tối thiểu 2-10 phút mỗi Group.</div>
+    <h3>👤 Facebook cá nhân + Playwright Group Engine V187</h3>
+    <div class="mkt-pw-note">Khách tự đăng nhập Facebook trong trình duyệt riêng. Web không hỏi và không lưu mật khẩu. Group có thể nhập bằng <b>link</b> hoặc <b>UID</b>.</div>
+    <div class="mkt-pw-danger">Lưu ý: nút mở trình duyệt Playwright chỉ mở được trên máy/server có giao diện trình duyệt. Nếu chạy Render/VPS headless thì nên dùng máy riêng/VPS có Chrome Remote Desktop để khách đăng nhập phiên.</div>
     <div class="mkt-pw-grid">
-      <div class="mkt-pw-card"><h4>1. Kết nối Facebook cá nhân</h4><div id="mktPwStatus">Đang kiểm tra...</div><button type="button" onclick="mktPwLoginStart()">Mở trình duyệt đăng nhập Facebook</button><button type="button" class="secondary" onclick="mktPwRefresh()">Kiểm tra trạng thái</button></div>
-      <div class="mkt-pw-card"><h4>2. Lưu Group cá nhân</h4><form method="post" action="/fb_personal_group_save"><input type="hidden" name="device_id" value="${getDeviceId()}"><label>Tên Group</label><input name="group_name" placeholder="VD: Hội bán hàng online"><label>Link Group Facebook</label><input name="group_url" placeholder="https://www.facebook.com/groups/..." required><label>Ghi chú</label><textarea name="note" rows="2" placeholder="Đã tham gia / cho phép quảng cáo..."></textarea><button>Lưu Group cá nhân</button></form></div>
-      <div class="mkt-pw-card"><h4>3. Tạo hàng chờ đăng Group</h4><form method="post" action="/fb_group_playwright_job"><input type="hidden" name="device_id" value="${getDeviceId()}"><div id="mktPwGroupsBox" class="mkt-pw-note">Sau khi lưu Group, tải lại trang để chọn Group.</div><label>Nội dung đăng</label><textarea name="content" rows="5" required placeholder="Nội dung đăng vào Group..."></textarea><label>Hẹn giờ</label><input type="datetime-local" name="schedule_time"><label>Giãn cách tối thiểu / tối đa giây</label><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><input type="number" name="min_delay_seconds" value="180"><input type="number" name="max_delay_seconds" value="600"></div><label><input type="checkbox" name="consent" value="yes" required> Tôi xác nhận chỉ đăng vào Group được phép, không spam.</label><button>Tạo hàng chờ Playwright</button></form></div>
-      <div class="mkt-pw-card"><h4>4. Chạy đăng Group</h4><button type="button" onclick="mktPwRunJobs()">Chạy hàng chờ đăng Group</button><div id="mktPwJobs"></div></div>
+      <div class="mkt-pw-card"><h4>1. Kết nối Facebook cá nhân</h4><div id="mktPwStatus">Đang kiểm tra...</div><div class="mkt-pw-actions"><button type="button" onclick="mktPwLoginStart()">Mở trình duyệt đăng nhập Facebook</button><a target="_blank" href="https://www.facebook.com/">Mở Facebook thường</a><button type="button" class="secondary" onclick="mktPwRefresh()">Kiểm tra trạng thái</button></div><div class="mkt-pw-mini">Không nhập mật khẩu Facebook vào web. Khách đăng nhập trực tiếp trên trình duyệt Facebook.</div></div>
+      <div class="mkt-pw-card"><h4>2. Lưu Group cá nhân</h4><form method="post" action="/fb_personal_group_save"><input type="hidden" name="device_id" value="${getDeviceId()}"><label>Tên Group</label><input name="group_name" placeholder="VD: Hội bán hàng online"><label>Link hoặc UID Group Facebook</label><input name="group_input" placeholder="https://www.facebook.com/groups/... hoặc 123456789" required><label>Lưu nhiều Group một lần</label><textarea name="bulk_groups" rows="4" placeholder="Mỗi dòng 1 Group. Ví dụ:\nHội bán hàng | 123456789\nhttps://www.facebook.com/groups/987654321"></textarea><label>Ghi chú</label><textarea name="note" rows="2" placeholder="Đã tham gia / cho phép quảng cáo..."></textarea><button>Lưu Group cá nhân</button></form></div>
+      <div class="mkt-pw-card"><h4>3. Tạo hàng chờ đăng Group</h4><form method="post" action="/fb_group_playwright_job"><input type="hidden" name="device_id" value="${getDeviceId()}"><div id="mktPwGroupsBox" class="mkt-pw-note">Đang tải Group...</div><label>Nhiều bài viết</label><textarea name="content_bulk" rows="7" required placeholder="Mỗi dòng là 1 bài. Ví dụ:\nBài số 1...\nBài số 2...\nBài số 3..."></textarea><label>Cách chia bài</label><select name="split_mode"><option value="rotate">Chia đều: mỗi Group nhận 1 bài, hết bài thì quay vòng</option><option value="all">Mỗi Group đăng tất cả bài trong danh sách</option></select><label>Hẹn giờ</label><input type="datetime-local" name="schedule_time"><label>Giãn cách tối thiểu / tối đa giây</label><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><input type="number" name="min_delay_seconds" value="180"><input type="number" name="max_delay_seconds" value="600"></div><label><input type="checkbox" name="consent" value="yes" required> Tôi xác nhận chỉ đăng vào Group được phép, không spam.</label><button>Tạo hàng chờ Playwright</button></form></div>
+      <div class="mkt-pw-card"><h4>4. Chạy đăng Group</h4><button type="button" onclick="mktPwRunJobs()">Chạy hàng chờ đăng Group</button><div class="mkt-pw-mini">Có thể đăng nhiều Group. Engine sẽ chạy tuần tự theo hàng chờ và giãn cách thời gian.</div><div id="mktPwJobs"></div></div>
     </div>`; host.insertBefore(div, host.firstChild); window.mktPwRefresh=refresh; window.mktPwLoginStart=function(){api('/api/fb_personal_login_start',{method:'POST',body:new URLSearchParams({device_id:getDeviceId()})}).then(function(d){alert(d.message||'Đã gửi lệnh');refresh()})}; window.mktPwRunJobs=function(){api('/api/fb_group_playwright_run',{method:'POST',body:new URLSearchParams({device_id:getDeviceId()})}).then(function(d){alert(d.message||'Đã gửi lệnh');refresh()})}; refresh(); }
-  function loadGroups(){api('/api/fb_personal_status?device_id='+encodeURIComponent(getDeviceId())).then(function(data){var box=document.getElementById('mktPwGroupsBox'); if(!box)return; var arr=data.groups||[]; if(!arr.length){box.innerHTML='Chưa có Group cá nhân. Hãy lưu Group trước.';return;} box.innerHTML=arr.map(function(g){return '<label style="display:block;margin:6px 0"><input type="checkbox" name="personal_group_ids" value="'+g[0]+'"> '+g[1]+'<br><small>'+g[2]+'</small></label>'}).join(''); renderStatus(data);}).catch(function(){})}
-  if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',function(){insert();setTimeout(loadGroups,400)})}else{insert();setTimeout(loadGroups,400)}
-  setTimeout(function(){insert();loadGroups()},1500);
+  if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',insert)}else{insert()}
+  setTimeout(insert,1500); setInterval(refresh,8000);
 })();
 </script>
 """
