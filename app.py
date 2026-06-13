@@ -3055,6 +3055,43 @@ button:hover{
   border:1px solid #DDD6FE;
   box-shadow:none;
 }
+/* V177 CTA Conversion Buttons - chỉ nâng cấp nút dùng thử và Premium */
+.mkt-cta-actions-v177{
+  align-items:center;
+}
+.mkt-cta-actions-v177 button{
+  min-height:54px;
+  padding:15px 22px;
+  border-radius:18px;
+  font-size:15px;
+  letter-spacing:.1px;
+}
+.mkt-cta-trial-v177{
+  background:linear-gradient(135deg,#22C55E,#16A34A)!important;
+  color:#FFFFFF!important;
+  border:1px solid rgba(34,197,94,.45)!important;
+  box-shadow:0 18px 38px rgba(34,197,94,.28)!important;
+}
+.mkt-cta-premium-v177{
+  background:linear-gradient(135deg,#F59E0B,#FACC15)!important;
+  color:#111827!important;
+  border:1px solid rgba(250,204,21,.55)!important;
+  box-shadow:0 18px 40px rgba(245,158,11,.30)!important;
+}
+.mkt-cta-note-v177{
+  flex-basis:100%;
+  margin-top:2px;
+  color:#64748B;
+  font-size:13px;
+  font-weight:800;
+}
+body .top-hero .mkt-cta-note-v177{
+  color:#CBD5E1!important;
+}
+@media(max-width:620px){
+  .mkt-cta-actions-v177{display:grid!important;grid-template-columns:1fr!important}
+  .mkt-cta-note-v177{text-align:center;line-height:1.45}
+}
 .success{
   color:#047857;
   background:#ECFDF5;
@@ -5545,10 +5582,10 @@ function closeLockedFeature(){
     <div class="v4-trust-card"><b>98%</b><span>Đánh giá hài lòng</span></div>
   </div>
 
-  <div class="hero-actions">
-    <button onclick="return openModule('post')">Bắt đầu đăng bài</button>
-    <button class="secondary" onclick="return openModule('ai_studio')">Tạo content AI</button>
-    <button class="secondary" onclick="scrollToPricing()">Xem bảng giá</button>
+  <div class="hero-actions mkt-cta-actions-v177">
+    <button class="mkt-cta-trial-v177" onclick="return openModule('post')">🚀 Dùng thử miễn phí 3 ngày</button>
+    <button class="mkt-cta-premium-v177" onclick="scrollToPricing()">👑 Mở khóa GPTMini Pro</button>
+    <div class="mkt-cta-note-v177">Không cần thẻ tín dụng • Mở ngay sau 30 giây • Đã có 89 khách hàng Premium đang hoạt động</div>
   </div>
 
   <div class="module-hub v3-main-hub">
