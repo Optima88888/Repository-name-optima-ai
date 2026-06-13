@@ -17723,6 +17723,135 @@ def mkt_v192_facebook_menu_ready_after_request(response):
         print('mkt_v192_facebook_menu_ready_after_request skipped:', _e)
     return response
 
+
+
+# ============================================================
+# V193 - FACEBOOK MULTI ACCOUNT COMMAND CENTER
+# ============================================================
+
+def ensure_fb_multi_center_tables():
+    ensure_fb_playwright_tables()
+    conn = db(); c = conn.cursor()
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS fb_multi_accounts (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        device_id TEXT,
+        account_name TEXT,
+        login_mode TEXT DEFAULT 'mobile',
+        status TEXT DEFAULT 'Đã thêm - chờ đăng nhập',
+        note TEXT,
+        created_at TEXT,
+        updated_at TEXT
+    )
+    """)
+    conn.commit(); conn.close()
+
+def _v193_now():
+    return datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+def _v193_device_from_req():
+    return (request.values.get('device_id') or request.headers.get('X-Device-Id') or session.get('gptmini_device_id') or 'default-device').strip()[:80]
+
+def _v193_split_blocks(text):
+    raw = str(text or '').replace('\r','\n').strip()
+    if not raw:
+        return []
+    if '-----' in raw:
+        return [p.strip() for p in raw.split('-----') if p.strip()][:200]
+    lines = [x.strip() for x in raw.split('\n') if x.strip()]
+    return (lines if len(lines) > 1 else [raw])[:200]
+
+def _v193_int(value, default=3):
+    try:
+        return max(0, min(int(value), 1440))
+    except Exception:
+        return default
+
+@app.route('/api/fb_multi_accounts_save', methods=['POST'])
+def api_fb_multi_accounts_save():
+    ensure_fb_multi_center_tables()
+    data = request.get_json(silent=True) or request.form
+    device_id = str(data.get('device_id') or _v193_device_from_req()).strip()[:80]
+    names = str(data.get('accounts') or '').replace('\r','\n')
+    mode = str(data.get('login_mode') or 'mobile').strip()[:40]
+    rows = [x.strip() for x in names.split('\n') if x.strip()]
+    if not rows:
+        return jsonify({'ok': False, 'message': 'Chưa nhập tên tài khoản Facebook.'})
+    now = _v193_now(); conn = db(); c = conn.cursor(); added = 0
+    for name in rows[:100]:
+        c.execute("INSERT INTO fb_multi_accounts(device_id,account_name,login_mode,status,note,created_at,updated_at) VALUES(?,?,?,?,?,?,?)", (device_id, name[:180], mode, 'Đã thêm - chờ đăng nhập', '', now, now))
+        added += 1
+    conn.commit(); conn.close()
+    return jsonify({'ok': True, 'message': f'Đã thêm {added} tài khoản.', 'added': added})
+
+@app.route('/api/fb_multi_center_state', methods=['GET','POST'])
+def api_fb_multi_center_state():
+    ensure_fb_multi_center_tables(); device_id = _v193_device_from_req(); conn = db(); c = conn.cursor()
+    c.execute("SELECT id,account_name,login_mode,status,note,updated_at FROM fb_multi_accounts WHERE device_id=? ORDER BY id DESC LIMIT 80", (device_id,)); accounts = c.fetchall()
+    c.execute("SELECT id,group_name,group_url,group_id,status,can_post,note,created_at FROM fb_personal_groups WHERE device_id=? ORDER BY id DESC LIMIT 250", (device_id,)); groups = c.fetchall()
+    c.execute("SELECT id,group_name,substr(content,1,90),status,result_message,post_url,created_at,schedule_time FROM fb_group_playwright_jobs WHERE device_id=? ORDER BY id DESC LIMIT 80", (device_id,)); jobs = c.fetchall(); conn.close()
+    return jsonify({'ok': True, 'device_id': device_id, 'accounts': accounts, 'groups': groups, 'jobs': jobs})
+
+@app.route('/api/fb_multi_queue_create', methods=['POST'])
+def api_fb_multi_queue_create():
+    ensure_fb_multi_center_tables(); data = request.get_json(silent=True) or request.form
+    device_id = str(data.get('device_id') or _v193_device_from_req()).strip()[:80]
+    group_ids = data.getlist('group_ids') if hasattr(data, 'getlist') else (data.get('group_ids') or [])
+    if isinstance(group_ids, str): group_ids = [x.strip() for x in group_ids.replace(',', '\n').split('\n') if x.strip()]
+    account_ids = data.getlist('account_ids') if hasattr(data, 'getlist') else (data.get('account_ids') or [])
+    if isinstance(account_ids, str): account_ids = [x.strip() for x in account_ids.replace(',', '\n').split('\n') if x.strip()]
+    contents = _v193_split_blocks(data.get('content_bulk') or '')
+    mode = str(data.get('mode') or 'now'); split_mode = str(data.get('split_mode') or 'rotate'); gap_min = _v193_int(data.get('gap_minutes'), 3); start_time = str(data.get('start_time') or '').strip()
+    if not group_ids: return jsonify({'ok': False, 'message': 'Chưa chọn Group/Page.'})
+    if not contents: return jsonify({'ok': False, 'message': 'Chưa nhập nội dung bài viết.'})
+    conn = db(); c = conn.cursor(); qmarks = ','.join(['?'] * len(group_ids))
+    c.execute(f"SELECT id,group_name,group_url FROM fb_personal_groups WHERE device_id=? AND id IN ({qmarks})", [device_id] + [str(x) for x in group_ids]); groups = c.fetchall()
+    if not groups: conn.close(); return jsonify({'ok': False, 'message': 'Không tìm thấy Group/Page đã chọn.'})
+    try: base_dt = datetime.datetime.fromisoformat(start_time) if start_time else datetime.datetime.now()
+    except Exception: base_dt = datetime.datetime.now()
+    now = _v193_now(); created = 0
+    for gi, g in enumerate(groups):
+        selected_contents = contents if split_mode == 'all' else [contents[gi % len(contents)]]
+        for content in selected_contents:
+            schedule_dt = base_dt + datetime.timedelta(minutes=gap_min * created) if (mode == 'schedule' or gap_min > 0) else None
+            schedule_value = schedule_dt.strftime('%Y-%m-%d %H:%M:%S') if schedule_dt else ''
+            acc_note = ('AccountID=' + str(account_ids[created % len(account_ids)])) if account_ids else ''
+            c.execute("""INSERT INTO fb_group_playwright_jobs(device_id,group_name,group_url,content,media_path,min_delay_seconds,max_delay_seconds,schedule_time,status,result_message,created_at) VALUES(?,?,?,?,?,?,?,?,?,?,?)""", (device_id, g[1], g[2], content, '', 180, 600, schedule_value, 'Chờ chạy', acc_note, now))
+            created += 1
+    conn.commit(); conn.close(); return jsonify({'ok': True, 'message': f'Đã tạo {created} bài trong hàng chờ.', 'created': created})
+
+def _v193_android_companion_spec_clean():
+    return '<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>GPTMini Android Companion</title><style>body{margin:0;font-family:system-ui;background:linear-gradient(135deg,#eff6ff,#fff,#f5f3ff);color:#0f172a;padding:22px}.box{max-width:900px;margin:0 auto;background:white;border:1px solid #dbeafe;border-radius:28px;padding:24px;box-shadow:0 24px 80px rgba(37,99,235,.15)}h1{margin:0 0 8px;font-size:32px}.note{background:#ecfdf5;border:1px solid #bbf7d0;color:#065f46;border-radius:18px;padding:14px;font-weight:900;line-height:1.5}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:18px}.card{background:#f8fafc;border:1px solid #e2e8f0;border-radius:20px;padding:16px;font-weight:850}.btn{display:inline-block;margin-top:18px;background:linear-gradient(135deg,#2563eb,#7c3aed);color:white;text-decoration:none;border-radius:16px;padding:13px 18px;font-weight:1000}@media(max-width:760px){.grid{grid-template-columns:1fr}h1{font-size:25px}}</style></head><body><div class="box"><h1>📱 GPTMini Android Companion</h1><p>Khách đăng nhập Facebook trực tiếp trên điện thoại. Web không hỏi và không lưu mật khẩu Facebook.</p><div class="note">Luồng dùng: tạo mã trên web → mở App Android GPTMini → nhập mã → đăng nhập Facebook → App lấy hàng chờ để đăng Group.</div><div class="grid"><div class="card">1. Tạo mã kết nối 6 số trên web.</div><div class="card">2. Nhập mã trong App Android GPTMini.</div><div class="card">3. Chọn Group, nội dung và bấm Đăng ngay.</div></div><a class="btn" href="/#group_suite">← Về Facebook Center</a></div></body></html>'
+try:
+    app.view_functions['android_companion_spec'] = _v193_android_companion_spec_clean
+except Exception as _e:
+    print('V193 android spec override skipped:', _e)
+
+MKT_V193_MULTI_ACCOUNT_CENTER_UI = '<style id="mkt-v193-multi-account-center">\n#mktV189DualGroupBox,#mktV188AndroidBox,#mktFbPersonalPwBox,#mktV192FbMenu,#mktV192FbModal,#mktV191FbLauncher,#mktV191FbModal{display:none!important;visibility:hidden!important;max-height:0!important;overflow:hidden!important;margin:0!important;padding:0!important;border:0!important}\n#mktV193FbCenter{margin:18px 0!important;padding:18px!important;border-radius:30px!important;background:linear-gradient(135deg,#ffffff,#eff6ff 52%,#f5f3ff)!important;border:1px solid #dbeafe!important;box-shadow:0 24px 70px rgba(37,99,235,.14)!important;color:#0f172a!important}.v193-head{display:flex!important;justify-content:space-between!important;gap:14px!important;align-items:flex-start!important;flex-wrap:wrap!important}.v193-head h3{margin:0!important;font-size:26px!important;color:#0f172a!important;font-weight:1000!important}.v193-head p{margin:7px 0 0!important;color:#64748b!important;font-weight:850!important;line-height:1.45!important}.v193-pill{display:inline-flex!important;gap:8px!important;align-items:center!important;background:#ecfdf5!important;border:1px solid #bbf7d0!important;color:#047857!important;padding:9px 13px!important;border-radius:999px!important;font-weight:1000!important}.v193-tabs{display:grid!important;grid-template-columns:repeat(4,1fr)!important;gap:10px!important;margin:16px 0!important}.v193-tabs button{border:1px solid #dbeafe!important;background:white!important;border-radius:18px!important;padding:13px!important;font-weight:1000!important;cursor:pointer!important;color:#334155!important}.v193-tabs button.active{background:linear-gradient(135deg,#2563eb,#7c3aed)!important;color:white!important;box-shadow:0 14px 34px rgba(37,99,235,.22)!important}.v193-panel{display:none!important}.v193-panel.active{display:block!important}.v193-grid{display:grid!important;grid-template-columns:1fr 1fr!important;gap:14px!important}.v193-card{background:rgba(255,255,255,.96)!important;border:1px solid #e5edff!important;border-radius:24px!important;padding:16px!important;box-shadow:0 14px 40px rgba(15,23,42,.08)!important}.v193-card h4{margin:0 0 10px!important;font-size:20px!important;color:#0f172a!important}.v193-card label{display:block!important;margin:9px 0 6px!important;font-weight:1000!important;color:#0f172a!important}.v193-card input,.v193-card textarea,.v193-card select{width:100%!important;box-sizing:border-box!important;border:1px solid #dbeafe!important;border-radius:16px!important;padding:13px!important;font-size:15px!important;background:white!important}.v193-card button,.v193-btn{border:0!important;border-radius:16px!important;padding:13px 16px!important;font-weight:1000!important;background:linear-gradient(135deg,#2563eb,#7c3aed)!important;color:white!important;cursor:pointer!important;box-shadow:0 14px 32px rgba(37,99,235,.18)!important;text-decoration:none!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;margin-top:10px!important}.v193-dark{background:linear-gradient(135deg,#0f172a,#334155)!important}.v193-note{background:#f1f5f9!important;border:1px solid #e2e8f0!important;border-radius:18px!important;padding:12px!important;color:#334155!important;font-weight:850!important;line-height:1.5!important}.v193-list{max-height:310px!important;overflow:auto!important}.v193-item{display:block!important;padding:10px!important;border:1px solid #e5edff!important;border-radius:15px!important;margin:8px 0!important;background:#fff!important;font-weight:850!important}.v193-kpis{display:grid!important;grid-template-columns:repeat(4,1fr)!important;gap:10px!important;margin:14px 0!important}.v193-kpi{padding:13px!important;border-radius:18px!important;background:white!important;border:1px solid #dbeafe!important;font-weight:1000!important}.v193-kpi b{display:block!important;font-size:24px!important;color:#2563eb!important}.v193-preview{font-size:13px!important;color:#64748b!important;line-height:1.45!important}.v193-actions{display:flex!important;gap:10px!important;flex-wrap:wrap!important}.v193-run{font-size:18px!important;padding:15px 22px!important;background:linear-gradient(135deg,#16a34a,#2563eb)!important}@media(max-width:860px){.v193-tabs,.v193-grid,.v193-kpis{grid-template-columns:1fr!important}#mktV193FbCenter{padding:14px!important;border-radius:22px!important}.v193-head h3{font-size:22px!important}.v193-card input,.v193-card textarea,.v193-card select{font-size:16px!important}.v193-card button,.v193-btn{width:100%!important}}\n</style>\n<script id="mkt-v193-multi-account-center-js">\n(function(){function qs(s,r){return(r||document).querySelector(s)}function qsa(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s))}function esc(s){return String(s==null?\'\':s).replace(/[&<>"\']/g,function(c){return {\'&\':\'&amp;\',\'<\':\'&lt;\',\'>\':\'&gt;\',\'"\':\'&quot;\',"\'":\'&#39;\'}[c]})}function device(){try{var v=localStorage.getItem(\'gptmini_device_id\')||localStorage.getItem(\'mkt_device_id\');if(!v){v=\'MKT-\'+Math.random().toString(16).slice(2,9).toUpperCase();localStorage.setItem(\'gptmini_device_id\',v)}return v}catch(e){return\'MKT-WEB\'}}function api(url,opt){opt=opt||{};opt.headers=Object.assign({\'X-Device-Id\':device()},opt.headers||{});return fetch(url,opt).then(function(r){return r.json()})}function host(){return qs(\'#group_suite .panel-body\')||qs(\'#group_suite\')||qs(\'.main,.content,main\')}function tab(name){qsa(\'#mktV193FbCenter [data-tab]\').forEach(function(b){b.classList.toggle(\'active\',b.getAttribute(\'data-tab\')===name)});qsa(\'#mktV193FbCenter .v193-panel\').forEach(function(p){p.classList.toggle(\'active\',p.id===\'v193\'+name)})}function sync(){var a=qs(\'#v193AccountsList\'),ac=qs(\'#v193AccountsListClone\'),g=qs(\'#v193GroupsList\'),gc=qs(\'#v193GroupsListClone\');if(a&&ac)ac.innerHTML=a.innerHTML;if(g&&gc)gc.innerHTML=g.innerHTML}function render(st){var a=st.accounts||[],g=st.groups||[],j=st.jobs||[];if(qs(\'#v193KpiAcc\'))qs(\'#v193KpiAcc\').textContent=a.length;if(qs(\'#v193KpiGroup\'))qs(\'#v193KpiGroup\').textContent=g.length;if(qs(\'#v193KpiJob\'))qs(\'#v193KpiJob\').textContent=j.length;if(qs(\'#v193KpiDevice\'))qs(\'#v193KpiDevice\').textContent=st.device_id||device();var al=qs(\'#v193AccountsList\');if(al)al.innerHTML=a.map(function(x){return \'<label class="v193-item"><input type="checkbox" name="account_ids" value="\'+esc(x[0])+\'"> 👤 <b>\'+esc(x[1])+\'</b><br><span class="v193-preview">\'+esc(x[2])+\' • \'+esc(x[3])+\'</span></label>\'}).join(\'\')||\'<div class="v193-note">Chưa có tài khoản.</div>\';var gl=qs(\'#v193GroupsList\');if(gl)gl.innerHTML=g.map(function(x){return \'<label class="v193-item"><input type="checkbox" name="group_ids" value="\'+esc(x[0])+\'"> 👥 <b>\'+esc(x[1]||\'Group\')+\'</b><br><span class="v193-preview">\'+esc(x[2]||x[3]||\'\')+\'</span></label>\'}).join(\'\')||\'<div class="v193-note">Chưa có Group/Page.</div>\';var jl=qs(\'#v193JobsList\');if(jl)jl.innerHTML=j.map(function(x){return \'<div class="v193-item"><b>#\'+esc(x[0])+\' \'+esc(x[1])+\'</b><br><span class="v193-preview">\'+esc(x[2])+\'</span><br>⏱ \'+esc(x[7]||\'Đăng ngay\')+\' • <b>\'+esc(x[3])+\'</b></div>\'}).join(\'\')||\'<div class="v193-note">Chưa có hàng chờ.</div>\';sync()}function refresh(){api(\'/api/fb_multi_center_state?device_id=\'+encodeURIComponent(device())).then(render).catch(function(){})}function inject(){var h=host();if(!h||qs(\'#mktV193FbCenter\'))return;var d=document.createElement(\'div\');d.id=\'mktV193FbCenter\';d.innerHTML=\'<div class="v193-head"><div><h3>📘 Facebook Multi Account Center</h3><p>Chọn nhiều tài khoản, nhiều Group/Page, dán nhiều bài, bấm Đăng ngay hoặc chia thời gian.</p></div><div class="v193-pill">🟢 Sẵn sàng đăng</div></div><div class="v193-kpis"><div class="v193-kpi"><b id="v193KpiAcc">0</b>Tài khoản</div><div class="v193-kpi"><b id="v193KpiGroup">0</b>Group</div><div class="v193-kpi"><b id="v193KpiJob">0</b>Hàng chờ</div><div class="v193-kpi"><b id="v193KpiDevice">MKT</b>ID máy</div></div><div class="v193-tabs"><button data-tab="Connect" class="active">1. Tài khoản</button><button data-tab="Groups">2. Group/Page</button><button data-tab="Post">3. Đăng bài</button><button data-tab="Queue">4. Hàng chờ</button></div><div id="v193Connect" class="v193-panel active"><div class="v193-grid"><div class="v193-card"><h4>➕ Thêm nhiều tài khoản Facebook</h4><div class="v193-note">Không nhập mật khẩu vào web. Chỉ lưu tên nick để chọn khi chia lịch.</div><label>Mỗi dòng 1 tài khoản</label><textarea id="v193AccountNames" rows="6" placeholder="Nick bán hàng 1\\nNick bán hàng 2"></textarea><label>Thiết bị đăng nhập</label><select id="v193LoginMode"><option value="mobile">📱 Điện thoại / App Android</option><option value="desktop">💻 Máy tính / Desktop</option></select><button type="button" onclick="mktV193SaveAccounts()">Lưu tài khoản</button><a class="v193-btn v193-dark" target="_blank" href="https://m.facebook.com/login">Mở Facebook Mobile</a><a class="v193-btn v193-dark" target="_blank" href="https://www.facebook.com/login">Mở Facebook Desktop</a></div><div class="v193-card"><h4>Danh sách tài khoản</h4><div id="v193AccountsList" class="v193-list"></div></div></div></div><div id="v193Groups" class="v193-panel"><div class="v193-grid"><div class="v193-card"><h4>👥 Lưu nhiều Group/Page</h4><form method="post" action="/fb_personal_group_save"><input type="hidden" name="device_id" value="\'+device()+\'"><label>Tên mặc định</label><input name="group_name" placeholder="VD: Group bán hàng"><label>Link/UID chính</label><input name="group_input" placeholder="https://www.facebook.com/groups/... hoặc UID"><label>Dán nhiều Group</label><textarea name="bulk_groups" rows="7" placeholder="Hội bán hàng | 123456789\\nhttps://www.facebook.com/groups/987654321"></textarea><button>Lưu Group/Page</button></form></div><div class="v193-card"><h4>Group/Page đã lưu</h4><div class="v193-actions"><button type="button" onclick="mktV193CheckAll(\\\'#v193GroupsList\\\',true)">Chọn tất cả</button><button type="button" class="v193-dark" onclick="mktV193CheckAll(\\\'#v193GroupsList\\\',false)">Bỏ chọn</button></div><div id="v193GroupsList" class="v193-list"></div></div></div></div><div id="v193Post" class="v193-panel"><div class="v193-grid"><div class="v193-card"><h4>✍️ Nhiều bài viết</h4><label>Dán nhiều bài, ngăn cách bằng dòng hoặc -----</label><textarea id="v193Content" rows="10" placeholder="Bài số 1...\\n-----\\nBài số 2..."></textarea><label>Cách chia bài</label><select id="v193Split"><option value="rotate">Chia đều</option><option value="all">Mỗi Group đăng tất cả bài</option></select><label>Chế độ</label><select id="v193Mode"><option value="now">🚀 Đăng ngay</option><option value="schedule">⏰ Chia lịch</option></select><label>Bắt đầu lúc</label><input id="v193Start" type="datetime-local"><label>Giãn cách/phút</label><select id="v193Gap"><option value="0">Đăng ngay</option><option value="1">1 phút</option><option value="3" selected>3 phút</option><option value="5">5 phút</option><option value="10">10 phút</option></select><button type="button" class="v193-run" onclick="mktV193CreateQueue()">🚀 Đăng ngay / Tạo hàng chờ</button></div><div class="v193-card"><h4>Chọn tài khoản + Group</h4><div class="v193-note">Tick tài khoản và Group cần đăng.</div><h4>Tài khoản</h4><div id="v193AccountsListClone" class="v193-list"></div><h4>Group/Page</h4><div id="v193GroupsListClone" class="v193-list"></div></div></div></div><div id="v193Queue" class="v193-panel"><div class="v193-grid"><div class="v193-card"><h4>⏳ Hàng chờ đăng bài</h4><div id="v193JobsList" class="v193-list"></div><button type="button" onclick="mktV193RunJobs()">▶️ Chạy hàng chờ Desktop</button><button type="button" class="v193-dark" onclick="mktV193PairStart()">📱 Tạo mã App Android</button><div id="v193Msg" class="v193-note" style="margin-top:10px">Sẵn sàng.</div></div><div class="v193-card"><h4>Gợi ý an toàn</h4><div class="v193-note">Nên giãn cách 3–10 phút/bài, không đăng trùng hàng loạt, chỉ đăng Group được phép.</div></div></div></div>\';h.insertBefore(d,h.firstChild);qsa(\'#mktV193FbCenter [data-tab]\').forEach(function(b){b.onclick=function(){tab(b.getAttribute(\'data-tab\'));refresh()}});refresh()}window.mktV193CheckAll=function(sel,on){qsa(sel+\' input[type=checkbox]\').forEach(function(x){x.checked=!!on})};window.mktV193SaveAccounts=function(){api(\'/api/fb_multi_accounts_save\',{method:\'POST\',body:new URLSearchParams({device_id:device(),accounts:(qs(\'#v193AccountNames\')||{}).value||\'\',login_mode:(qs(\'#v193LoginMode\')||{}).value||\'mobile\'})}).then(function(d){alert(d.message||\'Đã lưu\');refresh()})};window.mktV193CreateQueue=function(){var fd=new URLSearchParams();fd.set(\'device_id\',device());fd.set(\'content_bulk\',(qs(\'#v193Content\')||{}).value||\'\');fd.set(\'split_mode\',(qs(\'#v193Split\')||{}).value||\'rotate\');fd.set(\'mode\',(qs(\'#v193Mode\')||{}).value||\'now\');fd.set(\'start_time\',(qs(\'#v193Start\')||{}).value||\'\');fd.set(\'gap_minutes\',(qs(\'#v193Gap\')||{}).value||\'3\');qsa(\'#v193AccountsListClone input[name=account_ids]:checked\').forEach(function(x){fd.append(\'account_ids\',x.value)});qsa(\'#v193GroupsListClone input[name=group_ids]:checked\').forEach(function(x){fd.append(\'group_ids\',x.value)});api(\'/api/fb_multi_queue_create\',{method:\'POST\',body:fd}).then(function(d){var m=qs(\'#v193Msg\');if(m)m.textContent=d.message||\'\';alert(d.message||\'Đã tạo hàng chờ\');refresh();tab(\'Queue\')})};window.mktV193RunJobs=function(){api(\'/api/fb_group_playwright_run\',{method:\'POST\',body:new URLSearchParams({device_id:device()})}).then(function(d){var m=qs(\'#v193Msg\');if(m)m.textContent=d.message||\'Đã gửi lệnh chạy\';refresh()})};window.mktV193PairStart=function(){api(\'/api/android_pair_start\',{method:\'POST\',body:new URLSearchParams({device_id:device()})}).then(function(d){var m=qs(\'#v193Msg\');if(m)m.innerHTML=\'Mã App Android: <b style="font-size:24px;color:#2563eb">\'+esc(d.pair_code||\'\')+\'</b><br>\'+esc(d.message||\'\')})};function clean(){qsa(\'a[href*="android_companion_spec"],button[onclick*="android_companion_spec"]\').forEach(function(x){x.style.display=\'none\'})}function run(){inject();clean();refresh()}if(document.readyState===\'loading\')document.addEventListener(\'DOMContentLoaded\',run);else run();setTimeout(run,800);setTimeout(run,2200);setInterval(function(){refresh();clean()},7000);})();\n</script>'
+try:
+    _drop_names = {'mkt_v186_playwright_ui_after_request','mkt_v188_android_companion_after_request','mkt_v189_dual_android_desktop_after_request','mkt_v190_facebook_login_choice_after_request','mkt_v191_group_facebook_modal_after_request','mkt_v192_facebook_menu_ready_after_request'}
+    for _scope, _funcs in list(app.after_request_funcs.items()):
+        app.after_request_funcs[_scope] = [f for f in _funcs if getattr(f, '__name__', '') not in _drop_names]
+except Exception as _e:
+    print('V193 cleanup old after_request skipped:', _e)
+
+@app.after_request
+def mkt_v193_multi_account_center_after_request(response):
+    try:
+        ctype = (response.headers.get('Content-Type') or '').lower()
+        if 'text/html' in ctype:
+            body = response.get_data(as_text=True)
+            raw_start = body.find('html body .sidebar .mkt-dot-tag')
+            if raw_start != -1:
+                raw_end = body.find('</body>', raw_start)
+                if raw_end != -1: body = body[:raw_start] + body[raw_end:]
+            if 'mkt-v193-multi-account-center' not in body and '</body>' in body:
+                body = body.replace('</body>', MKT_V193_MULTI_ACCOUNT_CENTER_UI + '</body>', 1)
+                response.set_data(body); response.headers['Content-Length'] = str(len(body.encode('utf-8')))
+    except Exception as _e:
+        print('mkt_v193_multi_account_center_after_request skipped:', _e)
+    return response
+
 if __name__ == "__main__":
     # Không tự tạo kho 50k content khi khởi động để tránh lỗi SQLite database is locked trên Render.
     # Khi cần kiểm tra/tạo kho content, gọi /api/content_50k_stats từ admin.
