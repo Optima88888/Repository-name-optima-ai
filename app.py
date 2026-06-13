@@ -17852,13 +17852,6 @@ def mkt_v193_multi_account_center_after_request(response):
         print('mkt_v193_multi_account_center_after_request skipped:', _e)
     return response
 
-if __name__ == "__main__":
-    # Không tự tạo kho 50k content khi khởi động để tránh lỗi SQLite database is locked trên Render.
-    # Khi cần kiểm tra/tạo kho content, gọi /api/content_50k_stats từ admin.
-    threading.Thread(target=scheduler_loop, daemon=True).start()
-    port = int(os.environ.get("PORT", 10000))
-    app.run(host="0.0.0.0", port=port, debug=False)
-
 
 
 
@@ -21330,3 +21323,11 @@ def mkt_v210_convenience_after_request(response):
     except Exception as _e:
         print('mkt_v210_convenience_after_request skipped:', _e)
     return response
+
+if __name__ == "__main__":
+    # Không tự tạo kho 50k content khi khởi động để tránh lỗi SQLite database is locked trên Render.
+    # Khi cần kiểm tra/tạo kho content, gọi /api/content_50k_stats từ admin.
+    threading.Thread(target=scheduler_loop, daemon=True).start()
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host="0.0.0.0", port=port, debug=False)
+
