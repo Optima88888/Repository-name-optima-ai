@@ -17464,6 +17464,168 @@ def mkt_v146_facebook_personal_real_ready_after_request(response):
         print('mkt_v146_facebook_personal_real_ready_after_request skipped:', _e)
     return response
 
+
+
+# ============================================================
+# MKT_V147_FACEBOOK_PERSONAL_MENU_CARD_EXTENSION_FIX
+# Hoàn thiện hiển thị Facebook cá nhân trong khối menu thẻ đẹp như giao diện chính.
+# Đồng thời sửa Extension PC không bắt được web khi chạy trên Render/onrender.
+# Giữ nguyên giao diện và nội dung cũ, chỉ bổ sung card + fix mobile/extension.
+# ============================================================
+
+# Cập nhật manifest Extension để content script chạy được trên domain Render hiện tại.
+try:
+    if 'MKT_FB_PERSONAL_EXTENSION_FILES' in globals() and isinstance(MKT_FB_PERSONAL_EXTENSION_FILES, dict):
+        MKT_FB_PERSONAL_EXTENSION_FILES['manifest.json'] = """{
+  "manifest_version": 3,
+  "name": "MKT Facebook Personal Assistant",
+  "version": "1.2.0",
+  "description": "Kết nối Facebook cá nhân với Marketing Automation Pro: PC dùng Extension, Mobile dùng Copy + Mở Facebook.",
+  "permissions": ["tabs", "storage", "scripting", "clipboardWrite", "notifications"],
+  "host_permissions": [
+    "https://www.facebook.com/*",
+    "https://m.facebook.com/*",
+    "https://facebook.com/*",
+    "http://localhost/*",
+    "http://127.0.0.1/*",
+    "https://gptmini.pro/*",
+    "https://app.gptmini.pro/*",
+    "https://*.onrender.com/*",
+    "https://optima-ai.onrender.com/*"
+  ],
+  "background": {"service_worker": "background.js"},
+  "content_scripts": [{
+    "matches": [
+      "https://www.facebook.com/*",
+      "https://m.facebook.com/*",
+      "https://facebook.com/*",
+      "http://localhost/*",
+      "http://127.0.0.1/*",
+      "https://gptmini.pro/*",
+      "https://app.gptmini.pro/*",
+      "https://*.onrender.com/*",
+      "https://optima-ai.onrender.com/*"
+    ],
+    "js": ["content.js"],
+    "run_at": "document_idle"
+  }],
+  "action": {"default_title": "MKT Facebook Assistant", "default_popup": "popup.html"}
+}
+"""
+except Exception as _e:
+    print('mkt v147 extension manifest update skipped:', _e)
+
+MKT_V147_FB_PERSONAL_MENU_CARD_EXTENSION_FIX = r"""
+<style id="mkt-v147-fb-card-extension-fix-css">
+.app-quick-card.mkt-fb-personal-dashboard-card,
+.enterprise-card.mkt-fb-personal-dashboard-card,
+.mkt-fb-personal-dashboard-card{
+  cursor:pointer!important;
+  background:linear-gradient(135deg,#eef7ff 0%,#ffffff 48%,#f5f3ff 100%)!important;
+  border:1px solid rgba(147,197,253,.55)!important;
+  box-shadow:0 18px 42px rgba(37,99,235,.12)!important;
+  position:relative!important;
+  overflow:hidden!important;
+}
+.mkt-fb-personal-dashboard-card:before{content:""!important;position:absolute!important;inset:auto -40px -55px auto!important;width:150px!important;height:150px!important;border-radius:999px!important;background:radial-gradient(circle,rgba(34,197,94,.18),transparent 64%)!important;pointer-events:none!important;}
+.mkt-fb-personal-dashboard-card .app-ico,.mkt-fb-personal-dashboard-card .ec-icon{background:linear-gradient(135deg,#2563eb,#7c3aed)!important;color:#fff!important;box-shadow:0 14px 28px rgba(37,99,235,.22)!important;}
+.mkt-fb-personal-dashboard-card b,.mkt-fb-personal-dashboard-card h3{color:#020617!important;font-weight:1000!important;}
+.mkt-fb-personal-dashboard-card span,.mkt-fb-personal-dashboard-card p{color:#475569!important;}
+.mkt-fb-personal-dashboard-card .mkt-fb-card-mini-badge{display:inline-flex!important;align-items:center!important;gap:6px!important;margin-top:10px!important;padding:6px 10px!important;border-radius:999px!important;background:rgba(34,197,94,.12)!important;color:#166534!important;font-size:12px!important;font-weight:1000!important;}
+#mktFbMobileFloatBtn{display:none!important;}
+@media(max-width:820px){
+  #mktFbMobileFloatBtn{display:none!important;}
+  .mkt-mobile-fb-personal-entry{max-width:calc(100vw - 24px)!important;box-sizing:border-box!important;margin-left:12px!important;margin-right:12px!important;}
+  #facebook_personal,#mktFbPersonalBox{width:100%!important;max-width:100%!important;overflow:hidden!important;box-sizing:border-box!important;}
+  #mktFbPersonalBox{padding-left:14px!important;padding-right:14px!important;}
+  #mktPcActions{display:none!important;}
+  #mktMobileActions{display:flex!important;flex-direction:column!important;position:relative!important;left:auto!important;right:auto!important;bottom:auto!important;width:100%!important;max-width:100%!important;transform:none!important;padding:0!important;margin-top:14px!important;}
+  #mktMobileActions .mkt-fb-btn,#facebook_personal .mkt-fb-btn{width:100%!important;max-width:100%!important;box-sizing:border-box!important;border-radius:18px!important;}
+  #facebook_personal .mkt-fb-grid{grid-template-columns:1fr!important;}
+  #facebook_personal .mkt-fb-card,#facebook_personal textarea,#facebook_personal input,#facebook_personal select{width:100%!important;max-width:100%!important;box-sizing:border-box!important;}
+  #facebook_personal .mkt-fb-ext-link{display:none!important;}
+}
+</style>
+<script id="mkt-v147-fb-card-extension-fix-js">
+(function(){
+  function qs(s,r){return (r||document).querySelector(s)}
+  function qsa(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s))}
+  function isMobile(){return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)||window.innerWidth<=820}
+  function showFacebookPersonal(){
+    var section=document.getElementById('facebook_personal');
+    if(!section){alert('Chưa tìm thấy mục Facebook cá nhân. Vui lòng tải lại trang.');return false;}
+    try{ if(typeof window.openModule==='function') window.openModule('facebook_personal'); }catch(e){}
+    qsa('.module-section').forEach(function(el){el.classList.remove('active-module','active','show');el.style.display='none'});
+    section.classList.add('active-module','active','show');
+    section.style.setProperty('display','block','important');
+    section.style.setProperty('visibility','visible','important');
+    section.style.setProperty('opacity','1','important');
+    qsa('.v2-nav-link,.mobile-nav-link,.app-quick-card,.enterprise-card').forEach(function(a){a.classList.remove('active')});
+    qsa('[data-module="facebook_personal"],[href="#facebook_personal"]').forEach(function(a){a.classList.add('active')});
+    setTimeout(function(){section.scrollIntoView({behavior:'smooth',block:'start'});},80);
+    return false;
+  }
+  function addDashboardCard(){
+    if(document.getElementById('mktFbPersonalDashboardCard')) return;
+    var firstCard = qs('.app-quick-card') || qs('.enterprise-card');
+    if(!firstCard || !firstCard.parentNode) return;
+    var card=document.createElement(firstCard.tagName || 'div');
+    card.id='mktFbPersonalDashboardCard';
+    card.className=(firstCard.className || 'app-quick-card') + ' mkt-fb-personal-dashboard-card';
+    card.setAttribute('data-module','facebook_personal');
+    card.onclick=function(e){if(e)e.preventDefault();return showFacebookPersonal();};
+    card.innerHTML='<div class="app-ico ec-icon">📱</div><b>Facebook cá nhân</b><span>PC dùng Extension, điện thoại Copy & Mở Facebook để đăng thật an toàn.</span><div class="mkt-fb-card-mini-badge">🟢 PC + Mobile</div>';
+    try{ firstCard.parentNode.insertBefore(card, firstCard.nextSibling); }catch(e){ firstCard.parentNode.appendChild(card); }
+  }
+  function fixMobileMode(){
+    if(!isMobile()) return;
+    window.mktFbIsMobile=true;
+    var pc=document.getElementById('mktPcActions');var mob=document.getElementById('mktMobileActions');
+    if(pc){pc.classList.add('hide');pc.style.setProperty('display','none','important')}
+    if(mob){mob.classList.remove('hide');mob.style.setProperty('display','flex','important')}
+    var ext=document.getElementById('mktFbExtStatus');if(ext) ext.innerHTML='🔌 Extension: Không cần trên điện thoại';
+    var mode=document.getElementById('mktModeBox');if(mode) mode.innerHTML='<b>Chế độ điện thoại:</b> Bấm <b>📱 Copy & Mở Facebook</b>, dán nội dung vào app Facebook rồi tự bấm Đăng.';
+  }
+  function fixDesktopExtensionHint(){
+    if(isMobile()) return;
+    var ext=document.getElementById('mktFbExtStatus');
+    if(ext && /Chưa kiểm tra|Chưa phát hiện/.test(ext.textContent||'')){ext.innerHTML='🔌 Extension: Cài xong hãy tải lại trang';}
+  }
+  var oldCheck=null;
+  function patchCheckButton(){
+    if(isMobile()) return;
+    if(typeof window.mktFbCheckExtension==='function' && window.mktFbCheckExtension!==oldCheck){
+      oldCheck=window.mktFbCheckExtension;
+      window.mktFbCheckExtension=function(){
+        try{oldCheck();}catch(e){}
+        setTimeout(function(){
+          if(!window.mktFbExtensionReady){alert('Nếu chưa kết nối được: tải lại Chrome Extension bản mới, vào chrome://extensions > Remove bản cũ > Load unpacked bản mới, sau đó reload web.');}
+        },1600);
+      };
+    }
+  }
+  function run(){addDashboardCard();fixMobileMode();fixDesktopExtensionHint();patchCheckButton();}
+  window.mktShowFacebookPersonal = showFacebookPersonal;
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',run); else run();
+  setTimeout(run,300);setTimeout(run,900);setTimeout(run,1800);setInterval(run,3500);
+})();
+</script>
+"""
+
+@app.after_request
+def mkt_v147_facebook_personal_menu_card_extension_fix_after_request(response):
+    try:
+        ctype=(response.headers.get('Content-Type') or '').lower()
+        if 'text/html' in ctype:
+            body=response.get_data(as_text=True)
+            if 'mkt-v147-fb-card-extension-fix-js' not in body and '</body>' in body:
+                body=body.replace('</body>', MKT_V147_FB_PERSONAL_MENU_CARD_EXTENSION_FIX + '</body>')
+                response.set_data(body)
+                response.headers['Content-Length']=str(len(body.encode('utf-8')))
+    except Exception as _e:
+        print('mkt_v147_facebook_personal_menu_card_extension_fix_after_request skipped:', _e)
+    return response
+
 if __name__ == "__main__":
     # Không tự tạo kho 50k content khi khởi động để tránh lỗi SQLite database is locked trên Render.
     # Khi cần kiểm tra/tạo kho content, gọi /api/content_50k_stats từ admin.
