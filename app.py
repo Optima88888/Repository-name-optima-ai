@@ -19321,3 +19321,80 @@ def mkt_v197_fb_personal_fixed_center_after_request(response):
     except Exception as _e:
         print('mkt_v197_fb_personal_fixed_center_after_request skipped:', _e)
     return response
+
+# ============================================================
+# V198 - Fix đăng Facebook cá nhân rõ ràng + logo Omni Channel
+# - Không bắt chọn Group/Page khi đăng cá nhân.
+# - Thêm card "Trang cá nhân" rõ ràng trong màn đăng bài.
+# - Chặn các nút cũ báo sai "Chưa chọn Group/Page".
+# - Bổ sung logo SVG cho từng nền tảng trong Omni Channel Center.
+# ============================================================
+MKT_V198_PERSONAL_OMNI_LOGO_FIX = r'''
+<style id="mkt-v198-personal-omni-logo-css">
+#mktV198PersonalQuick{margin:0 0 14px!important;padding:16px!important;border-radius:24px!important;background:linear-gradient(135deg,#ecfdf5,#eff6ff,#f5f3ff)!important;border:1px solid #bbf7d0!important;box-shadow:0 20px 56px rgba(37,99,235,.12)!important;color:#0f172a!important}
+#mktV198PersonalQuick h3{margin:0 0 7px!important;font-size:23px!important;font-weight:1000!important;color:#0f172a!important}
+#mktV198PersonalQuick p{margin:0 0 12px!important;color:#475569!important;font-weight:900!important;line-height:1.45!important}
+.v198-personal-target{display:flex!important;align-items:center!important;gap:12px!important;background:#fff!important;border:2px solid #22c55e!important;border-radius:18px!important;padding:14px!important;margin:10px 0!important;box-shadow:0 12px 30px rgba(34,197,94,.12)!important;font-weight:1000!important;color:#065f46!important}
+.v198-personal-target .ico{width:48px!important;height:48px!important;border-radius:16px!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;background:linear-gradient(135deg,#2563eb,#7c3aed)!important;color:white!important;font-size:25px!important;flex:0 0 48px!important}
+.v198-inline-actions{display:flex!important;gap:10px!important;flex-wrap:wrap!important}.v198-inline-actions button{border:0!important;border-radius:15px!important;padding:12px 15px!important;font-weight:1000!important;cursor:pointer!important;background:linear-gradient(135deg,#16a34a,#2563eb)!important;color:#fff!important}.v198-inline-actions button.dark{background:linear-gradient(135deg,#0f172a,#334155)!important}
+.omni-platform-logo{width:42px!important;height:42px!important;min-width:42px!important;border-radius:14px!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;margin-right:10px!important;vertical-align:middle!important;box-shadow:0 12px 26px rgba(15,23,42,.12)!important;overflow:hidden!important;background:#fff!important}.omni-platform-logo svg{width:100%!important;height:100%!important;display:block!important}.v3-feature-card h3 .omni-platform-logo{position:relative!important;top:2px!important}
+</style>
+<script id="mkt-v198-personal-omni-logo-js">
+(function(){
+  function qs(s,r){return(r||document).querySelector(s)}function qsa(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s))}
+  function device(){try{var v=localStorage.getItem('gptmini_device_id')||localStorage.getItem('mkt_device_id');if(!v){v='MKT-'+Math.random().toString(16).slice(2,9).toUpperCase();localStorage.setItem('gptmini_device_id',v)}return v}catch(e){return'MKT-WEB'}}
+  function api(url,opt){opt=opt||{};opt.headers=Object.assign({'X-Device-Id':device()},opt.headers||{});return fetch(url,opt).then(function(r){return r.json()})}
+  function svg(type){
+    var map={
+      facebook_page:'<span class="omni-platform-logo"><svg viewBox="0 0 32 32"><circle cx="16" cy="16" r="16" fill="#1877F2"/><path d="M20.7 17.1l.6-4.1h-3.9v-2.7c0-1.1.5-2.2 2.3-2.2h1.8V4.6s-1.6-.3-3.1-.3c-3.2 0-5.3 1.9-5.3 5.5V13H9.6v4.1h3.5V27h4.3v-9.9h3.3z" fill="#fff"/></svg></span>',
+      facebook_group:'<span class="omni-platform-logo"><svg viewBox="0 0 32 32"><rect width="32" height="32" rx="9" fill="#1877F2"/><circle cx="12" cy="13" r="4" fill="#fff"/><circle cx="21" cy="14" r="3.3" fill="#dbeafe"/><path d="M5 25c.8-5 4-7.5 7-7.5s6.2 2.5 7 7.5H5z" fill="#fff"/><path d="M17 25c.6-3.8 2.8-5.8 5-5.8 2.3 0 4.6 2 5 5.8H17z" fill="#dbeafe"/></svg></span>',
+      tiktok:'<span class="omni-platform-logo"><svg viewBox="0 0 32 32"><rect width="32" height="32" rx="8" fill="#050505"/><path d="M19.8 6.2c.5 3.2 2.3 5.1 5.2 5.4v4.1c-1.8.1-3.5-.5-5.1-1.5v6.7c0 4.2-2.8 6.8-6.9 6.8-3.6 0-6.2-2.4-6.2-5.8 0-3.8 3.1-6.2 7.5-5.8v4.2c-1.8-.5-3.2.4-3.2 1.8 0 1.1.9 1.8 2.1 1.8 1.5 0 2.3-.9 2.3-2.7v-15h4.3z" fill="#fff"/></svg></span>',
+      tiktok_shop:'<span class="omni-platform-logo"><svg viewBox="0 0 32 32"><rect width="32" height="32" rx="8" fill="#050505"/><path d="M9 12h14l-1.2 13H10.2L9 12z" fill="#fff"/><path d="M12 12c.2-3 1.9-5 4-5s3.8 2 4 5" fill="none" stroke="#25F4EE" stroke-width="2"/><circle cx="13" cy="17" r="1.2" fill="#FE2C55"/><circle cx="19" cy="17" r="1.2" fill="#25F4EE"/></svg></span>',
+      instagram:'<span class="omni-platform-logo"><svg viewBox="0 0 32 32"><defs><linearGradient id="omniIGv198" x1="0" x2="1" y1="1" y2="0"><stop offset="0" stop-color="#FEDA75"/><stop offset=".35" stop-color="#FA7E1E"/><stop offset=".6" stop-color="#D62976"/><stop offset=".8" stop-color="#962FBF"/><stop offset="1" stop-color="#4F5BD5"/></linearGradient></defs><rect width="32" height="32" rx="8" fill="url(#omniIGv198)"/><rect x="8" y="8" width="16" height="16" rx="5" fill="none" stroke="#fff" stroke-width="2.2"/><circle cx="16" cy="16" r="4" fill="none" stroke="#fff" stroke-width="2.2"/><circle cx="21.5" cy="10.5" r="1.5" fill="#fff"/></svg></span>',
+      youtube:'<span class="omni-platform-logo"><svg viewBox="0 0 32 32"><rect x="3" y="8" width="26" height="16" rx="5" fill="#FF0000"/><path d="M14 12.2v7.6l6.6-3.8L14 12.2z" fill="#fff"/></svg></span>',
+      telegram:'<span class="omni-platform-logo"><svg viewBox="0 0 32 32"><circle cx="16" cy="16" r="16" fill="#229ED9"/><path d="M24.8 9.1L21.9 23c-.2 1-1 .9-1.6.5l-4.5-3.3-2.2 2.1c-.2.2-.4.4-.9.4l.3-4.6 8.4-7.6c.4-.3-.1-.5-.6-.2l-10.4 6.5-4.5-1.4c-1-.3-1-1 .2-1.5l17.6-6.8c.8-.3 1.5.2 1.2 1.9z" fill="#fff"/></svg></span>',
+      zalo_oa:'<span class="omni-platform-logo"><svg viewBox="0 0 32 32"><rect width="32" height="32" rx="8" fill="#0068FF"/><text x="16" y="19.8" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="10.5" font-weight="900" fill="#fff">Zalo</text></svg></span>'
+    };return map[type]||'';
+  }
+  function addOmniLogos(){
+    qsa('.v3-feature-card h3').forEach(function(h){
+      if(h.querySelector('.omni-platform-logo'))return;
+      var t=(h.textContent||'').toLowerCase(); var type='';
+      if(t.indexOf('facebook page')>-1)type='facebook_page'; else if(t.indexOf('facebook group')>-1)type='facebook_group'; else if(t.indexOf('tiktok shop')>-1)type='tiktok_shop'; else if(t.indexOf('tiktok')>-1)type='tiktok'; else if(t.indexOf('instagram')>-1)type='instagram'; else if(t.indexOf('youtube')>-1)type='youtube'; else if(t.indexOf('telegram')>-1)type='telegram'; else if(t.indexOf('zalo')>-1)type='zalo_oa';
+      if(type){ h.innerHTML=svg(type)+'<span>'+h.textContent.replace(/^[^A-Za-zÀ-ỹ0-9]+/,'').trim()+'</span>'; }
+    });
+  }
+  function injectPersonalQuick(){
+    var center=qs('#mktV197FbCenter'); if(!center||qs('#mktV198PersonalQuick'))return;
+    var box=document.createElement('div'); box.id='mktV198PersonalQuick';
+    box.innerHTML='<h3>👤 Đăng lên Facebook cá nhân</h3><p>Chế độ này không cần chọn Group/Page. Chỉ cần chọn nick ở tab Đăng bài, nhập nội dung/ảnh/video rồi bấm đăng.</p><div class="v198-personal-target"><span class="ico">👤</span><div><b>Đích đăng: Trang cá nhân Facebook</b><br><span>Hệ thống sẽ tạo hàng chờ personal_wall cho từng nick đã chọn.</span></div></div><div class="v198-inline-actions"><button type="button" onclick="mktV198OpenPersonal()">Mở tab đăng cá nhân</button><button class="dark" type="button" onclick="mktV198SelectPersonal()">Chọn Cá nhân ngay</button></div>';
+    center.insertBefore(box, center.firstChild);
+  }
+  window.mktV198OpenPersonal=function(){var b=qs('#mktV197FbCenter .v197-tabs button[data-tab="Compose"]'); if(b)b.click(); setTimeout(function(){window.mktV198SelectPersonal();},150)};
+  window.mktV198SelectPersonal=function(){var r=qs('#mktV197FbCenter input[name="v197Dest"][value="personal"]'); if(r){r.checked=true; r.dispatchEvent(new Event('change',{bubbles:true}));} var msg=qs('#v197Msg'); if(msg)msg.textContent='Đã chọn đăng Facebook cá nhân. Không cần Group/Page.';};
+  var oldCreate=null;
+  function patchCreate(){
+    if(window.mktV197CreateQueue && window.mktV197CreateQueue!==oldCreate){oldCreate=window.mktV197CreateQueue; window.mktV198CreateQueue=oldCreate;}
+    // ép các nút cũ nếu còn sót lại dùng luồng V197/V198, tránh alert Chưa chọn Group/Page của module cũ.
+    window.mktV193CreateQueue=function(){window.mktV198OpenPersonal(); alert('Đã chuyển sang mục đăng Facebook cá nhân. Chọn nick, nhập bài rồi bấm Đăng ngay.');};
+    window.mktV196CreateQueue=function(){if(window.mktV197CreateQueue)window.mktV197CreateQueue();};
+  }
+  function run(){injectPersonalQuick();addOmniLogos();patchCreate();}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',run);else run();setTimeout(run,600);setTimeout(run,1600);setInterval(run,4000);
+})();
+</script>
+'''
+
+@app.after_request
+def mkt_v198_personal_omni_logo_after_request(response):
+    try:
+        ctype = (response.headers.get('Content-Type') or '').lower()
+        if 'text/html' in ctype:
+            body = response.get_data(as_text=True)
+            if 'mkt-v198-personal-omni-logo-js' not in body and '</body>' in body:
+                body = body.replace('</body>', MKT_V198_PERSONAL_OMNI_LOGO_FIX + '</body>')
+                response.set_data(body)
+                response.headers['Content-Length'] = str(len(body.encode('utf-8')))
+    except Exception as _e:
+        print('mkt_v198_personal_omni_logo_after_request skipped:', _e)
+    return response
