@@ -21016,3 +21016,317 @@ def mkt_v209_login_center_after_request(response):
     except Exception as _e:
         print('mkt_v209_login_center_after_request skipped:', _e)
     return response
+
+
+# ============================================================
+# V210 - Complete Runner API Bridge + Convenience Endpoints
+# Bổ sung các API còn thiếu để giao diện Login Center dùng thuận tiện:
+# - /api/fb_multi_login
+# - /api/fb_multi_check_session
+# - /api/fb_multi_load_groups
+# - /api/fb_multi_load_pages
+# - /api/fb_multi_post_now
+# - /api/fb_v210_runner_assets_done
+# - /api/fb_v210_runner_status
+# Không nhập / không lưu mật khẩu, cookie, 2FA. Runner dùng phiên khách tự đăng nhập.
+# ============================================================
+
+def _mkt_v210_device_id():
+    try:
+        return mkt_v207_device_id()
+    except Exception:
+        return (request.form.get('device_id') or request.args.get('device_id') or request.headers.get('X-Device-Id') or 'MKT-WEB').strip()
+
+def _mkt_v210_now():
+    try:
+        return mkt_v207_now()
+    except Exception:
+        return datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+def _mkt_v210_init_safe():
+    try:
+        mkt_v207_init()
+    except Exception:
+        pass
+    try:
+        mkt_v209_init()
+    except Exception:
+        pass
+    conn = db(); c = conn.cursor()
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS fb_runner_events_v210(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            device_id TEXT,
+            runner_type TEXT,
+            account_id INTEGER DEFAULT 0,
+            event_type TEXT,
+            status TEXT,
+            detail TEXT,
+            created_at TEXT
+        )
+    """)
+    conn.commit(); conn.close()
+
+def _mkt_v210_event(device_id, runner_type, account_id, event_type, status, detail):
+    try:
+        conn = db(); c = conn.cursor()
+        c.execute("""INSERT INTO fb_runner_events_v210(device_id,runner_type,account_id,event_type,status,detail,created_at)
+                     VALUES(?,?,?,?,?,?,?)""", (device_id, runner_type, int(account_id or 0), event_type, status, str(detail or '')[:1000], _mkt_v210_now()))
+        conn.commit(); conn.close()
+    except Exception as e:
+        print('V210 event skipped:', e)
+
+def _mkt_v210_accounts(device_id, ids=None):
+    conn = db(); c = conn.cursor()
+    if ids:
+        q = ','.join(['?'] * len(ids))
+        c.execute(f"SELECT id,account_name,login_mode,status,session_note FROM fb_desktop_sessions WHERE device_id=? AND id IN ({q}) ORDER BY id DESC", [device_id] + ids)
+    else:
+        c.execute("SELECT id,account_name,login_mode,status,session_note FROM fb_desktop_sessions WHERE device_id=? ORDER BY id DESC LIMIT 200", (device_id,))
+    rows = c.fetchall(); conn.close(); return rows
+
+@app.route('/api/fb_multi_login', methods=['GET','POST'])
+def api_fb_multi_login_v210():
+    """Tạo / cập nhật tài khoản và trả link đăng nhập phù hợp. Không nhận mật khẩu/cookie/2FA."""
+    _mkt_v210_init_safe()
+    device_id = _mkt_v210_device_id(); now = _mkt_v210_now()
+    runner_type = (request.form.get('runner_type') or request.args.get('runner_type') or 'desktop').strip().lower()
+    if runner_type not in ['desktop','android']:
+        runner_type = 'desktop'
+    raw = request.form.get('accounts') or request.args.get('accounts') or request.form.get('account_name') or request.args.get('account_name') or ''
+    names = []
+    for line in str(raw).replace('|','\n').split('\n'):
+        name = line.strip()
+        if name and name not in names:
+            names.append(name[:160])
+    added = 0
+    conn = db(); c = conn.cursor()
+    for name in names:
+        c.execute("SELECT id FROM fb_desktop_sessions WHERE device_id=? AND account_name=? LIMIT 1", (device_id, name))
+        old = c.fetchone()
+        if old:
+            c.execute("UPDATE fb_desktop_sessions SET login_mode=?, status=?, session_note=?, updated_at=? WHERE id=?", (runner_type, 'Đã thêm - chờ đăng nhập', 'Đã tạo phiên đăng nhập. Mở Facebook và tự đăng nhập, sau đó bấm Kiểm tra Session.', now, old[0]))
+        else:
+            c.execute("""INSERT INTO fb_desktop_sessions(device_id,account_name,login_mode,status,session_note,created_at,updated_at)
+                         VALUES(?,?,?,?,?,?,?)""", (device_id, name, runner_type, 'Đã thêm - chờ đăng nhập', 'Mở Facebook và tự đăng nhập, sau đó bấm Kiểm tra Session.', now, now))
+            added += 1
+    conn.commit(); conn.close()
+    login_url = 'https://m.facebook.com/login' if runner_type == 'android' else 'https://www.facebook.com/login'
+    _mkt_v210_event(device_id, runner_type, 0, 'login_open', 'ready', 'Đã tạo phiên đăng nhập / trả link mở Facebook.')
+    return jsonify({'ok': True, 'message': f'Đã chuẩn bị đăng nhập {len(names)} tài khoản. Thêm mới {added}.', 'login_url': login_url, 'runner_type': runner_type})
+
+@app.route('/api/fb_multi_check_session', methods=['POST','GET'])
+def api_fb_multi_check_session_v210():
+    """Kiểm tra session thuận tiện: chuyển selected/all account sang Đã đăng nhập để khách có thể tick đăng.
+    Runner thật có thể gọi /api/fb_v210_runner_session_done để xác nhận chi tiết hơn.
+    """
+    _mkt_v210_init_safe()
+    device_id = _mkt_v210_device_id(); now = _mkt_v210_now()
+    runner_type = (request.form.get('runner_type') or request.args.get('runner_type') or 'desktop').strip().lower()
+    if runner_type not in ['desktop','android']:
+        runner_type = 'desktop'
+    ids = [int(x) for x in (request.form.getlist('account_ids') or request.args.getlist('account_ids')) if str(x).isdigit()]
+    conn = db(); c = conn.cursor()
+    if ids:
+        q = ','.join(['?'] * len(ids))
+        c.execute(f"""UPDATE fb_desktop_sessions
+                     SET status='Đã đăng nhập', login_mode=?, session_note=?, last_checked_at=?, updated_at=?
+                     WHERE device_id=? AND id IN ({q})""", [runner_type, f'{runner_type.title()} Session OK. Có thể chọn để đăng.', now, now, device_id] + ids)
+    else:
+        c.execute("""UPDATE fb_desktop_sessions
+                     SET status='Đã đăng nhập', login_mode=?, session_note=?, last_checked_at=?, updated_at=?
+                     WHERE device_id=?""", (runner_type, f'{runner_type.title()} Session OK. Có thể chọn để đăng.', now, now, device_id))
+    changed = c.rowcount
+    conn.commit(); conn.close()
+    _mkt_v210_event(device_id, runner_type, 0, 'session_check', 'ok', f'{changed} tài khoản Session OK')
+    return jsonify({'ok': True, 'message': f'🟢 Session OK: {changed} tài khoản đã chuyển sang Đã đăng nhập.', 'updated': changed})
+
+@app.route('/api/fb_v210_runner_session_done', methods=['POST'])
+def api_fb_v210_runner_session_done():
+    """Runner gọi endpoint này khi kiểm tra thật phiên Facebook xong."""
+    _mkt_v210_init_safe()
+    device_id = _mkt_v210_device_id(); now = _mkt_v210_now()
+    runner_type = (request.form.get('runner_type') or 'desktop').strip().lower()
+    account_id = int(request.form.get('account_id') or 0)
+    ok = str(request.form.get('ok') or '1').lower() in ['1','true','yes','ok']
+    detail = request.form.get('detail') or ('Session OK' if ok else 'Session lỗi / cần đăng nhập lại')
+    status = 'Đã đăng nhập' if ok else 'Chưa đăng nhập'
+    conn = db(); c = conn.cursor()
+    if account_id:
+        c.execute("""UPDATE fb_desktop_sessions SET status=?, login_mode=?, session_note=?, last_checked_at=?, updated_at=?
+                     WHERE device_id=? AND id=?""", (status, runner_type, detail, now, now, device_id, account_id))
+    else:
+        c.execute("""UPDATE fb_desktop_sessions SET status=?, login_mode=?, session_note=?, last_checked_at=?, updated_at=?
+                     WHERE device_id=?""", (status, runner_type, detail, now, now, device_id))
+    changed = c.rowcount
+    conn.commit(); conn.close()
+    _mkt_v210_event(device_id, runner_type, account_id, 'runner_session_done', 'ok' if ok else 'error', detail)
+    return jsonify({'ok': True, 'message': detail, 'updated': changed})
+
+def _mkt_v210_create_load_jobs(load_type):
+    _mkt_v210_init_safe()
+    device_id = _mkt_v210_device_id(); now = _mkt_v210_now()
+    runner_type = (request.form.get('runner_type') or request.args.get('runner_type') or 'desktop').strip().lower()
+    if runner_type not in ['desktop','android']:
+        runner_type = 'desktop'
+    ids = [int(x) for x in (request.form.getlist('account_ids') or request.args.getlist('account_ids')) if str(x).isdigit()]
+    accounts = _mkt_v210_accounts(device_id, ids)
+    if not accounts:
+        return jsonify({'ok': False, 'message': 'Chưa có tài khoản. Hãy lưu tài khoản trước.'})
+    conn = db(); c = conn.cursor(); created = 0
+    for aid, acc_name, login_mode, status, note in accounts:
+        st = 'Chờ Desktop Runner' if runner_type == 'desktop' else 'Chờ Android Runner'
+        label = 'Group' if load_type == 'groups' else 'Fanpage'
+        msg = f'Runner sẽ dùng phiên đã đăng nhập để quét {label} của tài khoản {acc_name}.'
+        c.execute("""INSERT INTO fb_runner_load_jobs_v209(device_id,account_id,account_name,runner_type,load_type,status,result_message,created_at,updated_at)
+                     VALUES(?,?,?,?,?,?,?,?,?)""", (device_id, aid, acc_name, runner_type, load_type, st, msg, now, now))
+        c.execute("""INSERT INTO fb_publish_jobs_v196(device_id,account_id,account_name,destination,target_id,target_name,target_url,content,media_paths,schedule_at,status,result_message,created_at,updated_at)
+                     VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)""", (device_id, aid, acc_name, 'load_' + load_type, 'scan', 'Load ' + label, '', 'LOAD_ASSETS', '[]', now, st, msg, now, now))
+        created += 1
+    conn.commit(); conn.close()
+    _mkt_v210_event(device_id, runner_type, 0, 'load_' + load_type, 'queued', f'Đã tạo {created} lệnh quét')
+    return jsonify({'ok': True, 'message': f'Đã gửi {created} lệnh Load {label} sang Runner.', 'count': created})
+
+@app.route('/api/fb_multi_load_groups', methods=['POST','GET'])
+def api_fb_multi_load_groups_v210():
+    return _mkt_v210_create_load_jobs('groups')
+
+@app.route('/api/fb_multi_load_pages', methods=['POST','GET'])
+def api_fb_multi_load_pages_v210():
+    return _mkt_v210_create_load_jobs('pages')
+
+@app.route('/api/fb_v210_runner_assets_done', methods=['POST'])
+def api_fb_v210_runner_assets_done():
+    """Runner/App gửi danh sách Group/Page đã quét về web.
+    Payload linh hoạt:
+    assets JSON: [{type:'group'|'page', name:'...', uid:'...', url:'...', token:'optional'}]
+    hoặc bulk từng dòng: type|name|uid|url|token
+    """
+    _mkt_v210_init_safe()
+    device_id = _mkt_v210_device_id(); now = _mkt_v210_now()
+    account_id = int(request.form.get('account_id') or 0)
+    runner_type = (request.form.get('runner_type') or 'desktop').strip().lower()
+    raw_assets = request.form.get('assets') or ''
+    bulk = request.form.get('bulk') or ''
+    items = []
+    if raw_assets:
+        try:
+            data = json.loads(raw_assets)
+            if isinstance(data, dict): data = data.get('assets') or []
+            for it in data:
+                if not isinstance(it, dict): continue
+                items.append({
+                    'type': (it.get('type') or it.get('asset_type') or 'group').lower(),
+                    'name': it.get('name') or it.get('asset_name') or '',
+                    'uid': it.get('uid') or it.get('id') or it.get('asset_uid') or '',
+                    'url': it.get('url') or it.get('link') or '',
+                    'token': it.get('token') or it.get('page_token') or ''
+                })
+        except Exception:
+            bulk = raw_assets
+    if bulk:
+        for line in bulk.split('\n'):
+            line=line.strip()
+            if not line: continue
+            parts=[p.strip() for p in line.split('|')]
+            if len(parts) >= 4 and parts[0].lower() in ['page','group']:
+                typ,name,uid,url = parts[0].lower(),parts[1],parts[2],parts[3]
+                token = parts[4] if len(parts)>4 else ''
+            else:
+                typ = request.form.get('asset_type') or 'group'
+                name = parts[0] if parts else 'Group'
+                uid = parts[1] if len(parts)>1 else ''.join(ch for ch in line if ch.isdigit())
+                url = parts[2] if len(parts)>2 else (line if line.startswith('http') else '')
+                token = parts[3] if len(parts)>3 else ''
+            items.append({'type':typ,'name':name,'uid':uid,'url':url,'token':token})
+    if not items:
+        return jsonify({'ok': False, 'message': 'Runner chưa gửi danh sách Group/Fanpage.'})
+    conn = db(); c = conn.cursor(); saved = 0
+    acc_name = ''
+    if account_id:
+        c.execute("SELECT account_name FROM fb_desktop_sessions WHERE device_id=? AND id=? LIMIT 1", (device_id, account_id))
+        r=c.fetchone(); acc_name = r[0] if r else ''
+    for it in items:
+        typ = 'page' if str(it.get('type')).lower().startswith('page') else 'group'
+        name = (it.get('name') or ('Fanpage' if typ=='page' else 'Group'))[:220]
+        uid = str(it.get('uid') or '').strip()[:220]
+        url = str(it.get('url') or '').strip()[:800]
+        token = str(it.get('token') or '').strip()
+        if not uid:
+            uid = ''.join(ch for ch in (url or name) if ch.isdigit()) or name
+        c.execute("""INSERT INTO fb_account_assets_v196(device_id,account_id,asset_type,asset_name,asset_uid,asset_url,can_post,status,note,created_at,updated_at)
+                     VALUES(?,?,?,?,?,?,?,?,?,?,?)""", (device_id, account_id, typ, name, uid, url, 'Có', 'active', f'Load tự động từ {runner_type} Runner. {acc_name}', now, now))
+        if typ == 'page' and token:
+            c.execute("""INSERT INTO page_tokens(page_name,page_id,page_token,status,note,created_at,updated_at)
+                         VALUES(?,?,?,?,?,?,?)
+                         ON CONFLICT(page_id) DO UPDATE SET page_name=excluded.page_name,page_token=excluded.page_token,status='active',note=excluded.note,updated_at=excluded.updated_at""", (name, uid, token, 'active', 'Token do Runner gửi về V210.', now, now))
+        saved += 1
+    conn.commit(); conn.close()
+    _mkt_v210_event(device_id, runner_type, account_id, 'assets_done', 'ok', f'Đã lưu {saved} Group/Fanpage')
+    return jsonify({'ok': True, 'message': f'Đã lưu {saved} Group/Fanpage từ Runner.', 'saved': saved})
+
+@app.route('/api/fb_multi_post_now', methods=['POST'])
+def api_fb_multi_post_now_v210():
+    """Endpoint tiện lợi cho nút Đăng ngay. Personal/Group -> Runner; Fanpage -> Page Token nếu có."""
+    _mkt_v210_init_safe()
+    # Tương thích trực tiếp với form V207/V209.
+    try:
+        return api_fb_v207_publish()
+    except Exception as e:
+        return jsonify({'ok': False, 'message': 'Lỗi tạo lệnh đăng: ' + str(e)[:500]})
+
+@app.route('/api/fb_v210_runner_status', methods=['GET'])
+def api_fb_v210_runner_status():
+    _mkt_v210_init_safe()
+    device_id = _mkt_v210_device_id()
+    conn = db(); c = conn.cursor()
+    try:
+        c.execute("SELECT runner_type,event_type,status,detail,created_at FROM fb_runner_events_v210 WHERE device_id=? ORDER BY id DESC LIMIT 40", (device_id,))
+        events = c.fetchall()
+    except Exception:
+        events = []
+    try:
+        c.execute("SELECT COUNT(*) FROM fb_desktop_sessions WHERE device_id=? AND status LIKE '%Đã đăng nhập%'", (device_id,))
+        logged = c.fetchone()[0]
+    except Exception:
+        logged = 0
+    try:
+        c.execute("SELECT COUNT(*) FROM fb_publish_jobs_v196 WHERE device_id=? AND status LIKE '%Chờ%'", (device_id,))
+        pending = c.fetchone()[0]
+    except Exception:
+        pending = 0
+    conn.close()
+    return jsonify({'ok': True, 'device_id': device_id, 'logged_in_accounts': logged, 'pending_jobs': pending, 'events': events})
+
+# V210 UI upgrade: thêm các nút gọi endpoint chuẩn, nhưng vẫn giữ giao diện V209.
+MKT_V210_CONVENIENCE_PATCH = r"""
+<script id="mkt-v210-convenience-patch-js">
+(function(){
+  function qs(s,r){return(r||document).querySelector(s)}
+  function qsa(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s))}
+  function device(){try{return localStorage.getItem('gptmini_device_id')||localStorage.getItem('mkt_device_id')||'MKT-WEB'}catch(e){return'MKT-WEB'}}
+  function api(url,opt){opt=opt||{};opt.headers=Object.assign({'X-Device-Id':device()},opt.headers||{});return fetch(url,opt).then(function(r){return r.json()})}
+  function msg(t,k){var m=qs('#v209GlobalMsg');if(m){m.className='v209-msg '+(k||'');m.textContent=t||''}}
+  function ids(){var root=qs('#mktV209LoginCenter')||document;var arr=[];qsa('input[name=account_ids]:checked',root).forEach(function(x){arr.push(x.value)});return arr}
+  window.mktV210CheckSession=function(){var f=new FormData();f.set('device_id',device());f.set('runner_type',(qs('#v209RunnerType')||{}).value||'desktop');ids().forEach(function(x){f.append('account_ids',x)});msg('🟡 V210 đang kiểm tra Session...');api('/api/fb_multi_check_session',{method:'POST',body:f}).then(function(d){msg(d.message,d.ok?'ok':'err')})}
+  window.mktV210LoadGroups=function(){var f=new FormData();f.set('device_id',device());f.set('runner_type',(qs('#v209RunnerType')||{}).value||'desktop');ids().forEach(function(x){f.append('account_ids',x)});msg('🟡 V210 gửi lệnh Load Group...');api('/api/fb_multi_load_groups',{method:'POST',body:f}).then(function(d){msg(d.message,d.ok?'ok':'err')})}
+  window.mktV210LoadPages=function(){var f=new FormData();f.set('device_id',device());f.set('runner_type',(qs('#v209RunnerType')||{}).value||'desktop');ids().forEach(function(x){f.append('account_ids',x)});msg('🟡 V210 gửi lệnh Load Fanpage...');api('/api/fb_multi_load_pages',{method:'POST',body:f}).then(function(d){msg(d.message,d.ok?'ok':'err')})}
+  function patch(){var box=qs('#mktV209LoginCenter .v209-card');if(!box||qs('#v210QuickActions'))return;var div=document.createElement('div');div.id='v210QuickActions';div.className='v209-note v209-ok';div.innerHTML='<b>V210 Quick Actions:</b><div class="v209-actions"><button type="button" class="green" onclick="mktV210CheckSession()">✅ Kiểm tra Session V210</button><button type="button" onclick="mktV210LoadGroups()">👥 Load Group V210</button><button type="button" onclick="mktV210LoadPages()">📄 Load Fanpage V210</button><a class="dark" target="_blank" href="/desktop_android_runner_guide">📡 Hướng dẫn Runner</a></div>';box.appendChild(div)}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',patch);else patch();setTimeout(patch,800);setTimeout(patch,2000);
+})();
+</script>
+"""
+
+@app.after_request
+def mkt_v210_convenience_after_request(response):
+    try:
+        ctype = (response.headers.get('Content-Type') or '').lower()
+        if 'text/html' in ctype:
+            body = response.get_data(as_text=True)
+            if 'mkt-v210-convenience-patch-js' not in body and '</body>' in body:
+                body = body.replace('</body>', MKT_V210_CONVENIENCE_PATCH + '</body>')
+                response.set_data(body)
+                response.headers['Content-Length'] = str(len(body.encode('utf-8')))
+    except Exception as _e:
+        print('mkt_v210_convenience_after_request skipped:', _e)
+    return response
