@@ -21305,7 +21305,7 @@ def mkt_v210_convenience_after_request(response):
         ctype = (response.headers.get('Content-Type') or '').lower()
         if 'text/html' in ctype:
             body = response.get_data(as_text=True)
-            if 'mkt-v210-convenience-patch-js' not in body and '</body>' in body:
+           if False and 'mkt-v210-convenience-patch-js' not in body and '</body>' in body:
                 body = body.replace('</body>', MKT_V210_CONVENIENCE_PATCH + '</body>')
                 response.set_data(body)
                 response.headers['Content-Length'] = str(len(body.encode('utf-8')))
@@ -21386,7 +21386,7 @@ def mkt_v211_runner_login_post_after_request(response):
         ctype = (response.headers.get('Content-Type') or '').lower()
         if 'text/html' in ctype:
             body = response.get_data(as_text=True)
-            if 'mkt-v211-runner-login-post-js' not in body and '</body>' in body:
+            if False and 'mkt-v211-runner-login-post-js' not in body and '</body>' in body:
                 body = body.replace('</body>', MKT_V211_RUNNER_LOGIN_POST_UI + '</body>', 1)
                 response.set_data(body)
                 response.headers['Content-Length'] = str(len(body.encode('utf-8')))
