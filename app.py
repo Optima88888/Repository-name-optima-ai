@@ -16754,6 +16754,427 @@ try:
 except Exception as _mkt_v178_error:
     print('V178 theme install skipped:', _mkt_v178_error)
 
+
+# ============================================================
+# V186 - Facebook Personal Login + Group Playwright Engine
+# Mục tiêu: cho khách tự đăng nhập Facebook cá nhân trong trình duyệt riêng,
+# lưu phiên theo device_id, tạo hàng chờ đăng Group và chạy có giãn cách.
+# Không yêu cầu/không lưu mật khẩu Facebook.
+# ============================================================
+PLAYWRIGHT_PROFILE_DIR = os.getenv('PLAYWRIGHT_PROFILE_DIR', 'playwright_profiles')
+os.makedirs(PLAYWRIGHT_PROFILE_DIR, exist_ok=True)
+_FB_PW_THREADS = {}
+_FB_PW_LOCK = threading.Lock()
+
+def _v186_now():
+    return datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+def _v186_device_id():
+    return (request.values.get('device_id') or request.headers.get('X-Device-Id') or session.get('gptmini_device_id') or 'default-device').strip()[:80]
+
+def _v186_safe_id(value):
+    raw = ''.join(ch if ch.isalnum() or ch in ['-', '_'] else '_' for ch in str(value or 'default'))
+    return (raw[:80] or 'default')
+
+def ensure_fb_playwright_tables():
+    conn = db(); c = conn.cursor()
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS fb_personal_profiles (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        device_id TEXT UNIQUE,
+        profile_name TEXT,
+        profile_dir TEXT,
+        login_status TEXT DEFAULT 'Chưa đăng nhập',
+        last_check_at TEXT,
+        last_error TEXT,
+        created_at TEXT,
+        updated_at TEXT
+    )
+    """)
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS fb_personal_groups (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        device_id TEXT,
+        group_name TEXT,
+        group_url TEXT,
+        group_id TEXT,
+        status TEXT DEFAULT 'Đã lưu',
+        can_post TEXT DEFAULT 'Chưa kiểm tra',
+        note TEXT,
+        created_at TEXT
+    )
+    """)
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS fb_group_playwright_jobs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        device_id TEXT,
+        group_name TEXT,
+        group_url TEXT,
+        content TEXT,
+        media_path TEXT,
+        min_delay_seconds INTEGER DEFAULT 180,
+        max_delay_seconds INTEGER DEFAULT 600,
+        schedule_time TEXT,
+        status TEXT DEFAULT 'Chờ chạy',
+        result_message TEXT,
+        post_url TEXT,
+        created_at TEXT,
+        processed_at TEXT
+    )
+    """)
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS fb_group_playwright_logs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        device_id TEXT,
+        job_id INTEGER,
+        action TEXT,
+        status TEXT,
+        detail TEXT,
+        created_at TEXT
+    )
+    """)
+    conn.commit(); conn.close()
+
+def _fb_pw_profile_dir(device_id):
+    safe = _v186_safe_id(device_id)
+    path = os.path.abspath(os.path.join(PLAYWRIGHT_PROFILE_DIR, safe))
+    os.makedirs(path, exist_ok=True)
+    return path
+
+def _fb_pw_log(device_id, job_id, action, status, detail=''):
+    try:
+        ensure_fb_playwright_tables()
+        conn=db(); c=conn.cursor()
+        c.execute("INSERT INTO fb_group_playwright_logs(device_id,job_id,action,status,detail,created_at) VALUES(?,?,?,?,?,?)",
+                  (device_id, job_id, action, status, str(detail or '')[:1200], _v186_now()))
+        conn.commit(); conn.close()
+    except Exception as e:
+        print('fb playwright log skipped:', e)
+
+def _fb_pw_upsert_profile(device_id, status='Chưa đăng nhập', error=''):
+    ensure_fb_playwright_tables()
+    profile_dir = _fb_pw_profile_dir(device_id)
+    now = _v186_now()
+    conn=db(); c=conn.cursor()
+    c.execute("""
+        INSERT INTO fb_personal_profiles(device_id,profile_name,profile_dir,login_status,last_check_at,last_error,created_at,updated_at)
+        VALUES(?,?,?,?,?,?,?,?)
+        ON CONFLICT(device_id) DO UPDATE SET
+            profile_dir=excluded.profile_dir,
+            login_status=excluded.login_status,
+            last_check_at=excluded.last_check_at,
+            last_error=excluded.last_error,
+            updated_at=excluded.updated_at
+    """, (device_id, 'Facebook cá nhân', profile_dir, status, now, str(error or '')[:800], now, now))
+    conn.commit(); conn.close()
+    return profile_dir
+
+def _fb_pw_import_error_text(e):
+    msg = str(e)
+    if 'playwright' in msg.lower() or 'No module named' in msg:
+        return 'Server chưa cài Playwright. Chạy: pip install playwright && playwright install chromium'
+    return msg[:1000]
+
+def fb_playwright_installed():
+    try:
+        import playwright  # noqa
+        return True
+    except Exception:
+        return False
+
+def _fb_pw_login_worker(device_id):
+    try:
+        profile_dir = _fb_pw_upsert_profile(device_id, 'Đang mở trình duyệt đăng nhập', '')
+        from playwright.sync_api import sync_playwright
+        headless = os.getenv('PLAYWRIGHT_HEADLESS', 'false').lower() in ['1','true','yes']
+        with sync_playwright() as p:
+            context = p.chromium.launch_persistent_context(
+                profile_dir,
+                headless=headless,
+                viewport={'width': 1366, 'height': 850},
+                args=['--disable-notifications']
+            )
+            page = context.new_page() if not context.pages else context.pages[0]
+            page.goto('https://www.facebook.com/', wait_until='domcontentloaded', timeout=60000)
+            _fb_pw_upsert_profile(device_id, 'Đang chờ khách đăng nhập Facebook', '')
+            # Giữ cửa sổ để khách tự đăng nhập. Nếu đã vào home/profile thì xem như có phiên.
+            deadline = time.time() + int(os.getenv('FB_LOGIN_WAIT_SECONDS', '300'))
+            logged = False
+            while time.time() < deadline:
+                try:
+                    url = page.url.lower()
+                    title = (page.title() or '').lower()
+                    if 'login' not in url and ('facebook' in title or 'facebook' in url):
+                        cookies = context.cookies()
+                        if any(c.get('name') == 'c_user' for c in cookies):
+                            logged = True
+                            break
+                    time.sleep(3)
+                except Exception:
+                    time.sleep(3)
+            context.close()
+            _fb_pw_upsert_profile(device_id, 'Đã đăng nhập' if logged else 'Chưa xác nhận đăng nhập', '')
+            _fb_pw_log(device_id, None, 'login', 'ok' if logged else 'pending', 'Hoàn tất cửa sổ đăng nhập' if logged else 'Hết thời gian chờ xác nhận đăng nhập')
+    except Exception as e:
+        err = _fb_pw_import_error_text(e)
+        _fb_pw_upsert_profile(device_id, 'Lỗi đăng nhập', err)
+        _fb_pw_log(device_id, None, 'login', 'error', err)
+    finally:
+        with _FB_PW_LOCK:
+            _FB_PW_THREADS.pop(device_id, None)
+
+def _fb_pw_open_composer(page):
+    candidates = [
+        "div[role='button']:has-text('Bạn viết gì đi')",
+        "div[role='button']:has-text('What\'s on your mind')",
+        "span:has-text('Viết gì đó')",
+        "span:has-text('Write something')",
+        "div[aria-label*='Tạo bài viết']",
+        "div[aria-label*='Create a public post']",
+    ]
+    for sel in candidates:
+        try:
+            loc = page.locator(sel).first
+            if loc.count() > 0:
+                loc.click(timeout=7000)
+                time.sleep(2)
+                return True
+        except Exception:
+            pass
+    return False
+
+def _fb_pw_fill_and_post(page, content):
+    boxes = ["div[role='textbox']", "div[contenteditable='true']"]
+    filled = False
+    for sel in boxes:
+        try:
+            loc = page.locator(sel).last
+            if loc.count() > 0:
+                loc.click(timeout=8000)
+                loc.fill(content, timeout=15000)
+                filled = True
+                break
+        except Exception:
+            try:
+                page.keyboard.insert_text(content)
+                filled = True
+                break
+            except Exception:
+                pass
+    if not filled:
+        raise Exception('Không tìm thấy ô nhập nội dung bài đăng trong Group.')
+    time.sleep(1)
+    post_selectors = [
+        "div[aria-label='Đăng'][role='button']",
+        "div[aria-label='Post'][role='button']",
+        "span:has-text('Đăng')",
+        "span:has-text('Post')",
+    ]
+    for sel in post_selectors:
+        try:
+            loc = page.locator(sel).last
+            if loc.count() > 0:
+                loc.click(timeout=10000)
+                time.sleep(5)
+                return True
+        except Exception:
+            pass
+    raise Exception('Đã nhập nội dung nhưng không tìm thấy nút Đăng/Post.')
+
+def _fb_pw_publish_one(device_id, job_id, group_url, content):
+    from playwright.sync_api import sync_playwright
+    profile_dir = _fb_pw_profile_dir(device_id)
+    headless = os.getenv('PLAYWRIGHT_HEADLESS', 'false').lower() in ['1','true','yes']
+    with sync_playwright() as p:
+        context = p.chromium.launch_persistent_context(
+            profile_dir,
+            headless=headless,
+            viewport={'width': 1366, 'height': 850},
+            args=['--disable-notifications']
+        )
+        page = context.new_page() if not context.pages else context.pages[0]
+        page.goto(group_url, wait_until='domcontentloaded', timeout=70000)
+        time.sleep(4)
+        if 'login' in page.url.lower():
+            context.close()
+            raise Exception('Phiên Facebook đã hết hạn. Vui lòng đăng nhập lại Facebook cá nhân.')
+        if not _fb_pw_open_composer(page):
+            context.close()
+            raise Exception('Không mở được khung tạo bài viết. Có thể tài khoản chưa vào Group hoặc Group không cho đăng.')
+        _fb_pw_fill_and_post(page, content)
+        final_url = page.url
+        context.close()
+        return final_url
+
+def _fb_pw_runner(device_id, only_one=False):
+    ensure_fb_playwright_tables()
+    try:
+        if not fb_playwright_installed():
+            raise Exception('Server chưa cài Playwright. Chạy: pip install playwright && playwright install chromium')
+        conn=db(); c=conn.cursor()
+        now = _v186_now()
+        limit = 1 if only_one else 20
+        c.execute("""
+            SELECT id,group_name,group_url,content,min_delay_seconds,max_delay_seconds
+            FROM fb_group_playwright_jobs
+            WHERE device_id=? AND status IN ('Chờ chạy','Lỗi - chạy lại')
+              AND (schedule_time IS NULL OR schedule_time='' OR schedule_time<=?)
+            ORDER BY id ASC LIMIT ?
+        """, (device_id, now, limit))
+        jobs = c.fetchall(); conn.close()
+        for job_id, group_name, group_url, content, min_d, max_d in jobs:
+            conn=db(); c=conn.cursor(); c.execute("UPDATE fb_group_playwright_jobs SET status=?, processed_at=? WHERE id=?", ('Đang chạy', _v186_now(), job_id)); conn.commit(); conn.close()
+            _fb_pw_log(device_id, job_id, 'publish', 'running', group_url)
+            try:
+                post_url = _fb_pw_publish_one(device_id, job_id, group_url, content)
+                conn=db(); c=conn.cursor(); c.execute("UPDATE fb_group_playwright_jobs SET status=?, result_message=?, post_url=?, processed_at=? WHERE id=?", ('Đã đăng', 'Đăng Group thành công bằng Playwright', post_url, _v186_now(), job_id)); conn.commit(); conn.close()
+                _fb_pw_log(device_id, job_id, 'publish', 'ok', post_url)
+            except Exception as e:
+                err = str(e)[:1000]
+                conn=db(); c=conn.cursor(); c.execute("UPDATE fb_group_playwright_jobs SET status=?, result_message=?, processed_at=? WHERE id=?", ('Lỗi - chạy lại', err, _v186_now(), job_id)); conn.commit(); conn.close()
+                _fb_pw_log(device_id, job_id, 'publish', 'error', err)
+            if not only_one:
+                try:
+                    delay = random.randint(max(120, int(min_d or 180)), max(max(120, int(min_d or 180)), int(max_d or 600)))
+                    time.sleep(delay)
+                except Exception:
+                    time.sleep(180)
+    finally:
+        with _FB_PW_LOCK:
+            _FB_PW_THREADS.pop('run:' + device_id, None)
+
+def _fb_pw_get_status(device_id):
+    ensure_fb_playwright_tables()
+    conn=db(); c=conn.cursor()
+    c.execute("SELECT device_id,profile_dir,login_status,last_check_at,last_error FROM fb_personal_profiles WHERE device_id=? LIMIT 1", (device_id,))
+    profile = c.fetchone()
+    c.execute("SELECT id,group_name,group_url,status,can_post,note,created_at FROM fb_personal_groups WHERE device_id=? ORDER BY id DESC LIMIT 80", (device_id,))
+    groups = c.fetchall()
+    c.execute("SELECT id,group_name,group_url,substr(content,1,120),status,result_message,post_url,created_at,processed_at FROM fb_group_playwright_jobs WHERE device_id=? ORDER BY id DESC LIMIT 80", (device_id,))
+    jobs = c.fetchall()
+    c.execute("SELECT action,status,detail,created_at FROM fb_group_playwright_logs WHERE device_id=? ORDER BY id DESC LIMIT 30", (device_id,))
+    logs = c.fetchall()
+    conn.close()
+    return profile, groups, jobs, logs
+
+@app.route('/api/fb_personal_login_start', methods=['POST'])
+def api_fb_personal_login_start():
+    device_id = _v186_device_id()
+    if not fb_playwright_installed():
+        _fb_pw_upsert_profile(device_id, 'Chưa cài Playwright', 'pip install playwright && playwright install chromium')
+        return jsonify({'ok': False, 'message': 'Chưa cài Playwright trên server. Chạy: pip install playwright && playwright install chromium'})
+    with _FB_PW_LOCK:
+        if device_id in _FB_PW_THREADS:
+            return jsonify({'ok': True, 'message': 'Trình duyệt đăng nhập Facebook đang mở.'})
+        t = threading.Thread(target=_fb_pw_login_worker, args=(device_id,), daemon=True)
+        _FB_PW_THREADS[device_id] = t
+        t.start()
+    return jsonify({'ok': True, 'message': 'Đã mở trình duyệt. Khách tự đăng nhập Facebook, không nhập mật khẩu vào web.'})
+
+@app.route('/api/fb_personal_status')
+def api_fb_personal_status():
+    device_id = _v186_device_id()
+    profile, groups, jobs, logs = _fb_pw_get_status(device_id)
+    return jsonify({'ok': True, 'installed': fb_playwright_installed(), 'profile': profile, 'groups': groups, 'jobs': jobs, 'logs': logs})
+
+@app.route('/fb_personal_group_save', methods=['POST'])
+def fb_personal_group_save():
+    ensure_fb_playwright_tables()
+    device_id = _v186_device_id()
+    group_name = (request.form.get('group_name') or '').strip()
+    group_url = (request.form.get('group_url') or '').strip()
+    note = (request.form.get('note') or '').strip()
+    if not group_url.startswith('http') or 'facebook.com' not in group_url.lower():
+        return redirect('/#group_suite')
+    group_id = normalize_uid(group_url.split('/')[-1]) if 'normalize_uid' in globals() else ''
+    conn=db(); c=conn.cursor()
+    c.execute("INSERT INTO fb_personal_groups(device_id,group_name,group_url,group_id,status,can_post,note,created_at) VALUES(?,?,?,?,?,?,?,?)",
+              (device_id, group_name or group_url, group_url, group_id, 'Đã lưu', 'Chưa kiểm tra', note, _v186_now()))
+    conn.commit(); conn.close()
+    return redirect('/#group_suite')
+
+@app.route('/fb_group_playwright_job', methods=['POST'])
+def fb_group_playwright_job():
+    ensure_fb_playwright_tables()
+    device_id = _v186_device_id()
+    content = (request.form.get('content') or '').strip()
+    consent = (request.form.get('consent') or '').strip()
+    if consent != 'yes' or not content:
+        return redirect('/#group_suite')
+    min_delay = max(120, int(request.form.get('min_delay_seconds') or 180))
+    max_delay = max(min_delay, int(request.form.get('max_delay_seconds') or 600))
+    schedule_time = (request.form.get('schedule_time') or '').replace('T', ' ')
+    selected = request.form.getlist('personal_group_ids')
+    conn=db(); c=conn.cursor()
+    added = 0
+    for gid in selected[:20]:
+        c.execute("SELECT group_name,group_url FROM fb_personal_groups WHERE id=? AND device_id=? LIMIT 1", (gid, device_id))
+        row = c.fetchone()
+        if not row: continue
+        c.execute("INSERT INTO fb_group_playwright_jobs(device_id,group_name,group_url,content,min_delay_seconds,max_delay_seconds,schedule_time,status,created_at) VALUES(?,?,?,?,?,?,?,?,?)",
+                  (device_id, row[0], row[1], content, min_delay, max_delay, schedule_time, 'Chờ chạy', _v186_now()))
+        added += 1
+    conn.commit(); conn.close()
+    _fb_pw_log(device_id, None, 'create_jobs', 'ok', f'Đã tạo {added} hàng chờ đăng Group')
+    return redirect('/#group_suite')
+
+@app.route('/api/fb_group_playwright_run', methods=['POST'])
+def api_fb_group_playwright_run():
+    device_id = _v186_device_id()
+    if not fb_playwright_installed():
+        return jsonify({'ok': False, 'message': 'Chưa cài Playwright. Chạy: pip install playwright && playwright install chromium'})
+    with _FB_PW_LOCK:
+        key = 'run:' + device_id
+        if key in _FB_PW_THREADS:
+            return jsonify({'ok': True, 'message': 'Engine đăng Group đang chạy.'})
+        t = threading.Thread(target=_fb_pw_runner, args=(device_id, False), daemon=True)
+        _FB_PW_THREADS[key] = t
+        t.start()
+    return jsonify({'ok': True, 'message': 'Đã bắt đầu chạy hàng chờ đăng Group bằng Playwright.'})
+
+MKT_V186_PLAYWRIGHT_UI = """
+<style id="mkt-v186-playwright-ui">
+#mktFbPersonalPwBox{margin:18px 0;padding:18px;border-radius:24px;border:1px solid rgba(59,130,246,.22);background:linear-gradient(135deg,#ffffff,#eff6ff,#f5f3ff);box-shadow:0 18px 48px rgba(37,99,235,.12);color:#0f172a}
+#mktFbPersonalPwBox h3{margin:0 0 8px;color:#1e3a8a}.mkt-pw-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}.mkt-pw-card{background:rgba(255,255,255,.92);border:1px solid #dbeafe;border-radius:18px;padding:14px}.mkt-pw-card label{display:block;font-weight:900;margin:8px 0 5px}.mkt-pw-card input,.mkt-pw-card textarea{width:100%;box-sizing:border-box}.mkt-pw-table{width:100%;border-collapse:collapse;margin-top:10px}.mkt-pw-table th,.mkt-pw-table td{border-bottom:1px solid #e5e7eb;padding:8px;text-align:left;font-size:12px}.mkt-pw-note{font-size:13px;color:#475569;font-weight:700;line-height:1.5}.mkt-pw-danger{background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;border-radius:14px;padding:10px;margin:10px 0;font-weight:800}@media(max-width:900px){.mkt-pw-grid{grid-template-columns:1fr}}
+</style>
+<script id="mkt-v186-playwright-ui-js">
+(function(){
+  function getDeviceId(){try{return localStorage.getItem('gptmini_device_id')||localStorage.getItem('mkt_device_id')||'default-device'}catch(e){return 'default-device'}}
+  function api(url, opt){opt=opt||{};opt.headers=Object.assign({'X-Device-Id':getDeviceId()}, opt.headers||{});return fetch(url,opt).then(r=>r.json())}
+  function renderStatus(data){var box=document.getElementById('mktPwStatus'); if(!box)return; var p=data.profile||[]; var installed=data.installed?'Đã cài':'Chưa cài'; var status=p&&p.length?p[2]:'Chưa tạo phiên'; var err=p&&p.length&&p[4]?('<br><b>Lỗi:</b> '+p[4]):''; box.innerHTML='<b>Playwright:</b> '+installed+'<br><b>Facebook cá nhân:</b> '+status+err; var jobs=document.getElementById('mktPwJobs'); if(jobs){var html='<table class="mkt-pw-table"><tr><th>Group</th><th>Nội dung</th><th>Trạng thái</th><th>Kết quả</th></tr>'; (data.jobs||[]).slice(0,10).forEach(function(j){html+='<tr><td>'+j[1]+'</td><td>'+j[3]+'</td><td>'+j[4]+'</td><td>'+(j[5]||j[6]||'')+'</td></tr>'}); jobs.innerHTML=html+'</table>'}}
+  function refresh(){api('/api/fb_personal_status?device_id='+encodeURIComponent(getDeviceId())).then(renderStatus).catch(function(){})}
+  function insert(){if(document.getElementById('mktFbPersonalPwBox'))return; var host=document.querySelector('#group_suite .panel-body')||document.querySelector('#group_suite')||document.querySelector('[id*="group"]'); if(!host)return; var div=document.createElement('div'); div.id='mktFbPersonalPwBox'; div.innerHTML=`
+    <h3>👤 Facebook cá nhân + Playwright Group Engine</h3>
+    <div class="mkt-pw-note">Khách tự đăng nhập Facebook trong trình duyệt riêng. Web không hỏi và không lưu mật khẩu. Chỉ dùng cho Group khách đã tham gia và được phép đăng.</div>
+    <div class="mkt-pw-danger">Khuyến nghị an toàn: không đăng spam, không dùng nội dung trùng lặp hàng loạt, giãn cách tối thiểu 2-10 phút mỗi Group.</div>
+    <div class="mkt-pw-grid">
+      <div class="mkt-pw-card"><h4>1. Kết nối Facebook cá nhân</h4><div id="mktPwStatus">Đang kiểm tra...</div><button type="button" onclick="mktPwLoginStart()">Mở trình duyệt đăng nhập Facebook</button><button type="button" class="secondary" onclick="mktPwRefresh()">Kiểm tra trạng thái</button></div>
+      <div class="mkt-pw-card"><h4>2. Lưu Group cá nhân</h4><form method="post" action="/fb_personal_group_save"><input type="hidden" name="device_id" value="${getDeviceId()}"><label>Tên Group</label><input name="group_name" placeholder="VD: Hội bán hàng online"><label>Link Group Facebook</label><input name="group_url" placeholder="https://www.facebook.com/groups/..." required><label>Ghi chú</label><textarea name="note" rows="2" placeholder="Đã tham gia / cho phép quảng cáo..."></textarea><button>Lưu Group cá nhân</button></form></div>
+      <div class="mkt-pw-card"><h4>3. Tạo hàng chờ đăng Group</h4><form method="post" action="/fb_group_playwright_job"><input type="hidden" name="device_id" value="${getDeviceId()}"><div id="mktPwGroupsBox" class="mkt-pw-note">Sau khi lưu Group, tải lại trang để chọn Group.</div><label>Nội dung đăng</label><textarea name="content" rows="5" required placeholder="Nội dung đăng vào Group..."></textarea><label>Hẹn giờ</label><input type="datetime-local" name="schedule_time"><label>Giãn cách tối thiểu / tối đa giây</label><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><input type="number" name="min_delay_seconds" value="180"><input type="number" name="max_delay_seconds" value="600"></div><label><input type="checkbox" name="consent" value="yes" required> Tôi xác nhận chỉ đăng vào Group được phép, không spam.</label><button>Tạo hàng chờ Playwright</button></form></div>
+      <div class="mkt-pw-card"><h4>4. Chạy đăng Group</h4><button type="button" onclick="mktPwRunJobs()">Chạy hàng chờ đăng Group</button><div id="mktPwJobs"></div></div>
+    </div>`; host.insertBefore(div, host.firstChild); window.mktPwRefresh=refresh; window.mktPwLoginStart=function(){api('/api/fb_personal_login_start',{method:'POST',body:new URLSearchParams({device_id:getDeviceId()})}).then(function(d){alert(d.message||'Đã gửi lệnh');refresh()})}; window.mktPwRunJobs=function(){api('/api/fb_group_playwright_run',{method:'POST',body:new URLSearchParams({device_id:getDeviceId()})}).then(function(d){alert(d.message||'Đã gửi lệnh');refresh()})}; refresh(); }
+  function loadGroups(){api('/api/fb_personal_status?device_id='+encodeURIComponent(getDeviceId())).then(function(data){var box=document.getElementById('mktPwGroupsBox'); if(!box)return; var arr=data.groups||[]; if(!arr.length){box.innerHTML='Chưa có Group cá nhân. Hãy lưu Group trước.';return;} box.innerHTML=arr.map(function(g){return '<label style="display:block;margin:6px 0"><input type="checkbox" name="personal_group_ids" value="'+g[0]+'"> '+g[1]+'<br><small>'+g[2]+'</small></label>'}).join(''); renderStatus(data);}).catch(function(){})}
+  if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',function(){insert();setTimeout(loadGroups,400)})}else{insert();setTimeout(loadGroups,400)}
+  setTimeout(function(){insert();loadGroups()},1500);
+})();
+</script>
+"""
+
+@app.after_request
+def mkt_v186_playwright_ui_after_request(response):
+    try:
+        ctype = (response.headers.get('Content-Type') or '').lower()
+        if 'text/html' in ctype:
+            body = response.get_data(as_text=True)
+            if 'mkt-v186-playwright-ui' not in body and '</body>' in body:
+                body = body.replace('</body>', MKT_V186_PLAYWRIGHT_UI + '</body>')
+                response.set_data(body)
+                response.headers['Content-Length'] = str(len(body.encode('utf-8')))
+    except Exception as _e:
+        print('mkt_v186_playwright_ui_after_request skipped:', _e)
+    return response
+
+
 if __name__ == "__main__":
     # Không tự tạo kho 50k content khi khởi động để tránh lỗi SQLite database is locked trên Render.
     # Khi cần kiểm tra/tạo kho content, gọi /api/content_50k_stats từ admin.
