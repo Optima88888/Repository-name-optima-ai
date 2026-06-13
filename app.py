@@ -16794,33 +16794,153 @@ def mkt_v143_facebook_personal_pc_mobile_after_request(response):
         print('mkt_v143_facebook_personal_pc_mobile_after_request skipped:', _e)
     return response
 
-@app.route('/api/fb_multi_center_state', methods=['GET','POST'])
-def api_fb_multi_center_state():
-    return jsonify({
-        'ok': True,
-        'accounts': [],
-        'groups': [],
-        'jobs': [],
-        'message': 'Facebook Multi Center active'
-    })
 
-@app.route('/api/fb_v210_runner_status', methods=['GET'])
-def api_fb_v210_runner_status():
-    return jsonify({
-        'ok': True,
-        'logged_in_accounts': 0,
-        'pending_jobs': 0,
-        'events': []
-    })
+# ============================================================
+# MKT_V144_FACEBOOK_PERSONAL_VISIBLE_FIX
+# Sửa lỗi web chưa thấy / bấm không mở menu Facebook cá nhân.
+# Lý do: menu được thêm bằng JS sau DOMContentLoaded nên event click cũ chưa bind.
+# Patch này ép tạo menu + bind onclick + mở section đúng bằng openModule.
+# ============================================================
 
-@app.route('/api/fb_v207_state', methods=['GET'])
-def api_fb_v207_state():
-    device_id = request.args.get('device_id', '')
+MKT_V144_FB_PERSONAL_VISIBLE_FIX = r"""
+<script id="mkt-v144-fb-personal-visible-fix-js">
+(function(){
+  function qs(s,r){return (r||document).querySelector(s)}
+  function qsa(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s))}
+  function showFbPersonal(){
+    try{
+      var section = document.getElementById('facebook_personal');
+      if(!section){
+        alert('Chưa tìm thấy khung Facebook cá nhân. Vui lòng tải lại trang.');
+        return false;
+      }
+      if(typeof window.openModule === 'function'){
+        try{ window.openModule('facebook_personal'); }catch(e){}
+      }
+      qsa('.module-section').forEach(function(el){el.classList.remove('active-module')});
+      section.classList.add('active-module');
+      section.style.display = '';
+      qsa('.v2-nav-link').forEach(function(a){a.classList.remove('active')});
+      var active = qs('.v2-nav-link[href="#facebook_personal"]');
+      if(active) active.classList.add('active');
+      setTimeout(function(){section.scrollIntoView({behavior:'smooth',block:'start'});},50);
+      return false;
+    }catch(e){
+      console.log('MKT FB Personal open skipped:', e);
+      return false;
+    }
+  }
+  function ensureMenu(){
+    try{
+      var section = document.getElementById('facebook_personal');
+      if(section){
+        section.classList.add('module-section');
+      }
+      var nav = qs('.mkt-clean-nav') || qs('.nav') || qs('.sidebar');
+      if(!nav) return;
+      var link = qs('.v2-nav-link[href="#facebook_personal"], [data-module="facebook_personal"]', nav);
+      if(!link){
+        var ref = qs('[data-module="fanpage_manager"]', nav) || qs('[data-module="post"]', nav) || qs('.v2-nav-title', nav);
+        link = document.createElement('a');
+        link.className = 'v2-nav-link mkt-menu-pro';
+        link.href = '#facebook_personal';
+        link.setAttribute('data-module','facebook_personal');
+        link.innerHTML = '<span class="v2-nav-text">👤 Facebook cá nhân</span><span class="mkt-dot-tag pro"><i></i><span>Pro</span></span>';
+        if(ref && ref.parentNode){
+          ref.parentNode.insertBefore(link, ref.nextSibling);
+        }else{
+          nav.appendChild(link);
+        }
+      }
+      link.onclick = function(e){
+        if(e) e.preventDefault();
+        return showFbPersonal();
+      };
+    }catch(e){
+      console.log('MKT FB Personal menu fix skipped:', e);
+    }
+  }
+  window.mktOpenFacebookPersonal = showFbPersonal;
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', ensureMenu);
+  }else{
+    ensureMenu();
+  }
+  setTimeout(ensureMenu,300);
+  setTimeout(ensureMenu,900);
+  setTimeout(ensureMenu,1800);
+})();
+</script>
+<style id="mkt-v144-fb-personal-visible-fix-css">
+.v2-nav-link[data-module="facebook_personal"]{
+  background:linear-gradient(90deg,rgba(37,99,235,.18),rgba(124,58,237,.16))!important;
+  border:1px solid rgba(147,197,253,.22)!important;
+}
+#facebook_personal.active-module{
+  display:block!important;
+  visibility:visible!important;
+  opacity:1!important;
+}
+</style>
+"""
+
+@app.after_request
+def mkt_v144_facebook_personal_visible_fix_after_request(response):
+    try:
+        ctype = (response.headers.get('Content-Type') or '').lower()
+        if 'text/html' in ctype:
+            body = response.get_data(as_text=True)
+            if 'mkt-v144-fb-personal-visible-fix-js' not in body and '</body>' in body:
+                body = body.replace('</body>', MKT_V144_FB_PERSONAL_VISIBLE_FIX + '</body>')
+                response.set_data(body)
+                response.headers['Content-Length'] = str(len(body.encode('utf-8')))
+    except Exception as _e:
+        print('mkt_v144_facebook_personal_visible_fix_after_request skipped:', _e)
+    return response
+
+# ============================================================
+# MKT_V144_FACEBOOK_OLD_API_404_FALLBACK
+# Chặn log 404 do JS cũ gọi API Facebook cũ.
+# ============================================================
+
+@app.route('/api/fb_v207_state', methods=['GET','POST'])
+def mkt_v144_api_fb_v207_state_fallback():
+    device_id = request.args.get('device_id') or (request.get_json(silent=True) or {}).get('device_id') or ''
     return jsonify({
         'ok': True,
         'device_id': device_id,
-        'status': 'ready'
+        'status': 'ready',
+        'message': 'Facebook cá nhân đang dùng bản PC + Mobile Extension.',
+        'accounts': [],
+        'queue': []
     })
+
+@app.route('/api/fb_v210_runner_status', methods=['GET','POST'])
+def mkt_v144_api_fb_v210_runner_status_fallback():
+    return jsonify({
+        'ok': True,
+        'running': False,
+        'status': 'idle',
+        'logged_in_accounts': 0,
+        'pending_jobs': 0,
+        'events': [],
+        'message': 'Runner cũ đã được chuyển sang Facebook cá nhân PC + Mobile.'
+    })
+
+@app.route('/api/fb_multi_center_state', methods=['GET','POST'])
+def mkt_v144_api_fb_multi_center_state_fallback():
+    device_id = request.args.get('device_id') or (request.get_json(silent=True) or {}).get('device_id') or ''
+    return jsonify({
+        'ok': True,
+        'device_id': device_id,
+        'status': 'ready',
+        'message': 'Facebook Multi Center fallback active.',
+        'accounts': [],
+        'groups': [],
+        'jobs': [],
+        'logs': []
+    })
+
 
 if __name__ == "__main__":
     # Không tự tạo kho 50k content khi khởi động để tránh lỗi SQLite database is locked trên Render.
@@ -16828,4 +16948,5 @@ if __name__ == "__main__":
     threading.Thread(target=scheduler_loop, daemon=True).start()
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port, debug=False)
+
 
