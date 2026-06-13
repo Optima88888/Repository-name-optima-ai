@@ -63,7 +63,7 @@ a{{display:block;text-align:center;margin-top:14px;color:#4f46e5;text-decoration
 </style>
 
 <style id="mkt-v179-brand-svg-logos">
-/* V179 - Brand SVG logos + Premium CTA wording */
+/* V179 - Brand SVG logos + Premium CTA wording (admin login only) */
 .mkt-brand-logo{{display:inline-flex!important;align-items:center!important;justify-content:center!important;width:24px!important;height:24px!important;min-width:24px!important;border-radius:999px!important;margin-right:10px!important;vertical-align:middle!important;box-shadow:0 8px 18px rgba(15,23,42,.10)!important;background:#fff!important;overflow:hidden!important}}
 .mkt-brand-logo svg{{width:100%!important;height:100%!important;display:block!important}}
 .v2-nav-text{{display:inline-flex!important;align-items:center!important;gap:0!important;line-height:1.15!important}}
@@ -2893,6 +2893,52 @@ HTML = r"""
 <link rel="apple-touch-icon" href="/static/icon-192.png">
 
 <style>
+
+/* V180 - Fix SVG logo size in customer UI */
+.mkt-brand-logo{
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  flex:0 0 22px!important;
+  width:22px!important;
+  height:22px!important;
+  min-width:22px!important;
+  max-width:22px!important;
+  max-height:22px!important;
+  border-radius:999px!important;
+  margin-right:9px!important;
+  vertical-align:middle!important;
+  background:#fff!important;
+  overflow:hidden!important;
+  box-shadow:0 6px 14px rgba(15,23,42,.10)!important;
+}
+.mkt-brand-logo svg,
+.mkt-brand-logo img{
+  display:block!important;
+  width:100%!important;
+  height:100%!important;
+  min-width:0!important;
+  max-width:100%!important;
+  max-height:100%!important;
+  object-fit:contain!important;
+}
+.v2-nav-link{min-height:44px!important;align-items:center!important;overflow:hidden!important;}
+.v2-nav-link .v2-nav-text{display:flex!important;align-items:center!important;gap:0!important;min-width:0!important;line-height:1.15!important;white-space:normal!important;}
+.v2-nav-link .mkt-brand-logo{flex:0 0 22px!important;width:22px!important;height:22px!important;min-width:22px!important;margin-right:10px!important;}
+.v2-nav-link .mkt-dot-tag{flex:0 0 auto!important;}
+.mkt-channel-strip{display:flex!important;align-items:center!important;gap:10px!important;flex-wrap:wrap!important;margin:18px 0 22px!important;padding:11px 14px!important;border:1px solid rgba(24,119,242,.14)!important;background:rgba(255,255,255,.84)!important;box-shadow:0 14px 32px rgba(15,23,42,.08)!important;border-radius:999px!important;backdrop-filter:blur(14px)!important;}
+.mkt-channel-pill{display:inline-flex!important;align-items:center!important;font-weight:900!important;color:#0f172a!important;font-size:14px!important;white-space:nowrap!important;}
+.mkt-channel-pill .mkt-brand-logo{width:22px!important;height:22px!important;min-width:22px!important;margin-right:7px!important;}
+.app-quick-card .app-ico{width:44px!important;height:44px!important;min-width:44px!important;max-width:44px!important;max-height:44px!important;overflow:hidden!important;display:flex!important;align-items:center!important;justify-content:center!important;gap:3px!important;flex-wrap:wrap!important;padding:5px!important;line-height:1!important;}
+.app-quick-card .app-ico .mkt-brand-logo{width:32px!important;height:32px!important;min-width:32px!important;max-width:32px!important;max-height:32px!important;margin:0!important;border-radius:12px!important;box-shadow:none!important;}
+.app-quick-card .app-ico .mkt-brand-logo:not(:only-child){width:16px!important;height:16px!important;min-width:16px!important;max-width:16px!important;max-height:16px!important;border-radius:5px!important;}
+.mkt-logo-stack{display:inline-flex!important;align-items:center!important;gap:4px!important;flex-wrap:wrap!important;max-width:64px!important;}
+@media(max-width:760px){
+  .mkt-brand-logo{width:20px!important;height:20px!important;min-width:20px!important;max-width:20px!important;}
+  .mkt-channel-strip{border-radius:22px!important;gap:8px!important;}
+  .mkt-channel-pill{font-size:13px!important;}
+}
+
 :root{
   --blue:#2563EB;
   --blue2:#3B82F6;
@@ -5556,27 +5602,27 @@ function closeLockedFeature(){
     <span>Kiểm tra Page, Token, quyền đăng bài và trạng thái hoạt động.</span>
   </div>
   <div class="app-quick-card" onclick="return openModule('group_suite')">
-    <div class="app-ico">👥</div>
+    <div class="app-ico"><span class="mkt-brand-logo mkt-logo-group" aria-label="Facebook Group"><svg viewBox="0 0 32 32" role="img"><circle cx="16" cy="16" r="16" fill="#1877F2"/><path d="M11 15a4 4 0 118 0 4 4 0 01-8 0zm-4 9c.7-4 4.1-6.2 8-6.2s7.3 2.2 8 6.2H7z" fill="#fff"/><path d="M21 17.5c2.4.3 4.3 1.9 4.9 4.5h-3.4c-.4-1.4-1.2-2.5-2.4-3.2.4-.4.7-.8.9-1.3z" fill="#dbeafe"/></svg></span></div>
     <b>Quản lý Group</b>
     <span>Lưu group, tạo lịch đăng group và viết bài seeding mềm.</span>
   </div>
   <div class="app-quick-card" onclick="return openModule('comment_manager')">
-    <div class="app-ico">💬</div>
+    <div class="app-ico"><span class="mkt-brand-logo mkt-logo-ai" aria-label="AI Chat"><svg viewBox="0 0 32 32" role="img"><rect width="32" height="32" rx="10" fill="#7C3AED"/><rect x="7" y="10" width="18" height="13" rx="4" fill="#fff"/><circle cx="13" cy="16" r="1.8" fill="#1877F2"/><circle cx="19" cy="16" r="1.8" fill="#1877F2"/><path d="M13 20h6" stroke="#1877F2" stroke-width="2" stroke-linecap="round"/><path d="M16 7v3" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg></span></div>
     <b>AI Comment</b>
     <span>Ẩn số điện thoại, trả lời comment, gắn nhãn và chuyển CRM.</span>
   </div>
   <div class="app-quick-card" onclick="return openModule('messenger_ai')">
-    <div class="app-ico">📨</div>
+    <div class="app-ico"><span class="mkt-brand-logo mkt-logo-ai" aria-label="AI Chat"><svg viewBox="0 0 32 32" role="img"><rect width="32" height="32" rx="10" fill="#7C3AED"/><rect x="7" y="10" width="18" height="13" rx="4" fill="#fff"/><circle cx="13" cy="16" r="1.8" fill="#1877F2"/><circle cx="19" cy="16" r="1.8" fill="#1877F2"/><path d="M13 20h6" stroke="#1877F2" stroke-width="2" stroke-linecap="round"/><path d="M16 7v3" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg></span></div>
     <b>AI Messenger</b>
     <span>Tạo kịch bản inbox, chốt sale, xử lý từ chối và chăm sóc lại.</span>
   </div>
   <div class="app-quick-card" onclick="return openModule('crm_sales')">
-    <div class="app-ico">📊</div>
+    <div class="app-ico"><span class="mkt-brand-logo mkt-logo-crm" aria-label="CRM"><svg viewBox="0 0 32 32" role="img"><rect width="32" height="32" rx="10" fill="#6366F1"/><path d="M8 22h4V12H8v10zm6 0h4V8h-4v14zm6 0h4v-7h-4v7z" fill="#fff"/></svg></span></div>
     <b>CRM Kanban</b>
     <span>Quản lý khách theo các cột: mới, tư vấn, báo giá, chốt, đã mua.</span>
   </div>
   <div class="app-quick-card" onclick="return openModule('marketing_director')">
-    <div class="app-ico">🧠</div>
+    <div class="app-ico"><span class="mkt-brand-logo mkt-logo-ai" aria-label="AI Chat"><svg viewBox="0 0 32 32" role="img"><rect width="32" height="32" rx="10" fill="#7C3AED"/><rect x="7" y="10" width="18" height="13" rx="4" fill="#fff"/><circle cx="13" cy="16" r="1.8" fill="#1877F2"/><circle cx="19" cy="16" r="1.8" fill="#1877F2"/><path d="M13 20h6" stroke="#1877F2" stroke-width="2" stroke-linecap="round"/><path d="M16 7v3" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg></span></div>
     <b>AI Marketing Director</b>
     <span>Lập kế hoạch 30 ngày, ads, content, funnel và KPI bán hàng.</span>
   </div>
