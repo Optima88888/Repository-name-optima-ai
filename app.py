@@ -20108,3 +20108,258 @@ def mkt_v205_facebook_tabs_working_after_request(response):
     except Exception as _e:
         print('mkt_v205_facebook_tabs_working_after_request skipped:', _e)
     return response
+
+
+# ============================================================
+# V206 - Desktop + Android Runner Bridge
+# Hoàn thiện luồng đăng thật bằng phiên khách đã tự đăng nhập:
+# - Web tạo lệnh đăng cá nhân/Page/Group
+# - Desktop Runner hoặc Android App tự poll lệnh bằng device_id
+# - Runner cập nhật thành công/lỗi/post_url về web
+# - Không nhận/không lưu mật khẩu, 2FA, cookie trên web
+# ============================================================
+
+def mkt_v206_init_runner_bridge():
+    try:
+        mkt_v196_init_fb_full_center()
+    except Exception:
+        pass
+    conn = db(); c = conn.cursor()
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS fb_runner_devices_v206 (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            device_id TEXT,
+            runner_type TEXT,
+            runner_name TEXT,
+            status TEXT DEFAULT 'offline',
+            phone_model TEXT,
+            last_seen TEXT,
+            note TEXT,
+            created_at TEXT,
+            updated_at TEXT,
+            UNIQUE(device_id, runner_type)
+        )
+    """)
+    conn.commit(); conn.close()
+
+def mkt_v206_now():
+    return datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+def mkt_v206_save_media(prefix='fb_v206_media'):
+    media_paths = []
+    media_dir = os.path.join(UPLOAD_DIR, prefix)
+    os.makedirs(media_dir, exist_ok=True)
+    for f in request.files.getlist('media_files'):
+        if not f or not getattr(f, 'filename', ''):
+            continue
+        fn = secure_filename(f.filename)
+        if not fn:
+            continue
+        ext = os.path.splitext(fn)[1].lower()
+        if ext not in ['.jpg', '.jpeg', '.png', '.webp', '.gif', '.mp4', '.mov', '.avi', '.mkv']:
+            continue
+        final = datetime.datetime.now().strftime('%Y%m%d%H%M%S%f') + '_' + fn
+        path = os.path.join(media_dir, final)
+        f.save(path)
+        media_paths.append(path)
+    return media_paths
+
+def mkt_v206_get_targets(c, device_id, destination, asset_ids):
+    targets = []
+    if destination == 'personal':
+        return [('personal', 'personal_wall', 'Trang cá nhân', 'https://www.facebook.com/me')]
+    if destination in ['page', 'group']:
+        if not asset_ids:
+            return []
+        q = ','.join(['?'] * len(asset_ids))
+        c.execute(f"SELECT id,asset_type,asset_name,asset_uid,asset_url FROM fb_account_assets_v196 WHERE device_id=? AND id IN ({q})", [device_id] + asset_ids)
+        for rid, typ, name, uid, url in c.fetchall():
+            if typ == destination:
+                targets.append((typ, uid or str(rid), name or typ, url or ''))
+    return targets
+
+@app.route('/api/fb_v206_runner_register', methods=['POST'])
+def api_fb_v206_runner_register():
+    mkt_v206_init_runner_bridge()
+    device_id = mkt_v196_get_device_id()
+    runner_type = (request.form.get('runner_type') or 'desktop').strip().lower()
+    if runner_type not in ['desktop', 'android']:
+        runner_type = 'desktop'
+    runner_name = (request.form.get('runner_name') or ('Desktop Runner' if runner_type == 'desktop' else 'Android Runner')).strip()[:120]
+    phone_model = (request.form.get('phone_model') or '').strip()[:120]
+    note = (request.form.get('note') or 'Runner đã kết nối.').strip()[:500]
+    now = mkt_v206_now()
+    conn = db(); c = conn.cursor()
+    c.execute("""
+        INSERT INTO fb_runner_devices_v206(device_id, runner_type, runner_name, status, phone_model, last_seen, note, created_at, updated_at)
+        VALUES(?,?,?,?,?,?,?,?,?)
+        ON CONFLICT(device_id, runner_type) DO UPDATE SET
+            runner_name=excluded.runner_name,
+            status='online',
+            phone_model=excluded.phone_model,
+            last_seen=excluded.last_seen,
+            note=excluded.note,
+            updated_at=excluded.updated_at
+    """, (device_id, runner_type, runner_name, 'online', phone_model, now, note, now, now))
+    conn.commit(); conn.close()
+    return jsonify({'ok': True, 'message': f'{runner_name} đã kết nối.', 'device_id': device_id, 'runner_type': runner_type})
+
+@app.route('/api/fb_v206_publish_direct', methods=['POST'])
+def api_fb_v206_publish_direct():
+    """Tạo lệnh đăng thật cho Desktop/Android Runner.
+    Web không đăng nhập thay khách; Runner dùng phiên Facebook khách đã tự đăng nhập.
+    """
+    mkt_v206_init_runner_bridge()
+    device_id = mkt_v196_get_device_id()
+    runner_type = (request.form.get('runner_type') or request.form.get('runner') or 'desktop').strip().lower()
+    if runner_type not in ['desktop', 'android']:
+        runner_type = 'desktop'
+    destination = (request.form.get('destination') or 'personal').strip().lower()
+    if destination not in ['personal', 'page', 'group']:
+        destination = 'personal'
+    account_ids = [int(x) for x in request.form.getlist('account_ids') if str(x).isdigit()]
+    asset_ids = [int(x) for x in request.form.getlist('asset_ids') if str(x).isdigit()]
+    contents = mkt_v196_split_lines(request.form.get('content_bulk') or '')
+    if not account_ids:
+        return jsonify({'ok': False, 'message': 'Chưa chọn tài khoản Facebook.'})
+    if not contents:
+        return jsonify({'ok': False, 'message': 'Chưa nhập nội dung bài đăng.'})
+    if destination in ['page', 'group'] and not asset_ids:
+        return jsonify({'ok': False, 'message': 'Chưa chọn Page/Group cần đăng.'})
+    media_paths = mkt_v206_save_media()
+    media_json = json.dumps(media_paths, ensure_ascii=False)
+    now = mkt_v206_now()
+    conn = db(); c = conn.cursor()
+    acc_map = {}
+    for aid in account_ids:
+        c.execute("SELECT account_name,status FROM fb_desktop_sessions WHERE id=? AND device_id=? LIMIT 1", (aid, device_id))
+        r = c.fetchone()
+        if r:
+            acc_map[aid] = (r[0], r[1] or '')
+    if not acc_map:
+        conn.close(); return jsonify({'ok': False, 'message': 'Không tìm thấy tài khoản đã chọn.'})
+    targets = mkt_v206_get_targets(c, device_id, destination, asset_ids)
+    if not targets:
+        conn.close(); return jsonify({'ok': False, 'message': 'Chưa có nơi đăng phù hợp.'})
+    status = 'Chờ Desktop Runner' if runner_type == 'desktop' else 'Chờ Android Runner'
+    msg = 'Đã gửi lệnh sang Desktop Runner. Mở Runner trên máy tính đã đăng nhập Facebook để đăng thật.' if runner_type == 'desktop' else 'Đã gửi lệnh sang Android Runner. Mở App Android đã đăng nhập Facebook để đăng thật.'
+    count = 0
+    for aid, (acc_name, acc_status) in acc_map.items():
+        for target in targets:
+            content = contents[count % len(contents)]
+            c.execute("""INSERT INTO fb_publish_jobs_v196(device_id,account_id,account_name,destination,target_id,target_name,target_url,content,media_paths,schedule_at,status,result_message,created_at,updated_at)
+                         VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                      (device_id, aid, acc_name, target[0], target[1], target[2], target[3], content, media_json, now, status, msg, now, now))
+            count += 1
+    conn.commit(); conn.close()
+    label = {'personal':'trang cá nhân', 'page':'Fanpage', 'group':'Group'}.get(destination, destination)
+    return jsonify({'ok': True, 'direct': True, 'runner_type': runner_type, 'message': f'Đã tạo {count} lệnh đăng thật lên {label}. {msg}'})
+
+@app.route('/api/fb_v206_runner_pull', methods=['POST', 'GET'])
+def api_fb_v206_runner_pull():
+    """Desktop/Android Runner gọi API này để lấy job cần đăng thật."""
+    mkt_v206_init_runner_bridge()
+    device_id = mkt_v196_get_device_id()
+    runner_type = (request.values.get('runner_type') or 'desktop').strip().lower()
+    if runner_type not in ['desktop', 'android']:
+        runner_type = 'desktop'
+    limit = min(max(int(request.values.get('limit') or 5), 1), 20)
+    want_status = 'Chờ Desktop Runner' if runner_type == 'desktop' else 'Chờ Android Runner'
+    now = mkt_v206_now()
+    conn = db(); c = conn.cursor()
+    c.execute("""
+        INSERT INTO fb_runner_devices_v206(device_id,runner_type,runner_name,status,last_seen,note,created_at,updated_at)
+        VALUES(?,?,?,?,?,?,?,?)
+        ON CONFLICT(device_id, runner_type) DO UPDATE SET status='online', last_seen=excluded.last_seen, updated_at=excluded.updated_at
+    """, (device_id, runner_type, 'Desktop Runner' if runner_type == 'desktop' else 'Android Runner', 'online', now, 'Đang poll lệnh đăng.', now, now))
+    c.execute("""
+        SELECT id,account_id,account_name,destination,target_id,target_name,target_url,content,media_paths,schedule_at,status
+        FROM fb_publish_jobs_v196
+        WHERE device_id=? AND status=?
+        ORDER BY id ASC LIMIT ?
+    """, (device_id, want_status, limit))
+    rows = c.fetchall()
+    job_ids = [r[0] for r in rows]
+    if job_ids:
+        q = ','.join(['?'] * len(job_ids))
+        c.execute(f"UPDATE fb_publish_jobs_v196 SET status=?, result_message=?, updated_at=? WHERE id IN ({q})", ['Đang đăng bằng Desktop Runner' if runner_type == 'desktop' else 'Đang đăng bằng Android Runner', 'Runner đã nhận lệnh.', now] + job_ids)
+    conn.commit(); conn.close()
+    jobs = []
+    for r in rows:
+        media = []
+        try:
+            media = json.loads(r[8] or '[]')
+        except Exception:
+            media = []
+        jobs.append({
+            'job_id': r[0], 'account_id': r[1], 'account_name': r[2], 'destination': r[3],
+            'target_id': r[4], 'target_name': r[5], 'target_url': r[6], 'content': r[7],
+            'media_paths': media, 'schedule_at': r[9], 'status': r[10]
+        })
+    return jsonify({'ok': True, 'device_id': device_id, 'runner_type': runner_type, 'jobs': jobs, 'count': len(jobs)})
+
+@app.route('/api/fb_v206_runner_done', methods=['POST'])
+def api_fb_v206_runner_done():
+    """Runner báo kết quả đăng thật về web."""
+    mkt_v206_init_runner_bridge()
+    device_id = mkt_v196_get_device_id()
+    job_id = int(request.form.get('job_id') or 0)
+    ok = str(request.form.get('ok') or '').lower() in ['1', 'true', 'yes', 'ok', 'success']
+    post_url = (request.form.get('post_url') or '').strip()[:800]
+    detail = (request.form.get('detail') or '').strip()[:1000]
+    status = 'Đăng thành công' if ok else 'Đăng lỗi'
+    msg = (('Đăng thành công. ' + post_url) if ok else ('Đăng lỗi. ' + detail)).strip()
+    now = mkt_v206_now()
+    conn = db(); c = conn.cursor()
+    c.execute("""UPDATE fb_publish_jobs_v196 SET status=?, result_message=?, target_url=COALESCE(NULLIF(?,''),target_url), updated_at=?
+                 WHERE id=? AND device_id=?""", (status, msg, post_url, now, job_id, device_id))
+    changed = c.rowcount
+    conn.commit(); conn.close()
+    return jsonify({'ok': bool(changed), 'message': 'Đã cập nhật trạng thái đăng.' if changed else 'Không tìm thấy job.'})
+
+@app.route('/desktop_android_runner_guide')
+def desktop_android_runner_guide():
+    return """<!doctype html><html lang='vi'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><title>Desktop + Android Runner</title><style>body{font-family:system-ui;margin:0;background:linear-gradient(135deg,#eff6ff,#fff);color:#0f172a;padding:20px}.box{max-width:980px;margin:auto;background:white;border:1px solid #dbeafe;border-radius:28px;padding:26px;box-shadow:0 26px 80px rgba(37,99,235,.13)}h1{margin-top:0;color:#1d4ed8}pre{background:#0f172a;color:#e5e7eb;border-radius:18px;padding:16px;overflow:auto}.ok{background:#ecfdf5;border:1px solid #bbf7d0;color:#065f46;border-radius:18px;padding:14px;font-weight:900}.warn{background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;border-radius:18px;padding:14px;font-weight:900}.step{border:1px solid #e5edff;border-radius:18px;padding:14px;margin:12px 0;background:#f8fbff}a{color:#2563eb;font-weight:900}</style></head><body><div class='box'><h1>💻📱 Desktop + Android Runner</h1><div class='ok'>Web chỉ tạo lệnh đăng. Runner đăng thật bằng Facebook mà khách đã tự đăng nhập trên máy tính hoặc điện thoại.</div><div class='step'><h3>Desktop Runner</h3><p>Khách mở Chrome thật, tự đăng nhập Facebook. Runner gọi <b>/api/fb_v206_runner_pull</b> để lấy lệnh và gọi <b>/api/fb_v206_runner_done</b> để báo kết quả.</p><pre>POST /api/fb_v206_runner_register
+runner_type=desktop
+
+GET /api/fb_v206_runner_pull?device_id=MKT-...&runner_type=desktop
+
+POST /api/fb_v206_runner_done
+job_id=123&ok=1&post_url=https://...</pre></div><div class='step'><h3>Android Runner</h3><p>App Android tự đăng nhập Facebook trên điện thoại khách, poll lệnh cùng device_id.</p><pre>POST /api/fb_v206_runner_register
+runner_type=android&phone_model=Samsung
+
+GET /api/fb_v206_runner_pull?device_id=MKT-...&runner_type=android</pre></div><div class='warn'>Không nhập mật khẩu, 2FA hoặc cookie vào web. Chỉ dùng phiên khách tự đăng nhập.</div><p><a href='/'>← Quay lại trang chính</a></p></div></body></html>"""
+
+MKT_V206_DESKTOP_ANDROID_RUNNER_UI = r"""
+<style id="mkt-v206-desktop-android-runner-css">
+#mktV206RunnerBar{margin:10px 0 16px!important;padding:14px!important;border-radius:22px!important;background:linear-gradient(135deg,#ecfdf5,#eff6ff,#f5f3ff)!important;border:1px solid #bfdbfe!important;box-shadow:0 14px 38px rgba(37,99,235,.12)!important;color:#0f172a!important;font-family:system-ui!important}#mktV206RunnerBar *{box-sizing:border-box!important}.v206-row{display:flex!important;gap:10px!important;align-items:center!important;flex-wrap:wrap!important}.v206-row b{font-size:18px!important}.v206-pill{display:inline-flex!important;align-items:center!important;gap:7px!important;border-radius:999px!important;padding:8px 12px!important;background:#fff!important;border:1px solid #dbeafe!important;font-weight:1000!important}.v206-runner-select{border:1px solid #dbeafe!important;border-radius:14px!important;padding:10px 12px!important;font-weight:900!important;background:white!important;color:#0f172a!important}.v206-link{border:0!important;border-radius:14px!important;padding:10px 14px!important;background:linear-gradient(135deg,#2563eb,#7c3aed)!important;color:white!important;font-weight:1000!important;text-decoration:none!important;display:inline-flex!important}.v206-status{margin-top:10px!important;padding:11px 13px!important;border-radius:16px!important;background:#f8fafc!important;border:1px solid #e2e8f0!important;color:#334155!important;font-weight:900!important;line-height:1.45!important}
+</style>
+<script id="mkt-v206-desktop-android-runner-js">
+(function(){
+  function qs(s,r){return(r||document).querySelector(s)}function qsa(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s))}
+  function device(){try{var v=localStorage.getItem('gptmini_device_id')||localStorage.getItem('mkt_device_id');if(!v){v='MKT-'+Math.random().toString(16).slice(2,9).toUpperCase();localStorage.setItem('gptmini_device_id',v)}return v}catch(e){return'MKT-WEB'}}
+  function api(url,opt){opt=opt||{};opt.headers=Object.assign({'X-Device-Id':device()},opt.headers||{});return fetch(url,opt).then(function(r){return r.json()})}
+  function addRunnerBar(){var center=qs('#mktV205FbCenter')||qs('#mktV204CleanFbCenter');if(!center||qs('#mktV206RunnerBar'))return;var bar=document.createElement('div');bar.id='mktV206RunnerBar';bar.innerHTML='<div class="v206-row"><b>💻📱 Chế độ đăng thật</b><span class="v206-pill">ID: '+device()+'</span><select id="v206RunnerType" class="v206-runner-select"><option value="desktop">💻 Desktop Runner</option><option value="android">📱 Android Runner</option></select><a class="v206-link" target="_blank" href="/desktop_android_runner_guide">Hướng dẫn Runner</a><button class="v206-link" type="button" onclick="mktV206RegisterRunner()">Kết nối Runner</button></div><div id="v206Status" class="v206-status">Chọn Desktop hoặc Android. Bấm đăng ngay sẽ gửi lệnh sang Runner để đăng thật bằng phiên khách đã tự đăng nhập.</div>';center.insertBefore(bar,center.firstChild)}
+  window.mktV206RegisterRunner=function(){var rt=(qs('#v206RunnerType')||{}).value||'desktop';var f=new FormData();f.set('device_id',device());f.set('runner_type',rt);f.set('runner_name',rt==='desktop'?'Desktop Runner':'Android Runner');api('/api/fb_v206_runner_register',{method:'POST',body:f}).then(function(d){var s=qs('#v206Status');if(s)s.textContent=d.message||'Đã kết nối Runner.';alert(d.message||'Đã kết nối Runner')})}
+  function collectFromV205(panel,dest){var root=qs('[data-panel="'+panel+'"]')||qs('#mktV205FbCenter')||qs('#mktV204CleanFbCenter');if(!root)return null;var f=new FormData();f.set('device_id',device());f.set('destination',dest||'personal');f.set('runner_type',(qs('#v206RunnerType')||{}).value||'desktop');var c=qs('.v205Content,.v204Content',root);f.set('content_bulk',(c||{}).value||'');var st=qs('.v205Start,.v204Start',root);f.set('start_time',(st||{}).value||'');var gap=qs('.v205Gap,.v204Gap',root);f.set('gap_minutes',(gap||{}).value||'0');qsa('input[name=account_ids]:checked',root).forEach(function(x){f.append('account_ids',x.value)});if(dest!=='personal')qsa('input[name=asset_ids]:checked',root).forEach(function(x){f.append('asset_ids',x.value)});var files=(qs('.v205Media,.v204Media',root)||{}).files||[];for(var i=0;i<files.length;i++)f.append('media_files',files[i]);if(!f.getAll('account_ids').length){alert('Chưa chọn tài khoản Facebook.');return null}if(!String(f.get('content_bulk')||'').trim()){alert('Chưa nhập nội dung bài đăng.');return null}if(dest!=='personal'&&!f.getAll('asset_ids').length){alert('Chưa chọn '+(dest==='page'?'Fanpage':'Group')+'.');return null}return f}
+  window.mktV205Publish=function(panel,dest,direct){var f=collectFromV205(panel,dest);if(!f)return;var url=direct?'/api/fb_v206_publish_direct':'/api/fb_v196_queue_create';api(url,{method:'POST',body:f}).then(function(d){var s=qs('#v206Status')||qs('#v205Msg')||qs('#v204Msg');if(s)s.textContent=d.message||'Đã xử lý.';alert(d.message||'Đã xử lý');try{if(window.mktV205Refresh)window.mktV205Refresh()}catch(e){} }).catch(function(){alert('Lỗi gửi lệnh đăng. Kiểm tra tài khoản/nội dung/Runner.')})}
+  window.mktV204Publish=window.mktV205Publish;
+  function patchButtons(){addRunnerBar();qsa('#mktV205FbCenter .v205-actions button.green,#mktV204CleanFbCenter .v204-actions button.green').forEach(function(b){if((b.textContent||'').indexOf('Đăng ngay')>-1){b.title='Gửi lệnh sang Desktop/Android Runner để đăng thật bằng phiên đã đăng nhập.'}})}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',patchButtons);else patchButtons();setTimeout(patchButtons,600);setTimeout(patchButtons,1600);setInterval(patchButtons,3000);
+})();
+</script>
+"""
+
+@app.after_request
+def mkt_v206_desktop_android_runner_after_request(response):
+    try:
+        ctype = (response.headers.get('Content-Type') or '').lower()
+        if 'text/html' in ctype:
+            body = response.get_data(as_text=True)
+            if 'mkt-v206-desktop-android-runner-js' not in body and '</body>' in body:
+                body = body.replace('</body>', MKT_V206_DESKTOP_ANDROID_RUNNER_UI + '</body>')
+                response.set_data(body)
+                response.headers['Content-Length'] = str(len(body.encode('utf-8')))
+    except Exception as _e:
+        print('mkt_v206_desktop_android_runner_after_request skipped:', _e)
+    return response
