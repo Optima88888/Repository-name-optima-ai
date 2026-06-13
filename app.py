@@ -17626,6 +17626,135 @@ def mkt_v147_facebook_personal_menu_card_extension_fix_after_request(response):
         print('mkt_v147_facebook_personal_menu_card_extension_fix_after_request skipped:', _e)
     return response
 
+
+
+# ============================================================
+# MKT_V148_MOBILE_FACEBOOK_MENU_INSIDE_FIX
+# Sửa nút Facebook cá nhân trên menu điện thoại bị tràn ra ngoài giao diện.
+# Giữ nguyên toàn bộ nội dung, cài đặt và logic hiện tại; chỉ ép layout mobile gọn trong khung.
+# ============================================================
+MKT_V148_MOBILE_FACEBOOK_MENU_INSIDE_FIX = r"""
+<style id="mkt-v148-mobile-fb-menu-inside-fix-css">
+@media(max-width:820px){
+  html,body{max-width:100%!important;overflow-x:hidden!important;}
+
+  /* Không cho shortcut/menu Facebook cá nhân nổi tràn ra ngoài màn hình */
+  #mktFbMobileFloatBtn{
+    display:none!important;
+    visibility:hidden!important;
+    opacity:0!important;
+    pointer-events:none!important;
+  }
+
+  /* Ép nút Facebook cá nhân nằm gọn trong menu điện thoại */
+  .mkt-mobile-fb-personal-entry,
+  a[data-module="facebook_personal_mobile"],
+  .v2-nav-link[data-module="facebook_personal_mobile"]{
+    position:relative!important;
+    inset:auto!important;
+    left:auto!important;
+    right:auto!important;
+    top:auto!important;
+    bottom:auto!important;
+    transform:none!important;
+    float:none!important;
+    display:flex!important;
+    width:auto!important;
+    max-width:calc(100% - 24px)!important;
+    min-width:0!important;
+    height:auto!important;
+    box-sizing:border-box!important;
+    margin:8px 12px!important;
+    padding:12px 14px!important;
+    border-radius:18px!important;
+    overflow:hidden!important;
+    white-space:normal!important;
+    line-height:1.25!important;
+    z-index:3!important;
+  }
+
+  .mkt-mobile-fb-personal-entry .v2-nav-text,
+  a[data-module="facebook_personal_mobile"] .v2-nav-text{
+    min-width:0!important;
+    max-width:100%!important;
+    overflow:hidden!important;
+    text-overflow:ellipsis!important;
+    white-space:nowrap!important;
+  }
+
+  .mkt-mobile-fb-personal-entry .mkt-dot-tag,
+  a[data-module="facebook_personal_mobile"] .mkt-dot-tag{
+    flex:0 0 auto!important;
+    margin-left:8px!important;
+    max-width:82px!important;
+  }
+
+  /* Các menu container không được để nút con vượt chiều ngang */
+  .sidebar,.mkt-clean-nav,.mobile-menu,.drawer,.nav{
+    max-width:100vw!important;
+    overflow-x:hidden!important;
+    box-sizing:border-box!important;
+  }
+}
+</style>
+<script id="mkt-v148-mobile-fb-menu-inside-fix-js">
+(function(){
+  function qs(s,r){return (r||document).querySelector(s)}
+  function qsa(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s))}
+  function isMobile(){return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)||window.innerWidth<=820}
+  function fixInside(){
+    try{
+      if(!isMobile()) return;
+
+      var floatBtn = document.getElementById('mktFbMobileFloatBtn');
+      if(floatBtn){
+        floatBtn.style.setProperty('display','none','important');
+        floatBtn.style.setProperty('visibility','hidden','important');
+        floatBtn.style.setProperty('pointer-events','none','important');
+      }
+
+      var nav = qs('.mkt-clean-nav') || qs('.sidebar') || qs('.mobile-menu') || qs('.drawer') || qs('.nav');
+      qsa('.mkt-mobile-fb-personal-entry,[data-module="facebook_personal_mobile"]').forEach(function(el){
+        if(nav && el.parentNode !== nav && !nav.contains(el)){
+          var ref = qs('[data-module="facebook_personal"]', nav) || qs('[data-module="fanpage_manager"]', nav) || qs('[data-module="post"]', nav) || qs('.v2-nav-link', nav);
+          if(ref && ref.parentNode){ ref.parentNode.insertBefore(el, ref.nextSibling); }
+          else{ nav.appendChild(el); }
+        }
+        el.style.setProperty('position','relative','important');
+        el.style.setProperty('left','auto','important');
+        el.style.setProperty('right','auto','important');
+        el.style.setProperty('top','auto','important');
+        el.style.setProperty('bottom','auto','important');
+        el.style.setProperty('transform','none','important');
+        el.style.setProperty('width','auto','important');
+        el.style.setProperty('max-width','calc(100% - 24px)','important');
+        el.style.setProperty('box-sizing','border-box','important');
+        el.style.setProperty('margin','8px 12px','important');
+        el.style.setProperty('overflow','hidden','important');
+      });
+    }catch(e){try{console.log('mkt v148 mobile menu fix skipped',e)}catch(_e){}}
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',fixInside); else fixInside();
+  window.addEventListener('resize',fixInside);
+  setTimeout(fixInside,250);setTimeout(fixInside,900);setTimeout(fixInside,1800);setInterval(fixInside,3500);
+})();
+</script>
+"""
+
+@app.after_request
+def mkt_v148_mobile_facebook_menu_inside_fix_after_request(response):
+    try:
+        ctype=(response.headers.get('Content-Type') or '').lower()
+        if 'text/html' in ctype:
+            body=response.get_data(as_text=True)
+            if 'mkt-v148-mobile-fb-menu-inside-fix-js' not in body and '</body>' in body:
+                body=body.replace('</body>', MKT_V148_MOBILE_FACEBOOK_MENU_INSIDE_FIX + '</body>')
+                response.set_data(body)
+                response.headers['Content-Length']=str(len(body.encode('utf-8')))
+    except Exception as _e:
+        print('mkt_v148_mobile_facebook_menu_inside_fix_after_request skipped:', _e)
+    return response
+
 if __name__ == "__main__":
     # Không tự tạo kho 50k content khi khởi động để tránh lỗi SQLite database is locked trên Render.
     # Khi cần kiểm tra/tạo kho content, gọi /api/content_50k_stats từ admin.
