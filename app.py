@@ -17755,6 +17755,186 @@ def mkt_v148_mobile_facebook_menu_inside_fix_after_request(response):
         print('mkt_v148_mobile_facebook_menu_inside_fix_after_request skipped:', _e)
     return response
 
+
+
+# ============================================================
+# MKT_V149_FACEBOOK_TARGET_CHOICE_UX
+# Giữ nguyên giao diện/menu/Extension hiện tại.
+# Chỉ bổ sung cụm chọn nơi đăng dưới "Nội dung bài viết":
+# Facebook cá nhân / Fanpage / Group để khách hiểu ngay cách dùng.
+# ============================================================
+
+MKT_V149_FACEBOOK_TARGET_CHOICE_UX = r"""
+<style id="mkt-v149-facebook-target-choice-ux-css">
+#mktFbTargetChoiceBox{
+  margin:12px 0 16px!important;
+  padding:14px!important;
+  border-radius:20px!important;
+  background:linear-gradient(135deg,rgba(15,23,42,.72),rgba(30,41,59,.55))!important;
+  border:1px solid rgba(148,163,184,.28)!important;
+  box-shadow:0 16px 36px rgba(2,6,23,.18)!important;
+  color:#fff!important;
+  box-sizing:border-box!important;
+}
+#mktFbTargetChoiceBox .mkt-v149-title{
+  font-weight:1000!important;
+  font-size:15px!important;
+  margin-bottom:10px!important;
+  color:#EAF2FF!important;
+}
+#mktFbTargetChoiceBox .mkt-v149-row{
+  display:flex!important;
+  align-items:center!important;
+  gap:10px!important;
+  flex-wrap:wrap!important;
+}
+#mktFbTargetChoiceBox .mkt-v149-target{
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  gap:8px!important;
+  min-height:42px!important;
+  padding:10px 14px!important;
+  border-radius:999px!important;
+  background:rgba(255,255,255,.08)!important;
+  border:1px solid rgba(255,255,255,.12)!important;
+  color:#E5E7EB!important;
+  font-weight:1000!important;
+  cursor:pointer!important;
+  user-select:none!important;
+  transition:.18s ease!important;
+}
+#mktFbTargetChoiceBox .mkt-v149-target input{accent-color:#22C55E!important;transform:scale(1.05)!important;}
+#mktFbTargetChoiceBox .mkt-v149-target.mkt-v149-active{
+  color:#fff!important;
+  background:linear-gradient(135deg,#06B6D4,#22C55E)!important;
+  border-color:rgba(34,197,94,.72)!important;
+  box-shadow:0 14px 32px rgba(34,197,94,.20)!important;
+}
+#mktFbTargetChoiceBox .mkt-v149-help{
+  margin-top:10px!important;
+  color:#FDE68A!important;
+  font-size:13px!important;
+  line-height:1.45!important;
+  font-weight:800!important;
+}
+@media(max-width:760px){
+  #mktFbTargetChoiceBox{padding:12px!important;border-radius:18px!important;margin:10px 0 14px!important;}
+  #mktFbTargetChoiceBox .mkt-v149-row{display:grid!important;grid-template-columns:1fr!important;gap:8px!important;}
+  #mktFbTargetChoiceBox .mkt-v149-target{width:100%!important;box-sizing:border-box!important;justify-content:flex-start!important;}
+}
+</style>
+<script id="mkt-v149-facebook-target-choice-ux-js">
+(function(){
+  function qs(s,r){return (r||document).querySelector(s)}
+  function qsa(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s))}
+  function txt(el){return ((el&&el.textContent)||'').replace(/\s+/g,' ').trim()}
+  function getTarget(){
+    var checked=qs('input[name="mkt_fb_target_choice"]:checked');
+    return checked?checked.value:'profile';
+  }
+  function targetUrl(target){
+    if(target==='page') return 'https://www.facebook.com/pages/?category=your_pages';
+    if(target==='group') return 'https://www.facebook.com/groups/feed/';
+    return 'https://www.facebook.com/';
+  }
+  function syncTargetUI(){
+    var target=getTarget();
+    qsa('#mktFbTargetChoiceBox .mkt-v149-target').forEach(function(lb){
+      var input=qs('input',lb);
+      lb.classList.toggle('mkt-v149-active', !!input && input.checked);
+    });
+    var help=qs('#mktFbTargetHelp');
+    if(help){
+      if(target==='page') help.innerHTML='📄 Fanpage: hệ thống sẽ mở khu vực Page. Khách chọn Fanpage rồi dán/đăng bài.';
+      else if(target==='group') help.innerHTML='👥 Group: hệ thống sẽ mở khu vực Group. Khách chọn Group rồi dán/đăng bài.';
+      else help.innerHTML='📘 Facebook cá nhân: không cần nhập mật khẩu, chỉ copy/dán nội dung rồi tự bấm Đăng.';
+    }
+    try{
+      var urlInput=qs('#mktFbUrl');
+      if(urlInput && (!urlInput.value || /facebook\.com\/?$|m\.facebook\.com\/?$|facebook\.com\/groups\/feed|facebook\.com\/pages/i.test(urlInput.value))){
+        urlInput.value=targetUrl(target);
+      }
+    }catch(e){}
+  }
+  function buildBox(){
+    var box=document.createElement('div');
+    box.id='mktFbTargetChoiceBox';
+    box.innerHTML='<div class="mkt-v149-title">📍 Chọn nơi đăng</div>'+
+      '<div class="mkt-v149-row">'+
+      '<label class="mkt-v149-target mkt-v149-active"><input type="radio" name="mkt_fb_target_choice" value="profile" checked> <span>📘 Facebook cá nhân</span></label>'+
+      '<label class="mkt-v149-target"><input type="radio" name="mkt_fb_target_choice" value="page"> <span>📄 Fanpage</span></label>'+
+      '<label class="mkt-v149-target"><input type="radio" name="mkt_fb_target_choice" value="group"> <span>👥 Group</span></label>'+
+      '</div><div id="mktFbTargetHelp" class="mkt-v149-help">📘 Facebook cá nhân: không cần nhập mật khẩu, chỉ copy/dán nội dung rồi tự bấm Đăng.</div>';
+    return box;
+  }
+  function installTargetChoice(){
+    try{
+      var section=qs('#facebook_personal');
+      if(!section || qs('#mktFbTargetChoiceBox',section)) return;
+      var content=qs('#mktFbContent',section);
+      if(!content) return;
+      var box=buildBox();
+      var insertAfter=content;
+      var parent=content.parentNode;
+      if(parent){
+        parent.insertBefore(box, insertAfter.nextSibling);
+      }
+      qsa('input[name="mkt_fb_target_choice"]',box).forEach(function(input){
+        input.addEventListener('change',function(){
+          syncTargetUI();
+          try{ if(window.mktFbLog) window.mktFbLog('Đã chọn nơi đăng: '+txt(input.parentNode)); }catch(e){}
+        });
+      });
+      syncTargetUI();
+    }catch(e){try{console.log('mkt v149 target choice skipped',e)}catch(_e){}}
+  }
+  var oldSend=null, oldOpen=null, oldMobile=null;
+  function patchActions(){
+    try{
+      if(!oldSend && typeof window.mktFbSend==='function'){
+        oldSend=window.mktFbSend;
+        window.mktFbSend=function(action,extra){
+          var urlInput=qs('#mktFbUrl');
+          var oldVal=urlInput?urlInput.value:'';
+          var t=getTarget();
+          if(urlInput && (!oldVal || /facebook\.com\/?$|m\.facebook\.com\/?$|facebook\.com\/groups\/feed|facebook\.com\/pages/i.test(oldVal))){
+            urlInput.value=targetUrl(t);
+          }
+          return oldSend.call(this,action,Object.assign({target:t},extra||{}));
+        };
+      }
+      if(!oldOpen && typeof window.mktFbOpenFacebook==='function'){
+        oldOpen=window.mktFbOpenFacebook;
+        window.mktFbOpenFacebook=function(){syncTargetUI();return oldOpen.apply(this,arguments);};
+      }
+      if(!oldMobile && typeof window.mktMobileCopyAndOpen==='function'){
+        oldMobile=window.mktMobileCopyAndOpen;
+        window.mktMobileCopyAndOpen=function(){syncTargetUI();return oldMobile.apply(this,arguments);};
+      }
+    }catch(e){}
+  }
+  function run(){installTargetChoice();patchActions();}
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',run); else run();
+  setTimeout(run,300);setTimeout(run,900);setTimeout(run,1800);setInterval(run,3500);
+})();
+</script>
+"""
+
+@app.after_request
+def mkt_v149_facebook_target_choice_ux_after_request(response):
+    try:
+        ctype=(response.headers.get('Content-Type') or '').lower()
+        if 'text/html' in ctype:
+            body=response.get_data(as_text=True)
+            if 'mkt-v149-facebook-target-choice-ux-js' not in body and '</body>' in body:
+                body=body.replace('</body>', MKT_V149_FACEBOOK_TARGET_CHOICE_UX + '</body>')
+                response.set_data(body)
+                response.headers['Content-Length']=str(len(body.encode('utf-8')))
+    except Exception as _e:
+        print('mkt_v149_facebook_target_choice_ux_after_request skipped:', _e)
+    return response
+
 if __name__ == "__main__":
     # Không tự tạo kho 50k content khi khởi động để tránh lỗi SQLite database is locked trên Render.
     # Khi cần kiểm tra/tạo kho content, gọi /api/content_50k_stats từ admin.
