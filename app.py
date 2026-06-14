@@ -20464,6 +20464,174 @@ except Exception as _mkt_v158_ext_error:
     print('MKT V158 extension version patch skipped:', _mkt_v158_ext_error)
 
 
+# ============================================================
+# MKT V159 - FACEBOOK AUTOMATION 2026 CENTER
+# Chuẩn hóa module Facebook tự động hóa dễ dùng cho khách.
+# Giữ nguyên menu/cấu trúc cũ, bổ sung menu riêng trên điện thoại.
+# ============================================================
+
+MKT_V159_FB_AUTO_CENTER = r"""
+<style id="mkt-v159-fbauto-2026-css">
+:root{--fbauto-blue:#1877f2;--fbauto-navy:#0f172a;--fbauto-soft:#eff6ff;--fbauto-border:#dbeafe;--fbauto-green:#22c55e;--fbauto-red:#ef4444;--fbauto-violet:#7c3aed}
+#mktFbAuto2026{display:none!important;position:relative;z-index:8;padding:20px;box-sizing:border-box;width:100%;min-height:100vh;color:#0f172a;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+#mktFbAuto2026.mkt-show{display:block!important}.mkt-fbauto-wrap{max-width:1180px;margin:0 auto;padding:16px}
+.mkt-fbauto-hero{border:1px solid rgba(219,234,254,.95);background:radial-gradient(circle at 12% 0%,rgba(24,119,242,.16),transparent 34%),linear-gradient(135deg,#fff,#f8fbff 54%,#eef6ff);border-radius:30px;padding:24px;box-shadow:0 24px 70px rgba(15,23,42,.12);overflow:hidden;position:relative}
+.mkt-fbauto-kicker{display:inline-flex;align-items:center;gap:8px;padding:7px 12px;border-radius:999px;background:#0f172a;color:#fff;font-weight:1000;font-size:12px;box-shadow:0 12px 28px rgba(15,23,42,.20)}
+.mkt-fbauto-hero h2{margin:14px 0 8px;font-size:34px;line-height:1.1;background:linear-gradient(90deg,#1877f2,#2563eb,#7c3aed);-webkit-background-clip:text;background-clip:text;color:transparent;font-weight:1000;letter-spacing:-.04em}.mkt-fbauto-hero p{margin:0;color:#64748b;font-weight:750;line-height:1.55;max-width:820px}
+.mkt-fbauto-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}.mkt-fbauto-btn{border:0;border-radius:16px;padding:12px 15px;font-weight:1000;cursor:pointer;background:linear-gradient(135deg,#1877f2,#2563eb);color:#fff;box-shadow:0 14px 32px rgba(37,99,235,.24);text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px}.mkt-fbauto-btn.alt{background:#fff;color:#0f172a;border:1px solid #dbeafe;box-shadow:0 12px 26px rgba(15,23,42,.08)}.mkt-fbauto-btn.good{background:linear-gradient(135deg,#16a34a,#22c55e)}
+.mkt-fbauto-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:16px}.mkt-fbauto-stat{background:#fff;border:1px solid #dbeafe;border-radius:22px;padding:16px;box-shadow:0 14px 36px rgba(15,23,42,.07)}.mkt-fbauto-stat b{display:block;font-size:24px;color:#0f172a}.mkt-fbauto-stat span{font-size:13px;color:#64748b;font-weight:900}
+.mkt-fbauto-panel{margin-top:16px;background:rgba(255,255,255,.96);border:1px solid #dbeafe;border-radius:26px;padding:18px;box-shadow:0 20px 52px rgba(15,23,42,.08)}.mkt-fbauto-panel h3{margin:0 0 10px;font-size:20px;color:#0f172a}.mkt-fbauto-panel small{color:#64748b;font-weight:800;line-height:1.45}
+.mkt-fbauto-form{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}.mkt-fbauto-form .full{grid-column:1/-1}.mkt-fbauto-form input,.mkt-fbauto-form textarea,.mkt-fbauto-form select{width:100%;box-sizing:border-box;border:1px solid #cbd5e1;border-radius:16px;padding:13px 14px;font-size:15px;outline:none;background:#fff;color:#0f172a;font-weight:700}.mkt-fbauto-form textarea{min-height:130px;resize:vertical}.mkt-fbauto-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}.mkt-fbauto-mode{display:inline-flex;align-items:center;gap:8px;border:1px solid #dbeafe;background:#f8fbff;padding:10px 12px;border-radius:14px;font-weight:900;color:#334155}
+.mkt-fbauto-log{height:210px;overflow:auto;background:#020617;color:#dbeafe;border-radius:18px;padding:12px;font-family:ui-monospace,Consolas,monospace;font-size:12.5px;line-height:1.45;border:1px solid rgba(15,23,42,.2)}.mkt-fbauto-list{display:grid;gap:8px;margin-top:12px}.mkt-fbauto-item{border:1px solid #e2e8f0;background:#fff;border-radius:16px;padding:12px;display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.mkt-fbauto-item b{color:#0f172a}.mkt-fbauto-item span{display:block;color:#64748b;font-size:13px;font-weight:750;margin-top:3px}.mkt-fbauto-pill{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:6px 10px;background:#ecfdf5;color:#166534;font-weight:1000;font-size:12px;white-space:nowrap}.mkt-fbauto-pill.warn{background:#fff7ed;color:#9a3412}.mkt-fbauto-pill.err{background:#fef2f2;color:#991b1b}
+#mktFbAutoMobileBtn{display:none;position:fixed;left:14px;bottom:118px;z-index:2147483000;border:0;border-radius:20px;padding:11px 13px;background:linear-gradient(135deg,#1877f2,#7c3aed);color:#fff;font-weight:1000;box-shadow:0 18px 46px rgba(37,99,235,.36);align-items:center;gap:8px;animation:mktFbAutoPulse 1.8s ease-in-out infinite}.mkt-fbauto-phone-menu{display:none;position:fixed;left:12px;right:12px;bottom:178px;z-index:2147482999;background:rgba(255,255,255,.98);border:1px solid #dbeafe;border-radius:24px;padding:12px;box-shadow:0 26px 70px rgba(15,23,42,.24);backdrop-filter:blur(16px)}.mkt-fbauto-phone-menu.show{display:block}.mkt-fbauto-phone-menu button{width:100%;margin:5px 0;border:0;border-radius:16px;padding:12px;background:#eff6ff;color:#0f172a;font-weight:1000;text-align:left}.mkt-fbauto-phone-menu button.primary{background:linear-gradient(135deg,#1877f2,#2563eb);color:#fff}
+@keyframes mktFbAutoPulse{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-3px) scale(1.03)}}@media(max-width:760px){#mktFbAuto2026{padding:10px 8px}.mkt-fbauto-wrap{padding:6px}.mkt-fbauto-hero{padding:18px;border-radius:24px}.mkt-fbauto-hero h2{font-size:25px}.mkt-fbauto-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.mkt-fbauto-form{grid-template-columns:1fr}.mkt-fbauto-panel{padding:14px;border-radius:22px}.mkt-fbauto-actions .mkt-fbauto-btn{width:100%}#mktFbAutoMobileBtn{display:inline-flex}.mkt-fbauto-item{display:block}.mkt-fbauto-pill{margin-top:8px}}
+</style>
+<section id="mktFbAuto2026" data-mkt-module="fbauto2026"><div class="mkt-fbauto-wrap"><div class="mkt-fbauto-hero"><div class="mkt-fbauto-kicker">⚡ Facebook Automation 2026 • PWA + Queue + Profile</div><h2>Trung tâm tự động hóa Facebook đa nền tảng</h2><p>Dành cho khách dùng điện thoại và máy tính: quản lý tài khoản, proxy/profile, tạo tác vụ đăng bài, hẹn giờ, random ảnh/video, kiểm tra trùng lặp, lưu log CSV và mở rộng theo queue.</p><div class="mkt-fbauto-actions"><button class="mkt-fbauto-btn" onclick="mktFbAutoShowTab('create')">➕ Tạo tác vụ đăng bài</button><button class="mkt-fbauto-btn alt" onclick="mktFbAutoShowTab('accounts')">👥 Quản lý tài khoản</button><button class="mkt-fbauto-btn alt" onclick="mktFbAutoShowTab('logs')">📊 Nhật ký & CSV</button><button class="mkt-fbauto-btn good" onclick="mktFbAutoRefresh()">🔄 Cập nhật thống kê</button></div><div class="mkt-fbauto-grid"><div class="mkt-fbauto-stat"><b id="mktFbAutoStatAccounts">0</b><span>Tài khoản</span></div><div class="mkt-fbauto-stat"><b id="mktFbAutoStatTasks">0</b><span>Tác vụ</span></div><div class="mkt-fbauto-stat"><b id="mktFbAutoStatSuccess">0</b><span>Thành công</span></div><div class="mkt-fbauto-stat"><b id="mktFbAutoStatFailed">0</b><span>Thất bại</span></div></div></div>
+<div class="mkt-fbauto-panel" data-tab="create"><h3>➕ Tạo tác vụ đăng bài</h3><small>Khách nhập nội dung, chọn tài khoản, chọn chế độ media và thời gian. Hệ thống lưu task vào hàng chờ. Với Facebook cá nhân, nên dùng Extension/PWA để khách tự đăng nhập và kiểm duyệt trước khi bấm đăng.</small><form id="mktFbAutoTaskForm" class="mkt-fbauto-form"><input name="title" placeholder="Tên chiến dịch / tiêu đề" value="Chiến dịch Facebook"><select name="schedule_mode"><option value="now">Đăng ngay</option><option value="once">Hẹn giờ một lần</option><option value="daily">Lặp mỗi ngày</option><option value="weekly">Lặp mỗi tuần</option><option value="monthly">Lặp mỗi tháng</option></select><input name="schedule_time" type="datetime-local"><select name="media_mode"><option value="random">Random media</option><option value="no_repeat">Random không lặp</option><option value="round_robin">Theo vòng lặp</option></select><input name="targets" class="full" placeholder="Nơi đăng: FB01 | Page A | Group B"><textarea name="content" class="full" id="mktFbAutoContent" placeholder="Nhập nội dung bài viết. Có thể nhập nhiều bài, mỗi bài cách nhau bằng dòng ---"></textarea><div class="mkt-fbauto-row full"><label class="mkt-fbauto-mode"><input type="checkbox" name="ai_spin" value="1"> AI Spin</label><label class="mkt-fbauto-mode"><input type="checkbox" name="anti_duplicate" value="1" checked> Anti Duplicate</label><label class="mkt-fbauto-mode"><input type="checkbox" name="hashtag_random" value="1"> Hashtag Random</label></div><button type="submit" class="mkt-fbauto-btn full">🚀 Lưu vào Queue</button></form></div>
+<div class="mkt-fbauto-panel" data-tab="accounts" style="display:none"><h3>👥 Tài khoản / Proxy / Browser Profile</h3><small>Mỗi tài khoản nên có proxy, user-agent và profile riêng. Không lưu mật khẩu Facebook trong hệ thống.</small><form id="mktFbAutoAccountForm" class="mkt-fbauto-form"><input name="account_name" placeholder="Tên tài khoản: FB01"><input name="proxy" placeholder="Proxy riêng: http://user:pass@ip:port"><input name="browser_profile" placeholder="Profile: profiles/FB01"><input name="user_agent" placeholder="User-Agent riêng nếu có"><button type="submit" class="mkt-fbauto-btn full">💾 Lưu tài khoản</button></form><div id="mktFbAutoAccounts" class="mkt-fbauto-list"></div></div>
+<div class="mkt-fbauto-panel" data-tab="media" style="display:none"><h3>🖼️ Kho ảnh/video random</h3><small>Upload ảnh/video để task tự chọn theo random, không lặp hoặc vòng lặp.</small><form id="mktFbAutoMediaForm" class="mkt-fbauto-form" enctype="multipart/form-data"><input name="label" placeholder="Nhãn media: Ảnh sản phẩm A"><input name="media" type="file" accept="image/*,video/*"><button type="submit" class="mkt-fbauto-btn full">⬆️ Upload media</button></form><div id="mktFbAutoMediaList" class="mkt-fbauto-list"></div></div>
+<div class="mkt-fbauto-panel" data-tab="logs" style="display:none"><h3>📊 Nhật ký hệ thống</h3><div class="mkt-fbauto-actions"><a class="mkt-fbauto-btn alt" href="/api/fbauto/logs.csv" target="_blank">⬇️ Xuất report.csv</a><button class="mkt-fbauto-btn alt" onclick="mktFbAutoShowTab('media')">🖼️ Kho media</button></div><div id="mktFbAutoTasks" class="mkt-fbauto-list"></div><pre id="mktFbAutoLog" class="mkt-fbauto-log">Đang chờ dữ liệu...</pre></div></div></section>
+<button id="mktFbAutoMobileBtn" type="button" onclick="mktFbAutoTogglePhoneMenu()">📱 Facebook Auto</button><div id="mktFbAutoPhoneMenu" class="mkt-fbauto-phone-menu"><button class="primary" onclick="mktFbAutoOpen();mktFbAutoTogglePhoneMenu(false)">🚀 Mở Facebook Automation</button><button onclick="mktFbAutoOpen();mktFbAutoShowTab('create');mktFbAutoTogglePhoneMenu(false)">➕ Tạo tác vụ đăng bài</button><button onclick="mktFbAutoOpen();mktFbAutoShowTab('accounts');mktFbAutoTogglePhoneMenu(false)">👥 Tài khoản / Proxy</button><button onclick="mktFbAutoOpen();mktFbAutoShowTab('media');mktFbAutoTogglePhoneMenu(false)">🖼️ Kho media random</button><button onclick="mktFbAutoOpen();mktFbAutoShowTab('logs');mktFbAutoTogglePhoneMenu(false)">📊 Log / CSV</button></div>
+<script id="mkt-v159-fbauto-2026-js">(function(){function qs(s,r){return(r||document).querySelector(s)}function qsa(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s))}function log(msg){var el=qs('#mktFbAutoLog');if(!el)return;var now=new Date().toLocaleTimeString('vi-VN');el.textContent='['+now+'] '+msg+'\n'+(el.textContent||'')}function hideOldModules(){qsa('section,.module-section,.enterprise-module-wrap,.dashboard,.content-section').forEach(function(el){if(el.id==='mktFbAuto2026')return;if(el.closest&&el.closest('#mktFbAuto2026'))return;if(el.offsetParent!==null||el.classList.contains('active')||el.style.display!=='none'){el.dataset.mktFbAutoOldDisplay=el.style.display||'';el.style.display='none';el.classList.remove('active','show')}})}window.mktFbAutoOpen=function(){hideOldModules();var sec=qs('#mktFbAuto2026');if(sec){sec.classList.add('mkt-show');sec.style.display='block';window.scrollTo({top:0,behavior:'smooth'})}mktFbAutoRefresh()};window.mktFbAutoShowTab=function(tab){qsa('#mktFbAuto2026 [data-tab]').forEach(function(el){el.style.display=(el.getAttribute('data-tab')===tab)?'block':'none'});log('Đã mở tab '+tab+'.')};window.mktFbAutoTogglePhoneMenu=function(force){var m=qs('#mktFbAutoPhoneMenu');if(!m)return;if(force===false)m.classList.remove('show');else m.classList.toggle('show')};function esc(s){return String(s||'').replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}function item(title,sub,pill,cls){return '<div class="mkt-fbauto-item"><div><b>'+esc(title)+'</b><span>'+esc(sub)+'</span></div><em class="mkt-fbauto-pill '+(cls||'')+'">'+esc(pill||'active')+'</em></div>'}window.mktFbAutoRefresh=function(){fetch('/api/fbauto/dashboard').then(function(r){return r.json()}).then(function(d){if(!d.ok){log(d.message||'Không tải được dữ liệu.');return}qs('#mktFbAutoStatAccounts').textContent=d.stats.accounts||0;qs('#mktFbAutoStatTasks').textContent=d.stats.tasks||0;qs('#mktFbAutoStatSuccess').textContent=d.stats.success||0;qs('#mktFbAutoStatFailed').textContent=d.stats.failed||0;qs('#mktFbAutoAccounts').innerHTML=(d.accounts||[]).map(function(a){return item(a.account_name,'Proxy: '+(a.proxy||'chưa cấu hình')+' • Profile: '+(a.browser_profile||'auto'),a.status||'active')}).join('')||'<small>Chưa có tài khoản.</small>';qs('#mktFbAutoTasks').innerHTML=(d.tasks||[]).map(function(t){var cls=t.status==='failed'?'err':(t.status==='queued'?'warn':'');return item(t.title||('Task #'+t.id),'Lịch: '+(t.schedule_time||t.schedule_mode||'now')+' • Target: '+(t.targets||'chưa chọn'),t.status||'queued',cls)}).join('')||'<small>Chưa có task.</small>';qs('#mktFbAutoMediaList').innerHTML=(d.media||[]).map(function(m){return item(m.label||m.file_name,m.file_path,m.media_type||'media')}).join('')||'<small>Chưa có media.</small>';qs('#mktFbAutoLog').textContent=(d.logs||[]).map(function(x){return '['+x.created_at+'] '+x.action+' • '+x.status+' • '+x.detail}).join('\n')||'Chưa có log.'}).catch(function(e){log('Lỗi tải dashboard: '+e)})};function postForm(form,url){return fetch(url,{method:'POST',body:new FormData(form)}).then(function(r){return r.json()})}function bind(){var af=qs('#mktFbAutoAccountForm');if(af&&!af.dataset.bound){af.dataset.bound='1';af.addEventListener('submit',function(e){e.preventDefault();postForm(af,'/api/fbauto/accounts').then(function(d){log(d.message||'Đã lưu tài khoản.');af.reset();mktFbAutoRefresh()})})}var tf=qs('#mktFbAutoTaskForm');if(tf&&!tf.dataset.bound){tf.dataset.bound='1';tf.addEventListener('submit',function(e){e.preventDefault();postForm(tf,'/api/fbauto/tasks').then(function(d){log(d.message||'Đã tạo task.');mktFbAutoShowTab('logs');mktFbAutoRefresh()})})}var mf=qs('#mktFbAutoMediaForm');if(mf&&!mf.dataset.bound){mf.dataset.bound='1';mf.addEventListener('submit',function(e){e.preventDefault();postForm(mf,'/api/fbauto/media').then(function(d){log(d.message||'Đã upload media.');mf.reset();mktFbAutoRefresh()})})}}function injectNav(){if(qs('[data-mkt-fbauto-nav]'))return;var nav=qs('.mkt-clean-nav,.sidebar,.v2-sidebar,nav');if(nav){var btn=document.createElement('button');btn.type='button';btn.setAttribute('data-mkt-fbauto-nav','1');btn.className='v2-nav-link mkt-fbauto-nav-btn';btn.innerHTML='<span class="v2-nav-text">📱 Facebook Auto 2026</span><span class="mkt-dot-tag enterprise"><i></i><span>PRO</span></span>';btn.onclick=function(e){e.preventDefault();mktFbAutoOpen()};try{nav.appendChild(btn)}catch(e){}}}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){bind();injectNav();mktFbAutoRefresh()});else{bind();injectNav();mktFbAutoRefresh()}setTimeout(function(){bind();injectNav()},800);setTimeout(injectNav,2200)})();</script>
+"""
+
+def mkt_v159_fbauto_ensure_schema():
+    conn = db(); c = conn.cursor()
+    c.execute("""CREATE TABLE IF NOT EXISTS fb_auto_accounts (id INTEGER PRIMARY KEY AUTOINCREMENT, account_name TEXT UNIQUE, browser_profile TEXT, cookies TEXT, user_agent TEXT, proxy TEXT, status TEXT DEFAULT 'active', note TEXT, created_at TEXT, updated_at TEXT)""")
+    c.execute("""CREATE TABLE IF NOT EXISTS fb_auto_tasks (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT, content TEXT, targets TEXT, schedule_mode TEXT DEFAULT 'now', schedule_time TEXT, repeat_rule TEXT, media_mode TEXT DEFAULT 'random', ai_spin INTEGER DEFAULT 0, anti_duplicate INTEGER DEFAULT 1, hashtag_random INTEGER DEFAULT 0, status TEXT DEFAULT 'queued', duplicate_score INTEGER DEFAULT 0, result_message TEXT, created_at TEXT, updated_at TEXT)""")
+    c.execute("""CREATE TABLE IF NOT EXISTS fb_auto_media (id INTEGER PRIMARY KEY AUTOINCREMENT, label TEXT, file_name TEXT, file_path TEXT, media_type TEXT, used_count INTEGER DEFAULT 0, created_at TEXT)""")
+    c.execute("""CREATE TABLE IF NOT EXISTS fb_auto_logs (id INTEGER PRIMARY KEY AUTOINCREMENT, task_id INTEGER, account_name TEXT, action TEXT, status TEXT, detail TEXT, created_at TEXT)""")
+    c.execute("""CREATE TABLE IF NOT EXISTS fb_auto_content_hashes (id INTEGER PRIMARY KEY AUTOINCREMENT, content_hash TEXT UNIQUE, content_preview TEXT, created_at TEXT)""")
+    conn.commit(); conn.close()
+
+def mkt_v159_now():
+    return datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+def mkt_v159_hash_content(content):
+    import hashlib, re
+    norm = re.sub(r'\s+', ' ', (content or '').strip().lower())
+    return hashlib.sha256(norm.encode('utf-8')).hexdigest(), norm
+
+def mkt_v159_duplicate_score(content):
+    h, norm = mkt_v159_hash_content(content)
+    if not norm:
+        return 0, h, 'Nội dung rỗng.'
+    conn = db(); c = conn.cursor()
+    try:
+        c.execute('SELECT content_preview FROM fb_auto_content_hashes ORDER BY id DESC LIMIT 200')
+        rows = [r[0] or '' for r in c.fetchall()]
+    except Exception:
+        rows = []
+    conn.close()
+    best = 0
+    try:
+        from difflib import SequenceMatcher
+        for old in rows:
+            best = max(best, int(SequenceMatcher(None, norm[:1500], old[:1500]).ratio()*100))
+    except Exception:
+        best = 0
+    if best >= 90:
+        msg = 'Trùng lặp cao, nên spin lại nội dung.'
+    elif best >= 70:
+        msg = 'Cảnh báo nội dung khá giống bài cũ.'
+    else:
+        msg = 'Nội dung an toàn dưới ngưỡng trùng lặp.'
+    return best, h, msg
+
+def mkt_v159_log(action, status='info', detail='', task_id=None, account_name=''):
+    try:
+        mkt_v159_fbauto_ensure_schema()
+        conn = db(); c = conn.cursor()
+        c.execute('INSERT INTO fb_auto_logs(task_id,account_name,action,status,detail,created_at) VALUES(?,?,?,?,?,?)', (task_id, account_name, action, status, detail, mkt_v159_now()))
+        conn.commit(); conn.close()
+    except Exception as e:
+        print('mkt_v159_log skipped:', e)
+
+@app.route('/api/fbauto/dashboard')
+def mkt_v159_fbauto_dashboard():
+    mkt_v159_fbauto_ensure_schema()
+    conn = db(); c = conn.cursor()
+    c.execute("SELECT COUNT(*) FROM fb_auto_accounts WHERE COALESCE(status,'active')!='deleted'"); accounts_count = c.fetchone()[0]
+    c.execute('SELECT COUNT(*) FROM fb_auto_tasks'); tasks_count = c.fetchone()[0]
+    c.execute("SELECT COUNT(*) FROM fb_auto_tasks WHERE status IN ('success','posted','done')"); success_count = c.fetchone()[0]
+    c.execute("SELECT COUNT(*) FROM fb_auto_tasks WHERE status IN ('failed','error')"); failed_count = c.fetchone()[0]
+    c.execute('SELECT id,account_name,browser_profile,user_agent,proxy,status,note,created_at FROM fb_auto_accounts ORDER BY id DESC LIMIT 30')
+    accounts = [{'id':r[0],'account_name':r[1],'browser_profile':r[2],'user_agent':r[3],'proxy':r[4],'status':r[5],'note':r[6],'created_at':r[7]} for r in c.fetchall()]
+    c.execute('SELECT id,title,targets,schedule_mode,schedule_time,media_mode,status,duplicate_score,result_message,created_at FROM fb_auto_tasks ORDER BY id DESC LIMIT 40')
+    tasks = [{'id':r[0],'title':r[1],'targets':r[2],'schedule_mode':r[3],'schedule_time':r[4],'media_mode':r[5],'status':r[6],'duplicate_score':r[7],'result_message':r[8],'created_at':r[9]} for r in c.fetchall()]
+    c.execute('SELECT id,label,file_name,file_path,media_type,used_count,created_at FROM fb_auto_media ORDER BY id DESC LIMIT 30')
+    media = [{'id':r[0],'label':r[1],'file_name':r[2],'file_path':r[3],'media_type':r[4],'used_count':r[5],'created_at':r[6]} for r in c.fetchall()]
+    c.execute('SELECT id,task_id,account_name,action,status,detail,created_at FROM fb_auto_logs ORDER BY id DESC LIMIT 80')
+    logs = [{'id':r[0],'task_id':r[1],'account_name':r[2],'action':r[3],'status':r[4],'detail':r[5],'created_at':r[6]} for r in c.fetchall()]
+    conn.close()
+    return jsonify({'ok': True, 'stats': {'accounts': accounts_count, 'tasks': tasks_count, 'success': success_count, 'failed': failed_count}, 'accounts': accounts, 'tasks': tasks, 'media': media, 'logs': logs})
+
+@app.route('/api/fbauto/accounts', methods=['POST'])
+def mkt_v159_fbauto_save_account():
+    mkt_v159_fbauto_ensure_schema()
+    account_name = (request.form.get('account_name') or '').strip() or ('FB' + datetime.datetime.now().strftime('%H%M%S'))
+    proxy = (request.form.get('proxy') or '').strip()
+    browser_profile = (request.form.get('browser_profile') or '').strip() or ('profiles/' + account_name.replace(' ', '_'))
+    user_agent = (request.form.get('user_agent') or '').strip()
+    now = mkt_v159_now()
+    conn = db(); c = conn.cursor()
+    c.execute("""INSERT INTO fb_auto_accounts(account_name,browser_profile,user_agent,proxy,status,note,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?) ON CONFLICT(account_name) DO UPDATE SET browser_profile=excluded.browser_profile,user_agent=excluded.user_agent,proxy=excluded.proxy,status='active',updated_at=excluded.updated_at""", (account_name,browser_profile,user_agent,proxy,'active','User tự đăng nhập, hệ thống không lưu mật khẩu.',now,now))
+    conn.commit(); conn.close()
+    mkt_v159_log('save_account','success','Đã lưu tài khoản '+account_name, account_name=account_name)
+    return jsonify({'ok': True, 'message': 'Đã lưu tài khoản/proxy/profile: ' + account_name})
+
+@app.route('/api/fbauto/tasks', methods=['POST'])
+def mkt_v159_fbauto_create_task():
+    mkt_v159_fbauto_ensure_schema()
+    title = (request.form.get('title') or 'Chiến dịch Facebook').strip(); content = (request.form.get('content') or '').strip(); targets = (request.form.get('targets') or '').strip(); schedule_mode = (request.form.get('schedule_mode') or 'now').strip(); schedule_time = (request.form.get('schedule_time') or '').strip(); media_mode = (request.form.get('media_mode') or 'random').strip()
+    ai_spin = 1 if request.form.get('ai_spin') else 0; anti_duplicate = 1 if request.form.get('anti_duplicate') else 0; hashtag_random = 1 if request.form.get('hashtag_random') else 0
+    if not content:
+        return jsonify({'ok': False, 'message': 'Bạn cần nhập nội dung bài viết.'}), 400
+    score, h, dup_msg = mkt_v159_duplicate_score(content); status = 'queued'; result = 'Task đã vào queue. ' + dup_msg; now = mkt_v159_now()
+    conn = db(); c = conn.cursor()
+    c.execute("""INSERT INTO fb_auto_tasks(title,content,targets,schedule_mode,schedule_time,media_mode,ai_spin,anti_duplicate,hashtag_random,status,duplicate_score,result_message,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)""", (title,content,targets,schedule_mode,schedule_time,media_mode,ai_spin,anti_duplicate,hashtag_random,status,score,result,now,now))
+    task_id = c.lastrowid
+    try: c.execute('INSERT OR IGNORE INTO fb_auto_content_hashes(content_hash,content_preview,created_at) VALUES(?,?,?)', (h, content[:1500].lower(), now))
+    except Exception: pass
+    conn.commit(); conn.close(); mkt_v159_log('create_task','queued',result,task_id=task_id)
+    return jsonify({'ok': True, 'task_id': task_id, 'message': 'Đã tạo tác vụ #' + str(task_id) + ' và lưu vào Queue. ' + dup_msg, 'duplicate_score': score})
+
+@app.route('/api/fbauto/media', methods=['POST'])
+def mkt_v159_fbauto_upload_media():
+    mkt_v159_fbauto_ensure_schema(); f = request.files.get('media')
+    if not f or not f.filename: return jsonify({'ok': False, 'message': 'Bạn chưa chọn ảnh/video.'}), 400
+    safe_name = secure_filename(f.filename); folder = os.path.join(UPLOAD_DIR, 'fbauto2026'); os.makedirs(folder, exist_ok=True); stamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S_'); path = os.path.join(folder, stamp + safe_name); f.save(path)
+    label = (request.form.get('label') or safe_name).strip(); ext = safe_name.lower().rsplit('.',1)[-1] if '.' in safe_name else ''; media_type = 'video' if ext in ['mp4','mov','avi','webm','mkv'] else 'image'
+    conn = db(); c = conn.cursor(); c.execute('INSERT INTO fb_auto_media(label,file_name,file_path,media_type,used_count,created_at) VALUES(?,?,?,?,?,?)', (label,safe_name,path,media_type,0,mkt_v159_now())); conn.commit(); conn.close(); mkt_v159_log('upload_media','success','Đã upload media '+safe_name)
+    return jsonify({'ok': True, 'message': 'Đã upload media: ' + safe_name, 'path': path})
+
+@app.route('/api/fbauto/logs.csv')
+def mkt_v159_fbauto_logs_csv():
+    mkt_v159_fbauto_ensure_schema(); mem = io.StringIO(); writer = csv.writer(mem); writer.writerow(['time','task_id','account','action','status','detail'])
+    conn = db(); c = conn.cursor(); c.execute('SELECT created_at,task_id,account_name,action,status,detail FROM fb_auto_logs ORDER BY id DESC LIMIT 5000')
+    for row in c.fetchall(): writer.writerow(row)
+    conn.close(); data = io.BytesIO(mem.getvalue().encode('utf-8-sig'))
+    return send_file(data, mimetype='text/csv', as_attachment=True, download_name='report.csv')
+
+@app.after_request
+def mkt_v159_fbauto_2026_after_request(response):
+    try:
+        ctype = (response.headers.get('Content-Type') or '').lower()
+        if 'text/html' in ctype:
+            body = response.get_data(as_text=True)
+            if 'mkt-v159-fbauto-2026-js' not in body and '</body>' in body:
+                body = body.replace('</body>', MKT_V159_FB_AUTO_CENTER + '</body>')
+                response.set_data(body); response.headers['Content-Length'] = str(len(body.encode('utf-8')))
+    except Exception as _e:
+        print('mkt_v159_fbauto_2026_after_request skipped:', _e)
+    return response
+
+try:
+    mkt_v159_fbauto_ensure_schema()
+except Exception as _mkt_v159_schema_err:
+    print('MKT V159 fbauto schema bootstrap skipped:', _mkt_v159_schema_err)
+
+
 if __name__ == "__main__":
     # Không tự tạo kho 50k content khi khởi động để tránh lỗi SQLite database is locked trên Render.
     # Khi cần kiểm tra/tạo kho content, gọi /api/content_50k_stats từ admin.
