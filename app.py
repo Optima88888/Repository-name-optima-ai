@@ -20475,6 +20475,7 @@ except Exception as _mkt_v158_ext_error:
 
 import hashlib
 import uuid
+import urllib.parse
 try:
     from difflib import SequenceMatcher
 except Exception:
@@ -20507,6 +20508,41 @@ def fb2026_slug(text):
     val = "".join(keep).strip("_")[:48]
     return val or "FB"
 
+
+def fb2026_profile_path(account_code):
+    """Tự tạo browser profile, không bắt khách nhập đường dẫn profile."""
+    code = fb2026_slug(account_code or ('FB' + uuid.uuid4().hex[:4]))
+    path = os.path.join(FB2026_PROFILE_ROOT, code)
+    os.makedirs(path, exist_ok=True)
+    return path
+
+def fb2026_playwright_proxy(proxy_text):
+    """Chuẩn hóa proxy cho Playwright. Hỗ trợ http://user:pass@ip:port và ip:port."""
+    raw = str(proxy_text or '').strip()
+    if not raw:
+        return None
+    if '://' not in raw:
+        raw = 'http://' + raw
+    try:
+        u = urllib.parse.urlparse(raw)
+        server = f"{u.scheme}://{u.hostname}:{u.port}" if u.port else f"{u.scheme}://{u.hostname}"
+        cfg = {'server': server}
+        if u.username:
+            cfg['username'] = urllib.parse.unquote(u.username)
+        if u.password:
+            cfg['password'] = urllib.parse.unquote(u.password)
+        return cfg
+    except Exception:
+        return {'server': raw}
+
+def fb2026_account_public_status(row):
+    status = str(row.get('login_status') or 'Chưa kết nối')
+    if row.get('page_id') and row.get('page_token_mask'):
+        api = 'API Ready'
+    else:
+        api = 'Profile Mode'
+    return f"{status} • {api}"
+
 def fb2026_hash(text):
     return hashlib.sha256(str(text or "").encode("utf-8")).hexdigest()
 
@@ -20535,6 +20571,16 @@ def fb2026_init_db():
     c.execute("""CREATE TABLE IF NOT EXISTS fb2026_plugins(
         id INTEGER PRIMARY KEY AUTOINCREMENT, plugin_name TEXT UNIQUE, plugin_type TEXT,
         status TEXT DEFAULT 'active', config_json TEXT, created_at TEXT, updated_at TEXT)""")
+    for sql in [
+        "ALTER TABLE fb2026_accounts ADD COLUMN last_session_check TEXT",
+        "ALTER TABLE fb2026_accounts ADD COLUMN proxy_status TEXT",
+        "ALTER TABLE fb2026_accounts ADD COLUMN session_score INTEGER DEFAULT 0",
+        "ALTER TABLE fb2026_accounts ADD COLUMN last_login_at TEXT"
+    ]:
+        try:
+            c.execute(sql)
+        except Exception:
+            pass
     conn.commit(); conn.close()
 
 try:
@@ -20743,9 +20789,9 @@ def fb2026_process_due_tasks(limit=None):
 def fb2026_coverage():
     fb2026_init_db()
     return jsonify({"ok": True, "items": [
-        {"name":"Tài khoản/proxy/profile riêng", "status":"done"},
+        {"name":"Tự tạo Browser Profile, khách không cần nhập", "status":"done"},
         {"name":"Mở trình duyệt đăng nhập Facebook thật bằng Playwright", "status":"done_optional_playwright"},
-        {"name":"Lưu session/profile", "status":"done_profile_dir"},
+        {"name":"Lưu session/profile + kiểm tra phiên", "status":"done_session_health"},
         {"name":"Đăng Page thật qua Graph API", "status":"done_requires_page_token"},
         {"name":"Đăng profile cá nhân", "status":"manual_assisted", "note":"Không bypass captcha/checkpoint."},
         {"name":"Hẹn giờ/lặp ngày tuần tháng", "status":"done"},
@@ -20754,6 +20800,7 @@ def fb2026_coverage():
         {"name":"Anti Duplicate", "status":"done"},
         {"name":"CSV Log", "status":"done"},
         {"name":"API bên thứ ba", "status":"done"},
+        {"name":"Test proxy / Test Page API / Reconnect", "status":"done"},
         {"name":"Plugin mở rộng", "status":"ready"}
     ]})
 
@@ -20763,7 +20810,7 @@ def fb2026_accounts_api():
     if request.method == 'POST':
         data = request.get_json(silent=True) or request.form
         code = fb2026_slug(data.get('account_code') or data.get('display_name') or ('FB' + uuid.uuid4().hex[:4]))
-        profile = str(data.get('browser_profile') or '').strip() or os.path.join(FB2026_PROFILE_ROOT, code)
+        profile = fb2026_profile_path(code)
         os.makedirs(profile, exist_ok=True)
         now=fb2026_now()
         c.execute("""INSERT INTO fb2026_accounts(account_code,display_name,proxy,browser_profile,cookies_json,user_agent,login_status,page_id,page_token,note,status,created_at,updated_at)
@@ -20771,9 +20818,13 @@ def fb2026_accounts_api():
                      ON CONFLICT(account_code) DO UPDATE SET display_name=excluded.display_name,proxy=excluded.proxy,browser_profile=excluded.browser_profile,user_agent=excluded.user_agent,page_id=excluded.page_id,page_token=excluded.page_token,note=excluded.note,updated_at=excluded.updated_at""",
                   (code, data.get('display_name') or code, data.get('proxy') or '', profile, data.get('cookies_json') or '', data.get('user_agent') or '', data.get('login_status') or 'Chưa đăng nhập', data.get('page_id') or '', data.get('page_token') or '', data.get('note') or '', 'active', now, now))
         conn.commit(); conn.close()
-        return jsonify({"ok": True, "message":"Đã lưu tài khoản/profile.", "account_code": code, "browser_profile": profile})
-    c.execute("SELECT id,account_code,display_name,proxy,browser_profile,user_agent,login_status,page_id,CASE WHEN page_token!='' THEN substr(page_token,1,8)||'...' ELSE '' END AS page_token_mask,note,status,updated_at FROM fb2026_accounts WHERE COALESCE(status,'active')!='deleted' ORDER BY id DESC")
-    rows=fb2026_rows_to_dicts(c,c.fetchall()); conn.close()
+        return jsonify({"ok": True, "message":"Đã lưu tài khoản. Browser Profile được hệ thống tự tạo, khách không cần nhập.", "account_code": code, "browser_profile": profile})
+    c.execute("SELECT id,account_code,display_name,proxy,browser_profile,user_agent,login_status,page_id,CASE WHEN page_token!='' THEN substr(page_token,1,8)||'...' ELSE '' END AS page_token_mask,note,status,updated_at,last_session_check,proxy_status,session_score,last_login_at FROM fb2026_accounts WHERE COALESCE(status,'active')!='deleted' ORDER BY id DESC")
+    rows=fb2026_rows_to_dicts(c,c.fetchall())
+    for r in rows:
+        r['public_status'] = fb2026_account_public_status(r)
+        r['browser_profile_label'] = 'Tự động tạo bởi hệ thống'
+    conn.close()
     return jsonify({"ok": True, "accounts": rows})
 
 @app.route('/api/fb2026/login/start', methods=['POST'])
@@ -20782,30 +20833,149 @@ def fb2026_login_start():
     conn=db(); c=conn.cursor(); c.execute("SELECT id,account_code,browser_profile,proxy,user_agent FROM fb2026_accounts WHERE id=?", (acct_id,)); row=c.fetchone(); conn.close()
     if not row:
         return jsonify({"ok": False, "message":"Không tìm thấy tài khoản."}), 404
-    _, code, profile, proxy, ua = row; os.makedirs(profile, exist_ok=True)
+    _, code, profile, proxy, ua = row
+    profile = profile or fb2026_profile_path(code)
+    os.makedirs(profile, exist_ok=True)
     try:
         from playwright.sync_api import sync_playwright
     except Exception:
         return jsonify({"ok": False, "message":"Máy chủ chưa cài Playwright. Cài: pip install playwright && playwright install chromium", "profile": profile})
+    keep_minutes = int(os.getenv('FB2026_LOGIN_WINDOW_MINUTES', '15'))
     def _open():
         try:
             with sync_playwright() as p:
                 kwargs={"headless": False, "user_data_dir": profile}
                 if ua:
                     kwargs['user_agent'] = ua
-                if proxy:
-                    kwargs['proxy'] = {"server": proxy}
+                px = fb2026_playwright_proxy(proxy)
+                if px:
+                    kwargs['proxy'] = px
                 browser = p.chromium.launch_persistent_context(**kwargs)
                 page = browser.new_page(); page.goto('https://www.facebook.com/', wait_until='domcontentloaded', timeout=60000)
-                fb2026_log('', code, 'login_browser', 'opened', 'Đã mở Chrome profile. Người dùng tự đăng nhập Facebook, không lưu mật khẩu trong hệ thống.')
-                time.sleep(20*60)
+                fb2026_log('', code, 'login_browser', 'opened', 'Đã mở Chrome profile riêng. Người dùng tự đăng nhập Facebook; hệ thống không lưu mật khẩu.')
+                time.sleep(max(1, keep_minutes) * 60)
+                cookies = []
+                try:
+                    cookies = browser.cookies('https://www.facebook.com')
+                except Exception:
+                    cookies = []
+                login_ok = any(str(x.get('name')) == 'c_user' for x in cookies)
+                status = 'Đã kết nối Facebook' if login_ok else 'Chưa xác nhận đăng nhập'
+                conn2=db(); c2=conn2.cursor()
+                c2.execute("UPDATE fb2026_accounts SET cookies_json=?,login_status=?,last_login_at=?,last_session_check=?,session_score=?,browser_profile=?,updated_at=? WHERE id=?",
+                           (json.dumps(cookies, ensure_ascii=False), status, fb2026_now(), fb2026_now(), 100 if login_ok else 30, profile, fb2026_now(), acct_id))
+                conn2.commit(); conn2.close()
+                fb2026_log('', code, 'login_browser', 'success' if login_ok else 'warning', status)
                 try: browser.close()
                 except Exception: pass
         except Exception as e:
             fb2026_log('', code, 'login_browser', 'failed', str(e))
+            try:
+                conn2=db(); c2=conn2.cursor(); c2.execute("UPDATE fb2026_accounts SET login_status=?,last_session_check=?,session_score=?,updated_at=? WHERE id=?", ('Lỗi mở trình duyệt: '+str(e)[:120], fb2026_now(), 0, fb2026_now(), acct_id)); conn2.commit(); conn2.close()
+            except Exception:
+                pass
     threading.Thread(target=_open, daemon=True).start()
-    conn=db(); c=conn.cursor(); c.execute("UPDATE fb2026_accounts SET login_status='Đã mở trình duyệt đăng nhập',updated_at=? WHERE id=?", (fb2026_now(), acct_id)); conn.commit(); conn.close()
-    return jsonify({"ok": True, "message":"Đã yêu cầu mở trình duyệt đăng nhập. Hãy đăng nhập Facebook trực tiếp trên cửa sổ Chrome vừa mở.", "profile": profile})
+    conn=db(); c=conn.cursor(); c.execute("UPDATE fb2026_accounts SET login_status='Đang chờ khách đăng nhập',browser_profile=?,updated_at=? WHERE id=?", (profile, fb2026_now(), acct_id)); conn.commit(); conn.close()
+    return jsonify({"ok": True, "message":"Đã mở trình duyệt đăng nhập. Khách chỉ cần đăng nhập Facebook trong cửa sổ Chrome vừa mở; Browser Profile được tự lưu.", "profile_label":"Tự động tạo bởi hệ thống", "profile": profile})
+
+@app.route('/api/fb2026/session/check', methods=['POST','GET'])
+def fb2026_session_check_api():
+    fb2026_init_db(); data=request.get_json(silent=True) or request.values; acct_id=str(data.get('account_id') or '').strip()
+    if not acct_id:
+        return jsonify({"ok": False, "message":"Thiếu account_id."}), 400
+    conn=db(); c=conn.cursor(); c.execute("SELECT id,account_code,browser_profile,proxy,user_agent,cookies_json,page_id,page_token FROM fb2026_accounts WHERE id=?", (acct_id,)); row=c.fetchone(); conn.close()
+    if not row:
+        return jsonify({"ok": False, "message":"Không tìm thấy tài khoản."}), 404
+    _, code, profile, proxy, ua, cookies_json, page_id, page_token = row
+    profile = profile or fb2026_profile_path(code)
+    os.makedirs(profile, exist_ok=True)
+    status='Chưa kết nối'; score=0; detail=[]
+    try:
+        cookies = json.loads(cookies_json or '[]') if cookies_json else []
+    except Exception:
+        cookies = []
+    if any(str(x.get('name')) == 'c_user' for x in cookies if isinstance(x, dict)):
+        status='Cookie còn hiệu lực trong hồ sơ'; score=70; detail.append('Có cookie c_user đã lưu')
+    if page_id and page_token:
+        ok, msg = fb2026_page_token_check(page_id, page_token)
+        if ok:
+            status='Đã kết nối Page API'; score=100; detail.append(msg)
+        else:
+            detail.append('Page API lỗi: '+msg)
+    # Nếu có Playwright, kiểm tra nhẹ bằng profile thật nhưng không bypass captcha/checkpoint.
+    try:
+        from playwright.sync_api import sync_playwright
+        with sync_playwright() as p:
+            kwargs={"headless": True, "user_data_dir": profile}
+            if ua: kwargs['user_agent'] = ua
+            px=fb2026_playwright_proxy(proxy)
+            if px: kwargs['proxy']=px
+            browser=p.chromium.launch_persistent_context(**kwargs)
+            page=browser.new_page(); page.goto('https://www.facebook.com/', wait_until='domcontentloaded', timeout=60000)
+            current=(page.url or '').lower()
+            cookies2=browser.cookies('https://www.facebook.com')
+            if any(str(x.get('name')) == 'c_user' for x in cookies2):
+                status='Đã kết nối Facebook'; score=max(score,90); cookies = cookies2; detail.append('Profile đang còn đăng nhập')
+            elif 'login' in current:
+                status='Session hết hạn hoặc chưa đăng nhập'; score=10; detail.append('Facebook đang yêu cầu đăng nhập lại')
+            try: browser.close()
+            except Exception: pass
+    except Exception as e:
+        detail.append('Không kiểm tra Playwright: '+str(e)[:160])
+    conn=db(); c=conn.cursor(); c.execute("UPDATE fb2026_accounts SET login_status=?,cookies_json=?,last_session_check=?,session_score=?,updated_at=? WHERE id=?", (status, json.dumps(cookies, ensure_ascii=False), fb2026_now(), score, fb2026_now(), acct_id)); conn.commit(); conn.close()
+    fb2026_log('', code, 'session_check', 'success' if score>=70 else 'warning', '; '.join(detail)[:1000])
+    return jsonify({"ok": True, "account_id": acct_id, "status": status, "score": score, "detail": detail})
+
+@app.route('/api/fb2026/proxy/test', methods=['POST','GET'])
+def fb2026_proxy_test_api():
+    fb2026_init_db(); data=request.get_json(silent=True) or request.values; acct_id=str(data.get('account_id') or '').strip()
+    if not acct_id:
+        return jsonify({"ok": False, "message":"Thiếu account_id."}), 400
+    conn=db(); c=conn.cursor(); c.execute("SELECT account_code,proxy FROM fb2026_accounts WHERE id=?", (acct_id,)); row=c.fetchone(); conn.close()
+    if not row:
+        return jsonify({"ok": False, "message":"Không tìm thấy tài khoản."}), 404
+    code, proxy = row
+    if not proxy:
+        status='Không dùng proxy'; ok=True; detail='Tài khoản này đang chạy bằng IP máy chủ.'
+    else:
+        try:
+            proxies={'http': proxy, 'https': proxy}
+            r=requests.get('https://www.facebook.com/generate_204', proxies=proxies, timeout=12)
+            ok = r.status_code in (200,204)
+            status='Proxy hoạt động' if ok else 'Proxy phản hồi bất thường'
+            detail=f'HTTP {r.status_code}'
+        except Exception as e:
+            ok=False; status='Proxy lỗi'; detail=str(e)[:300]
+    conn=db(); c=conn.cursor(); c.execute("UPDATE fb2026_accounts SET proxy_status=?,updated_at=? WHERE id=?", (status + ' - ' + detail, fb2026_now(), acct_id)); conn.commit(); conn.close()
+    fb2026_log('', code, 'proxy_test', 'success' if ok else 'failed', status + ': ' + detail)
+    return jsonify({"ok": ok, "status": status, "detail": detail})
+
+def fb2026_page_token_check(page_id, page_token):
+    try:
+        res=requests.get(f'https://graph.facebook.com/v20.0/{page_id}', params={'fields':'id,name','access_token':page_token}, timeout=20)
+        data=res.json() if res.text else {}
+        if res.status_code < 400 and data.get('id'):
+            return True, 'Page API hợp lệ: ' + str(data.get('name') or data.get('id'))
+        return False, data.get('error',{}).get('message') or res.text[:300]
+    except Exception as e:
+        return False, str(e)
+
+@app.route('/api/fb2026/page-token/check', methods=['POST','GET'])
+def fb2026_page_token_check_api():
+    fb2026_init_db(); data=request.get_json(silent=True) or request.values; acct_id=str(data.get('account_id') or '').strip()
+    conn=db(); c=conn.cursor(); c.execute("SELECT account_code,page_id,page_token FROM fb2026_accounts WHERE id=?", (acct_id,)); row=c.fetchone(); conn.close()
+    if not row:
+        return jsonify({"ok": False, "message":"Không tìm thấy tài khoản."}), 404
+    code, page_id, page_token = row
+    ok, msg = fb2026_page_token_check(page_id, page_token)
+    fb2026_log('', code, 'page_token_check', 'success' if ok else 'failed', msg)
+    return jsonify({"ok": ok, "message": msg})
+
+@app.route('/api/fb2026/accounts/delete', methods=['POST'])
+def fb2026_account_delete_api():
+    fb2026_init_db(); data=request.get_json(silent=True) or request.form; acct_id=str(data.get('account_id') or '').strip()
+    conn=db(); c=conn.cursor(); c.execute("UPDATE fb2026_accounts SET status='deleted',updated_at=? WHERE id=?", (fb2026_now(), acct_id)); conn.commit(); conn.close()
+    return jsonify({"ok": True, "message":"Đã xóa tài khoản khỏi danh sách. Profile trên ổ đĩa vẫn được giữ để tránh mất session."})
 
 @app.route('/api/fb2026/media/upload', methods=['POST'])
 def fb2026_media_upload():
@@ -20910,20 +21080,24 @@ MKT_V160_FB2026_REAL_BACKEND_UI = r'''
 </style>
 <script id="mkt-v160-fb2026-real-backend-js">
 (function(){
-  function html(){return '<div id="mktFb2026ProPanel"><div class="fb2026-hero"><span class="fb2026-pill">⚡ Facebook Automation 2026 • Real Backend</span><h1 class="fb2026-title">Trung tâm đăng bài Facebook dùng thật</h1><div class="fb2026-sub">Có backend lưu tài khoản/profile, mở trình duyệt đăng nhập, tạo queue đăng bài, hẹn giờ, random media, AI spin, anti duplicate, log CSV và API mở rộng. Đăng Page thật khi cấu hình Page ID + Page Token hợp lệ.</div><div class="fb2026-tabs"><button data-fbtab="task" class="active">➕ Tạo task</button><button data-fbtab="account">👥 Tài khoản</button><button data-fbtab="media">🖼️ Media</button><button data-fbtab="log">📊 Log/API</button></div><div class="fb2026-grid"><div class="fb2026-kpi"><b id="fb26Acc">0</b><span>Tài khoản</span></div><div class="fb2026-kpi"><b id="fb26Task">0</b><span>Tác vụ</span></div><div class="fb2026-kpi"><b id="fb26Ok">0%</b><span>Tỷ lệ thành công</span></div><div class="fb2026-kpi"><b id="fb26Run">0</b><span>Đang/chờ chạy</span></div></div></div><div class="fb2026-card fb2026-section active" data-section="task"><h2>➕ Tạo tác vụ đăng bài</h2><p class="fb2026-note">Chọn tài khoản đã lưu. Nếu tài khoản có Page Token, hệ thống đăng Page thật qua API. Nếu chỉ có browser profile, task sẽ lưu log để khách mở profile đăng thủ công an toàn.</p><div class="fb2026-form"><select id="fb26Accounts" class="full" multiple></select><textarea id="fb26Content" class="full" placeholder="Nhập nội dung bài đăng..."></textarea><input id="fb26Link" placeholder="Link nếu có"><input id="fb26Schedule" type="datetime-local"><select id="fb26Repeat"><option value="none">Không lặp</option><option value="daily">Lặp mỗi ngày</option><option value="weekly">Lặp mỗi tuần</option><option value="monthly">Lặp mỗi tháng</option></select><select id="fb26MediaMode"><option value="random">Random media</option><option value="no_repeat">Không lặp ưu tiên file ít dùng</option><option value="loop">Theo vòng lặp</option></select><input id="fb26MediaIds" placeholder="ID media, ví dụ: 1,2,3"><input id="fb26HashTags" placeholder="#marketing, #facebook, #viral"><input id="fb26HashMin" type="number" placeholder="Min hashtag" value="0"><input id="fb26HashMax" type="number" placeholder="Max hashtag" value="0"><input id="fb26Spin" type="number" placeholder="AI spin số phiên bản" value="0"><button class="fb2026-btn primary full" id="fb26CreateTask">🚀 Lưu task / Đưa vào queue</button><button class="fb2026-btn green full" id="fb26RunWorker">▶️ Chạy worker xử lý task đến hạn</button></div><div id="fb26TaskResult" class="fb2026-list"></div></div><div class="fb2026-card fb2026-section" data-section="account"><h2>👥 Tài khoản / Proxy / Browser Profile</h2><div class="fb2026-form"><input id="fb26Code" placeholder="Mã tài khoản: FB01"><input id="fb26Name" placeholder="Tên hiển thị"><input id="fb26Proxy" placeholder="Proxy riêng: http://user:pass@ip:port"><input id="fb26UA" placeholder="User-Agent riêng nếu có"><input id="fb26PageId" placeholder="Page ID để đăng thật qua API"><input id="fb26PageToken" placeholder="Page Token có quyền đăng bài"><input id="fb26Profile" class="full" placeholder="Profile: fb2026_profiles/FB01"><button class="fb2026-btn primary full" id="fb26SaveAcc">💾 Lưu tài khoản</button></div><div id="fb26AccList" class="fb2026-list"></div></div><div class="fb2026-card fb2026-section" data-section="media"><h2>🖼️ Kho ảnh/video random</h2><div class="fb2026-form"><input id="fb26Files" type="file" multiple class="full"><button class="fb2026-btn primary full" id="fb26Upload">⬆️ Upload media</button></div><div id="fb26MediaList" class="fb2026-list"></div></div><div class="fb2026-card fb2026-section" data-section="log"><h2>📊 Nhật ký / API / CSV</h2><div class="fb2026-tabs"><button class="fb2026-btn" id="fb26RefreshLog">🔄 Tải log</button><button class="fb2026-btn" id="fb26CSV">⬇️ Xuất report.csv</button><button class="fb2026-btn" id="fb26Coverage">✅ Kiểm tra thiếu</button></div><p class="fb2026-note">API nhanh: POST /api/fb2026/create-task • POST /api/fb2026/upload-media • GET /api/fb2026/logs • GET /api/fb2026/accounts</p><div id="fb26Logs" class="fb2026-list"></div></div></div>'}
+  function html(){return '<div id="mktFb2026ProPanel"><div class="fb2026-hero"><span class="fb2026-pill">⚡ Facebook Automation 2026 • Real Backend</span><h1 class="fb2026-title">Trung tâm đăng bài Facebook dùng thật</h1><div class="fb2026-sub">Có backend lưu tài khoản/profile, mở trình duyệt đăng nhập, tạo queue đăng bài, hẹn giờ, random media, AI spin, anti duplicate, log CSV và API mở rộng. Đăng Page thật khi cấu hình Page ID + Page Token hợp lệ.</div><div class="fb2026-tabs"><button data-fbtab="task" class="active">➕ Tạo task</button><button data-fbtab="account">👥 Tài khoản</button><button data-fbtab="media">🖼️ Media</button><button data-fbtab="log">📊 Log/API</button></div><div class="fb2026-grid"><div class="fb2026-kpi"><b id="fb26Acc">0</b><span>Tài khoản</span></div><div class="fb2026-kpi"><b id="fb26Task">0</b><span>Tác vụ</span></div><div class="fb2026-kpi"><b id="fb26Ok">0%</b><span>Tỷ lệ thành công</span></div><div class="fb2026-kpi"><b id="fb26Run">0</b><span>Đang/chờ chạy</span></div></div></div><div class="fb2026-card fb2026-section active" data-section="task"><h2>➕ Tạo tác vụ đăng bài</h2><p class="fb2026-note">Chọn tài khoản đã lưu. Nếu tài khoản có Page Token, hệ thống đăng Page thật qua API. Nếu chỉ có browser profile, task sẽ lưu log để khách mở profile đăng thủ công an toàn.</p><div class="fb2026-form"><select id="fb26Accounts" class="full" multiple></select><textarea id="fb26Content" class="full" placeholder="Nhập nội dung bài đăng..."></textarea><input id="fb26Link" placeholder="Link nếu có"><input id="fb26Schedule" type="datetime-local"><select id="fb26Repeat"><option value="none">Không lặp</option><option value="daily">Lặp mỗi ngày</option><option value="weekly">Lặp mỗi tuần</option><option value="monthly">Lặp mỗi tháng</option></select><select id="fb26MediaMode"><option value="random">Random media</option><option value="no_repeat">Không lặp ưu tiên file ít dùng</option><option value="loop">Theo vòng lặp</option></select><input id="fb26MediaIds" placeholder="ID media, ví dụ: 1,2,3"><input id="fb26HashTags" placeholder="#marketing, #facebook, #viral"><input id="fb26HashMin" type="number" placeholder="Min hashtag" value="0"><input id="fb26HashMax" type="number" placeholder="Max hashtag" value="0"><input id="fb26Spin" type="number" placeholder="AI spin số phiên bản" value="0"><button class="fb2026-btn primary full" id="fb26CreateTask">🚀 Lưu task / Đưa vào queue</button><button class="fb2026-btn green full" id="fb26RunWorker">▶️ Chạy worker xử lý task đến hạn</button></div><div id="fb26TaskResult" class="fb2026-list"></div></div><div class="fb2026-card fb2026-section" data-section="account"><h2>👥 Tài khoản / Proxy / Kết nối Facebook</h2><p class="fb2026-note">Khách không cần nhập Browser Profile. Hệ thống tự tạo hồ sơ trình duyệt riêng cho từng tài khoản sau khi bấm Kết nối Facebook.</p><div class="fb2026-form"><input id="fb26Code" placeholder="Mã tài khoản: FB01"><input id="fb26Name" placeholder="Tên hiển thị"><input id="fb26Proxy" placeholder="Proxy riêng: http://user:pass@ip:port"><input id="fb26UA" placeholder="User-Agent riêng nếu có"><input id="fb26PageId" placeholder="Page ID để đăng thật qua API"><input id="fb26PageToken" placeholder="Page Token có quyền đăng bài"><div class="fb2026-note full">🖥 Hồ sơ trình duyệt: <b>Tự động tạo bởi hệ thống</b></div><button class="fb2026-btn primary full" id="fb26SaveAcc">💾 Lưu tài khoản</button></div><div id="fb26AccList" class="fb2026-list"></div></div><div class="fb2026-card fb2026-section" data-section="media"><h2>🖼️ Kho ảnh/video random</h2><div class="fb2026-form"><input id="fb26Files" type="file" multiple class="full"><button class="fb2026-btn primary full" id="fb26Upload">⬆️ Upload media</button></div><div id="fb26MediaList" class="fb2026-list"></div></div><div class="fb2026-card fb2026-section" data-section="log"><h2>📊 Nhật ký / API / CSV</h2><div class="fb2026-tabs"><button class="fb2026-btn" id="fb26RefreshLog">🔄 Tải log</button><button class="fb2026-btn" id="fb26CSV">⬇️ Xuất report.csv</button><button class="fb2026-btn" id="fb26Coverage">✅ Kiểm tra thiếu</button></div><p class="fb2026-note">API nhanh: POST /api/fb2026/create-task • POST /api/fb2026/upload-media • GET /api/fb2026/logs • GET /api/fb2026/accounts</p><div id="fb26Logs" class="fb2026-list"></div></div></div>'}
   function mount(){var old=document.getElementById('mktFb2026ProPanel'); if(old) return; var target=document.querySelector('.main,.content,.container,main')||document.body; var wrap=document.createElement('div'); wrap.innerHTML=html(); target.prepend(wrap.firstChild); var mob=document.createElement('button'); mob.className='mkt-fb2026-mobile-menu'; mob.innerHTML='📱 FB Auto'; mob.onclick=function(){document.getElementById('mktFb2026ProPanel')?.scrollIntoView({behavior:'smooth',block:'start'});}; document.body.appendChild(mob); bind(); loadAll();}
   function item(obj){return '<div class="fb2026-item">'+(obj.title||obj.account_code||obj.file_name||obj.task_uid||obj.action||'Mục')+'<small>'+Object.keys(obj).map(function(k){return k+': '+obj[k]}).join('\n')+'</small></div>'}
   async function j(url,opt){var r=await fetch(url,opt||{}); return await r.json();}
   function bind(){document.querySelectorAll('[data-fbtab]').forEach(function(b){b.onclick=function(){document.querySelectorAll('[data-fbtab]').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.querySelectorAll('.fb2026-section').forEach(s=>s.classList.remove('active'));document.querySelector('[data-section="'+b.dataset.fbtab+'"]').classList.add('active');};});document.getElementById('fb26SaveAcc').onclick=saveAcc;document.getElementById('fb26CreateTask').onclick=createTask;document.getElementById('fb26RunWorker').onclick=runWorker;document.getElementById('fb26Upload').onclick=uploadMedia;document.getElementById('fb26RefreshLog').onclick=loadLogs;document.getElementById('fb26CSV').onclick=function(){location.href='/api/fb2026/export.csv'};document.getElementById('fb26Coverage').onclick=coverage;}
   async function loadStats(){var d=await j('/api/fb2026/stats').catch(()=>null); if(!d||!d.ok)return; var s=d.stats; fb26Acc.textContent=s.accounts; fb26Task.textContent=s.tasks; fb26Ok.textContent=s.success_rate+'%'; fb26Run.textContent=(s.running+s.queued);}
-  async function loadAccounts(){var d=await j('/api/fb2026/accounts').catch(()=>null); if(!d||!d.ok)return; fb26Accounts.innerHTML=(d.accounts||[]).map(a=>'<option value="'+a.id+'">'+a.account_code+' • '+(a.display_name||'')+' • '+(a.page_id?'API Ready':'Profile')+'</option>').join(''); fb26AccList.innerHTML=(d.accounts||[]).map(a=>item(Object.assign({title:'👤 '+a.account_code},a))+'<button class="fb2026-btn" onclick="fetch(\'/api/fb2026/login/start\',{method:\'POST\',headers:{\'Content-Type\':\'application/json\'},body:JSON.stringify({account_id:'+a.id+'})}).then(r=>r.json()).then(x=>alert(x.message||JSON.stringify(x)))">🌐 Mở trình duyệt đăng nhập</button>').join('');}
+  async function loadAccounts(){var d=await j('/api/fb2026/accounts').catch(()=>null); if(!d||!d.ok)return; fb26Accounts.innerHTML=(d.accounts||[]).map(a=>'<option value="'+a.id+'">'+a.account_code+' • '+(a.display_name||'')+' • '+(a.public_status||'')+'</option>').join(''); fb26AccList.innerHTML=(d.accounts||[]).map(function(a){return item(Object.assign({title:'👤 '+a.account_code+' • '+(a.public_status||'')},a))+'<div class="fb2026-tabs"><button class="fb2026-btn green" onclick="fb26Login('+a.id+')">🔗 Kết nối Facebook</button><button class="fb2026-btn" onclick="fb26Check('+a.id+')">🟢 Kiểm tra phiên</button><button class="fb2026-btn" onclick="fb26Proxy('+a.id+')">🌐 Test proxy</button><button class="fb2026-btn" onclick="fb26PageToken('+a.id+')">📄 Test Page API</button></div>'}).join('');}
   async function loadMedia(){var d=await j('/api/fb2026/media').catch(()=>null); if(!d||!d.ok)return; fb26MediaList.innerHTML=(d.media||[]).map(m=>item(Object.assign({title:'🖼️ ID '+m.id+' - '+m.file_name},m))).join('');}
   async function loadLogs(){var d=await j('/api/fb2026/logs').catch(()=>null); if(!d||!d.ok)return; fb26Logs.innerHTML=(d.logs||[]).map(l=>item(Object.assign({title:(l.status==='success'?'✅ ':'⚠️ ')+l.action},l))).join('');}
-  async function saveAcc(){var body={account_code:fb26Code.value,display_name:fb26Name.value,proxy:fb26Proxy.value,user_agent:fb26UA.value,page_id:fb26PageId.value,page_token:fb26PageToken.value,browser_profile:fb26Profile.value}; var d=await j('/api/fb2026/accounts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}); alert(d.message||JSON.stringify(d)); loadAll();}
+  async function saveAcc(){var body={account_code:fb26Code.value,display_name:fb26Name.value,proxy:fb26Proxy.value,user_agent:fb26UA.value,page_id:fb26PageId.value,page_token:fb26PageToken.value,browser_profile:''}; var d=await j('/api/fb2026/accounts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}); alert(d.message||JSON.stringify(d)); loadAll();}
   async function createTask(){var ac=[...fb26Accounts.selectedOptions].map(o=>o.value); var body={account_ids:ac,content:fb26Content.value,link_url:fb26Link.value,schedule_time:fb26Schedule.value?fb26Schedule.value.replace('T',' '):'',repeat_mode:fb26Repeat.value,media_mode:fb26MediaMode.value,media_ids:fb26MediaIds.value,hashtag_pool:fb26HashTags.value,hashtag_min:fb26HashMin.value,hashtag_max:fb26HashMax.value,spin_count:fb26Spin.value}; var d=await j('/api/fb2026/tasks',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}); fb26TaskResult.innerHTML=item(Object.assign({title:d.ok?'✅ Đã tạo task':'❌ Lỗi'},d)); loadStats();}
   async function runWorker(){var d=await j('/api/fb2026/worker/run',{method:'POST'}); alert('Đã xử lý '+(d.processed||0)+' task'); loadAll();}
   async function uploadMedia(){var fd=new FormData(); [...fb26Files.files].forEach(f=>fd.append('files',f)); var d=await j('/api/fb2026/media/upload',{method:'POST',body:fd}); alert('Đã upload '+((d.saved||[]).length)+' file'); loadMedia();loadStats();}
   async function coverage(){var d=await j('/api/fb2026/coverage'); fb26Logs.innerHTML=(d.items||[]).map(x=>item(Object.assign({title:x.name},x))).join('');}
+  window.fb26Login=async function(id){var d=await j('/api/fb2026/login/start',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({account_id:id})}); alert(d.message||JSON.stringify(d)); loadAccounts();};
+  window.fb26Check=async function(id){var d=await j('/api/fb2026/session/check',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({account_id:id})}); alert((d.status||'Kết quả')+'\nĐiểm: '+(d.score||0)+'\n'+((d.detail||[]).join('\n'))); loadAccounts(); loadLogs();};
+  window.fb26Proxy=async function(id){var d=await j('/api/fb2026/proxy/test',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({account_id:id})}); alert((d.status||'Proxy')+'\n'+(d.detail||'')); loadAccounts(); loadLogs();};
+  window.fb26PageToken=async function(id){var d=await j('/api/fb2026/page-token/check',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({account_id:id})}); alert(d.message||JSON.stringify(d)); loadLogs();};
   function loadAll(){loadStats();loadAccounts();loadMedia();loadLogs();}
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',mount); else mount();
 })();
