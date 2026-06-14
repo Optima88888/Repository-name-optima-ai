@@ -17935,6 +17935,267 @@ def mkt_v149_facebook_target_choice_ux_after_request(response):
         print('mkt_v149_facebook_target_choice_ux_after_request skipped:', _e)
     return response
 
+
+
+# ============================================================
+# V150 - Mobile one-tap Copy + Open Facebook real UX
+# Giữ nguyên toàn bộ giao diện hiện tại.
+# Không đụng menu.
+# Không đụng Extension desktop.
+# Chỉ nâng cấp luồng mobile/manual: copy chắc hơn + mở đúng Facebook + hướng dẫn dán/đăng.
+# ============================================================
+
+MKT_V150_FACEBOOK_ONE_TAP_COPY_OPEN_UX = r"""
+<style id="mkt-v150-facebook-one-tap-copy-open-css">
+#mktV150FbGuideOverlay{
+  position:fixed!important;inset:0!important;z-index:2147483000!important;
+  display:none!important;align-items:center!important;justify-content:center!important;
+  padding:18px!important;background:rgba(2,6,23,.72)!important;backdrop-filter:blur(12px)!important;
+  box-sizing:border-box!important;
+}
+#mktV150FbGuideOverlay.mkt-v150-show{display:flex!important;}
+#mktV150FbGuideCard{
+  width:min(520px,94vw)!important;border-radius:26px!important;padding:20px!important;
+  background:linear-gradient(135deg,#0f172a,#111827 56%,#1e1b4b)!important;
+  border:1px solid rgba(148,163,184,.34)!important;color:#fff!important;
+  box-shadow:0 34px 100px rgba(0,0,0,.55)!important;box-sizing:border-box!important;
+  font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif!important;
+}
+#mktV150FbGuideCard h3{margin:0 0 10px!important;font-size:22px!important;line-height:1.25!important;color:#fff!important;font-weight:1000!important}
+#mktV150FbGuideCard .mkt-v150-note{margin:0 0 14px!important;color:#FDE68A!important;font-weight:900!important;line-height:1.45!important}
+#mktV150FbGuideCard .mkt-v150-steps{display:grid!important;gap:8px!important;margin:12px 0 16px!important}
+#mktV150FbGuideCard .mkt-v150-step{
+  padding:11px 12px!important;border-radius:16px!important;background:rgba(255,255,255,.08)!important;
+  border:1px solid rgba(255,255,255,.10)!important;color:#E5E7EB!important;font-weight:850!important;line-height:1.35!important;
+}
+#mktV150FbGuideCard .mkt-v150-actions{display:flex!important;gap:10px!important;flex-wrap:wrap!important;margin-top:12px!important}
+#mktV150FbGuideCard button{
+  border:0!important;border-radius:999px!important;padding:12px 16px!important;font-weight:1000!important;
+  cursor:pointer!important;color:#fff!important;box-shadow:0 14px 30px rgba(0,0,0,.25)!important;
+}
+#mktV150FbGuideOpen{background:linear-gradient(135deg,#2563EB,#7C3AED)!important}
+#mktV150FbGuideCopy{background:linear-gradient(135deg,#06B6D4,#22C55E)!important}
+#mktV150FbGuideClose{background:rgba(148,163,184,.26)!important}
+#mktV150FbQuickStatus{
+  display:none!important;margin-top:10px!important;padding:10px 12px!important;border-radius:16px!important;
+  background:rgba(34,197,94,.10)!important;border:1px solid rgba(34,197,94,.28)!important;
+  color:#BBF7D0!important;font-weight:900!important;line-height:1.4!important;
+}
+#mktV150FbQuickStatus.mkt-v150-show{display:block!important;}
+@media(max-width:760px){
+  #mktV150FbGuideCard{padding:17px!important;border-radius:22px!important}
+  #mktV150FbGuideCard h3{font-size:20px!important}
+  #mktV150FbGuideCard .mkt-v150-actions{display:grid!important;grid-template-columns:1fr!important}
+  #mktV150FbGuideCard button{width:100%!important}
+}
+</style>
+<script id="mkt-v150-facebook-one-tap-copy-open-js">
+(function(){
+  if(window.__MKT_V150_FB_ONE_TAP_INSTALLED__) return;
+  window.__MKT_V150_FB_ONE_TAP_INSTALLED__=true;
+
+  function qs(s,r){return (r||document).querySelector(s)}
+  function qsa(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s))}
+  function currentPost(){
+    try{
+      if(typeof window.mktFbCurrentPost==='function') return (window.mktFbCurrentPost()||'').trim();
+      var el=qs('#mktFbContent'); return el ? (el.value||'').trim() : '';
+    }catch(e){return '';}
+  }
+  function currentTarget(){
+    var checked=qs('input[name="mkt_fb_target_choice"]:checked');
+    return checked ? checked.value : 'profile';
+  }
+  function targetLabel(t){
+    if(t==='page') return 'Fanpage';
+    if(t==='group') return 'Group';
+    return 'Facebook cá nhân';
+  }
+  function webUrl(t){
+    var input=qs('#mktFbUrl');
+    var val=input ? (input.value||'').trim() : '';
+    var isDefault=!val || /facebook\.com\/?$|m\.facebook\.com\/?$|facebook\.com\/groups\/feed|facebook\.com\/pages/i.test(val);
+    if(!isDefault) return val.replace('www.facebook.com','m.facebook.com');
+    if(t==='page') return 'https://m.facebook.com/pages/';
+    if(t==='group') return 'https://m.facebook.com/groups/feed/';
+    return 'https://m.facebook.com/';
+  }
+  async function copyTextStrong(text){
+    if(!text) return false;
+    try{
+      if(navigator.clipboard && window.isSecureContext){
+        await navigator.clipboard.writeText(text);
+        return true;
+      }
+    }catch(e){}
+    try{
+      var ta=document.createElement('textarea');
+      ta.value=text;
+      ta.setAttribute('readonly','readonly');
+      ta.style.position='fixed';
+      ta.style.left='-9999px';
+      ta.style.top='0';
+      ta.style.opacity='0';
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      ta.setSelectionRange(0, ta.value.length);
+      var ok=false;
+      try{ok=document.execCommand('copy');}catch(_e){}
+      document.body.removeChild(ta);
+      return !!ok;
+    }catch(e){return false;}
+  }
+  function log(msg){
+    try{ if(window.mktFbLog) window.mktFbLog(msg); }catch(e){}
+  }
+  function toast(msg, good){
+    var box=qs('#mktV150FbQuickStatus');
+    if(!box){
+      var section=qs('#facebook_personal') || document.body;
+      box=document.createElement('div');
+      box.id='mktV150FbQuickStatus';
+      var targetBox=qs('#mktFbTargetChoiceBox', section);
+      if(targetBox && targetBox.parentNode) targetBox.parentNode.insertBefore(box,targetBox.nextSibling);
+      else section.appendChild(box);
+    }
+    box.innerHTML=msg;
+    box.classList.add('mkt-v150-show');
+    box.style.setProperty('background', good?'rgba(34,197,94,.10)':'rgba(245,158,11,.10)','important');
+    box.style.setProperty('border-color', good?'rgba(34,197,94,.28)':'rgba(245,158,11,.32)','important');
+    box.style.setProperty('color', good?'#BBF7D0':'#FDE68A','important');
+    clearTimeout(window.__mktV150ToastTimer);
+    window.__mktV150ToastTimer=setTimeout(function(){box.classList.remove('mkt-v150-show')},6500);
+  }
+  function ensureGuide(){
+    var ov=qs('#mktV150FbGuideOverlay');
+    if(ov) return ov;
+    ov=document.createElement('div');
+    ov.id='mktV150FbGuideOverlay';
+    ov.innerHTML='<div id="mktV150FbGuideCard" role="dialog" aria-modal="true">'+
+      '<h3>✅ Đã copy nội dung</h3>'+
+      '<p class="mkt-v150-note" id="mktV150FbGuideNote">Facebook sẽ mở ở tab mới. Anh/chị chỉ cần dán nội dung và tự bấm Đăng.</p>'+
+      '<div class="mkt-v150-steps">'+
+      '<div class="mkt-v150-step">1️⃣ Nhấn vào ô <b>Bạn đang nghĩ gì?</b> hoặc ô tạo bài viết.</div>'+
+      '<div class="mkt-v150-step">2️⃣ Giữ tay trong ô viết bài → chọn <b>Dán</b>.</div>'+
+      '<div class="mkt-v150-step">3️⃣ Kiểm tra nội dung rồi bấm <b>Đăng</b> trên Facebook.</div>'+
+      '</div>'+
+      '<div class="mkt-v150-actions">'+
+      '<button id="mktV150FbGuideOpen" type="button">🌐 Mở Facebook lại</button>'+
+      '<button id="mktV150FbGuideCopy" type="button">📋 Copy lại bài</button>'+
+      '<button id="mktV150FbGuideClose" type="button">Đã hiểu</button>'+
+      '</div>'+
+      '</div>';
+    document.body.appendChild(ov);
+    ov.addEventListener('click',function(e){ if(e.target===ov) ov.classList.remove('mkt-v150-show'); });
+    qs('#mktV150FbGuideClose',ov).onclick=function(){ov.classList.remove('mkt-v150-show')};
+    qs('#mktV150FbGuideCopy',ov).onclick=async function(){
+      var ok=await copyTextStrong(currentPost());
+      toast(ok?'✅ Đã copy lại bài viết.':'⚠️ Máy không cho copy tự động, hãy copy thủ công trong ô nội dung.', ok);
+    };
+    qs('#mktV150FbGuideOpen',ov).onclick=function(){
+      window.open(webUrl(currentTarget()),'_blank','noopener,noreferrer');
+    };
+    return ov;
+  }
+  function showGuide(copied, opened, t){
+    var ov=ensureGuide();
+    var note=qs('#mktV150FbGuideNote',ov);
+    if(note){
+      note.innerHTML=(copied?'✅ Nội dung đã được copy. ':'⚠️ Máy có thể chưa cho copy tự động. Hãy copy thủ công nếu không dán được. ')+
+        'Đang đăng lên <b>'+targetLabel(t)+'</b>. Facebook '+(opened?'đã mở ở tab mới.':'có thể bị trình duyệt chặn, bấm “Mở Facebook lại”.');
+    }
+    ov.classList.add('mkt-v150-show');
+  }
+  async function oneTapCopyOpen(){
+    var post=currentPost();
+    if(!post){
+      alert('Bạn chưa nhập nội dung bài viết.');
+      return false;
+    }
+    var t=currentTarget();
+    var url=webUrl(t);
+    var newWin=null;
+    try{ newWin=window.open('about:blank','_blank','noopener,noreferrer'); }catch(e){}
+    var ok=await copyTextStrong(post);
+    if(newWin){
+      try{ newWin.location.href=url; }catch(e){ try{ window.open(url,'_blank','noopener,noreferrer'); }catch(_e){} }
+    }else{
+      try{ window.open(url,'_blank','noopener,noreferrer'); }catch(e){}
+    }
+    toast((ok?'✅ Đã copy bài viết. ':'⚠️ Nếu không dán được, bấm Copy bài lại. ')+'Facebook đã được mở, hãy dán nội dung rồi bấm Đăng.', ok);
+    showGuide(ok, true, t);
+    log((ok?'Đã copy và mở ':'Đã mở ') + targetLabel(t) + ' để khách tự dán/bấm Đăng.');
+    return true;
+  }
+
+  function patch(){
+    try{
+      if(window.__MKT_V150_FB_PATCHED__) return;
+      if(typeof window.mktMobileCopyAndOpen!=='function' || typeof window.mktFbOpenFacebook!=='function') return;
+      window.__MKT_V150_FB_PATCHED__=true;
+
+      var oldOpen=window.mktFbOpenFacebook;
+      var oldPostNow=window.mktFbPostNow;
+      var oldCopyOnly=window.mktFbCopyOnly;
+
+      window.mktMobileCopyAndOpen=function(){ return oneTapCopyOpen(); };
+
+      window.mktFbOpenFacebook=function(){
+        if(window.mktFbIsMobile) return oneTapCopyOpen();
+        return oldOpen.apply(this,arguments);
+      };
+
+      window.mktFbPostNow=function(){
+        if(window.mktFbIsMobile) return oneTapCopyOpen();
+        return oldPostNow.apply(this,arguments);
+      };
+
+      window.mktFbCopyOnly=async function(){
+        var post=currentPost();
+        if(!post){alert('Bạn chưa nhập nội dung bài viết.');return;}
+        var ok=await copyTextStrong(post);
+        try{ if(!window.mktFbIsMobile && oldCopyOnly) return oldCopyOnly.apply(this,arguments); }catch(e){}
+        toast(ok?'✅ Đã copy bài viết. Bây giờ có thể mở Facebook để dán và bấm Đăng.':'⚠️ Không copy tự động được, hãy copy thủ công trong ô nội dung.', ok);
+        log(ok?'Đã copy bài viết.':'Không copy tự động được.');
+        alert(ok?'Đã copy bài viết.':'Không copy tự động được. Hãy copy thủ công.');
+      };
+      window.mktMobileCopyOnly=window.mktFbCopyOnly;
+    }catch(e){try{console.log('mkt v150 patch skipped',e)}catch(_e){}}
+  }
+  function improveHelp(){
+    try{
+      var help=qs('#mktFbTargetHelp');
+      var t=currentTarget();
+      if(help && !help.getAttribute('data-v150-lock')){
+        if(t==='page') help.innerHTML='📄 Fanpage: bấm Copy & Mở Facebook, chọn Page, dán nội dung rồi bấm Đăng. Không cần mật khẩu.';
+        else if(t==='group') help.innerHTML='👥 Group: bấm Copy & Mở Facebook, chọn Group, dán nội dung rồi bấm Đăng. Không cần mật khẩu.';
+        else help.innerHTML='📘 Facebook cá nhân: bấm Copy & Mở Facebook, dán nội dung vào ô “Bạn đang nghĩ gì?” rồi tự bấm Đăng.';
+      }
+    }catch(e){}
+  }
+  function run(){patch();improveHelp();}
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',run); else run();
+  setTimeout(run,300);setTimeout(run,900);setTimeout(run,1800);setInterval(run,3500);
+})();
+</script>
+"""
+
+@app.after_request
+def mkt_v150_facebook_one_tap_copy_open_after_request(response):
+    try:
+        ctype=(response.headers.get('Content-Type') or '').lower()
+        if 'text/html' in ctype:
+            body=response.get_data(as_text=True)
+            if 'mkt-v150-facebook-one-tap-copy-open-js' not in body and '</body>' in body:
+                body=body.replace('</body>', MKT_V150_FACEBOOK_ONE_TAP_COPY_OPEN_UX + '</body>')
+                response.set_data(body)
+                response.headers['Content-Length']=str(len(body.encode('utf-8')))
+    except Exception as _e:
+        print('mkt_v150_facebook_one_tap_copy_open_after_request skipped:', _e)
+    return response
+
+
 if __name__ == "__main__":
     # Không tự tạo kho 50k content khi khởi động để tránh lỗi SQLite database is locked trên Render.
     # Khi cần kiểm tra/tạo kho content, gọi /api/content_50k_stats từ admin.
