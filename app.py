@@ -19347,6 +19347,71 @@ if(!isFacebookPage()){
 except Exception as _mkt_v154_ext_error:
     print('MKT V154 Extension reliable post patch skipped:', _mkt_v154_ext_error)
 
+
+# ============================================================
+# V153 - Fix nút tải ZIP Extension không tải được
+# Giữ nguyên toàn bộ giao diện hiện tại. Không đụng menu.
+# Lỗi: click handler tổng của Facebook Center bắt luôn nút Tải Extension trong popup,
+#      preventDefault rồi mở lại hướng dẫn; một số trình duyệt còn mở sai thành download/...
+# Sửa: cho nút #mktExtDownloadBtn tải trực tiếp bằng URL tuyệt đối /download/...
+# ============================================================
+MKT_V153_EXTENSION_DOWNLOAD_DIRECT_FIX = r"""
+<script id="mkt-v153-extension-download-direct-fix-js">
+(function(){
+  'use strict';
+  var ZIP_PATH = '/download/mkt-facebook-personal-extension.zip';
+  function absoluteZipUrl(){ return window.location.origin + ZIP_PATH; }
+  function qs(s,r){return (r||document).querySelector(s)}
+  function qsa(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s))}
+  function prepareDownloadButton(){
+    qsa('#mktExtDownloadBtn').forEach(function(a){
+      a.setAttribute('href', absoluteZipUrl());
+      a.setAttribute('download', 'mkt-facebook-personal-extension-v2.zip');
+      a.setAttribute('target', '_self');
+      a.dataset.mktDirectDownloadReady = '1';
+    });
+  }
+  function directDownload(e){
+    var a = e.target && e.target.closest ? e.target.closest('#mktExtDownloadBtn') : null;
+    if(!a) return;
+    e.preventDefault();
+    e.stopPropagation();
+    if(e.stopImmediatePropagation) e.stopImmediatePropagation();
+    var hint = qs('#mktExtMiniHint');
+    if(hint){
+      hint.innerHTML = '<b>Đang tải ZIP:</b> Nếu Chrome chưa tải, hãy kiểm tra biểu tượng tải xuống ở góc phải hoặc bấm lại nút này.';
+    }
+    window.location.href = absoluteZipUrl();
+    return false;
+  }
+  document.addEventListener('click', directDownload, true);
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', prepareDownloadButton); else prepareDownloadButton();
+  setTimeout(prepareDownloadButton, 300);
+  setTimeout(prepareDownloadButton, 1200);
+  setInterval(prepareDownloadButton, 3000);
+})();
+</script>
+"""
+
+@app.after_request
+def mkt_v153_extension_download_direct_fix_after_request(response):
+    try:
+        ctype = (response.headers.get('Content-Type') or '').lower()
+        if 'text/html' in ctype:
+            body = response.get_data(as_text=True)
+            if 'mkt-v153-extension-download-direct-fix-js' not in body and '</body>' in body:
+                body = body.replace('</body>', MKT_V153_EXTENSION_DOWNLOAD_DIRECT_FIX + '</body>')
+                response.set_data(body)
+                response.headers['Content-Length'] = str(len(body.encode('utf-8')))
+    except Exception as _e:
+        print('mkt_v153_extension_download_direct_fix_after_request skipped:', _e)
+    return response
+
+# Route phụ để nếu trình duyệt/web cũ gọi thiếu dấu / vẫn tải được khi đang cùng domain.
+@app.route('/download/mkt-facebook-personal-extension-v2.zip')
+def mkt_download_facebook_personal_extension_zip_v2_alias():
+    return mkt_download_facebook_personal_extension_zip()
+
 if __name__ == "__main__":
     # Không tự tạo kho 50k content khi khởi động để tránh lỗi SQLite database is locked trên Render.
     # Khi cần kiểm tra/tạo kho content, gọi /api/content_50k_stats từ admin.
