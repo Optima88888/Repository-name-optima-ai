@@ -18799,7 +18799,7 @@ html body .mkt-fb-ext-link{display:inline-flex!important;align-items:center!impo
       +'<div class="mkt-ext-step"><b>Bước 6: Tải lại trang</b><span>Quay lại web, bấm F5, trạng thái sẽ đổi sang Extension đã kết nối.</span></div>'
       +'</div>'
       +'<div id="mktExtMiniHint"><b>Mẹo:</b> Nếu đã cài mà chưa kết nối, hãy Remove bản cũ trong chrome://extensions rồi Load unpacked lại bản mới.</div>'
-      +'<div class="mkt-ext-guide-actions"><a id="mktExtDownloadBtn" href="/download/mkt-facebook-personal-extension.zip" target="_blank">⬇️ Tải Extension</a><button id="mktExtOpenChromeBtn" type="button" class="mkt-gray">📍 Mở chrome://extensions</button><button id="mktExtCloseBtn" type="button" class="mkt-gray">Đã hiểu</button></div>'
+      +'<div class="mkt-ext-guide-actions"><a id="mktExtDownloadBtn" href="/download/mkt-facebook-personal-extension.zip" download="mkt-facebook-personal-extension.zip">⬇️ Tải Extension</a><button id="mktExtOpenChromeBtn" type="button" class="mkt-gray">📍 Mở chrome://extensions</button><button id="mktExtCloseBtn" type="button" class="mkt-gray">Đã hiểu</button></div>'
       +'</div>';
     document.body.appendChild(div);
     qsa('.mkt-ext-guide-close,#mktExtCloseBtn',div).forEach(function(b){b.addEventListener('click',hideGuide)});
@@ -18819,6 +18819,21 @@ html body .mkt-fb-ext-link{display:inline-flex!important;align-items:center!impo
   window.mktShowExtensionInstallGuide=showGuide;
   function enhanceLink(){
     qsa('a.mkt-fb-ext-link,a[href*="mkt-facebook-personal-extension.zip"]').forEach(function(a){
+      if(a.id==='mktExtDownloadBtn'){
+        if(!a.dataset.mktDownloadReady){
+          a.dataset.mktDownloadReady='1';
+          a.setAttribute('download','mkt-facebook-personal-extension.zip');
+          a.setAttribute('target','_self');
+          a.addEventListener('click',function(ev){
+            ev.stopPropagation();
+            setTimeout(function(){
+              var hint=qs('#mktExtMiniHint');
+              if(hint) hint.innerHTML='<b>Đang tải:</b> Nếu Chrome chưa tải, hãy kiểm tra thanh tải xuống hoặc bấm lại nút Tải Extension.';
+            },80);
+          },true);
+        }
+        return;
+      }
       if(a.dataset.mktV151) return; a.dataset.mktV151='1';
       a.innerHTML='⚡ Cài Extension Facebook cá nhân (1 phút)';
       a.setAttribute('title','Xem hướng dẫn cài đặt Extension');
@@ -19338,4 +19353,5 @@ if __name__ == "__main__":
     threading.Thread(target=scheduler_loop, daemon=True).start()
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port, debug=False)
+
 
