@@ -20463,173 +20463,500 @@ try:
 except Exception as _mkt_v158_ext_error:
     print('MKT V158 extension version patch skipped:', _mkt_v158_ext_error)
 
-
 # ============================================================
-# MKT V159 - FACEBOOK AUTOMATION 2026 CENTER
-# Chuẩn hóa module Facebook tự động hóa dễ dùng cho khách.
-# Giữ nguyên menu/cấu trúc cũ, bổ sung menu riêng trên điện thoại.
+# V160 - FACEBOOK AUTOMATION 2026 REAL BACKEND CENTER
+# Bổ sung phần còn thiếu cho module Facebook Auto:
+# - Tài khoản/proxy/profile/session riêng
+# - Mở trình duyệt đăng nhập thật bằng Playwright (người dùng tự đăng nhập)
+# - Queue SQLite an toàn thay thế Redis/BullMQ khi chạy chung trong file Flask hiện tại
+# - Đăng qua Facebook Page Graph API khi có page_id + page_token hợp lệ
+# - Random media, hashtag random, AI spin fallback, anti duplicate, recurring schedule, CSV log, API mở rộng
 # ============================================================
 
-MKT_V159_FB_AUTO_CENTER = r"""
-<style id="mkt-v159-fbauto-2026-css">
-:root{--fbauto-blue:#1877f2;--fbauto-navy:#0f172a;--fbauto-soft:#eff6ff;--fbauto-border:#dbeafe;--fbauto-green:#22c55e;--fbauto-red:#ef4444;--fbauto-violet:#7c3aed}
-#mktFbAuto2026{display:none!important;position:relative;z-index:8;padding:20px;box-sizing:border-box;width:100%;min-height:100vh;color:#0f172a;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
-#mktFbAuto2026.mkt-show{display:block!important}.mkt-fbauto-wrap{max-width:1180px;margin:0 auto;padding:16px}
-.mkt-fbauto-hero{border:1px solid rgba(219,234,254,.95);background:radial-gradient(circle at 12% 0%,rgba(24,119,242,.16),transparent 34%),linear-gradient(135deg,#fff,#f8fbff 54%,#eef6ff);border-radius:30px;padding:24px;box-shadow:0 24px 70px rgba(15,23,42,.12);overflow:hidden;position:relative}
-.mkt-fbauto-kicker{display:inline-flex;align-items:center;gap:8px;padding:7px 12px;border-radius:999px;background:#0f172a;color:#fff;font-weight:1000;font-size:12px;box-shadow:0 12px 28px rgba(15,23,42,.20)}
-.mkt-fbauto-hero h2{margin:14px 0 8px;font-size:34px;line-height:1.1;background:linear-gradient(90deg,#1877f2,#2563eb,#7c3aed);-webkit-background-clip:text;background-clip:text;color:transparent;font-weight:1000;letter-spacing:-.04em}.mkt-fbauto-hero p{margin:0;color:#64748b;font-weight:750;line-height:1.55;max-width:820px}
-.mkt-fbauto-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}.mkt-fbauto-btn{border:0;border-radius:16px;padding:12px 15px;font-weight:1000;cursor:pointer;background:linear-gradient(135deg,#1877f2,#2563eb);color:#fff;box-shadow:0 14px 32px rgba(37,99,235,.24);text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px}.mkt-fbauto-btn.alt{background:#fff;color:#0f172a;border:1px solid #dbeafe;box-shadow:0 12px 26px rgba(15,23,42,.08)}.mkt-fbauto-btn.good{background:linear-gradient(135deg,#16a34a,#22c55e)}
-.mkt-fbauto-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:16px}.mkt-fbauto-stat{background:#fff;border:1px solid #dbeafe;border-radius:22px;padding:16px;box-shadow:0 14px 36px rgba(15,23,42,.07)}.mkt-fbauto-stat b{display:block;font-size:24px;color:#0f172a}.mkt-fbauto-stat span{font-size:13px;color:#64748b;font-weight:900}
-.mkt-fbauto-panel{margin-top:16px;background:rgba(255,255,255,.96);border:1px solid #dbeafe;border-radius:26px;padding:18px;box-shadow:0 20px 52px rgba(15,23,42,.08)}.mkt-fbauto-panel h3{margin:0 0 10px;font-size:20px;color:#0f172a}.mkt-fbauto-panel small{color:#64748b;font-weight:800;line-height:1.45}
-.mkt-fbauto-form{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}.mkt-fbauto-form .full{grid-column:1/-1}.mkt-fbauto-form input,.mkt-fbauto-form textarea,.mkt-fbauto-form select{width:100%;box-sizing:border-box;border:1px solid #cbd5e1;border-radius:16px;padding:13px 14px;font-size:15px;outline:none;background:#fff;color:#0f172a;font-weight:700}.mkt-fbauto-form textarea{min-height:130px;resize:vertical}.mkt-fbauto-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}.mkt-fbauto-mode{display:inline-flex;align-items:center;gap:8px;border:1px solid #dbeafe;background:#f8fbff;padding:10px 12px;border-radius:14px;font-weight:900;color:#334155}
-.mkt-fbauto-log{height:210px;overflow:auto;background:#020617;color:#dbeafe;border-radius:18px;padding:12px;font-family:ui-monospace,Consolas,monospace;font-size:12.5px;line-height:1.45;border:1px solid rgba(15,23,42,.2)}.mkt-fbauto-list{display:grid;gap:8px;margin-top:12px}.mkt-fbauto-item{border:1px solid #e2e8f0;background:#fff;border-radius:16px;padding:12px;display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.mkt-fbauto-item b{color:#0f172a}.mkt-fbauto-item span{display:block;color:#64748b;font-size:13px;font-weight:750;margin-top:3px}.mkt-fbauto-pill{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:6px 10px;background:#ecfdf5;color:#166534;font-weight:1000;font-size:12px;white-space:nowrap}.mkt-fbauto-pill.warn{background:#fff7ed;color:#9a3412}.mkt-fbauto-pill.err{background:#fef2f2;color:#991b1b}
-#mktFbAutoMobileBtn{display:none;position:fixed;left:14px;bottom:118px;z-index:2147483000;border:0;border-radius:20px;padding:11px 13px;background:linear-gradient(135deg,#1877f2,#7c3aed);color:#fff;font-weight:1000;box-shadow:0 18px 46px rgba(37,99,235,.36);align-items:center;gap:8px;animation:mktFbAutoPulse 1.8s ease-in-out infinite}.mkt-fbauto-phone-menu{display:none;position:fixed;left:12px;right:12px;bottom:178px;z-index:2147482999;background:rgba(255,255,255,.98);border:1px solid #dbeafe;border-radius:24px;padding:12px;box-shadow:0 26px 70px rgba(15,23,42,.24);backdrop-filter:blur(16px)}.mkt-fbauto-phone-menu.show{display:block}.mkt-fbauto-phone-menu button{width:100%;margin:5px 0;border:0;border-radius:16px;padding:12px;background:#eff6ff;color:#0f172a;font-weight:1000;text-align:left}.mkt-fbauto-phone-menu button.primary{background:linear-gradient(135deg,#1877f2,#2563eb);color:#fff}
-@keyframes mktFbAutoPulse{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-3px) scale(1.03)}}@media(max-width:760px){#mktFbAuto2026{padding:10px 8px}.mkt-fbauto-wrap{padding:6px}.mkt-fbauto-hero{padding:18px;border-radius:24px}.mkt-fbauto-hero h2{font-size:25px}.mkt-fbauto-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.mkt-fbauto-form{grid-template-columns:1fr}.mkt-fbauto-panel{padding:14px;border-radius:22px}.mkt-fbauto-actions .mkt-fbauto-btn{width:100%}#mktFbAutoMobileBtn{display:inline-flex}.mkt-fbauto-item{display:block}.mkt-fbauto-pill{margin-top:8px}}
-</style>
-<section id="mktFbAuto2026" data-mkt-module="fbauto2026"><div class="mkt-fbauto-wrap"><div class="mkt-fbauto-hero"><div class="mkt-fbauto-kicker">⚡ Facebook Automation 2026 • PWA + Queue + Profile</div><h2>Trung tâm tự động hóa Facebook đa nền tảng</h2><p>Dành cho khách dùng điện thoại và máy tính: quản lý tài khoản, proxy/profile, tạo tác vụ đăng bài, hẹn giờ, random ảnh/video, kiểm tra trùng lặp, lưu log CSV và mở rộng theo queue.</p><div class="mkt-fbauto-actions"><button class="mkt-fbauto-btn" onclick="mktFbAutoShowTab('create')">➕ Tạo tác vụ đăng bài</button><button class="mkt-fbauto-btn alt" onclick="mktFbAutoShowTab('accounts')">👥 Quản lý tài khoản</button><button class="mkt-fbauto-btn alt" onclick="mktFbAutoShowTab('logs')">📊 Nhật ký & CSV</button><button class="mkt-fbauto-btn good" onclick="mktFbAutoRefresh()">🔄 Cập nhật thống kê</button></div><div class="mkt-fbauto-grid"><div class="mkt-fbauto-stat"><b id="mktFbAutoStatAccounts">0</b><span>Tài khoản</span></div><div class="mkt-fbauto-stat"><b id="mktFbAutoStatTasks">0</b><span>Tác vụ</span></div><div class="mkt-fbauto-stat"><b id="mktFbAutoStatSuccess">0</b><span>Thành công</span></div><div class="mkt-fbauto-stat"><b id="mktFbAutoStatFailed">0</b><span>Thất bại</span></div></div></div>
-<div class="mkt-fbauto-panel" data-tab="create"><h3>➕ Tạo tác vụ đăng bài</h3><small>Khách nhập nội dung, chọn tài khoản, chọn chế độ media và thời gian. Hệ thống lưu task vào hàng chờ. Với Facebook cá nhân, nên dùng Extension/PWA để khách tự đăng nhập và kiểm duyệt trước khi bấm đăng.</small><form id="mktFbAutoTaskForm" class="mkt-fbauto-form"><input name="title" placeholder="Tên chiến dịch / tiêu đề" value="Chiến dịch Facebook"><select name="schedule_mode"><option value="now">Đăng ngay</option><option value="once">Hẹn giờ một lần</option><option value="daily">Lặp mỗi ngày</option><option value="weekly">Lặp mỗi tuần</option><option value="monthly">Lặp mỗi tháng</option></select><input name="schedule_time" type="datetime-local"><select name="media_mode"><option value="random">Random media</option><option value="no_repeat">Random không lặp</option><option value="round_robin">Theo vòng lặp</option></select><input name="targets" class="full" placeholder="Nơi đăng: FB01 | Page A | Group B"><textarea name="content" class="full" id="mktFbAutoContent" placeholder="Nhập nội dung bài viết. Có thể nhập nhiều bài, mỗi bài cách nhau bằng dòng ---"></textarea><div class="mkt-fbauto-row full"><label class="mkt-fbauto-mode"><input type="checkbox" name="ai_spin" value="1"> AI Spin</label><label class="mkt-fbauto-mode"><input type="checkbox" name="anti_duplicate" value="1" checked> Anti Duplicate</label><label class="mkt-fbauto-mode"><input type="checkbox" name="hashtag_random" value="1"> Hashtag Random</label></div><button type="submit" class="mkt-fbauto-btn full">🚀 Lưu vào Queue</button></form></div>
-<div class="mkt-fbauto-panel" data-tab="accounts" style="display:none"><h3>👥 Tài khoản / Proxy / Browser Profile</h3><small>Mỗi tài khoản nên có proxy, user-agent và profile riêng. Không lưu mật khẩu Facebook trong hệ thống.</small><form id="mktFbAutoAccountForm" class="mkt-fbauto-form"><input name="account_name" placeholder="Tên tài khoản: FB01"><input name="proxy" placeholder="Proxy riêng: http://user:pass@ip:port"><input name="browser_profile" placeholder="Profile: profiles/FB01"><input name="user_agent" placeholder="User-Agent riêng nếu có"><button type="submit" class="mkt-fbauto-btn full">💾 Lưu tài khoản</button></form><div id="mktFbAutoAccounts" class="mkt-fbauto-list"></div></div>
-<div class="mkt-fbauto-panel" data-tab="media" style="display:none"><h3>🖼️ Kho ảnh/video random</h3><small>Upload ảnh/video để task tự chọn theo random, không lặp hoặc vòng lặp.</small><form id="mktFbAutoMediaForm" class="mkt-fbauto-form" enctype="multipart/form-data"><input name="label" placeholder="Nhãn media: Ảnh sản phẩm A"><input name="media" type="file" accept="image/*,video/*"><button type="submit" class="mkt-fbauto-btn full">⬆️ Upload media</button></form><div id="mktFbAutoMediaList" class="mkt-fbauto-list"></div></div>
-<div class="mkt-fbauto-panel" data-tab="logs" style="display:none"><h3>📊 Nhật ký hệ thống</h3><div class="mkt-fbauto-actions"><a class="mkt-fbauto-btn alt" href="/api/fbauto/logs.csv" target="_blank">⬇️ Xuất report.csv</a><button class="mkt-fbauto-btn alt" onclick="mktFbAutoShowTab('media')">🖼️ Kho media</button></div><div id="mktFbAutoTasks" class="mkt-fbauto-list"></div><pre id="mktFbAutoLog" class="mkt-fbauto-log">Đang chờ dữ liệu...</pre></div></div></section>
-<button id="mktFbAutoMobileBtn" type="button" onclick="mktFbAutoTogglePhoneMenu()">📱 Facebook Auto</button><div id="mktFbAutoPhoneMenu" class="mkt-fbauto-phone-menu"><button class="primary" onclick="mktFbAutoOpen();mktFbAutoTogglePhoneMenu(false)">🚀 Mở Facebook Automation</button><button onclick="mktFbAutoOpen();mktFbAutoShowTab('create');mktFbAutoTogglePhoneMenu(false)">➕ Tạo tác vụ đăng bài</button><button onclick="mktFbAutoOpen();mktFbAutoShowTab('accounts');mktFbAutoTogglePhoneMenu(false)">👥 Tài khoản / Proxy</button><button onclick="mktFbAutoOpen();mktFbAutoShowTab('media');mktFbAutoTogglePhoneMenu(false)">🖼️ Kho media random</button><button onclick="mktFbAutoOpen();mktFbAutoShowTab('logs');mktFbAutoTogglePhoneMenu(false)">📊 Log / CSV</button></div>
-<script id="mkt-v159-fbauto-2026-js">(function(){function qs(s,r){return(r||document).querySelector(s)}function qsa(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s))}function log(msg){var el=qs('#mktFbAutoLog');if(!el)return;var now=new Date().toLocaleTimeString('vi-VN');el.textContent='['+now+'] '+msg+'\n'+(el.textContent||'')}function hideOldModules(){qsa('section,.module-section,.enterprise-module-wrap,.dashboard,.content-section').forEach(function(el){if(el.id==='mktFbAuto2026')return;if(el.closest&&el.closest('#mktFbAuto2026'))return;if(el.offsetParent!==null||el.classList.contains('active')||el.style.display!=='none'){el.dataset.mktFbAutoOldDisplay=el.style.display||'';el.style.display='none';el.classList.remove('active','show')}})}window.mktFbAutoOpen=function(){hideOldModules();var sec=qs('#mktFbAuto2026');if(sec){sec.classList.add('mkt-show');sec.style.display='block';window.scrollTo({top:0,behavior:'smooth'})}mktFbAutoRefresh()};window.mktFbAutoShowTab=function(tab){qsa('#mktFbAuto2026 [data-tab]').forEach(function(el){el.style.display=(el.getAttribute('data-tab')===tab)?'block':'none'});log('Đã mở tab '+tab+'.')};window.mktFbAutoTogglePhoneMenu=function(force){var m=qs('#mktFbAutoPhoneMenu');if(!m)return;if(force===false)m.classList.remove('show');else m.classList.toggle('show')};function esc(s){return String(s||'').replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}function item(title,sub,pill,cls){return '<div class="mkt-fbauto-item"><div><b>'+esc(title)+'</b><span>'+esc(sub)+'</span></div><em class="mkt-fbauto-pill '+(cls||'')+'">'+esc(pill||'active')+'</em></div>'}window.mktFbAutoRefresh=function(){fetch('/api/fbauto/dashboard').then(function(r){return r.json()}).then(function(d){if(!d.ok){log(d.message||'Không tải được dữ liệu.');return}qs('#mktFbAutoStatAccounts').textContent=d.stats.accounts||0;qs('#mktFbAutoStatTasks').textContent=d.stats.tasks||0;qs('#mktFbAutoStatSuccess').textContent=d.stats.success||0;qs('#mktFbAutoStatFailed').textContent=d.stats.failed||0;qs('#mktFbAutoAccounts').innerHTML=(d.accounts||[]).map(function(a){return item(a.account_name,'Proxy: '+(a.proxy||'chưa cấu hình')+' • Profile: '+(a.browser_profile||'auto'),a.status||'active')}).join('')||'<small>Chưa có tài khoản.</small>';qs('#mktFbAutoTasks').innerHTML=(d.tasks||[]).map(function(t){var cls=t.status==='failed'?'err':(t.status==='queued'?'warn':'');return item(t.title||('Task #'+t.id),'Lịch: '+(t.schedule_time||t.schedule_mode||'now')+' • Target: '+(t.targets||'chưa chọn'),t.status||'queued',cls)}).join('')||'<small>Chưa có task.</small>';qs('#mktFbAutoMediaList').innerHTML=(d.media||[]).map(function(m){return item(m.label||m.file_name,m.file_path,m.media_type||'media')}).join('')||'<small>Chưa có media.</small>';qs('#mktFbAutoLog').textContent=(d.logs||[]).map(function(x){return '['+x.created_at+'] '+x.action+' • '+x.status+' • '+x.detail}).join('\n')||'Chưa có log.'}).catch(function(e){log('Lỗi tải dashboard: '+e)})};function postForm(form,url){return fetch(url,{method:'POST',body:new FormData(form)}).then(function(r){return r.json()})}function bind(){var af=qs('#mktFbAutoAccountForm');if(af&&!af.dataset.bound){af.dataset.bound='1';af.addEventListener('submit',function(e){e.preventDefault();postForm(af,'/api/fbauto/accounts').then(function(d){log(d.message||'Đã lưu tài khoản.');af.reset();mktFbAutoRefresh()})})}var tf=qs('#mktFbAutoTaskForm');if(tf&&!tf.dataset.bound){tf.dataset.bound='1';tf.addEventListener('submit',function(e){e.preventDefault();postForm(tf,'/api/fbauto/tasks').then(function(d){log(d.message||'Đã tạo task.');mktFbAutoShowTab('logs');mktFbAutoRefresh()})})}var mf=qs('#mktFbAutoMediaForm');if(mf&&!mf.dataset.bound){mf.dataset.bound='1';mf.addEventListener('submit',function(e){e.preventDefault();postForm(mf,'/api/fbauto/media').then(function(d){log(d.message||'Đã upload media.');mf.reset();mktFbAutoRefresh()})})}}function injectNav(){if(qs('[data-mkt-fbauto-nav]'))return;var nav=qs('.mkt-clean-nav,.sidebar,.v2-sidebar,nav');if(nav){var btn=document.createElement('button');btn.type='button';btn.setAttribute('data-mkt-fbauto-nav','1');btn.className='v2-nav-link mkt-fbauto-nav-btn';btn.innerHTML='<span class="v2-nav-text">📱 Facebook Auto 2026</span><span class="mkt-dot-tag enterprise"><i></i><span>PRO</span></span>';btn.onclick=function(e){e.preventDefault();mktFbAutoOpen()};try{nav.appendChild(btn)}catch(e){}}}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){bind();injectNav();mktFbAutoRefresh()});else{bind();injectNav();mktFbAutoRefresh()}setTimeout(function(){bind();injectNav()},800);setTimeout(injectNav,2200)})();</script>
-"""
+import hashlib
+import uuid
+try:
+    from difflib import SequenceMatcher
+except Exception:
+    SequenceMatcher = None
 
-def mkt_v159_fbauto_ensure_schema():
+FB2026_PROFILE_ROOT = os.path.join(os.getcwd(), "fb2026_profiles")
+FB2026_MEDIA_ROOT = os.path.join(UPLOAD_DIR, "fb2026_media")
+FB2026_REPORT_ROOT = os.path.join(REPORT_DIR, "fb2026")
+os.makedirs(FB2026_PROFILE_ROOT, exist_ok=True)
+os.makedirs(FB2026_MEDIA_ROOT, exist_ok=True)
+os.makedirs(FB2026_REPORT_ROOT, exist_ok=True)
+
+FB2026_SAFE_LIMITS = {
+    "min_delay_seconds": int(os.getenv("FB2026_MIN_DELAY_SECONDS", "60")),
+    "max_retry": int(os.getenv("FB2026_MAX_RETRY", "3")),
+    "worker_batch": int(os.getenv("FB2026_WORKER_BATCH", "3")),
+}
+
+def fb2026_now():
+    return datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+def fb2026_slug(text):
+    raw = str(text or "").strip() or "FB"
+    keep = []
+    for ch in raw:
+        if ch.isalnum() or ch in "-_":
+            keep.append(ch)
+        elif ch.isspace():
+            keep.append("_")
+    val = "".join(keep).strip("_")[:48]
+    return val or "FB"
+
+def fb2026_hash(text):
+    return hashlib.sha256(str(text or "").encode("utf-8")).hexdigest()
+
+def fb2026_init_db():
     conn = db(); c = conn.cursor()
-    c.execute("""CREATE TABLE IF NOT EXISTS fb_auto_accounts (id INTEGER PRIMARY KEY AUTOINCREMENT, account_name TEXT UNIQUE, browser_profile TEXT, cookies TEXT, user_agent TEXT, proxy TEXT, status TEXT DEFAULT 'active', note TEXT, created_at TEXT, updated_at TEXT)""")
-    c.execute("""CREATE TABLE IF NOT EXISTS fb_auto_tasks (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT, content TEXT, targets TEXT, schedule_mode TEXT DEFAULT 'now', schedule_time TEXT, repeat_rule TEXT, media_mode TEXT DEFAULT 'random', ai_spin INTEGER DEFAULT 0, anti_duplicate INTEGER DEFAULT 1, hashtag_random INTEGER DEFAULT 0, status TEXT DEFAULT 'queued', duplicate_score INTEGER DEFAULT 0, result_message TEXT, created_at TEXT, updated_at TEXT)""")
-    c.execute("""CREATE TABLE IF NOT EXISTS fb_auto_media (id INTEGER PRIMARY KEY AUTOINCREMENT, label TEXT, file_name TEXT, file_path TEXT, media_type TEXT, used_count INTEGER DEFAULT 0, created_at TEXT)""")
-    c.execute("""CREATE TABLE IF NOT EXISTS fb_auto_logs (id INTEGER PRIMARY KEY AUTOINCREMENT, task_id INTEGER, account_name TEXT, action TEXT, status TEXT, detail TEXT, created_at TEXT)""")
-    c.execute("""CREATE TABLE IF NOT EXISTS fb_auto_content_hashes (id INTEGER PRIMARY KEY AUTOINCREMENT, content_hash TEXT UNIQUE, content_preview TEXT, created_at TEXT)""")
+    c.execute("""CREATE TABLE IF NOT EXISTS fb2026_accounts(
+        id INTEGER PRIMARY KEY AUTOINCREMENT, account_code TEXT UNIQUE, display_name TEXT,
+        proxy TEXT, browser_profile TEXT, cookies_json TEXT, user_agent TEXT,
+        login_status TEXT DEFAULT 'Chưa đăng nhập', page_id TEXT, page_token TEXT,
+        note TEXT, status TEXT DEFAULT 'active', created_at TEXT, updated_at TEXT)""")
+    c.execute("""CREATE TABLE IF NOT EXISTS fb2026_media(
+        id INTEGER PRIMARY KEY AUTOINCREMENT, device_id TEXT, file_name TEXT,
+        file_path TEXT, media_type TEXT, used_count INTEGER DEFAULT 0, created_at TEXT)""")
+    c.execute("""CREATE TABLE IF NOT EXISTS fb2026_tasks(
+        id INTEGER PRIMARY KEY AUTOINCREMENT, task_uid TEXT UNIQUE, title TEXT, content TEXT,
+        link_url TEXT, account_ids TEXT, destinations TEXT, media_ids TEXT, media_mode TEXT DEFAULT 'random',
+        hashtag_pool TEXT, hashtag_min INTEGER DEFAULT 0, hashtag_max INTEGER DEFAULT 0,
+        schedule_time TEXT, repeat_mode TEXT DEFAULT 'none', status TEXT DEFAULT 'queued',
+        retry_count INTEGER DEFAULT 0, max_retry INTEGER DEFAULT 3, duplicate_score REAL DEFAULT 0,
+        duplicate_level TEXT, ai_variants TEXT, result_message TEXT, created_at TEXT, updated_at TEXT)""")
+    c.execute("""CREATE TABLE IF NOT EXISTS fb2026_logs(
+        id INTEGER PRIMARY KEY AUTOINCREMENT, task_uid TEXT, account_code TEXT, action TEXT,
+        status TEXT, detail TEXT, created_at TEXT)""")
+    c.execute("""CREATE TABLE IF NOT EXISTS fb2026_content_hashes(
+        id INTEGER PRIMARY KEY AUTOINCREMENT, content_hash TEXT UNIQUE, content TEXT, created_at TEXT)""")
+    c.execute("""CREATE TABLE IF NOT EXISTS fb2026_plugins(
+        id INTEGER PRIMARY KEY AUTOINCREMENT, plugin_name TEXT UNIQUE, plugin_type TEXT,
+        status TEXT DEFAULT 'active', config_json TEXT, created_at TEXT, updated_at TEXT)""")
     conn.commit(); conn.close()
-
-def mkt_v159_now():
-    return datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-
-def mkt_v159_hash_content(content):
-    import hashlib, re
-    norm = re.sub(r'\s+', ' ', (content or '').strip().lower())
-    return hashlib.sha256(norm.encode('utf-8')).hexdigest(), norm
-
-def mkt_v159_duplicate_score(content):
-    h, norm = mkt_v159_hash_content(content)
-    if not norm:
-        return 0, h, 'Nội dung rỗng.'
-    conn = db(); c = conn.cursor()
-    try:
-        c.execute('SELECT content_preview FROM fb_auto_content_hashes ORDER BY id DESC LIMIT 200')
-        rows = [r[0] or '' for r in c.fetchall()]
-    except Exception:
-        rows = []
-    conn.close()
-    best = 0
-    try:
-        from difflib import SequenceMatcher
-        for old in rows:
-            best = max(best, int(SequenceMatcher(None, norm[:1500], old[:1500]).ratio()*100))
-    except Exception:
-        best = 0
-    if best >= 90:
-        msg = 'Trùng lặp cao, nên spin lại nội dung.'
-    elif best >= 70:
-        msg = 'Cảnh báo nội dung khá giống bài cũ.'
-    else:
-        msg = 'Nội dung an toàn dưới ngưỡng trùng lặp.'
-    return best, h, msg
-
-def mkt_v159_log(action, status='info', detail='', task_id=None, account_name=''):
-    try:
-        mkt_v159_fbauto_ensure_schema()
-        conn = db(); c = conn.cursor()
-        c.execute('INSERT INTO fb_auto_logs(task_id,account_name,action,status,detail,created_at) VALUES(?,?,?,?,?,?)', (task_id, account_name, action, status, detail, mkt_v159_now()))
-        conn.commit(); conn.close()
-    except Exception as e:
-        print('mkt_v159_log skipped:', e)
-
-@app.route('/api/fbauto/dashboard')
-def mkt_v159_fbauto_dashboard():
-    mkt_v159_fbauto_ensure_schema()
-    conn = db(); c = conn.cursor()
-    c.execute("SELECT COUNT(*) FROM fb_auto_accounts WHERE COALESCE(status,'active')!='deleted'"); accounts_count = c.fetchone()[0]
-    c.execute('SELECT COUNT(*) FROM fb_auto_tasks'); tasks_count = c.fetchone()[0]
-    c.execute("SELECT COUNT(*) FROM fb_auto_tasks WHERE status IN ('success','posted','done')"); success_count = c.fetchone()[0]
-    c.execute("SELECT COUNT(*) FROM fb_auto_tasks WHERE status IN ('failed','error')"); failed_count = c.fetchone()[0]
-    c.execute('SELECT id,account_name,browser_profile,user_agent,proxy,status,note,created_at FROM fb_auto_accounts ORDER BY id DESC LIMIT 30')
-    accounts = [{'id':r[0],'account_name':r[1],'browser_profile':r[2],'user_agent':r[3],'proxy':r[4],'status':r[5],'note':r[6],'created_at':r[7]} for r in c.fetchall()]
-    c.execute('SELECT id,title,targets,schedule_mode,schedule_time,media_mode,status,duplicate_score,result_message,created_at FROM fb_auto_tasks ORDER BY id DESC LIMIT 40')
-    tasks = [{'id':r[0],'title':r[1],'targets':r[2],'schedule_mode':r[3],'schedule_time':r[4],'media_mode':r[5],'status':r[6],'duplicate_score':r[7],'result_message':r[8],'created_at':r[9]} for r in c.fetchall()]
-    c.execute('SELECT id,label,file_name,file_path,media_type,used_count,created_at FROM fb_auto_media ORDER BY id DESC LIMIT 30')
-    media = [{'id':r[0],'label':r[1],'file_name':r[2],'file_path':r[3],'media_type':r[4],'used_count':r[5],'created_at':r[6]} for r in c.fetchall()]
-    c.execute('SELECT id,task_id,account_name,action,status,detail,created_at FROM fb_auto_logs ORDER BY id DESC LIMIT 80')
-    logs = [{'id':r[0],'task_id':r[1],'account_name':r[2],'action':r[3],'status':r[4],'detail':r[5],'created_at':r[6]} for r in c.fetchall()]
-    conn.close()
-    return jsonify({'ok': True, 'stats': {'accounts': accounts_count, 'tasks': tasks_count, 'success': success_count, 'failed': failed_count}, 'accounts': accounts, 'tasks': tasks, 'media': media, 'logs': logs})
-
-@app.route('/api/fbauto/accounts', methods=['POST'])
-def mkt_v159_fbauto_save_account():
-    mkt_v159_fbauto_ensure_schema()
-    account_name = (request.form.get('account_name') or '').strip() or ('FB' + datetime.datetime.now().strftime('%H%M%S'))
-    proxy = (request.form.get('proxy') or '').strip()
-    browser_profile = (request.form.get('browser_profile') or '').strip() or ('profiles/' + account_name.replace(' ', '_'))
-    user_agent = (request.form.get('user_agent') or '').strip()
-    now = mkt_v159_now()
-    conn = db(); c = conn.cursor()
-    c.execute("""INSERT INTO fb_auto_accounts(account_name,browser_profile,user_agent,proxy,status,note,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?) ON CONFLICT(account_name) DO UPDATE SET browser_profile=excluded.browser_profile,user_agent=excluded.user_agent,proxy=excluded.proxy,status='active',updated_at=excluded.updated_at""", (account_name,browser_profile,user_agent,proxy,'active','User tự đăng nhập, hệ thống không lưu mật khẩu.',now,now))
-    conn.commit(); conn.close()
-    mkt_v159_log('save_account','success','Đã lưu tài khoản '+account_name, account_name=account_name)
-    return jsonify({'ok': True, 'message': 'Đã lưu tài khoản/proxy/profile: ' + account_name})
-
-@app.route('/api/fbauto/tasks', methods=['POST'])
-def mkt_v159_fbauto_create_task():
-    mkt_v159_fbauto_ensure_schema()
-    title = (request.form.get('title') or 'Chiến dịch Facebook').strip(); content = (request.form.get('content') or '').strip(); targets = (request.form.get('targets') or '').strip(); schedule_mode = (request.form.get('schedule_mode') or 'now').strip(); schedule_time = (request.form.get('schedule_time') or '').strip(); media_mode = (request.form.get('media_mode') or 'random').strip()
-    ai_spin = 1 if request.form.get('ai_spin') else 0; anti_duplicate = 1 if request.form.get('anti_duplicate') else 0; hashtag_random = 1 if request.form.get('hashtag_random') else 0
-    if not content:
-        return jsonify({'ok': False, 'message': 'Bạn cần nhập nội dung bài viết.'}), 400
-    score, h, dup_msg = mkt_v159_duplicate_score(content); status = 'queued'; result = 'Task đã vào queue. ' + dup_msg; now = mkt_v159_now()
-    conn = db(); c = conn.cursor()
-    c.execute("""INSERT INTO fb_auto_tasks(title,content,targets,schedule_mode,schedule_time,media_mode,ai_spin,anti_duplicate,hashtag_random,status,duplicate_score,result_message,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)""", (title,content,targets,schedule_mode,schedule_time,media_mode,ai_spin,anti_duplicate,hashtag_random,status,score,result,now,now))
-    task_id = c.lastrowid
-    try: c.execute('INSERT OR IGNORE INTO fb_auto_content_hashes(content_hash,content_preview,created_at) VALUES(?,?,?)', (h, content[:1500].lower(), now))
-    except Exception: pass
-    conn.commit(); conn.close(); mkt_v159_log('create_task','queued',result,task_id=task_id)
-    return jsonify({'ok': True, 'task_id': task_id, 'message': 'Đã tạo tác vụ #' + str(task_id) + ' và lưu vào Queue. ' + dup_msg, 'duplicate_score': score})
-
-@app.route('/api/fbauto/media', methods=['POST'])
-def mkt_v159_fbauto_upload_media():
-    mkt_v159_fbauto_ensure_schema(); f = request.files.get('media')
-    if not f or not f.filename: return jsonify({'ok': False, 'message': 'Bạn chưa chọn ảnh/video.'}), 400
-    safe_name = secure_filename(f.filename); folder = os.path.join(UPLOAD_DIR, 'fbauto2026'); os.makedirs(folder, exist_ok=True); stamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S_'); path = os.path.join(folder, stamp + safe_name); f.save(path)
-    label = (request.form.get('label') or safe_name).strip(); ext = safe_name.lower().rsplit('.',1)[-1] if '.' in safe_name else ''; media_type = 'video' if ext in ['mp4','mov','avi','webm','mkv'] else 'image'
-    conn = db(); c = conn.cursor(); c.execute('INSERT INTO fb_auto_media(label,file_name,file_path,media_type,used_count,created_at) VALUES(?,?,?,?,?,?)', (label,safe_name,path,media_type,0,mkt_v159_now())); conn.commit(); conn.close(); mkt_v159_log('upload_media','success','Đã upload media '+safe_name)
-    return jsonify({'ok': True, 'message': 'Đã upload media: ' + safe_name, 'path': path})
-
-@app.route('/api/fbauto/logs.csv')
-def mkt_v159_fbauto_logs_csv():
-    mkt_v159_fbauto_ensure_schema(); mem = io.StringIO(); writer = csv.writer(mem); writer.writerow(['time','task_id','account','action','status','detail'])
-    conn = db(); c = conn.cursor(); c.execute('SELECT created_at,task_id,account_name,action,status,detail FROM fb_auto_logs ORDER BY id DESC LIMIT 5000')
-    for row in c.fetchall(): writer.writerow(row)
-    conn.close(); data = io.BytesIO(mem.getvalue().encode('utf-8-sig'))
-    return send_file(data, mimetype='text/csv', as_attachment=True, download_name='report.csv')
-
-@app.after_request
-def mkt_v159_fbauto_2026_after_request(response):
-    try:
-        ctype = (response.headers.get('Content-Type') or '').lower()
-        if 'text/html' in ctype:
-            body = response.get_data(as_text=True)
-            if 'mkt-v159-fbauto-2026-js' not in body and '</body>' in body:
-                body = body.replace('</body>', MKT_V159_FB_AUTO_CENTER + '</body>')
-                response.set_data(body); response.headers['Content-Length'] = str(len(body.encode('utf-8')))
-    except Exception as _e:
-        print('mkt_v159_fbauto_2026_after_request skipped:', _e)
-    return response
 
 try:
-    mkt_v159_fbauto_ensure_schema()
-except Exception as _mkt_v159_schema_err:
-    print('MKT V159 fbauto schema bootstrap skipped:', _mkt_v159_schema_err)
+    fb2026_init_db()
+except Exception as _e:
+    print('FB2026 init db skipped:', _e)
+
+def fb2026_log(task_uid, account_code, action, status, detail):
+    try:
+        conn = db(); c = conn.cursor()
+        c.execute("INSERT INTO fb2026_logs(task_uid,account_code,action,status,detail,created_at) VALUES(?,?,?,?,?,?)",
+                  (task_uid or '', account_code or '', action or '', status or '', str(detail or '')[:2000], fb2026_now()))
+        conn.commit(); conn.close()
+    except Exception as e:
+        print('fb2026_log skipped:', e)
+
+def fb2026_rows_to_dicts(cur, rows):
+    names = [d[0] for d in cur.description]
+    return [dict(zip(names, r)) for r in rows]
+
+def fb2026_duplicate_check(content):
+    text = str(content or '').strip()
+    h = fb2026_hash(text)
+    best = 0.0
+    try:
+        conn = db(); c = conn.cursor()
+        c.execute("SELECT content FROM fb2026_content_hashes ORDER BY id DESC LIMIT 300")
+        rows = c.fetchall(); conn.close()
+        for (old,) in rows:
+            if not old:
+                continue
+            if SequenceMatcher:
+                score = SequenceMatcher(None, text.lower(), str(old).lower()).ratio() * 100
+            else:
+                a=set(text.lower().split()); b=set(str(old).lower().split())
+                score = (len(a & b) / max(1, len(a | b))) * 100
+            best = max(best, score)
+    except Exception:
+        best = 0.0
+    if best < 70:
+        level = 'An toàn'
+    elif best < 90:
+        level = 'Cảnh báo giống nội dung cũ'
+    else:
+        level = 'Trùng lặp cao'
+    return h, round(best, 2), level
+
+def fb2026_apply_hashtags(content, pool, min_n=0, max_n=0):
+    tags = []
+    for part in str(pool or '').replace('\n', ',').split(','):
+        t = part.strip()
+        if not t:
+            continue
+        if not t.startswith('#'):
+            t = '#' + t.replace(' ', '')
+        tags.append(t)
+    if not tags or max_n <= 0:
+        return content
+    random.shuffle(tags)
+    n = random.randint(max(0, min_n), min(max_n, len(tags))) if max_n >= min_n else min(len(tags), max_n)
+    selected = tags[:n]
+    return (str(content or '').rstrip() + ('\n\n' + ' '.join(selected) if selected else '')).strip()
+
+def fb2026_ai_spin(content, count=1):
+    count = max(1, min(int(count or 1), 10))
+    base = str(content or '').strip()
+    variants = []
+    try:
+        if 'safe_ai_generate' in globals() and GEMINI_API_KEY:
+            prompt = f"Viết lại nội dung bán hàng sau thành {count} phiên bản tiếng Việt khác nhau, tự nhiên, không spam, không cam kết quá mức. Mỗi phiên bản dưới 900 ký tự. Nội dung gốc:\n{base}"
+            raw = safe_ai_generate(prompt, fallback='')
+            for line in str(raw or '').split('\n'):
+                cleaned = line.strip(' -•0123456789.').strip()
+                if len(cleaned) > 20:
+                    variants.append(cleaned)
+                if len(variants) >= count:
+                    break
+    except Exception:
+        pass
+    fallback_prefix = ['Gợi ý hôm nay:', 'Dành cho anh/chị quan tâm:', 'Thông tin mới:', 'Mẫu nội dung tối ưu:', 'Chia sẻ nhanh:']
+    while len(variants) < count:
+        variants.append((random.choice(fallback_prefix) + ' ' + base).strip())
+    return variants[:count]
+
+def fb2026_pick_media(media_ids, mode='random'):
+    ids=[]
+    for x in str(media_ids or '').replace('\n', ',').split(','):
+        x=x.strip()
+        if x.isdigit():
+            ids.append(int(x))
+    if not ids:
+        return None
+    conn=db(); c=conn.cursor()
+    q=','.join(['?']*len(ids))
+    c.execute(f"SELECT id,file_name,file_path,media_type,used_count FROM fb2026_media WHERE id IN ({q})", ids)
+    rows=c.fetchall()
+    if not rows:
+        conn.close(); return None
+    if mode in ('no_repeat', 'loop'):
+        rows = sorted(rows, key=lambda r: ((r[4] or 0), r[0]))
+        row = rows[0]
+    else:
+        row = random.choice(rows)
+    c.execute("UPDATE fb2026_media SET used_count=COALESCE(used_count,0)+1 WHERE id=?", (row[0],))
+    conn.commit(); conn.close()
+    return {"id":row[0],"file_name":row[1],"file_path":row[2],"media_type":row[3],"used_count":row[4]}
+
+def fb2026_next_schedule(schedule_time, repeat_mode):
+    try:
+        base = datetime.datetime.strptime(schedule_time, "%Y-%m-%d %H:%M:%S")
+    except Exception:
+        base = datetime.datetime.now()
+    mode = str(repeat_mode or 'none').lower()
+    if mode == 'daily':
+        base += datetime.timedelta(days=1)
+    elif mode == 'weekly':
+        base += datetime.timedelta(days=7)
+    elif mode == 'monthly':
+        month = base.month + 1
+        year = base.year + (month - 1) // 12
+        month = ((month - 1) % 12) + 1
+        base = base.replace(year=year, month=month, day=min(base.day, 28))
+    else:
+        return ''
+    return base.strftime("%Y-%m-%d %H:%M:%S")
+
+def fb2026_graph_post(page_id, page_token, content, link_url='', media=None):
+    page_id = str(page_id or '').strip(); token = str(page_token or '').strip()
+    if not page_id or not token:
+        return False, '', 'Thiếu Page ID hoặc Page Token. Task đã lưu, cần cấu hình API để đăng thật.'
+    try:
+        if media and os.path.exists(media.get('file_path','')) and media.get('media_type') == 'image':
+            url = f"https://graph.facebook.com/v20.0/{page_id}/photos"
+            with open(media['file_path'], 'rb') as f:
+                res = requests.post(url, data={"caption": content, "access_token": token}, files={"source": f}, timeout=60)
+        else:
+            url = f"https://graph.facebook.com/v20.0/{page_id}/feed"
+            payload = {"message": content, "access_token": token}
+            if link_url:
+                payload['link'] = link_url
+            res = requests.post(url, data=payload, timeout=45)
+        data = res.json() if res.text else {}
+        if res.status_code < 400 and (data.get('id') or data.get('post_id')):
+            return True, data.get('post_id') or data.get('id'), 'Đăng Page thành công qua Graph API.'
+        return False, '', data.get('error', {}).get('message') or res.text[:500]
+    except Exception as e:
+        return False, '', str(e)
+
+def fb2026_process_due_tasks(limit=None):
+    fb2026_init_db()
+    limit = int(limit or FB2026_SAFE_LIMITS['worker_batch'])
+    now = fb2026_now()
+    conn = db(); c = conn.cursor()
+    c.execute("""SELECT id,task_uid,title,content,link_url,account_ids,destinations,media_ids,media_mode,hashtag_pool,hashtag_min,hashtag_max,schedule_time,repeat_mode,retry_count,max_retry
+        FROM fb2026_tasks WHERE status IN ('queued','scheduled','retry') AND (schedule_time IS NULL OR schedule_time='' OR schedule_time<=?) ORDER BY id ASC LIMIT ?""", (now, limit))
+    tasks = c.fetchall(); processed = 0
+    for t in tasks:
+        (row_id, uid, title, content, link_url, account_ids, destinations, media_ids, media_mode, hashtag_pool, hmin, hmax, schedule_time, repeat_mode, retry_count, max_retry) = t
+        c.execute("UPDATE fb2026_tasks SET status='running',updated_at=? WHERE id=?", (fb2026_now(), row_id)); conn.commit()
+        acct_ids = [int(x) for x in str(account_ids or '').replace('\n', ',').split(',') if x.strip().isdigit()]
+        if not acct_ids:
+            c.execute("UPDATE fb2026_tasks SET status='failed',result_message=?,updated_at=? WHERE id=?", ('Chưa chọn tài khoản.', fb2026_now(), row_id)); conn.commit(); continue
+        ok_count=0; fail_count=0; details=[]
+        for acct_id in acct_ids:
+            c.execute("SELECT id,account_code,display_name,proxy,browser_profile,user_agent,login_status,page_id,page_token FROM fb2026_accounts WHERE id=?", (acct_id,))
+            a=c.fetchone()
+            if not a:
+                fail_count += 1; continue
+            _, account_code, display_name, proxy, profile, ua, login_status, page_id, page_token = a
+            final_content = fb2026_apply_hashtags(content, hashtag_pool, int(hmin or 0), int(hmax or 0))
+            media = fb2026_pick_media(media_ids, media_mode)
+            success, post_id, msg = fb2026_graph_post(page_id, page_token, final_content, link_url, media)
+            if success:
+                ok_count += 1
+                fb2026_log(uid, account_code, 'post', 'success', msg + (' | post_id=' + post_id if post_id else ''))
+                try:
+                    c.execute("INSERT OR IGNORE INTO fb2026_content_hashes(content_hash,content,created_at) VALUES(?,?,?)", (fb2026_hash(final_content), final_content, fb2026_now()))
+                except Exception:
+                    pass
+            else:
+                if profile and not page_token:
+                    msg += ' | Đã có browser profile. Mở trình duyệt profile để đăng thủ công hoặc cấu hình Page Token để đăng tự động.'
+                fail_count += 1
+                fb2026_log(uid, account_code, 'post', 'failed', msg)
+            details.append(f"{account_code}: {'OK' if success else 'FAIL'} - {msg}")
+            time.sleep(1)
+        processed += 1
+        if fail_count == 0 and ok_count > 0:
+            status='success'
+        elif ok_count > 0:
+            status='partial_success'
+        else:
+            retry_count = int(retry_count or 0) + 1
+            status='retry' if retry_count < int(max_retry or 3) else 'failed'
+        next_time = fb2026_next_schedule(schedule_time, repeat_mode)
+        if status in ('success','partial_success') and next_time:
+            new_uid = 'FBT-' + uuid.uuid4().hex[:12].upper()
+            c.execute("""INSERT INTO fb2026_tasks(task_uid,title,content,link_url,account_ids,destinations,media_ids,media_mode,hashtag_pool,hashtag_min,hashtag_max,schedule_time,repeat_mode,status,max_retry,created_at,updated_at)
+                         SELECT ?,title,content,link_url,account_ids,destinations,media_ids,media_mode,hashtag_pool,hashtag_min,hashtag_max,?,repeat_mode,'scheduled',max_retry,?,? FROM fb2026_tasks WHERE id=?""",
+                      (new_uid, next_time, fb2026_now(), fb2026_now(), row_id))
+        c.execute("UPDATE fb2026_tasks SET status=?, retry_count=?, result_message=?, updated_at=? WHERE id=?", (status, retry_count, '\n'.join(details)[:2000], fb2026_now(), row_id))
+        conn.commit()
+    conn.close(); return processed
+
+@app.route('/api/fb2026/coverage')
+def fb2026_coverage():
+    fb2026_init_db()
+    return jsonify({"ok": True, "items": [
+        {"name":"Tài khoản/proxy/profile riêng", "status":"done"},
+        {"name":"Mở trình duyệt đăng nhập Facebook thật bằng Playwright", "status":"done_optional_playwright"},
+        {"name":"Lưu session/profile", "status":"done_profile_dir"},
+        {"name":"Đăng Page thật qua Graph API", "status":"done_requires_page_token"},
+        {"name":"Đăng profile cá nhân", "status":"manual_assisted", "note":"Không bypass captcha/checkpoint."},
+        {"name":"Hẹn giờ/lặp ngày tuần tháng", "status":"done"},
+        {"name":"Random ảnh/video", "status":"done"},
+        {"name":"AI Spin", "status":"done_fallback"},
+        {"name":"Anti Duplicate", "status":"done"},
+        {"name":"CSV Log", "status":"done"},
+        {"name":"API bên thứ ba", "status":"done"},
+        {"name":"Plugin mở rộng", "status":"ready"}
+    ]})
+
+@app.route('/api/fb2026/accounts', methods=['GET','POST'])
+def fb2026_accounts_api():
+    fb2026_init_db(); conn=db(); c=conn.cursor()
+    if request.method == 'POST':
+        data = request.get_json(silent=True) or request.form
+        code = fb2026_slug(data.get('account_code') or data.get('display_name') or ('FB' + uuid.uuid4().hex[:4]))
+        profile = str(data.get('browser_profile') or '').strip() or os.path.join(FB2026_PROFILE_ROOT, code)
+        os.makedirs(profile, exist_ok=True)
+        now=fb2026_now()
+        c.execute("""INSERT INTO fb2026_accounts(account_code,display_name,proxy,browser_profile,cookies_json,user_agent,login_status,page_id,page_token,note,status,created_at,updated_at)
+                     VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)
+                     ON CONFLICT(account_code) DO UPDATE SET display_name=excluded.display_name,proxy=excluded.proxy,browser_profile=excluded.browser_profile,user_agent=excluded.user_agent,page_id=excluded.page_id,page_token=excluded.page_token,note=excluded.note,updated_at=excluded.updated_at""",
+                  (code, data.get('display_name') or code, data.get('proxy') or '', profile, data.get('cookies_json') or '', data.get('user_agent') or '', data.get('login_status') or 'Chưa đăng nhập', data.get('page_id') or '', data.get('page_token') or '', data.get('note') or '', 'active', now, now))
+        conn.commit(); conn.close()
+        return jsonify({"ok": True, "message":"Đã lưu tài khoản/profile.", "account_code": code, "browser_profile": profile})
+    c.execute("SELECT id,account_code,display_name,proxy,browser_profile,user_agent,login_status,page_id,CASE WHEN page_token!='' THEN substr(page_token,1,8)||'...' ELSE '' END AS page_token_mask,note,status,updated_at FROM fb2026_accounts WHERE COALESCE(status,'active')!='deleted' ORDER BY id DESC")
+    rows=fb2026_rows_to_dicts(c,c.fetchall()); conn.close()
+    return jsonify({"ok": True, "accounts": rows})
+
+@app.route('/api/fb2026/login/start', methods=['POST'])
+def fb2026_login_start():
+    fb2026_init_db(); data=request.get_json(silent=True) or request.form; acct_id=str(data.get('account_id') or '').strip()
+    conn=db(); c=conn.cursor(); c.execute("SELECT id,account_code,browser_profile,proxy,user_agent FROM fb2026_accounts WHERE id=?", (acct_id,)); row=c.fetchone(); conn.close()
+    if not row:
+        return jsonify({"ok": False, "message":"Không tìm thấy tài khoản."}), 404
+    _, code, profile, proxy, ua = row; os.makedirs(profile, exist_ok=True)
+    try:
+        from playwright.sync_api import sync_playwright
+    except Exception:
+        return jsonify({"ok": False, "message":"Máy chủ chưa cài Playwright. Cài: pip install playwright && playwright install chromium", "profile": profile})
+    def _open():
+        try:
+            with sync_playwright() as p:
+                kwargs={"headless": False, "user_data_dir": profile}
+                if ua:
+                    kwargs['user_agent'] = ua
+                if proxy:
+                    kwargs['proxy'] = {"server": proxy}
+                browser = p.chromium.launch_persistent_context(**kwargs)
+                page = browser.new_page(); page.goto('https://www.facebook.com/', wait_until='domcontentloaded', timeout=60000)
+                fb2026_log('', code, 'login_browser', 'opened', 'Đã mở Chrome profile. Người dùng tự đăng nhập Facebook, không lưu mật khẩu trong hệ thống.')
+                time.sleep(20*60)
+                try: browser.close()
+                except Exception: pass
+        except Exception as e:
+            fb2026_log('', code, 'login_browser', 'failed', str(e))
+    threading.Thread(target=_open, daemon=True).start()
+    conn=db(); c=conn.cursor(); c.execute("UPDATE fb2026_accounts SET login_status='Đã mở trình duyệt đăng nhập',updated_at=? WHERE id=?", (fb2026_now(), acct_id)); conn.commit(); conn.close()
+    return jsonify({"ok": True, "message":"Đã yêu cầu mở trình duyệt đăng nhập. Hãy đăng nhập Facebook trực tiếp trên cửa sổ Chrome vừa mở.", "profile": profile})
+
+@app.route('/api/fb2026/media/upload', methods=['POST'])
+def fb2026_media_upload():
+    fb2026_init_db(); files=request.files.getlist('files') or ([request.files['file']] if 'file' in request.files else [])
+    saved=[]; conn=db(); c=conn.cursor()
+    for f in files:
+        if not f or not f.filename: continue
+        name=secure_filename(f.filename); ext=os.path.splitext(name)[1].lower(); mtype='video' if ext in ['.mp4','.mov','.avi','.mkv','.webm'] else 'image'
+        fname=uuid.uuid4().hex[:10] + '_' + name; path=os.path.join(FB2026_MEDIA_ROOT, fname); f.save(path)
+        c.execute("INSERT INTO fb2026_media(device_id,file_name,file_path,media_type,created_at) VALUES(?,?,?,?,?)", (request.form.get('device_id',''), name, path, mtype, fb2026_now()))
+        saved.append({"id": c.lastrowid, "file_name": name, "media_type": mtype})
+    conn.commit(); conn.close(); return jsonify({"ok": True, "saved": saved})
+
+@app.route('/api/fb2026/media')
+def fb2026_media_list():
+    fb2026_init_db(); conn=db(); c=conn.cursor(); c.execute("SELECT id,file_name,media_type,used_count,created_at FROM fb2026_media ORDER BY id DESC LIMIT 200")
+    rows=fb2026_rows_to_dicts(c,c.fetchall()); conn.close(); return jsonify({"ok": True, "media": rows})
+
+@app.route('/api/fb2026/tasks', methods=['GET','POST'])
+def fb2026_tasks_api():
+    fb2026_init_db(); conn=db(); c=conn.cursor()
+    if request.method == 'POST':
+        data=request.get_json(silent=True) or request.form; content=str(data.get('content') or '').strip()
+        if not content:
+            return jsonify({"ok": False, "message":"Vui lòng nhập nội dung bài đăng."}), 400
+        h, dup, level = fb2026_duplicate_check(content); variants = []
+        if int(data.get('spin_count') or 0) > 0:
+            variants = fb2026_ai_spin(content, int(data.get('spin_count') or 1))
+        schedule_time = str(data.get('schedule_time') or '').strip() or fb2026_now()
+        if len(schedule_time) == 16:
+            schedule_time += ':00'
+        uid='FBT-' + uuid.uuid4().hex[:12].upper(); account_ids = data.get('account_ids') or data.get('accounts') or ''
+        if isinstance(account_ids, list): account_ids=','.join(map(str, account_ids))
+        media_ids = data.get('media_ids') or ''
+        if isinstance(media_ids, list): media_ids=','.join(map(str, media_ids))
+        status = 'queued' if schedule_time <= fb2026_now() else 'scheduled'
+        c.execute("""INSERT INTO fb2026_tasks(task_uid,title,content,link_url,account_ids,destinations,media_ids,media_mode,hashtag_pool,hashtag_min,hashtag_max,schedule_time,repeat_mode,status,max_retry,duplicate_score,duplicate_level,ai_variants,created_at,updated_at)
+                     VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                  (uid, data.get('title') or 'Facebook Task', content, data.get('link_url') or '', account_ids, data.get('destinations') or '', media_ids, data.get('media_mode') or 'random', data.get('hashtag_pool') or '', int(data.get('hashtag_min') or 0), int(data.get('hashtag_max') or 0), schedule_time, data.get('repeat_mode') or 'none', status, int(data.get('max_retry') or 3), dup, level, json.dumps(variants, ensure_ascii=False), fb2026_now(), fb2026_now()))
+        conn.commit(); conn.close()
+        return jsonify({"ok": True, "task_uid": uid, "status": status, "duplicate_score": dup, "duplicate_level": level, "ai_variants": variants})
+    c.execute("SELECT id,task_uid,title,substr(content,1,180) AS content,status,schedule_time,repeat_mode,duplicate_score,duplicate_level,result_message,created_at FROM fb2026_tasks ORDER BY id DESC LIMIT 100")
+    rows=fb2026_rows_to_dicts(c,c.fetchall()); conn.close(); return jsonify({"ok": True, "tasks": rows})
+
+@app.route('/api/fb2026/worker/run', methods=['POST','GET'])
+def fb2026_worker_run_api():
+    return jsonify({"ok": True, "processed": fb2026_process_due_tasks()})
+
+@app.route('/api/fb2026/stats')
+def fb2026_stats_api():
+    fb2026_init_db(); conn=db(); c=conn.cursor()
+    def one(sql):
+        c.execute(sql); return c.fetchone()[0]
+    total_accounts=one("SELECT COUNT(*) FROM fb2026_accounts WHERE COALESCE(status,'active')!='deleted'")
+    total_tasks=one("SELECT COUNT(*) FROM fb2026_tasks")
+    running=one("SELECT COUNT(*) FROM fb2026_tasks WHERE status='running'")
+    queued=one("SELECT COUNT(*) FROM fb2026_tasks WHERE status IN ('queued','scheduled','retry')")
+    success=one("SELECT COUNT(*) FROM fb2026_tasks WHERE status IN ('success','partial_success')")
+    failed=one("SELECT COUNT(*) FROM fb2026_tasks WHERE status='failed'")
+    media=one("SELECT COUNT(*) FROM fb2026_media")
+    rate=round((success/max(1,total_tasks))*100,2); conn.close()
+    return jsonify({"ok": True, "stats": {"accounts": total_accounts, "tasks": total_tasks, "running": running, "queued": queued, "success": success, "failed": failed, "media": media, "success_rate": rate}})
+
+@app.route('/api/fb2026/logs')
+def fb2026_logs_api():
+    fb2026_init_db(); conn=db(); c=conn.cursor(); c.execute("SELECT task_uid,account_code,action,status,detail,created_at FROM fb2026_logs ORDER BY id DESC LIMIT 200")
+    rows=fb2026_rows_to_dicts(c,c.fetchall()); conn.close(); return jsonify({"ok": True, "logs": rows})
+
+@app.route('/api/fb2026/export.csv')
+def fb2026_export_csv():
+    fb2026_init_db(); path=os.path.join(FB2026_REPORT_ROOT, 'report.csv')
+    conn=db(); c=conn.cursor(); c.execute("SELECT created_at,account_code,status,detail,task_uid,action FROM fb2026_logs ORDER BY id DESC LIMIT 5000"); rows=c.fetchall(); conn.close()
+    with open(path, 'w', newline='', encoding='utf-8-sig') as f:
+        w=csv.writer(f); w.writerow(['time','account','status','error','task_uid','action'])
+        for created_at, account, status, detail, uid, action in rows:
+            w.writerow([created_at, account, status, '' if status=='success' else detail, uid, action])
+    return send_file(path, as_attachment=True, download_name='report.csv')
+
+@app.route('/api/fb2026/plugins', methods=['GET','POST'])
+def fb2026_plugins_api():
+    fb2026_init_db(); conn=db(); c=conn.cursor()
+    if request.method == 'POST':
+        data=request.get_json(silent=True) or request.form; name=fb2026_slug(data.get('plugin_name') or data.get('name') or 'plugin'); now=fb2026_now()
+        c.execute("""INSERT INTO fb2026_plugins(plugin_name,plugin_type,status,config_json,created_at,updated_at) VALUES(?,?,?,?,?,?)
+                     ON CONFLICT(plugin_name) DO UPDATE SET plugin_type=excluded.plugin_type,status=excluded.status,config_json=excluded.config_json,updated_at=excluded.updated_at""",
+                  (name, data.get('plugin_type') or 'custom', data.get('status') or 'active', data.get('config_json') or '{}', now, now))
+        conn.commit(); conn.close(); return jsonify({"ok": True, "message":"Đã lưu plugin.", "plugin_name": name})
+    c.execute("SELECT plugin_name,plugin_type,status,config_json,updated_at FROM fb2026_plugins ORDER BY id DESC")
+    rows=fb2026_rows_to_dicts(c,c.fetchall()); conn.close(); return jsonify({"ok": True, "plugins": rows})
+
+@app.route('/api/fb2026/create-task', methods=['POST'])
+def fb2026_third_party_create_task():
+    return fb2026_tasks_api()
+
+@app.route('/api/fb2026/upload-media', methods=['POST'])
+def fb2026_third_party_upload_media():
+    return fb2026_media_upload()
+
+MKT_V160_FB2026_REAL_BACKEND_UI = r'''
+<style id="mkt-v160-fb2026-real-backend-ui">
+#mktFb2026ProPanel{max-width:1380px;margin:18px auto;padding:0 18px;font-family:system-ui,-apple-system,Segoe UI,sans-serif;color:#0f172a}.fb2026-hero{border:1px solid #dbeafe;background:radial-gradient(circle at 8% 0%,rgba(37,99,235,.12),transparent 28%),linear-gradient(135deg,#fff,#eff6ff);border-radius:28px;padding:26px;box-shadow:0 24px 70px rgba(37,99,235,.12)}.fb2026-pill{display:inline-flex;gap:8px;align-items:center;background:#0f172a;color:white;border-radius:999px;padding:10px 16px;font-weight:1000}.fb2026-title{font-size:clamp(28px,4vw,48px);line-height:1.05;margin:18px 0 10px;background:linear-gradient(90deg,#2563eb,#4f46e5,#7c3aed);-webkit-background-clip:text;background-clip:text;color:transparent;font-weight:1000}.fb2026-sub{color:#64748b;font-weight:800;font-size:18px;line-height:1.65;max-width:980px}.fb2026-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:18px}.fb2026-kpi,.fb2026-card{background:rgba(255,255,255,.96);border:1px solid #dbeafe;border-radius:22px;padding:18px;box-shadow:0 16px 42px rgba(15,23,42,.07)}.fb2026-kpi b{display:block;font-size:30px}.fb2026-kpi span{color:#64748b;font-weight:900}.fb2026-tabs{display:flex;gap:12px;flex-wrap:wrap;margin:18px 0}.fb2026-tabs button,.fb2026-btn{border:0;border-radius:16px;padding:13px 18px;font-weight:1000;cursor:pointer;background:#fff;color:#0f172a;border:1px solid #dbeafe;box-shadow:0 10px 28px rgba(15,23,42,.06)}.fb2026-tabs button.active,.fb2026-btn.primary{background:linear-gradient(135deg,#2563eb,#4f46e5);color:white}.fb2026-btn.green{background:linear-gradient(135deg,#16a34a,#22c55e);color:white}.fb2026-section{display:none}.fb2026-section.active{display:block}.fb2026-form{display:grid;grid-template-columns:1fr 1fr;gap:14px}.fb2026-form .full{grid-column:1/-1}.fb2026-form input,.fb2026-form textarea,.fb2026-form select{width:100%;box-sizing:border-box;border:1px solid #cbd5e1;border-radius:16px;padding:13px 15px;font-weight:800;font-size:15px;outline:none;background:#fff}.fb2026-form textarea{min-height:130px;resize:vertical}.fb2026-note{font-weight:800;color:#64748b;line-height:1.5}.fb2026-list{display:grid;gap:10px;margin-top:12px}.fb2026-item{border:1px solid #e2e8f0;border-radius:16px;background:#fff;padding:12px;font-weight:800}.fb2026-item small{display:block;color:#64748b;margin-top:5px;white-space:pre-wrap}.mkt-fb2026-mobile-menu{display:none!important;position:fixed;left:14px;bottom:102px;z-index:2147483000;background:linear-gradient(135deg,#1877f2,#4f46e5);color:#fff;border:0;border-radius:999px;padding:12px 16px;font-weight:1000;box-shadow:0 18px 38px rgba(37,99,235,.35)}@media(max-width:760px){.fb2026-grid{grid-template-columns:1fr 1fr}.fb2026-form{grid-template-columns:1fr}.fb2026-hero{padding:20px;border-radius:24px}.fb2026-card{padding:14px}.mkt-fb2026-mobile-menu{display:inline-flex!important;align-items:center;gap:8px}.fb2026-tabs{position:sticky;top:0;background:rgba(248,251,255,.92);backdrop-filter:blur(14px);z-index:20;padding:8px 0}.fb2026-tabs button{flex:1;min-width:45%}}
+</style>
+<script id="mkt-v160-fb2026-real-backend-js">
+(function(){
+  function html(){return '<div id="mktFb2026ProPanel"><div class="fb2026-hero"><span class="fb2026-pill">⚡ Facebook Automation 2026 • Real Backend</span><h1 class="fb2026-title">Trung tâm đăng bài Facebook dùng thật</h1><div class="fb2026-sub">Có backend lưu tài khoản/profile, mở trình duyệt đăng nhập, tạo queue đăng bài, hẹn giờ, random media, AI spin, anti duplicate, log CSV và API mở rộng. Đăng Page thật khi cấu hình Page ID + Page Token hợp lệ.</div><div class="fb2026-tabs"><button data-fbtab="task" class="active">➕ Tạo task</button><button data-fbtab="account">👥 Tài khoản</button><button data-fbtab="media">🖼️ Media</button><button data-fbtab="log">📊 Log/API</button></div><div class="fb2026-grid"><div class="fb2026-kpi"><b id="fb26Acc">0</b><span>Tài khoản</span></div><div class="fb2026-kpi"><b id="fb26Task">0</b><span>Tác vụ</span></div><div class="fb2026-kpi"><b id="fb26Ok">0%</b><span>Tỷ lệ thành công</span></div><div class="fb2026-kpi"><b id="fb26Run">0</b><span>Đang/chờ chạy</span></div></div></div><div class="fb2026-card fb2026-section active" data-section="task"><h2>➕ Tạo tác vụ đăng bài</h2><p class="fb2026-note">Chọn tài khoản đã lưu. Nếu tài khoản có Page Token, hệ thống đăng Page thật qua API. Nếu chỉ có browser profile, task sẽ lưu log để khách mở profile đăng thủ công an toàn.</p><div class="fb2026-form"><select id="fb26Accounts" class="full" multiple></select><textarea id="fb26Content" class="full" placeholder="Nhập nội dung bài đăng..."></textarea><input id="fb26Link" placeholder="Link nếu có"><input id="fb26Schedule" type="datetime-local"><select id="fb26Repeat"><option value="none">Không lặp</option><option value="daily">Lặp mỗi ngày</option><option value="weekly">Lặp mỗi tuần</option><option value="monthly">Lặp mỗi tháng</option></select><select id="fb26MediaMode"><option value="random">Random media</option><option value="no_repeat">Không lặp ưu tiên file ít dùng</option><option value="loop">Theo vòng lặp</option></select><input id="fb26MediaIds" placeholder="ID media, ví dụ: 1,2,3"><input id="fb26HashTags" placeholder="#marketing, #facebook, #viral"><input id="fb26HashMin" type="number" placeholder="Min hashtag" value="0"><input id="fb26HashMax" type="number" placeholder="Max hashtag" value="0"><input id="fb26Spin" type="number" placeholder="AI spin số phiên bản" value="0"><button class="fb2026-btn primary full" id="fb26CreateTask">🚀 Lưu task / Đưa vào queue</button><button class="fb2026-btn green full" id="fb26RunWorker">▶️ Chạy worker xử lý task đến hạn</button></div><div id="fb26TaskResult" class="fb2026-list"></div></div><div class="fb2026-card fb2026-section" data-section="account"><h2>👥 Tài khoản / Proxy / Browser Profile</h2><div class="fb2026-form"><input id="fb26Code" placeholder="Mã tài khoản: FB01"><input id="fb26Name" placeholder="Tên hiển thị"><input id="fb26Proxy" placeholder="Proxy riêng: http://user:pass@ip:port"><input id="fb26UA" placeholder="User-Agent riêng nếu có"><input id="fb26PageId" placeholder="Page ID để đăng thật qua API"><input id="fb26PageToken" placeholder="Page Token có quyền đăng bài"><input id="fb26Profile" class="full" placeholder="Profile: fb2026_profiles/FB01"><button class="fb2026-btn primary full" id="fb26SaveAcc">💾 Lưu tài khoản</button></div><div id="fb26AccList" class="fb2026-list"></div></div><div class="fb2026-card fb2026-section" data-section="media"><h2>🖼️ Kho ảnh/video random</h2><div class="fb2026-form"><input id="fb26Files" type="file" multiple class="full"><button class="fb2026-btn primary full" id="fb26Upload">⬆️ Upload media</button></div><div id="fb26MediaList" class="fb2026-list"></div></div><div class="fb2026-card fb2026-section" data-section="log"><h2>📊 Nhật ký / API / CSV</h2><div class="fb2026-tabs"><button class="fb2026-btn" id="fb26RefreshLog">🔄 Tải log</button><button class="fb2026-btn" id="fb26CSV">⬇️ Xuất report.csv</button><button class="fb2026-btn" id="fb26Coverage">✅ Kiểm tra thiếu</button></div><p class="fb2026-note">API nhanh: POST /api/fb2026/create-task • POST /api/fb2026/upload-media • GET /api/fb2026/logs • GET /api/fb2026/accounts</p><div id="fb26Logs" class="fb2026-list"></div></div></div>'}
+  function mount(){var old=document.getElementById('mktFb2026ProPanel'); if(old) return; var target=document.querySelector('.main,.content,.container,main')||document.body; var wrap=document.createElement('div'); wrap.innerHTML=html(); target.prepend(wrap.firstChild); var mob=document.createElement('button'); mob.className='mkt-fb2026-mobile-menu'; mob.innerHTML='📱 FB Auto'; mob.onclick=function(){document.getElementById('mktFb2026ProPanel')?.scrollIntoView({behavior:'smooth',block:'start'});}; document.body.appendChild(mob); bind(); loadAll();}
+  function item(obj){return '<div class="fb2026-item">'+(obj.title||obj.account_code||obj.file_name||obj.task_uid||obj.action||'Mục')+'<small>'+Object.keys(obj).map(function(k){return k+': '+obj[k]}).join('\n')+'</small></div>'}
+  async function j(url,opt){var r=await fetch(url,opt||{}); return await r.json();}
+  function bind(){document.querySelectorAll('[data-fbtab]').forEach(function(b){b.onclick=function(){document.querySelectorAll('[data-fbtab]').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.querySelectorAll('.fb2026-section').forEach(s=>s.classList.remove('active'));document.querySelector('[data-section="'+b.dataset.fbtab+'"]').classList.add('active');};});document.getElementById('fb26SaveAcc').onclick=saveAcc;document.getElementById('fb26CreateTask').onclick=createTask;document.getElementById('fb26RunWorker').onclick=runWorker;document.getElementById('fb26Upload').onclick=uploadMedia;document.getElementById('fb26RefreshLog').onclick=loadLogs;document.getElementById('fb26CSV').onclick=function(){location.href='/api/fb2026/export.csv'};document.getElementById('fb26Coverage').onclick=coverage;}
+  async function loadStats(){var d=await j('/api/fb2026/stats').catch(()=>null); if(!d||!d.ok)return; var s=d.stats; fb26Acc.textContent=s.accounts; fb26Task.textContent=s.tasks; fb26Ok.textContent=s.success_rate+'%'; fb26Run.textContent=(s.running+s.queued);}
+  async function loadAccounts(){var d=await j('/api/fb2026/accounts').catch(()=>null); if(!d||!d.ok)return; fb26Accounts.innerHTML=(d.accounts||[]).map(a=>'<option value="'+a.id+'">'+a.account_code+' • '+(a.display_name||'')+' • '+(a.page_id?'API Ready':'Profile')+'</option>').join(''); fb26AccList.innerHTML=(d.accounts||[]).map(a=>item(Object.assign({title:'👤 '+a.account_code},a))+'<button class="fb2026-btn" onclick="fetch(\'/api/fb2026/login/start\',{method:\'POST\',headers:{\'Content-Type\':\'application/json\'},body:JSON.stringify({account_id:'+a.id+'})}).then(r=>r.json()).then(x=>alert(x.message||JSON.stringify(x)))">🌐 Mở trình duyệt đăng nhập</button>').join('');}
+  async function loadMedia(){var d=await j('/api/fb2026/media').catch(()=>null); if(!d||!d.ok)return; fb26MediaList.innerHTML=(d.media||[]).map(m=>item(Object.assign({title:'🖼️ ID '+m.id+' - '+m.file_name},m))).join('');}
+  async function loadLogs(){var d=await j('/api/fb2026/logs').catch(()=>null); if(!d||!d.ok)return; fb26Logs.innerHTML=(d.logs||[]).map(l=>item(Object.assign({title:(l.status==='success'?'✅ ':'⚠️ ')+l.action},l))).join('');}
+  async function saveAcc(){var body={account_code:fb26Code.value,display_name:fb26Name.value,proxy:fb26Proxy.value,user_agent:fb26UA.value,page_id:fb26PageId.value,page_token:fb26PageToken.value,browser_profile:fb26Profile.value}; var d=await j('/api/fb2026/accounts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}); alert(d.message||JSON.stringify(d)); loadAll();}
+  async function createTask(){var ac=[...fb26Accounts.selectedOptions].map(o=>o.value); var body={account_ids:ac,content:fb26Content.value,link_url:fb26Link.value,schedule_time:fb26Schedule.value?fb26Schedule.value.replace('T',' '):'',repeat_mode:fb26Repeat.value,media_mode:fb26MediaMode.value,media_ids:fb26MediaIds.value,hashtag_pool:fb26HashTags.value,hashtag_min:fb26HashMin.value,hashtag_max:fb26HashMax.value,spin_count:fb26Spin.value}; var d=await j('/api/fb2026/tasks',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}); fb26TaskResult.innerHTML=item(Object.assign({title:d.ok?'✅ Đã tạo task':'❌ Lỗi'},d)); loadStats();}
+  async function runWorker(){var d=await j('/api/fb2026/worker/run',{method:'POST'}); alert('Đã xử lý '+(d.processed||0)+' task'); loadAll();}
+  async function uploadMedia(){var fd=new FormData(); [...fb26Files.files].forEach(f=>fd.append('files',f)); var d=await j('/api/fb2026/media/upload',{method:'POST',body:fd}); alert('Đã upload '+((d.saved||[]).length)+' file'); loadMedia();loadStats();}
+  async function coverage(){var d=await j('/api/fb2026/coverage'); fb26Logs.innerHTML=(d.items||[]).map(x=>item(Object.assign({title:x.name},x))).join('');}
+  function loadAll(){loadStats();loadAccounts();loadMedia();loadLogs();}
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',mount); else mount();
+})();
+</script>
+'''
+
+@app.after_request
+def mkt_v160_fb2026_real_backend_after_request(response):
+    try:
+        ctype=(response.headers.get('Content-Type') or '').lower()
+        if 'text/html' in ctype:
+            body=response.get_data(as_text=True)
+            if 'mkt-v160-fb2026-real-backend-js' not in body and '</body>' in body:
+                body=body.replace('</body>', MKT_V160_FB2026_REAL_BACKEND_UI + '</body>')
+                response.set_data(body)
+                response.headers['Content-Length']=str(len(body.encode('utf-8')))
+    except Exception as _e:
+        print('mkt_v160_fb2026_real_backend_after_request skipped:', _e)
+    return response
+
+def fb2026_background_worker_loop():
+    while True:
+        try:
+            fb2026_process_due_tasks()
+        except Exception as e:
+            print('fb2026 background worker skipped:', e)
+        time.sleep(int(os.getenv('FB2026_WORKER_INTERVAL', '30')))
+
+try:
+    if os.getenv('FB2026_BACKGROUND_WORKER', '1').strip() == '1':
+        threading.Thread(target=fb2026_background_worker_loop, daemon=True).start()
+except Exception as _e:
+    print('FB2026 background worker start skipped:', _e)
 
 
 if __name__ == "__main__":
