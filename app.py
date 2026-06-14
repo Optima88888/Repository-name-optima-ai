@@ -18204,3 +18204,125 @@ if __name__ == "__main__":
     app.run(host="0.0.0.0", port=port, debug=False)
 
 
+
+
+# ============================================================
+# V151 - Extension install guide UX upgrade
+# Giữ nguyên toàn bộ giao diện hiện tại.
+# Không đụng menu.
+# Không chỉnh file Extension. Chỉ bổ sung hướng dẫn cài đặt cho khách.
+# ============================================================
+MKT_V151_EXTENSION_INSTALL_GUIDE = """
+<style id="mkt-v151-extension-install-guide-css">
+#mktExtGuideOverlay{position:fixed!important;inset:0!important;background:rgba(2,6,23,.62)!important;backdrop-filter:blur(10px)!important;z-index:999999!important;display:none!important;align-items:center!important;justify-content:center!important;padding:18px!important;box-sizing:border-box!important}
+#mktExtGuideOverlay.mkt-show{display:flex!important}
+.mkt-ext-guide-modal{width:min(720px,96vw)!important;max-height:92vh!important;overflow:auto!important;border-radius:28px!important;background:linear-gradient(145deg,#111827,#172033 55%,#0f172a)!important;color:#fff!important;border:1px solid rgba(147,197,253,.28)!important;box-shadow:0 30px 90px rgba(0,0,0,.55)!important;padding:22px!important;box-sizing:border-box!important;font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif!important}
+.mkt-ext-guide-head{display:flex!important;align-items:flex-start!important;justify-content:space-between!important;gap:14px!important;margin-bottom:14px!important}
+.mkt-ext-guide-head h3{margin:0!important;font-size:24px!important;line-height:1.2!important;font-weight:1000!important;color:#fff!important}
+.mkt-ext-guide-head p{margin:6px 0 0!important;color:#cbd5e1!important;font-size:14px!important;line-height:1.45!important;font-weight:700!important}
+.mkt-ext-guide-close{width:40px!important;height:40px!important;border:0!important;border-radius:14px!important;background:rgba(255,255,255,.12)!important;color:#fff!important;font-size:22px!important;cursor:pointer!important;flex:0 0 auto!important}
+.mkt-ext-guide-safe{margin:10px 0 16px!important;padding:12px 14px!important;border-radius:18px!important;background:rgba(34,197,94,.10)!important;border:1px solid rgba(34,197,94,.26)!important;color:#bbf7d0!important;font-weight:900!important;line-height:1.45!important}
+.mkt-ext-steps{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:12px!important;margin:14px 0!important}
+.mkt-ext-step{background:rgba(255,255,255,.075)!important;border:1px solid rgba(255,255,255,.10)!important;border-radius:18px!important;padding:13px!important;min-height:92px!important;box-sizing:border-box!important}
+.mkt-ext-step b{display:block!important;font-size:14px!important;color:#fff!important;margin-bottom:6px!important;font-weight:1000!important}
+.mkt-ext-step span{display:block!important;color:#cbd5e1!important;font-size:13px!important;line-height:1.42!important;font-weight:700!important}
+.mkt-ext-guide-actions{display:flex!important;flex-wrap:wrap!important;gap:10px!important;margin-top:16px!important}
+.mkt-ext-guide-actions a,.mkt-ext-guide-actions button{border:0!important;border-radius:16px!important;padding:13px 16px!important;font-weight:1000!important;cursor:pointer!important;text-decoration:none!important;color:#fff!important;background:linear-gradient(135deg,#2563eb,#7c3aed)!important;box-shadow:0 14px 30px rgba(37,99,235,.24)!important}
+.mkt-ext-guide-actions button.mkt-gray{background:rgba(255,255,255,.12)!important;color:#fff!important;box-shadow:none!important;border:1px solid rgba(255,255,255,.12)!important}
+#mktExtMiniHint{margin-top:10px!important;padding:10px 12px!important;border-radius:16px!important;background:rgba(59,130,246,.10)!important;border:1px solid rgba(59,130,246,.22)!important;color:#bfdbfe!important;font-size:13px!important;line-height:1.45!important;font-weight:800!important}
+#mktExtMiniHint b{color:#fff!important}
+html body .mkt-fb-ext-link{display:inline-flex!important;align-items:center!important;justify-content:center!important;gap:8px!important;margin-top:14px!important;padding:12px 16px!important;border-radius:16px!important;background:linear-gradient(135deg,rgba(37,99,235,.22),rgba(124,58,237,.18))!important;border:1px solid rgba(147,197,253,.25)!important;color:#93c5fd!important;font-weight:1000!important;text-decoration:none!important;box-shadow:0 12px 28px rgba(37,99,235,.10)!important}
+@media(max-width:760px){.mkt-ext-steps{grid-template-columns:1fr!important}.mkt-ext-guide-modal{border-radius:24px!important;padding:18px!important}.mkt-ext-guide-head h3{font-size:21px!important}.mkt-ext-guide-actions a,.mkt-ext-guide-actions button{width:100%!important;text-align:center!important}}
+</style>
+<script id="mkt-v151-extension-install-guide-js">
+(function(){
+  'use strict';
+  function qs(s,r){return (r||document).querySelector(s)}
+  function qsa(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s))}
+  function isMobile(){return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent||'')}
+  function buildOverlay(){
+    if(qs('#mktExtGuideOverlay')) return;
+    var div=document.createElement('div');
+    div.id='mktExtGuideOverlay';
+    div.innerHTML=''
+      +'<div class="mkt-ext-guide-modal" role="dialog" aria-modal="true">'
+      +'<div class="mkt-ext-guide-head"><div><h3>⚡ Cài Chrome Extension trong 1 phút</h3><p>Extension chỉ dùng cho máy tính Chrome. Điện thoại dùng chế độ Copy + Mở Facebook, không cần cài Extension.</p></div><button class="mkt-ext-guide-close" type="button" aria-label="Đóng">×</button></div>'
+      +'<div class="mkt-ext-guide-safe">✅ Công cụ không lấy mật khẩu, không lấy cookie, không tự bấm Đăng. Khách kiểm tra nội dung rồi tự bấm Đăng trên Facebook.</div>'
+      +'<div class="mkt-ext-steps">'
+      +'<div class="mkt-ext-step"><b>Bước 1: Tải Extension</b><span>Bấm nút Tải Extension bên dưới để tải file ZIP về máy.</span></div>'
+      +'<div class="mkt-ext-step"><b>Bước 2: Giải nén ZIP</b><span>Nhấp chuột phải vào file ZIP → Extract / Giải nén ra thư mục.</span></div>'
+      +'<div class="mkt-ext-step"><b>Bước 3: Mở trang tiện ích</b><span>Mở Chrome và vào chrome://extensions.</span></div>'
+      +'<div class="mkt-ext-step"><b>Bước 4: Bật Developer Mode</b><span>Bật Chế độ nhà phát triển ở góc phải phía trên.</span></div>'
+      +'<div class="mkt-ext-step"><b>Bước 5: Load unpacked</b><span>Chọn Tải tiện ích đã giải nén rồi chọn thư mục vừa giải nén.</span></div>'
+      +'<div class="mkt-ext-step"><b>Bước 6: Tải lại trang</b><span>Quay lại web, bấm F5, trạng thái sẽ đổi sang Extension đã kết nối.</span></div>'
+      +'</div>'
+      +'<div id="mktExtMiniHint"><b>Mẹo:</b> Nếu đã cài mà chưa kết nối, hãy Remove bản cũ trong chrome://extensions rồi Load unpacked lại bản mới.</div>'
+      +'<div class="mkt-ext-guide-actions"><a id="mktExtDownloadBtn" href="/download/mkt-facebook-personal-extension.zip" target="_blank">⬇️ Tải Extension</a><button id="mktExtOpenChromeBtn" type="button" class="mkt-gray">📍 Mở chrome://extensions</button><button id="mktExtCloseBtn" type="button" class="mkt-gray">Đã hiểu</button></div>'
+      +'</div>';
+    document.body.appendChild(div);
+    qsa('.mkt-ext-guide-close,#mktExtCloseBtn',div).forEach(function(b){b.addEventListener('click',hideGuide)});
+    div.addEventListener('click',function(e){if(e.target===div) hideGuide();});
+    var chromeBtn=qs('#mktExtOpenChromeBtn',div);
+    if(chromeBtn){chromeBtn.addEventListener('click',function(){
+      try{navigator.clipboard&&navigator.clipboard.writeText('chrome://extensions');}catch(e){}
+      alert('Chrome không cho web mở trực tiếp chrome://extensions. Đã copy đường dẫn, hãy dán vào thanh địa chỉ Chrome: chrome://extensions');
+    });}
+  }
+  function showGuide(e){
+    if(e){e.preventDefault();e.stopPropagation();}
+    buildOverlay();
+    var ov=qs('#mktExtGuideOverlay'); if(ov) ov.classList.add('mkt-show');
+  }
+  function hideGuide(){var ov=qs('#mktExtGuideOverlay'); if(ov) ov.classList.remove('mkt-show');}
+  window.mktShowExtensionInstallGuide=showGuide;
+  function enhanceLink(){
+    qsa('a.mkt-fb-ext-link,a[href*="mkt-facebook-personal-extension.zip"]').forEach(function(a){
+      if(a.dataset.mktV151) return; a.dataset.mktV151='1';
+      a.innerHTML='⚡ Cài Extension Facebook cá nhân (1 phút)';
+      a.setAttribute('title','Xem hướng dẫn cài đặt Extension');
+      a.addEventListener('click',showGuide,true);
+    });
+  }
+  function enhanceStatus(){
+    var ext=qs('#mktFbExtStatus');
+    if(ext && !qs('#mktExtMiniStatusGuide')){
+      var btn=document.createElement('button');
+      btn.id='mktExtMiniStatusGuide';
+      btn.type='button';
+      btn.textContent='?';
+      btn.title='Hướng dẫn cài Extension';
+      btn.style.cssText='margin-left:8px;width:26px;height:26px;border:0;border-radius:999px;background:rgba(59,130,246,.22);color:#bfdbfe;font-weight:1000;cursor:pointer;';
+      btn.onclick=showGuide;
+      ext.parentNode && ext.parentNode.insertBefore(btn,ext.nextSibling);
+    }
+  }
+  var oldCheck=null;
+  function patchCheck(){
+    if(typeof window.mktFbCheckExtension==='function' && window.mktFbCheckExtension!==oldCheck){
+      oldCheck=window.mktFbCheckExtension;
+      window.mktFbCheckExtension=function(){
+        oldCheck.apply(this,arguments);
+        setTimeout(function(){ if(!window.mktFbExtensionReady && !isMobile()) showGuide(); },1300);
+      };
+    }
+  }
+  function run(){buildOverlay();enhanceLink();enhanceStatus();patchCheck();}
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',run); else run();
+  setTimeout(run,600);setTimeout(run,1600);setInterval(function(){enhanceLink();enhanceStatus();patchCheck();},3000);
+})();
+</script>
+"""
+
+@app.after_request
+def mkt_v151_extension_install_guide_after_request(response):
+    try:
+        ctype = (response.headers.get('Content-Type') or '').lower()
+        if 'text/html' in ctype:
+            body = response.get_data(as_text=True)
+            if 'mkt-v151-extension-install-guide-js' not in body and '</body>' in body:
+                body = body.replace('</body>', MKT_V151_EXTENSION_INSTALL_GUIDE + '</body>')
+                response.set_data(body)
+                response.headers['Content-Length'] = str(len(body.encode('utf-8')))
+    except Exception as _e:
+        print('mkt_v151_extension_install_guide_after_request skipped:', _e)
+    return response
