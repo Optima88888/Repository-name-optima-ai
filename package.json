@@ -1,0 +1,12 @@
+{
+  "name": "facebook-automation-platform-2026",
+  "private": true,
+  "version": "1.0.0",
+  "workspaces": ["server", "worker", "web"],
+  "scripts": {
+    "dev": "docker compose up --build",
+    "server": "npm --workspace server run dev",
+    "worker": "npm --workspace worker run dev",
+    "web": "npm --workspace web run dev"
+  }
+}
