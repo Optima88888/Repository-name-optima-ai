@@ -19412,6 +19412,252 @@ def mkt_v153_extension_download_direct_fix_after_request(response):
 def mkt_download_facebook_personal_extension_zip_v2_alias():
     return mkt_download_facebook_personal_extension_zip()
 
+
+# ============================================================
+# V154 - Facebook content.js: tìm nút Đăng chắc hơn sau khi dán
+# Giữ nguyên giao diện hiện tại. Không đụng menu.
+# Sửa đúng lỗi log: "Đã dán nội dung nhưng chưa tìm thấy nút Đăng"
+# ============================================================
+try:
+    MKT_FB_PERSONAL_EXTENSION_FILES['manifest.json'] = MKT_FB_PERSONAL_EXTENSION_FILES['manifest.json'].replace('"version": "1.3.0"', '"version": "1.4.0"').replace('"version": "1.1.0"', '"version": "1.4.0"')
+    MKT_FB_PERSONAL_EXTENSION_FILES['content.js'] = r"""
+(function(){
+"use strict";
+function isFacebookPage(){return location.hostname.includes("facebook.com");}
+function sendWebMessage(action,payload){try{window.postMessage(Object.assign({source:"MKT_EXTENSION_FACEBOOK_PERSONAL_V1",action:action},payload||{}),"*");}catch(e){}}
+function visible(el){
+  if(!el) return false;
+  var r=el.getBoundingClientRect();
+  var s=getComputedStyle(el);
+  return r.width>0 && r.height>0 && s.visibility!=="hidden" && s.display!=="none" && s.opacity!=="0";
+}
+function getLabel(el){
+  if(!el) return "";
+  var parts=[
+    el.innerText,
+    el.textContent,
+    el.getAttribute && el.getAttribute("aria-label"),
+    el.getAttribute && el.getAttribute("title"),
+    el.getAttribute && el.getAttribute("data-testid")
+  ].filter(Boolean);
+  return parts.join(" ").replace(/\s+/g," ").trim();
+}
+function isDisabled(el){
+  if(!el) return true;
+  var s=getComputedStyle(el);
+  return el.disabled || el.getAttribute("aria-disabled")==="true" || el.getAttribute("disabled")!==null || s.pointerEvents==="none" || s.cursor==="not-allowed";
+}
+function closestButton(el){
+  if(!el) return null;
+  return el.closest && (el.closest('[role="button"]') || el.closest('button') || el.closest('a[role="button"]'));
+}
+function activeDialog(){
+  var dialogs=Array.from(document.querySelectorAll('[role="dialog"], div[aria-modal="true"]')).filter(visible);
+  return dialogs.length ? dialogs[dialogs.length-1] : document;
+}
+function findComposerTrigger(){
+  var patterns=[/Bạn đang nghĩ gì/i,/What's on your mind/i,/Tạo bài viết/i,/Create post/i,/Viết gì đó/i,/Write something/i];
+  var all=Array.from(document.querySelectorAll('div, span, button, [role="button"], a'));
+  for(var i=0;i<all.length;i++){
+    if(!visible(all[i])) continue;
+    var t=getLabel(all[i]);
+    for(var j=0;j<patterns.length;j++){
+      if(patterns[j].test(t)){
+        var b=closestButton(all[i]) || all[i];
+        if(visible(b)) return b;
+      }
+    }
+  }
+  return null;
+}
+function findComposerBox(){
+  var root=activeDialog();
+  var selectors=[
+    'div[role="textbox"][contenteditable="true"]',
+    '[contenteditable="true"][role="textbox"]',
+    'div[aria-label*="Bạn đang nghĩ gì"]',
+    'div[aria-label*="What"]',
+    'div[aria-label*="Viết"]',
+    '[contenteditable="true"]',
+    'textarea'
+  ];
+  for(var i=0;i<selectors.length;i++){
+    var list=Array.from(root.querySelectorAll(selectors[i]));
+    for(var j=0;j<list.length;j++){
+      if(visible(list[j])) return list[j];
+    }
+  }
+  return null;
+}
+async function copyText(text){try{await navigator.clipboard.writeText(text);return true;}catch(e){return false;}}
+function insertText(el,text){
+  el.focus();
+  try{
+    var sel=window.getSelection();
+    if(sel && sel.removeAllRanges) sel.removeAllRanges();
+  }catch(e){}
+  if(el.tagName && el.tagName.toLowerCase()==="textarea"){
+    el.value=text;
+    el.dispatchEvent(new Event("input",{bubbles:true}));
+  }else{
+    try{
+      document.execCommand("selectAll",false,null);
+      document.execCommand("insertText",false,text);
+    }catch(e){
+      el.textContent=text;
+    }
+    try{el.dispatchEvent(new InputEvent("input",{bubbles:true,inputType:"insertText",data:text}));}catch(e){el.dispatchEvent(new Event("input",{bubbles:true}));}
+  }
+  el.dispatchEvent(new Event("change",{bubbles:true}));
+  el.dispatchEvent(new KeyboardEvent("keyup",{bubbles:true,key:" ",code:"Space"}));
+}
+function waitForComposerBox(callback,tries){
+  tries=tries||0;
+  var box=findComposerBox();
+  if(box){callback(box);return;}
+  if(tries>=50){callback(null);return;}
+  setTimeout(function(){waitForComposerBox(callback,tries+1);},250);
+}
+function scorePostButton(btn){
+  var label=getLabel(btn);
+  var bad=/Đăng nhập|Log in|Đăng ký|Sign up|Quản lý bài viết|Manage posts|Bài viết|Posts|Ảnh\/video|Photo|Video|Cảm xúc|Feeling|Bình luận|Comment|Chia sẻ ngay|Share now/i;
+  if(bad.test(label)) return -999;
+  var score=0;
+  if(/^(Đăng|Post|Publish)$/i.test(label)) score+=100;
+  if(/(^|\s)(Đăng|Post|Publish)(\s|$)/i.test(label)) score+=60;
+  if((btn.getAttribute("aria-label")||"").match(/^(Đăng|Post|Publish)$/i)) score+=80;
+  if(isDisabled(btn)) score-=200;
+  var r=btn.getBoundingClientRect();
+  if(r.width<30 || r.height<20) score-=80;
+  if(r.top>window.innerHeight*0.25) score+=5;
+  score+=Math.min(20, r.left/100);
+  return score;
+}
+function findRealPostButton(){
+  var root=activeDialog();
+  var raw=Array.from(root.querySelectorAll('[role="button"], button, a[role="button"], div[aria-label], span[aria-label]')).filter(visible);
+  var buttons=[];
+  raw.forEach(function(el){
+    var b=closestButton(el) || el;
+    if(buttons.indexOf(b)===-1 && visible(b)) buttons.push(b);
+  });
+  var ranked=buttons.map(function(b){return {el:b,score:scorePostButton(b),label:getLabel(b)};})
+                    .filter(function(x){return x.score>0;})
+                    .sort(function(a,b){return b.score-a.score;});
+  if(ranked.length) return ranked[0].el;
+  return null;
+}
+function tryKeyboardSubmit(){
+  var box=findComposerBox();
+  if(!box) return false;
+  box.focus();
+  ["keydown","keypress","keyup"].forEach(function(type){
+    box.dispatchEvent(new KeyboardEvent(type,{bubbles:true,cancelable:true,key:"Enter",code:"Enter",ctrlKey:true}));
+  });
+  return true;
+}
+function waitAndClickPost(callback,tries){
+  tries=tries||0;
+  var btn=findRealPostButton();
+  if(btn && !isDisabled(btn)){
+    btn.scrollIntoView({block:"center",inline:"center"});
+    setTimeout(function(){
+      btn.click();
+      callback({ok:true,message:"Đã dán nội dung và bấm nút Đăng trên Facebook."});
+    },250);
+    return;
+  }
+  if(tries===18){ tryKeyboardSubmit(); }
+  if(tries>=70){
+    callback({ok:false,message:"Đã dán nội dung nhưng chưa tìm thấy nút Đăng. Có thể Facebook đang đổi giao diện/chặn tự bấm. Hãy bấm Đăng thủ công."});
+    return;
+  }
+  setTimeout(function(){waitAndClickPost(callback,tries+1);},300);
+}
+function fillFacebookPost(content,autoPost,sendResponse){
+  if(!isFacebookPage()){sendResponse({ok:false,message:"Tab hiện tại không phải Facebook."});return;}
+  copyText(content);
+  var box=findComposerBox();
+  if(!box){
+    var trigger=findComposerTrigger();
+    if(trigger){trigger.scrollIntoView({block:"center"}); trigger.click();}
+  }
+  waitForComposerBox(function(finalBox){
+    if(!finalBox){
+      alert("Chưa tìm thấy ô đăng bài. Hãy bấm vào ô 'Bạn đang nghĩ gì?' rồi bấm lại Đăng ngay PC.");
+      sendResponse({ok:false,message:"Chưa tìm thấy ô đăng bài Facebook."});
+      return;
+    }
+    insertText(finalBox,content);
+    if(autoPost){
+      waitAndClickPost(function(result){
+        if(!result.ok) alert(result.message);
+        sendResponse(result);
+      });
+    }else{
+      alert("Đã dán nội dung vào Facebook. Bạn kiểm tra rồi bấm Đăng.");
+      sendResponse({ok:true,message:"Đã dán nội dung."});
+    }
+  });
+}
+window.addEventListener("message",function(event){
+  var data=event.data||{}; if(data.source!=="MKT_WEB_FACEBOOK_PERSONAL_V1") return;
+  var action=data.action, content=data.content||"", url=data.url||"https://www.facebook.com/";
+  if(action==="ping"){
+    chrome.runtime.sendMessage({type:"MKT_PING"},function(res){sendWebMessage("pong",{ok:!!(res&&res.ok),version:res&&res.version});});
+    chrome.runtime.sendMessage({type:"MKT_CHECK_FACEBOOK"},function(res){sendWebMessage("facebook_status",{ready:!!(res&&res.ready),message:res&&res.ready?"Đã phát hiện tab Facebook đang mở.":"Chưa thấy tab Facebook đang mở."});});
+  }
+  if(action==="open"){chrome.runtime.sendMessage({type:"MKT_OPEN_FACEBOOK",url:url},function(){sendWebMessage("log",{message:"Đã mở Facebook."});});}
+  if(action==="copy"){chrome.runtime.sendMessage({type:"MKT_COPY_CONTENT",content:content},function(){copyText(content);sendWebMessage("log",{message:"Đã copy nội dung bài viết."});});}
+  if(action==="post_now"){chrome.runtime.sendMessage({type:"MKT_POST_NOW",content:content},function(res){sendWebMessage("facebook_status",{ready:!!(res&&res.ok),message:res&&res.message?res.message:"Đã gửi lệnh đăng ngay sang Extension."});});}
+});
+chrome.runtime.onMessage.addListener(function(msg,sender,sendResponse){
+  if(!msg||!msg.type) return;
+  if(msg.type==="MKT_FILL_FACEBOOK_POST"){fillFacebookPost(msg.content||"",!!msg.autoPost,sendResponse);return true;}
+  if(msg.type==="MKT_CHECK_FACEBOOK_READY"){sendResponse({ok:true,url:location.href,title:document.title});return true;}
+});
+})();
+"""
+    # Đồng bộ version background để khách biết đã cài bản mới.
+    if 'version:"1.3.0"' in MKT_FB_PERSONAL_EXTENSION_FILES.get('background.js',''):
+        MKT_FB_PERSONAL_EXTENSION_FILES['background.js'] = MKT_FB_PERSONAL_EXTENSION_FILES['background.js'].replace('version:"1.3.0"', 'version:"1.4.0"')
+except Exception as _mkt_v154_ext_error:
+    print('MKT V154 Extension robust post button patch skipped:', _mkt_v154_ext_error)
+
+MKT_V154_FACEBOOK_LOG_NOTE_PATCH = r"""
+<script id="mkt-v154-facebook-post-note-js">
+(function(){
+  function patchNote(){
+    try{
+      var links=document.querySelectorAll('a,button');
+      links.forEach(function(el){
+        var t=(el.innerText||el.textContent||'').trim();
+        if(t.indexOf('Cài Extension Facebook cá nhân')>-1){
+          el.setAttribute('title','Sau khi cập nhật file này phải tải ZIP mới, gỡ extension cũ, Load unpacked lại bản mới.');
+        }
+      });
+    }catch(e){}
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',patchNote); else patchNote();
+  setTimeout(patchNote,800);
+})();
+</script>
+"""
+@app.after_request
+def mkt_v154_facebook_post_note_after_request(response):
+    try:
+        ctype=(response.headers.get('Content-Type') or '').lower()
+        if 'text/html' in ctype:
+            body=response.get_data(as_text=True)
+            if 'mkt-v154-facebook-post-note-js' not in body and '</body>' in body:
+                body=body.replace('</body>', MKT_V154_FACEBOOK_LOG_NOTE_PATCH + '</body>')
+                response.set_data(body)
+                response.headers['Content-Length']=str(len(body.encode('utf-8')))
+    except Exception as _e:
+        print('mkt_v154_facebook_post_note_after_request skipped:', _e)
+    return response
+
+
 if __name__ == "__main__":
     # Không tự tạo kho 50k content khi khởi động để tránh lỗi SQLite database is locked trên Render.
     # Khi cần kiểm tra/tạo kho content, gọi /api/content_50k_stats từ admin.
