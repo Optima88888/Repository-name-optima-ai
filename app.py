@@ -19966,6 +19966,108 @@ def mkt_v155_safe_prepare_ui_after_request(response):
         print('mkt_v155_safe_prepare_ui_after_request skipped:', _e)
     return response
 
+
+
+# ============================================================
+# V156 - Hard safe UI patch: chặn luồng cũ tự tìm nút Đăng
+# Giữ nguyên giao diện hiện tại. Không đụng menu.
+# ============================================================
+MKT_V156_HARD_SAFE_UI_PATCH = r"""
+<script id="mkt-v156-hard-safe-ui-js">
+(function(){
+  'use strict';
+  function qs(s,r){return (r||document).querySelector(s)}
+  function qsa(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s))}
+  function log(msg){
+    try{if(typeof window.mktFbLog==='function')return window.mktFbLog(msg);}catch(e){}
+    var box=qs('#mktFbPersonalLog');
+    if(box){var time=new Date().toLocaleTimeString('vi-VN');box.innerHTML='<div>['+time+'] '+msg+'</div>'+box.innerHTML;}
+  }
+  function post(){
+    try{if(typeof window.mktFbCurrentPost==='function')return (window.mktFbCurrentPost()||'').trim();}catch(e){}
+    var el=qs('#mktFbContent');return el?(el.value||'').trim():'';
+  }
+  function copyText(text){
+    if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(text).catch(function(){});}
+    try{var ta=document.createElement('textarea');ta.value=text;ta.style.position='fixed';ta.style.left='-9999px';document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();}catch(e){}
+  }
+  function fbUrl(){return ((qs('#mktFbUrl')||{}).value||'https://www.facebook.com/').trim()||'https://www.facebook.com/'}
+  function sendPrepare(){
+    var content=post();
+    if(!content){alert('Bạn chưa nhập nội dung bài viết.');return false;}
+    copyText(content);
+    window.postMessage({source:'MKT_WEB_FACEBOOK_PERSONAL_V1',action:'prepare_now',content:content,url:fbUrl(),extra:{safePrepare:true,v156:true}},'*');
+    log('Đã copy và gửi lệnh CHUẨN BỊ BÀI. Extension chỉ mở ô đăng/dán nội dung; khách tự bấm Đăng bước cuối.');
+    return false;
+  }
+  function patchText(){
+    qsa('button,a').forEach(function(el){
+      var t=(el.innerText||el.textContent||'');
+      if(/Đăng ngay PC|Chuẩn bị bài PC/.test(t)){
+        el.innerHTML=el.innerHTML.replace('Đăng ngay PC','Chuẩn bị bài PC').replace('Đăng ngay Facebook','Chuẩn bị bài Facebook');
+        el.setAttribute('title','Chỉ chuẩn bị bài: dán nội dung, khách tự bấm Đăng bước cuối');
+      }
+    });
+    qsa('div,span,p').forEach(function(el){
+      if(!el||!el.innerHTML)return;
+      if(el.innerHTML.indexOf('Đăng ngay để Extension dán')>-1){el.innerHTML=el.innerHTML.replace('bấm Đăng ngay để Extension dán nội dung.','bấm Chuẩn bị bài PC để Extension mở ô đăng và dán sẵn nội dung.');}
+    });
+  }
+  function patchFunction(){
+    window.mktFbPostNow=function(){return sendPrepare();};
+    window.mktFbPrepareNow=function(){return sendPrepare();};
+  }
+  function patchClicks(){
+    if(window.__MKT_V156_CLICK_BOUND__)return;window.__MKT_V156_CLICK_BOUND__=true;
+    document.addEventListener('click',function(e){
+      var el=e.target&&e.target.closest&&e.target.closest('button,a');if(!el)return;
+      var t=(el.innerText||el.textContent||'').trim();
+      if(/Đăng ngay PC|Chuẩn bị bài PC|Đăng ngay Facebook|Chuẩn bị bài Facebook/.test(t)){
+        e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();return sendPrepare();
+      }
+    },true);
+  }
+  function patchPostMessage(){
+    if(window.__MKT_V156_POSTMESSAGE_PATCH__)return;window.__MKT_V156_POSTMESSAGE_PATCH__=true;
+    var oldPost=window.postMessage;
+    window.postMessage=function(message,targetOrigin,transfer){
+      try{
+        if(message&&message.source==='MKT_WEB_FACEBOOK_PERSONAL_V1'&&message.action==='post_now'){
+          message=Object.assign({},message,{action:'prepare_now',extra:Object.assign({},message.extra||{},{safePrepare:true,v156:true})});
+        }
+      }catch(e){}
+      return oldPost.call(window,message,targetOrigin,transfer);
+    };
+  }
+  function patchLogs(){
+    var box=qs('#mktFbPersonalLog');if(!box||box.__mktV156LogPatch)return;box.__mktV156LogPatch=true;
+    var clean=function(){
+      box.innerHTML=box.innerHTML
+      .replaceAll('Đã dán nội dung nhưng chưa tìm thấy nút Đăng. Facebook có thể đổi giao diện hoặc đang chặn tự bấm; hãy bấm Đăng thủ công.','Đã chuẩn bị bài. Khách kiểm tra nội dung rồi tự bấm Đăng bước cuối.')
+      .replaceAll('Đã dán nội dung nhưng chưa tìm thấy nút Đăng. Có thể Facebook đang đổi giao diện/chặn tự bấm. Hãy bấm Đăng thủ công.','Đã chuẩn bị bài. Khách kiểm tra nội dung rồi tự bấm Đăng bước cuối.');
+    };
+    var obs=new MutationObserver(clean);obs.observe(box,{childList:true,subtree:true,characterData:true});clean();
+  }
+  function run(){patchPostMessage();patchText();patchFunction();patchClicks();patchLogs();}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',run);else run();
+  setTimeout(run,200);setTimeout(run,800);setTimeout(run,1800);setInterval(run,1000);
+})();
+</script>
+"""
+@app.after_request
+def mkt_v156_hard_safe_ui_after_request(response):
+    try:
+        ctype=(response.headers.get('Content-Type') or '').lower()
+        if 'text/html' in ctype:
+            body=response.get_data(as_text=True)
+            if 'mkt-v156-hard-safe-ui-js' not in body and '</body>' in body:
+                body=body.replace('</body>', MKT_V156_HARD_SAFE_UI_PATCH + '</body>')
+                response.set_data(body)
+                response.headers['Content-Length']=str(len(body.encode('utf-8')))
+    except Exception as _e:
+        print('mkt_v156_hard_safe_ui_after_request skipped:', _e)
+    return response
+
 if __name__ == "__main__":
     # Không tự tạo kho 50k content khi khởi động để tránh lỗi SQLite database is locked trên Render.
     # Khi cần kiểm tra/tạo kho content, gọi /api/content_50k_stats từ admin.
