@@ -20225,6 +20225,245 @@ except Exception as _mkt_v157_ext_error:
     print('MKT V157 extension version patch skipped:', _mkt_v157_ext_error)
 
 
+
+# ============================================================
+# V158 - Hard fix Facebook Personal input + dead buttons
+# Giữ nguyên giao diện/menu hiện tại. Chỉ vá phần không nhập được và các nút không chạy:
+# - Ô Nội dung bài viết bị lớp JS/CSS cũ chặn focus/nhập.
+# - Nút Kết nối Extension / Mở Facebook / Chuẩn bị bài PC / Copy bài / Xóa / Hẹn giờ / Bài tiếp không chạy ổn định.
+# - SAFE: chỉ mở Facebook, copy/dán/chuẩn bị nội dung; không tự bấm nút Đăng cuối cùng của Facebook.
+# ============================================================
+
+MKT_V158_FB_HARD_INPUT_BUTTON_FIX = r"""
+<style id="mkt-v158-fb-hard-input-button-fix-css">
+#facebook_personal #mktFbContent,
+#facebook_personal textarea#mktFbContent{
+  pointer-events:auto!important;
+  user-select:text!important;
+  -webkit-user-select:text!important;
+  touch-action:manipulation!important;
+  cursor:text!important;
+  position:relative!important;
+  z-index:2147480!important;
+  opacity:1!important;
+  visibility:visible!important;
+  display:block!important;
+  min-height:220px!important;
+  outline:none!important;
+}
+#facebook_personal #mktPcActions,
+#facebook_personal .mkt-fb-actions{
+  pointer-events:auto!important;
+  position:relative!important;
+  z-index:2147479!important;
+}
+#facebook_personal button,
+#facebook_personal a,
+#facebook_personal input,
+#facebook_personal select,
+#facebook_personal textarea{
+  pointer-events:auto!important;
+}
+#facebook_personal .mkt-v158-blocker-disabled{
+  pointer-events:none!important;
+}
+</style>
+<script id="mkt-v158-fb-hard-input-button-fix-js">
+(function(){
+  'use strict';
+  if(window.__MKT_V158_FB_HARD_FIX__) return;
+  window.__MKT_V158_FB_HARD_FIX__=true;
+  function qs(s,r){return (r||document).querySelector(s)}
+  function qsa(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s))}
+  function txt(el){return ((el&&el.innerText)|| (el&&el.textContent) || '').replace(/\s+/g,' ').trim()}
+  function section(){return qs('#facebook_personal') || qs('[id*="facebook_personal"]')}
+  function log(msg){
+    try{ if(typeof window.mktFbLog==='function') return window.mktFbLog(msg); }catch(e){}
+    var box=qs('#mktFbPersonalLog');
+    if(box){var time=new Date().toLocaleTimeString('vi-VN');box.innerHTML='<div>['+time+'] '+msg+'</div>'+box.innerHTML;}
+    try{console.log('[MKT V158]',msg)}catch(e){}
+  }
+  function toast(msg, ok){
+    try{ if(typeof window.mktFbToast==='function') return window.mktFbToast(msg, ok!==false); }catch(e){}
+    log(msg);
+  }
+  function getTa(){return qs('#mktFbContent') || qs('#facebook_personal textarea')}
+  function hardEnableTextarea(){
+    var ta=getTa(); if(!ta) return null;
+    try{
+      ta.removeAttribute('disabled'); ta.removeAttribute('readonly');
+      ta.disabled=false; ta.readOnly=false; ta.tabIndex=0;
+      ta.setAttribute('aria-disabled','false');
+      ta.style.setProperty('pointer-events','auto','important');
+      ta.style.setProperty('user-select','text','important');
+      ta.style.setProperty('-webkit-user-select','text','important');
+      ta.style.setProperty('cursor','text','important');
+      ta.style.setProperty('position','relative','important');
+      ta.style.setProperty('z-index','2147480','important');
+      ta.style.setProperty('visibility','visible','important');
+      ta.style.setProperty('display','block','important');
+      ta.style.setProperty('opacity','1','important');
+      if(!ta.dataset.mktV158Bind){
+        ta.dataset.mktV158Bind='1';
+        ['keydown','keyup','input','paste','compositionstart','compositionend'].forEach(function(ev){
+          ta.addEventListener(ev,function(e){try{e.stopPropagation();}catch(_e){}},true);
+        });
+        ta.addEventListener('input',function(){
+          try{localStorage.setItem('mkt_fb_content_draft',ta.value||'')}catch(e){}
+          try{ if(typeof window.mktFbUpdateCount==='function') window.mktFbUpdateCount(); }catch(e){}
+        },false);
+      }
+      return ta;
+    }catch(e){return ta;}
+  }
+  function getContent(){var ta=hardEnableTextarea(); return (ta && ta.value || '').trim();}
+  function setContent(v){var ta=hardEnableTextarea(); if(ta){ta.value=v||''; ta.dispatchEvent(new Event('input',{bubbles:true})); ta.focus();}}
+  function focusTextarea(){var ta=hardEnableTextarea(); if(!ta) return false; try{ta.focus({preventScroll:true});}catch(e){try{ta.focus();}catch(_e){}} return true;}
+  function disableBlockers(){
+    var ta=hardEnableTextarea(); if(!ta) return;
+    try{
+      var r=ta.getBoundingClientRect();
+      if(!r.width || !r.height) return;
+      [[r.left+10,r.top+10],[r.left+r.width/2,r.top+r.height/2],[r.right-10,r.bottom-10]].forEach(function(p){
+        var el=document.elementFromPoint(p[0],p[1]);
+        if(el && el!==ta && !ta.contains(el) && section() && section().contains(el)){
+          var isControl=el.closest && el.closest('button,a,input,select,textarea,#mktFbContent');
+          if(!isControl){el.classList.add('mkt-v158-blocker-disabled');el.style.setProperty('pointer-events','none','important');}
+        }
+      });
+    }catch(e){}
+  }
+  function openFacebook(){
+    var url=((qs('#mktFbUrl')||{}).value||'https://www.facebook.com/').trim() || 'https://www.facebook.com/';
+    try{window.postMessage({source:'MKT_WEB_FACEBOOK_PERSONAL_V1',action:'open',url:url},'*');}catch(e){}
+    try{window.open(url,'_blank','noopener,noreferrer');}catch(e){location.href=url;}
+    toast('Đã mở Facebook. Nếu dùng PC, bấm Chuẩn bị bài PC sau khi Facebook đã đăng nhập.', true);
+    return false;
+  }
+  async function copyPost(){
+    var post=getContent();
+    if(!post){alert('Bạn chưa nhập nội dung bài viết.');focusTextarea();return false;}
+    var ok=false;
+    try{await navigator.clipboard.writeText(post);ok=true;}catch(e){
+      try{var ta=hardEnableTextarea();ta.select();ok=document.execCommand('copy');}catch(_e){}
+    }
+    try{window.postMessage({source:'MKT_WEB_FACEBOOK_PERSONAL_V1',action:'copy',content:post},'*');}catch(e){}
+    alert(ok?'Đã copy bài viết.':'Máy chưa cho copy tự động. Hãy bôi đen nội dung và copy thủ công.');
+    toast(ok?'Đã copy bài viết.':'Không copy tự động được.', ok);
+    return false;
+  }
+  function preparePost(){
+    var post=getContent();
+    if(!post){alert('Bạn chưa nhập nội dung bài viết.');focusTextarea();return false;}
+    var url=((qs('#mktFbUrl')||{}).value||'https://www.facebook.com/').trim() || 'https://www.facebook.com/';
+    try{window.postMessage({source:'MKT_WEB_FACEBOOK_PERSONAL_V1',action:'prepare_now',content:post,url:url,extra:{safePrepare:true,from:'v158'}},'*');}catch(e){}
+    try{window.postMessage({source:'MKT_WEB_FACEBOOK_PERSONAL_V1',action:'post_now',content:post,url:url,extra:{safePrepare:true,from:'v158'}},'*');}catch(e){}
+    toast('Đã gửi lệnh Chuẩn bị bài PC sang Extension. Extension chỉ dán nội dung, không tự bấm Đăng.', true);
+    return false;
+  }
+  function clearPost(){setContent('');toast('Đã xóa nội dung bài viết.',true);return false;}
+  function schedulePost(){
+    var post=getContent(); if(!post){alert('Bạn chưa nhập nội dung bài viết.');focusTextarea();return false;}
+    try{ if(typeof window.mktFbSchedule==='function') return window.mktFbSchedule(); }catch(e){}
+    var select=qs('#mktFbReminder')||qs('#mktFbScheduleSelect')||qs('#facebook_personal select');
+    var label=select ? (select.options[select.selectedIndex]||{}).text || select.value : 'khung giờ đã chọn';
+    try{localStorage.setItem('mkt_fb_scheduled_post',JSON.stringify({content:post,label:label,createdAt:Date.now()}));}catch(e){}
+    alert('Đã lưu hẹn giờ nhắc đăng: '+label);toast('Đã lưu hẹn giờ nhắc đăng: '+label,true);return false;
+  }
+  function nextPost(){
+    var post=getContent(); if(!post){alert('Bạn chưa nhập nội dung bài viết.');focusTextarea();return false;}
+    var parts=post.split(/\n\s*\n/).map(function(x){return x.trim()}).filter(Boolean);
+    if(parts.length<=1){alert('Chưa có bài tiếp theo. Nếu có nhiều bài, mỗi bài cách nhau bằng 1 dòng trống.');return false;}
+    setContent(parts.slice(1).join('\n\n'));
+    toast('Đã chuyển sang bài tiếp theo.',true);return false;
+  }
+  function connectExt(){
+    try{window.postMessage({source:'MKT_WEB_FACEBOOK_PERSONAL_V1',action:'ping'},'*');toast('Đã kiểm tra Extension. Nếu chưa hiện xanh, hãy tải lại extension rồi bấm lại.',true);}catch(e){}
+    return false;
+  }
+  function routeButton(btn, ev){
+    if(!btn || !(section()&&section().contains(btn))) return;
+    var t=txt(btn);
+    if(!t) return;
+    var fn=null;
+    if(/Kết nối Extension|Extension/i.test(t)) fn=connectExt;
+    else if(/Mở Facebook/i.test(t)) fn=openFacebook;
+    else if(/Chuẩn bị bài|Đăng ngay PC|Đăng ngay Facebook|Dán vào Facebook/i.test(t)) fn=preparePost;
+    else if(/Copy bài|Sao chép/i.test(t)) fn=copyPost;
+    else if(/^\s*Xóa|🧹\s*Xóa/i.test(t)) fn=clearPost;
+    else if(/Hẹn giờ/i.test(t)) fn=schedulePost;
+    else if(/Bài tiếp/i.test(t)) fn=nextPost;
+    if(fn){try{ev.preventDefault();ev.stopPropagation();ev.stopImmediatePropagation();}catch(e){} return fn();}
+  }
+  function patchButtons(){
+    var sec=section(); if(!sec) return;
+    qsa('button,a',sec).forEach(function(b){
+      try{b.removeAttribute('disabled');b.disabled=false;b.style.setProperty('pointer-events','auto','important');b.style.setProperty('cursor','pointer','important');}catch(e){}
+    });
+  }
+  document.addEventListener('pointerdown',function(ev){
+    var ta=hardEnableTextarea(); if(!ta) return;
+    var r=ta.getBoundingClientRect();
+    if(ev.clientX>=r.left && ev.clientX<=r.right && ev.clientY>=r.top && ev.clientY<=r.bottom){disableBlockers();setTimeout(focusTextarea,0);}
+  },true);
+  document.addEventListener('click',function(ev){
+    var btn=ev.target && ev.target.closest && ev.target.closest('button,a');
+    if(routeButton(btn,ev)===false) return false;
+    var ta=hardEnableTextarea(); if(!ta) return;
+    var r=ta.getBoundingClientRect();
+    if(ev.clientX>=r.left && ev.clientX<=r.right && ev.clientY>=r.top && ev.clientY<=r.bottom){disableBlockers();setTimeout(focusTextarea,0);}
+  },true);
+  window.addEventListener('message',function(event){
+    var d=event.data||{}; if(d.source!=='MKT_EXTENSION_FACEBOOK_PERSONAL_V1') return;
+    if(d.action==='pong' || d.action==='facebook_status' || d.action==='log') log(d.message || ('Extension phản hồi: '+(d.version||'')));
+  });
+  function run(){hardEnableTextarea();disableBlockers();patchButtons();}
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',run); else run();
+  setTimeout(run,200);setTimeout(run,700);setTimeout(run,1600);setInterval(run,2500);
+})();
+</script>
+"""
+
+@app.after_request
+def mkt_v158_fb_hard_input_button_fix_after_request(response):
+    try:
+        ctype = (response.headers.get("Content-Type") or "").lower()
+        if "text/html" in ctype:
+            body = response.get_data(as_text=True)
+            if "mkt-v158-fb-hard-input-button-fix-js" not in body and "</body>" in body:
+                body = body.replace("</body>", MKT_V158_FB_HARD_INPUT_BUTTON_FIX + "</body>")
+                response.set_data(body)
+                response.headers["Content-Length"] = str(len(body.encode("utf-8")))
+    except Exception as _e:
+        print("mkt_v158_fb_hard_input_button_fix_after_request skipped:", _e)
+    return response
+
+# V158.1 - nâng version extension để khách biết cần tải/cài lại đúng bản sửa nút.
+try:
+    if 'MKT_FB_PERSONAL_EXTENSION_FILES' in globals() and isinstance(MKT_FB_PERSONAL_EXTENSION_FILES, dict):
+        if 'manifest.json' in MKT_FB_PERSONAL_EXTENSION_FILES:
+            MKT_FB_PERSONAL_EXTENSION_FILES['manifest.json'] = (
+                MKT_FB_PERSONAL_EXTENSION_FILES['manifest.json']
+                .replace('"version": "1.5.2"', '"version": "1.5.3"')
+                .replace('"version": "1.5.1"', '"version": "1.5.3"')
+                .replace('"version": "1.5.0"', '"version": "1.5.3"')
+                .replace('"version": "1.4.0"', '"version": "1.5.3"')
+                .replace('"version": "1.1.0"', '"version": "1.5.3"')
+            )
+        if 'background.js' in MKT_FB_PERSONAL_EXTENSION_FILES:
+            MKT_FB_PERSONAL_EXTENSION_FILES['background.js'] = (
+                MKT_FB_PERSONAL_EXTENSION_FILES['background.js']
+                .replace('version:"1.5.2"', 'version:"1.5.3"')
+                .replace('version:"1.5.1"', 'version:"1.5.3"')
+                .replace('v1.5.2', 'v1.5.3')
+                .replace('v1.5.1', 'v1.5.3')
+            )
+        if 'popup.html' in MKT_FB_PERSONAL_EXTENSION_FILES:
+            MKT_FB_PERSONAL_EXTENSION_FILES['popup.html'] = MKT_FB_PERSONAL_EXTENSION_FILES['popup.html'].replace('v1.5.2', 'v1.5.3').replace('v1.5.1', 'v1.5.3')
+except Exception as _mkt_v158_ext_error:
+    print('MKT V158 extension version patch skipped:', _mkt_v158_ext_error)
+
+
 if __name__ == "__main__":
     # Không tự tạo kho 50k content khi khởi động để tránh lỗi SQLite database is locked trên Render.
     # Khi cần kiểm tra/tạo kho content, gọi /api/content_50k_stats từ admin.
