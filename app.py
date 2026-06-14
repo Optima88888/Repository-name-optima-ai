@@ -22290,6 +22290,408 @@ except Exception as _e:
 
 
 
+# ============================================================
+# V166 - FACEBOOK AUTO CUSTOMER WIZARD UI
+# Mục tiêu: giữ nguyên giao diện/menu hiện tại, chỉ cải thiện UX trong khối Facebook Automation
+# - Không đụng menu trái / menu cũ
+# - Không đổi backend V165
+# - Biến giao diện kỹ thuật thành luồng khách dễ hiểu: Kết nối Facebook -> Viết bài -> Chọn nơi đăng -> Xem kết quả
+# ============================================================
+MKT_V166_FB2026_CUSTOMER_WIZARD_UI = """
+<style id="mkt-v166-fb2026-customer-wizard-css">
+#mktFb2026ProPanel.fb166-ux{--fb166-blue:#2563eb;--fb166-sky:#0ea5e9;--fb166-violet:#7c3aed;--fb166-green:#16a34a;--fb166-ink:#0f172a;--fb166-muted:#64748b;--fb166-card:#ffffff;--fb166-soft:#f8fbff;--fb166-border:#dbeafe;max-width:1180px!important;margin:0 auto!important;}
+#mktFb2026ProPanel.fb166-ux .fb2026-hero{position:relative!important;overflow:hidden!important;padding:34px!important;border-radius:34px!important;background:radial-gradient(circle at 8% 0%,rgba(14,165,233,.18),transparent 32%),radial-gradient(circle at 100% 0%,rgba(124,58,237,.14),transparent 34%),linear-gradient(135deg,#ffffff,#f5faff)!important;border:1px solid #dbeafe!important;box-shadow:0 28px 70px rgba(37,99,235,.14)!important;}
+#mktFb2026ProPanel.fb166-ux .fb2026-pill{background:#0f172a!important;color:#fff!important;border-radius:999px!important;padding:10px 18px!important;font-size:13px!important;box-shadow:0 10px 26px rgba(15,23,42,.18)!important;}
+#mktFb2026ProPanel.fb166-ux .fb2026-title{max-width:920px!important;margin:22px 0 10px!important;font-size:clamp(38px,5.4vw,64px)!important;line-height:.98!important;letter-spacing:-.055em!important;background:linear-gradient(90deg,#0ea5e9,#2563eb,#7c3aed)!important;-webkit-background-clip:text!important;background-clip:text!important;color:transparent!important;}
+#mktFb2026ProPanel.fb166-ux .fb2026-sub{max-width:920px!important;color:#52637a!important;font-size:18px!important;line-height:1.65!important;font-weight:900!important;}
+.fb166-steps{display:grid!important;grid-template-columns:repeat(4,1fr)!important;gap:14px!important;margin:26px 0 18px!important;}
+.fb166-step{position:relative!important;background:rgba(255,255,255,.9)!important;border:1px solid #dbeafe!important;border-radius:24px!important;padding:18px!important;box-shadow:0 16px 36px rgba(15,23,42,.07)!important;min-height:112px!important;}
+.fb166-step b{display:block!important;color:#0f172a!important;font-size:18px!important;margin:8px 0 5px!important;}
+.fb166-step span{display:block!important;color:#64748b!important;font-weight:850!important;line-height:1.35!important;font-size:13px!important;}
+.fb166-step .num{display:inline-flex!important;align-items:center!important;justify-content:center!important;width:34px!important;height:34px!important;border-radius:14px!important;background:linear-gradient(135deg,#2563eb,#7c3aed)!important;color:#fff!important;font-weight:1000!important;box-shadow:0 12px 22px rgba(37,99,235,.20)!important;}
+.fb166-quickbar{display:flex!important;gap:12px!important;flex-wrap:wrap!important;margin:18px 0 4px!important;}
+.fb166-quickbar button,#mktFb2026ProPanel.fb166-ux .fb2026-tabs button,#mktFb2026ProPanel.fb166-ux .fb2026-btn{border:0!important;border-radius:18px!important;padding:14px 18px!important;font-weight:1000!important;cursor:pointer!important;box-shadow:0 12px 28px rgba(15,23,42,.08)!important;transition:.18s ease!important;}
+.fb166-quickbar button:hover,#mktFb2026ProPanel.fb166-ux .fb2026-tabs button:hover,#mktFb2026ProPanel.fb166-ux .fb2026-btn:hover{transform:translateY(-2px)!important;box-shadow:0 18px 36px rgba(37,99,235,.14)!important;}
+.fb166-quickbar .primary{background:linear-gradient(135deg,#2563eb,#7c3aed)!important;color:#fff!important;}
+.fb166-quickbar .soft{background:#fff!important;color:#0f172a!important;border:1px solid #dbeafe!important;}
+#mktFb2026ProPanel.fb166-ux .fb2026-tabs{gap:12px!important;margin-top:18px!important;background:transparent!important;}
+#mktFb2026ProPanel.fb166-ux .fb2026-tabs button{background:#fff!important;color:#0f172a!important;border:1px solid #dbeafe!important;}
+#mktFb2026ProPanel.fb166-ux .fb2026-tabs button.active{background:linear-gradient(135deg,#2563eb,#7c3aed)!important;color:#fff!important;border-color:transparent!important;}
+#mktFb2026ProPanel.fb166-ux .fb2026-grid{margin-top:22px!important;gap:16px!important;}
+#mktFb2026ProPanel.fb166-ux .fb2026-kpi{border-radius:24px!important;background:#fff!important;border:1px solid #dbeafe!important;box-shadow:0 14px 34px rgba(15,23,42,.07)!important;padding:22px!important;}
+#mktFb2026ProPanel.fb166-ux .fb2026-kpi b{font-size:34px!important;color:#0f172a!important;}
+#mktFb2026ProPanel.fb166-ux .fb2026-kpi span{font-size:14px!important;color:#64748b!important;font-weight:1000!important;}
+#mktFb2026ProPanel.fb166-ux .fb2026-card{border-radius:30px!important;background:linear-gradient(135deg,#ffffff,#fbfdff)!important;border:1px solid #dbeafe!important;box-shadow:0 22px 58px rgba(15,23,42,.08)!important;padding:28px!important;margin-top:18px!important;}
+#mktFb2026ProPanel.fb166-ux .fb2026-card h2{font-size:30px!important;line-height:1.1!important;color:#0f172a!important;margin-bottom:10px!important;}
+#mktFb2026ProPanel.fb166-ux .fb2026-note{font-size:16px!important;line-height:1.6!important;color:#64748b!important;font-weight:850!important;background:#f8fbff!important;border:1px dashed #bfdbfe!important;border-radius:18px!important;padding:12px 14px!important;}
+.fb166-helper{display:grid!important;grid-template-columns:1.2fr .8fr!important;gap:16px!important;margin:16px 0!important;}
+.fb166-helper-card{border-radius:24px!important;border:1px solid #dbeafe!important;background:#fff!important;padding:20px!important;box-shadow:0 14px 36px rgba(15,23,42,.06)!important;}
+.fb166-helper-card h3{margin:0 0 8px!important;color:#0f172a!important;font-size:20px!important;}
+.fb166-helper-card p{margin:0!important;color:#64748b!important;font-weight:850!important;line-height:1.45!important;}
+.fb166-status-pill{display:inline-flex!important;align-items:center!important;gap:8px!important;background:#ecfdf5!important;color:#166534!important;border:1px solid #bbf7d0!important;border-radius:999px!important;padding:8px 12px!important;font-weight:1000!important;margin-top:10px!important;}
+.fb166-form-title{font-size:13px!important;text-transform:uppercase!important;letter-spacing:.08em!important;color:#2563eb!important;font-weight:1000!important;margin:18px 0 8px!important;}
+#mktFb2026ProPanel.fb166-ux input,#mktFb2026ProPanel.fb166-ux textarea,#mktFb2026ProPanel.fb166-ux select{border:1px solid #cfe0f7!important;border-radius:18px!important;padding:15px 16px!important;background:#fff!important;box-shadow:0 8px 22px rgba(15,23,42,.04)!important;font-size:15px!important;font-weight:800!important;color:#0f172a!important;outline:none!important;}
+#mktFb2026ProPanel.fb166-ux textarea{min-height:170px!important;line-height:1.5!important;}
+#mktFb2026ProPanel.fb166-ux input:focus,#mktFb2026ProPanel.fb166-ux textarea:focus,#mktFb2026ProPanel.fb166-ux select:focus{border-color:#7c3aed!important;box-shadow:0 0 0 4px rgba(124,58,237,.10)!important;}
+#mktFb2026ProPanel.fb166-ux .fb2026-btn.primary,#mktFb2026ProPanel.fb166-ux .fb2026-btn.green{background:linear-gradient(135deg,#2563eb,#7c3aed)!important;color:#fff!important;min-height:54px!important;font-size:16px!important;}
+#mktFb2026ProPanel.fb166-ux .fb2026-btn.green{background:linear-gradient(135deg,#16a34a,#22c55e)!important;}
+.fb166-tech-muted{opacity:.72!important;font-size:13px!important;}
+.fb166-safe-note{background:linear-gradient(135deg,#fff7ed,#fffbeb)!important;color:#92400e!important;border:1px solid #fed7aa!important;border-radius:18px!important;padding:13px 15px!important;font-weight:900!important;line-height:1.5!important;margin:12px 0!important;}
+.fb166-mobile-dock{display:none!important;}
+@media(max-width:760px){#mktFb2026ProPanel.fb166-ux{padding:0 10px!important}#mktFb2026ProPanel.fb166-ux .fb2026-hero{padding:22px!important;border-radius:28px!important}.fb166-steps{grid-template-columns:1fr!important}.fb166-helper{grid-template-columns:1fr!important}#mktFb2026ProPanel.fb166-ux .fb2026-grid{grid-template-columns:1fr 1fr!important}#mktFb2026ProPanel.fb166-ux .fb2026-tabs{position:sticky!important;top:0!important;z-index:30!important;background:rgba(248,251,255,.94)!important;padding:10px!important;border-radius:20px!important;backdrop-filter:blur(14px)!important}#mktFb2026ProPanel.fb166-ux .fb2026-tabs button{min-width:46%!important}.fb166-mobile-dock{display:flex!important;position:fixed!important;left:10px!important;right:10px!important;bottom:12px!important;z-index:9999!important;background:rgba(255,255,255,.94)!important;border:1px solid #dbeafe!important;border-radius:24px!important;box-shadow:0 20px 60px rgba(15,23,42,.22)!important;padding:8px!important;gap:8px!important;backdrop-filter:blur(14px)!important}.fb166-mobile-dock button{flex:1!important;border:0!important;border-radius:17px!important;padding:11px 6px!important;font-weight:1000!important;background:#eff6ff!important;color:#0f172a!important;font-size:12px!important}.fb166-mobile-dock button:first-child{background:linear-gradient(135deg,#2563eb,#7c3aed)!important;color:#fff!important}}
+</style>
+<script id="mkt-v166-fb2026-customer-wizard-js">
+(function(){
+  function $(sel,root){return (root||document).querySelector(sel)}
+  function $all(sel,root){return Array.prototype.slice.call((root||document).querySelectorAll(sel))}
+  function clickTab(name){var b=$('[data-fbtab="'+name+'"]'); if(b) b.click(); var p=$('#mktFb2026ProPanel'); if(p) p.scrollIntoView({behavior:'smooth',block:'start'});}
+  window.fb166GoTask=function(){clickTab('task')};
+  window.fb166GoAccount=function(){clickTab('account')};
+  window.fb166GoMedia=function(){clickTab('media')};
+  window.fb166GoLog=function(){clickTab('log')};
+  function setText(el,html){if(el && el.getAttribute('data-v166-text')!=='1'){el.innerHTML=html;el.setAttribute('data-v166-text','1')}}
+  function improvePanel(){
+    var root=$('#mktFb2026ProPanel'); if(!root) return false;
+    root.classList.add('fb166-ux');
+    setText($('.fb2026-pill',root),'⚡ Facebook Auto 2026 • Dễ dùng cho khách hàng');
+    setText($('.fb2026-title',root),'Đăng Facebook tự động theo từng bước');
+    setText($('.fb2026-sub',root),'Khách chỉ cần làm 4 bước: kết nối Facebook, viết bài, thêm ảnh/video và bấm đăng. Các phần kỹ thuật như Profile, Worker, Queue, Session sẽ chạy ngầm phía sau.');
+    var hero=$('.fb2026-hero',root);
+    if(hero && !$('.fb166-steps',hero)){
+      var sub=$('.fb2026-sub',hero);
+      var steps=document.createElement('div');
+      steps.className='fb166-steps';
+      steps.innerHTML='<div class="fb166-step"><div class="num">1</div><b>Kết nối Facebook</b><span>Bấm kết nối, tự mở trình duyệt để khách đăng nhập.</span></div><div class="fb166-step"><div class="num">2</div><b>Viết bài</b><span>Nhập nội dung, bật AI spin/hashtag nếu cần.</span></div><div class="fb166-step"><div class="num">3</div><b>Thêm ảnh/video</b><span>Tải nhiều media để hệ thống random thông minh.</span></div><div class="fb166-step"><div class="num">4</div><b>Đăng hoặc hẹn giờ</b><span>Đưa vào hàng chờ, worker VPS xử lý và ghi log.</span></div>';
+      if(sub) sub.insertAdjacentElement('afterend',steps);
+      var quick=document.createElement('div');
+      quick.className='fb166-quickbar';
+      quick.innerHTML='<button class="primary" onclick="fb166GoAccount()">➕ Kết nối Facebook</button><button class="soft" onclick="fb166GoTask()">📝 Tạo bài đăng</button><button class="soft" onclick="fb166GoMedia()">🖼 Thêm ảnh/video</button><button class="soft" onclick="fb166GoLog()">📊 Xem kết quả</button>';
+      steps.insertAdjacentElement('afterend',quick);
+    }
+    var tabs=$all('[data-fbtab]',root);
+    tabs.forEach(function(b){
+      var t=b.getAttribute('data-fbtab');
+      if(t==='task') setText(b,'📝 2. Tạo bài');
+      if(t==='account') setText(b,'📘 1. Kết nối FB');
+      if(t==='media') setText(b,'🖼 3. Ảnh/Video');
+      if(t==='log') setText(b,'📊 4. Kết quả');
+    });
+    var kpis=$all('.fb2026-kpi span',root);
+    if(kpis[0]) setText(kpis[0],'Facebook đã kết nối');
+    if(kpis[1]) setText(kpis[1],'Bài đã tạo');
+    if(kpis[2]) setText(kpis[2],'Tỷ lệ đăng thành công');
+    if(kpis[3]) setText(kpis[3],'Bài đang chờ đăng');
+    improveSections(root);
+    improveButtons(root);
+    improvePlaceholders(root);
+    improveAccountCards(root);
+    addMobileDock(root);
+    return true;
+  }
+  function improveSections(root){
+    var account=$('[data-section="account"]',root);
+    if(account && !$('.fb166-account-helper',account)){
+      account.insertAdjacentHTML('afterbegin','<div class="fb166-helper fb166-account-helper"><div class="fb166-helper-card"><h3>📘 Bước 1: Kết nối tài khoản Facebook</h3><p>Khách không cần nhập Browser Profile. Hệ thống tự tạo hồ sơ trình duyệt riêng, khách chỉ đăng nhập Facebook một lần.</p><span class="fb166-status-pill">🟢 Sẵn sàng tạo hồ sơ tự động</span></div><div class="fb166-helper-card"><h3>Khách cần làm gì?</h3><p>Nhập tên tài khoản để dễ nhớ, proxy nếu có, sau đó bấm <b>Lưu & Kết nối Facebook</b>.</p></div></div>');
+    }
+    var task=$('[data-section="task"]',root);
+    if(task && !$('.fb166-task-helper',task)){
+      task.insertAdjacentHTML('afterbegin','<div class="fb166-helper fb166-task-helper"><div class="fb166-helper-card"><h3>📝 Bước 2: Viết bài cần đăng</h3><p>Chọn tài khoản đã kết nối, nhập nội dung, chọn lịch đăng. Nếu chưa chọn giờ, hệ thống hiểu là đăng ngay.</p></div><div class="fb166-helper-card"><h3>Gợi ý an toàn</h3><p>Không đăng dồn dập. Nên dùng hẹn giờ, nội dung khác nhau và kiểm tra log sau khi đăng.</p></div></div>');
+      task.insertAdjacentHTML('beforeend','<div class="fb166-safe-note">⚠️ Lưu ý: hệ thống không tự vượt captcha/checkpoint. Nếu Facebook yêu cầu xác minh, khách cần xử lý thủ công trong trình duyệt profile.</div>');
+    }
+    var media=$('[data-section="media"]',root);
+    if(media && !$('.fb166-media-helper',media)){
+      media.insertAdjacentHTML('afterbegin','<div class="fb166-helper fb166-media-helper"><div class="fb166-helper-card"><h3>🖼 Bước 3: Tải ảnh/video</h3><p>Tải nhiều ảnh/video để hệ thống random cho từng bài, giảm trùng lặp và giúp bài tự nhiên hơn.</p></div><div class="fb166-helper-card"><h3>Chế độ media</h3><p>Random, không lặp hoặc vòng lặp được chọn ở phần tạo bài.</p></div></div>');
+    }
+    var log=$('[data-section="log"]',root);
+    if(log && !$('.fb166-log-helper',log)){
+      log.insertAdjacentHTML('afterbegin','<div class="fb166-helper fb166-log-helper"><div class="fb166-helper-card"><h3>📊 Bước 4: Xem kết quả đăng</h3><p>Theo dõi bài thành công, bài lỗi, lý do lỗi và xuất CSV gửi khách hoặc lưu báo cáo.</p></div><div class="fb166-helper-card"><h3>VPS khuyến nghị</h3><p>Đăng thật bằng Playwright nên chạy trên VPS Ubuntu có Chromium, không nên chạy Chrome lâu dài trên Render.</p></div></div>');
+    }
+  }
+  function improveButtons(root){
+    var map={
+      'fb26SaveAcc':'💾 Lưu & sẵn sàng kết nối Facebook',
+      'fb26CreateTask':'🚀 Đăng ngay / Lưu lịch đăng',
+      'fb26RunWorker':'▶️ Xử lý bài đang chờ',
+      'fb26Upload':'⬆️ Tải ảnh/video lên kho',
+      'fb26RefreshLog':'🔄 Cập nhật nhật ký',
+      'fb26CSV':'⬇️ Xuất báo cáo CSV',
+      'fb26Coverage':'🩺 Kiểm tra hệ thống'
+    };
+    Object.keys(map).forEach(function(id){var el=document.getElementById(id); if(el) setText(el,map[id]);});
+    $all('button',root).forEach(function(b){
+      var tx=(b.textContent||'').trim();
+      if(tx==='🔗 Kết nối Facebook') setText(b,'📘 Kết nối Facebook');
+      if(tx==='🟢 Kiểm tra phiên') setText(b,'🟢 Kiểm tra đăng nhập');
+      if(tx==='🌐 Test proxy') setText(b,'🌐 Kiểm tra proxy');
+      if(tx==='📄 Test Page API') setText(b,'📄 Kiểm tra Fanpage');
+      if(tx.indexOf('Check Session Thật')>-1) setText(b,'🔐 Kiểm tra phiên thật');
+      if(tx.indexOf('Test Đăng Thật')>-1) setText(b,'🚀 Test đăng bài');
+      if(tx.indexOf('Chạy Worker')>-1) setText(b,'▶️ Bật máy đăng bài');
+      if(tx.indexOf('Dừng Worker')>-1) setText(b,'⏹️ Tắt máy đăng bài');
+      if(tx.indexOf('Trạng thái Worker')>-1) setText(b,'📡 Máy đăng bài đang chạy?');
+    });
+  }
+  function improvePlaceholders(root){
+    var pairs={
+      fb26Code:'Tên gợi nhớ, ví dụ: Facebook shop chính',
+      fb26Name:'Tên hiển thị cho khách dễ nhận biết',
+      fb26Proxy:'Proxy riêng nếu có, có thể bỏ trống',
+      fb26UA:'User-Agent riêng nếu có, có thể bỏ trống',
+      fb26PageId:'Fanpage ID nếu muốn đăng Page bằng API',
+      fb26PageToken:'Page Token hợp lệ nếu có',
+      fb26Content:'Viết nội dung bài đăng tại đây. Có thể nhập nhiều dòng, thêm CTA, số điện thoại, link...',
+      fb26Link:'Link đính kèm nếu có',
+      fb26MediaIds:'ID ảnh/video muốn dùng, ví dụ: 1,2,3. Bỏ trống nếu chưa có media',
+      fb26HashTags:'#marketing, #facebook, #sale, #viral',
+      fb26HashMin:'Số hashtag tối thiểu',
+      fb26HashMax:'Số hashtag tối đa',
+      fb26Spin:'Số phiên bản AI muốn tạo, ví dụ 3 hoặc 5'
+    };
+    Object.keys(pairs).forEach(function(id){var el=document.getElementById(id); if(el) el.setAttribute('placeholder',pairs[id]);});
+    var acc=document.getElementById('fb26Accounts'); if(acc && acc.getAttribute('data-v166-help')!=='1'){acc.setAttribute('data-v166-help','1');acc.title='Giữ Ctrl để chọn nhiều tài khoản trên máy tính. Trên điện thoại chọn từng tài khoản.';}
+  }
+  function improveAccountCards(root){
+    var list=document.getElementById('fb26AccList'); if(!list) return;
+    $all('.fb2026-item',list).forEach(function(card){
+      if(card.getAttribute('data-v166-card')==='1') return;
+      card.setAttribute('data-v166-card','1');
+      var small=$('small',card);
+      if(small){
+        small.classList.add('fb166-tech-muted');
+        var raw=small.textContent||'';
+        var status='Chưa rõ';
+        if(raw.indexOf('Đã đăng nhập')>-1 || raw.indexOf('connected')>-1) status='Đã kết nối';
+        else if(raw.indexOf('Chưa đăng nhập')>-1) status='Chưa kết nối';
+        card.insertAdjacentHTML('afterbegin','<div class="fb166-status-pill">📘 Facebook: '+status+'</div>');
+      }
+    });
+  }
+  function addMobileDock(root){
+    if(document.getElementById('fb166MobileDock')) return;
+    var d=document.createElement('div');
+    d.id='fb166MobileDock';
+    d.className='fb166-mobile-dock';
+    d.innerHTML='<button onclick="fb166GoAccount()">📘 Kết nối</button><button onclick="fb166GoTask()">📝 Bài</button><button onclick="fb166GoMedia()">🖼 Ảnh</button><button onclick="fb166GoLog()">📊 Log</button>';
+    document.body.appendChild(d);
+  }
+  function boot(){
+    var ok=improvePanel();
+    if(!ok) setTimeout(boot,400);
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',boot); else boot();
+  setTimeout(boot,800); setTimeout(boot,1600); setTimeout(boot,3000); setInterval(improvePanel,2500);
+})();
+</script>
+"""
+
+@app.after_request
+def mkt_v166_fb2026_customer_wizard_after_request(response):
+    try:
+        ctype = (response.headers.get('Content-Type') or '').lower()
+        if 'text/html' in ctype:
+            body = response.get_data(as_text=True)
+            if 'mkt-v166-fb2026-customer-wizard-js' not in body and '</body>' in body:
+                body = body.replace('</body>', MKT_V166_FB2026_CUSTOMER_WIZARD_UI + '</body>')
+                response.set_data(body)
+                response.headers['Content-Length'] = str(len(body.encode('utf-8')))
+    except Exception as _e:
+        print('mkt_v166_fb2026_customer_wizard_after_request skipped:', _e)
+    return response
+
+
+
+
+# ============================================================
+# V167 - FACEBOOK AUTO VPS READY CENTER
+# Hoàn thiện triển khai thật trên VPS Ubuntu: Playwright, Chromium, Worker, Session, Page Token.
+# Không bypass captcha/checkpoint, không lưu mật khẩu Facebook.
+# ============================================================
+
+FB2026_V167_BOOTSTRAP_SH = '#!/usr/bin/env bash\nset -e\ncd "$(dirname "$0")"\necho "[1/6] Update Ubuntu packages..."\nsudo apt-get update -y\nsudo apt-get install -y python3 python3-pip python3-venv curl wget git unzip xvfb libnss3 libatk-bridge2.0-0 libgtk-3-0 libx11-xcb1 libxcomposite1 libxdamage1 libxrandr2 libgbm1 libasound2t64 || sudo apt-get install -y python3 python3-pip python3-venv curl wget git unzip xvfb libnss3 libatk-bridge2.0-0 libgtk-3-0 libx11-xcb1 libxcomposite1 libxdamage1 libxrandr2 libgbm1 libasound2\n\necho "[2/6] Create virtualenv..."\npython3 -m venv .venv\nsource .venv/bin/activate\npython -m pip install --upgrade pip wheel setuptools\n\necho "[3/6] Install Python packages..."\npip install flask python-dotenv requests google-generativeai openpyxl playwright gunicorn\n\necho "[4/6] Install Playwright Chromium..."\npython -m playwright install chromium\npython -m playwright install-deps chromium || true\n\necho "[5/6] Prepare folders..."\nmkdir -p uploads reports backups fb2026_profiles uploads/fb2026_media reports/fb2026\n\necho "[6/6] Create run script..."\ncat > run_vps.sh <<\'EOF\'\n#!/usr/bin/env bash\ncd "$(dirname "$0")"\nsource .venv/bin/activate\nexport FLASK_ENV=production\nexport FB2026_ENABLE_WORKER=1\nexport FB2026_RUNTIME=real\nexport FB2026_HEADLESS=0\nexport FB2026_SAFE_MODE=1\nexport FB2026_WORKER_INTERVAL_SECONDS=12\npython app.py\nEOF\nchmod +x run_vps.sh\n\necho "Done. Run: ./run_vps.sh"\n'
+FB2026_V167_REQUIREMENTS = 'flask\npython-dotenv\nrequests\ngoogle-generativeai\nopenpyxl\nplaywright\ngunicorn\n'
+
+
+def fb2026_v167_is_render_like():
+    keys = ['RENDER', 'RENDER_SERVICE_ID', 'RENDER_EXTERNAL_HOSTNAME', 'RENDER_INSTANCE_ID']
+    return any(os.getenv(k) for k in keys)
+
+
+def fb2026_v167_cmd_ok(cmd, timeout=10):
+    try:
+        import subprocess
+        p = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=timeout)
+        return p.returncode == 0, (p.stdout or p.stderr or '').strip()[:1200]
+    except Exception as e:
+        return False, str(e)[:1200]
+
+
+def fb2026_v167_check_playwright():
+    result = {'python_playwright': False, 'chromium_installed': False, 'can_launch_browser': False, 'message': '', 'errors': []}
+    try:
+        import importlib.util
+        result['python_playwright'] = importlib.util.find_spec('playwright') is not None
+    except Exception as e:
+        result['errors'].append('Không kiểm tra được thư viện Playwright: ' + str(e))
+    if result['python_playwright']:
+        ok, out = fb2026_v167_cmd_ok(['python', '-m', 'playwright', '--version'], timeout=12)
+        result['playwright_version'] = out
+        try:
+            from playwright.sync_api import sync_playwright
+            with sync_playwright() as p:
+                browser = p.chromium.launch(headless=True)
+                result['chromium_installed'] = True
+                page = browser.new_page(); page.goto('about:blank', timeout=8000)
+                browser.close(); result['can_launch_browser'] = True
+        except Exception as e:
+            msg = str(e)[:1000]
+            result['errors'].append(msg)
+            if 'Executable doesn' in msg or 'playwright install' in msg.lower():
+                result['chromium_installed'] = False
+    result['message'] = 'Sẵn sàng chạy Playwright.' if result['can_launch_browser'] else 'Chưa sẵn sàng. Cần cài Playwright/Chromium hoặc chuyển sang VPS Ubuntu.'
+    return result
+
+
+def fb2026_v167_check_profiles():
+    try:
+        root = globals().get('FB2026_PROFILE_ROOT', os.path.join(os.getcwd(), 'fb2026_profiles'))
+        os.makedirs(root, exist_ok=True)
+        names = [n for n in os.listdir(root) if os.path.isdir(os.path.join(root, n))]
+        return {'ok': True, 'root': root, 'count': len(names), 'samples': names[:10]}
+    except Exception as e:
+        return {'ok': False, 'error': str(e)}
+
+
+def fb2026_v167_check_accounts_summary():
+    try:
+        fb2026_init_db(); conn = db(); c = conn.cursor()
+        c.execute("SELECT COUNT(*) FROM fb2026_accounts WHERE COALESCE(status,'active')!='deleted'"); total = c.fetchone()[0]
+        c.execute("SELECT COUNT(*) FROM fb2026_accounts WHERE COALESCE(login_status,'') LIKE '%Đã đăng nhập%' OR COALESCE(login_status,'') LIKE '%login%'"); logged = c.fetchone()[0]
+        c.execute("SELECT COUNT(*) FROM fb2026_accounts WHERE COALESCE(page_id,'')!='' AND COALESCE(page_token,'')!=''"); page_ready = c.fetchone()[0]
+        conn.close(); return {'ok': True, 'total': total, 'logged_or_checked': logged, 'page_api_ready': page_ready}
+    except Exception as e:
+        return {'ok': False, 'error': str(e)}
+
+
+def fb2026_v167_worker_state():
+    state = globals().get('FB2026_WORKER_STATE', {})
+    if isinstance(state, dict):
+        safe = {k:v for k,v in state.items() if k != 'thread'}
+        th = state.get('thread')
+        safe['alive'] = bool(th and getattr(th, 'is_alive', lambda: False)())
+        return safe
+    return {'alive': False, 'message': 'Chưa có worker state.'}
+
+
+@app.route('/api/fb2026/vps/check', methods=['GET'])
+def fb2026_v167_vps_check_api():
+    env = {'cwd': os.getcwd(), 'platform': __import__('platform').platform(), 'python': __import__('sys').version.split()[0], 'is_render_like': fb2026_v167_is_render_like(), 'fb2026_runtime': os.getenv('FB2026_RUNTIME', ''), 'fb2026_enable_worker': os.getenv('FB2026_ENABLE_WORKER', ''), 'fb2026_headless': os.getenv('FB2026_HEADLESS', ''), 'safe_mode': os.getenv('FB2026_SAFE_MODE', '1')}
+    pw = fb2026_v167_check_playwright(); profiles = fb2026_v167_check_profiles(); accounts = fb2026_v167_check_accounts_summary(); worker = fb2026_v167_worker_state()
+    ready = (not env['is_render_like']) and pw.get('can_launch_browser') and profiles.get('ok')
+    warnings = []
+    if env['is_render_like']: warnings.append('Đang giống môi trường Render: không khuyến nghị chạy Chrome profile lâu dài. Nên dùng VPS Ubuntu.')
+    if not pw.get('python_playwright'): warnings.append('Thiếu thư viện Playwright: pip install playwright')
+    if not pw.get('chromium_installed'): warnings.append('Thiếu Chromium: python -m playwright install chromium')
+    if not worker.get('alive'): warnings.append('Worker chưa chạy. Bấm Chạy Worker hoặc bật FB2026_ENABLE_WORKER=1 trên VPS.')
+    return jsonify({'ok': True, 'ready_for_real_vps': bool(ready), 'environment': env, 'playwright': pw, 'profiles': profiles, 'accounts': accounts, 'worker': worker, 'warnings': warnings})
+
+
+@app.route('/api/fb2026/vps/install-script', methods=['GET'])
+def fb2026_v167_install_script_api():
+    bio = io.BytesIO(FB2026_V167_BOOTSTRAP_SH.encode('utf-8'))
+    return send_file(bio, mimetype='text/x-shellscript', as_attachment=True, download_name='install_fb2026_vps.sh')
+
+
+@app.route('/api/fb2026/vps/requirements', methods=['GET'])
+def fb2026_v167_requirements_api():
+    bio = io.BytesIO(FB2026_V167_REQUIREMENTS.encode('utf-8'))
+    return send_file(bio, mimetype='text/plain', as_attachment=True, download_name='requirements_fb2026.txt')
+
+
+@app.route('/api/fb2026/worker/ensure-vps', methods=['POST','GET'])
+def fb2026_v167_worker_ensure_api():
+    try:
+        if 'fb2026_start_worker_v165' in globals():
+            ok, msg = fb2026_start_worker_v165(); return jsonify({'ok': bool(ok), 'message': msg, 'state': fb2026_v167_worker_state()})
+        return jsonify({'ok': False, 'message': 'Chưa tìm thấy worker engine v165 trong file.'}), 500
+    except Exception as e:
+        return jsonify({'ok': False, 'message': str(e)}), 500
+
+
+@app.route('/api/fb2026/session/verify-vps', methods=['POST'])
+def fb2026_v167_session_verify_api():
+    fb2026_init_db(); data = request.get_json(silent=True) or request.form; acct_id = str(data.get('account_id') or '').strip()
+    if not acct_id: return jsonify({'ok': False, 'message': 'Thiếu account_id'}), 400
+    conn = db(); c = conn.cursor(); c.execute("SELECT id,account_code,browser_profile,proxy,user_agent FROM fb2026_accounts WHERE id=?", (acct_id,)); row = c.fetchone(); conn.close()
+    if not row: return jsonify({'ok': False, 'message': 'Không tìm thấy tài khoản'}), 404
+    _id, code, profile, proxy, ua = row; profile = profile or fb2026_profile_path(code); os.makedirs(profile, exist_ok=True)
+    if fb2026_v167_is_render_like(): return jsonify({'ok': False, 'message': 'Render không phù hợp để kiểm tra Chrome profile thật. Hãy chạy trên VPS Ubuntu.', 'profile': profile})
+    try:
+        from playwright.sync_api import sync_playwright
+        px = fb2026_playwright_proxy(proxy) if 'fb2026_playwright_proxy' in globals() else None
+        with sync_playwright() as p:
+            kwargs = {'headless': True}
+            if px: kwargs['proxy'] = px
+            context = p.chromium.launch_persistent_context(profile, **kwargs)
+            page = context.new_page(); page.goto('https://www.facebook.com/', wait_until='domcontentloaded', timeout=20000)
+            title = page.title() or ''; url = page.url or ''; cookies = context.cookies(); lower = (title + ' ' + url).lower()
+            login_ok = ('login' not in lower and 'đăng nhập' not in lower and 'facebook' in lower) or any((ck.get('name') == 'c_user') for ck in cookies)
+            context.close()
+        status = 'Đã đăng nhập' if login_ok else 'Chưa đăng nhập / cần khách đăng nhập lại'
+        conn = db(); c = conn.cursor(); c.execute("UPDATE fb2026_accounts SET login_status=?,cookies_json=?,last_session_check=?,session_score=?,browser_profile=?,updated_at=? WHERE id=?", (status, json.dumps(cookies, ensure_ascii=False), fb2026_now(), 100 if login_ok else 20, profile, fb2026_now(), acct_id)); conn.commit(); conn.close()
+        fb2026_log('', code, 'session_verify_v167', 'success' if login_ok else 'warning', status)
+        return jsonify({'ok': login_ok, 'message': status, 'profile': profile, 'title': title, 'url': url})
+    except Exception as e:
+        fb2026_log('', code, 'session_verify_v167', 'failed', str(e)); return jsonify({'ok': False, 'message': str(e)[:1000], 'profile': profile})
+
+
+@app.route('/api/fb2026/page-token/test-vps', methods=['POST'])
+def fb2026_v167_page_token_test_api():
+    data = request.get_json(silent=True) or request.form; page_id = str(data.get('page_id') or '').strip(); page_token = str(data.get('page_token') or '').strip(); acct_id = str(data.get('account_id') or '').strip()
+    if acct_id and (not page_id or not page_token):
+        try:
+            fb2026_init_db(); conn=db(); c=conn.cursor(); c.execute("SELECT page_id,page_token FROM fb2026_accounts WHERE id=?", (acct_id,)); r=c.fetchone(); conn.close()
+            if r: page_id = page_id or (r[0] or ''); page_token = page_token or (r[1] or '')
+        except Exception: pass
+    if not page_id or not page_token: return jsonify({'ok': False, 'message': 'Thiếu Page ID hoặc Page Token'}), 400
+    try:
+        url = f'https://graph.facebook.com/v19.0/{page_id}'; res = requests.get(url, params={'fields':'id,name,access_token,tasks','access_token': page_token}, timeout=15); js = res.json()
+        if res.status_code >= 400 or js.get('error'): return jsonify({'ok': False, 'message': js.get('error', {}).get('message', 'Page Token không hợp lệ'), 'raw': js}), 200
+        return jsonify({'ok': True, 'message': 'Page Token hợp lệ. Có thể đăng Page qua API nếu token có quyền phù hợp.', 'page': {'id': js.get('id'), 'name': js.get('name')}})
+    except Exception as e: return jsonify({'ok': False, 'message': str(e)})
+
+
+@app.route('/api/fb2026/vps/doctor', methods=['GET'])
+def fb2026_v167_doctor_api():
+    chk = fb2026_v167_vps_check_api().get_json(); score = 0; items = []
+    def add(ok, label, fix):
+        nonlocal score
+        if ok: score += 20
+        items.append({'ok': bool(ok), 'label': label, 'fix': fix})
+    add(not chk['environment'].get('is_render_like'), 'Môi trường VPS Ubuntu', 'Chuyển khỏi Render sang VPS Ubuntu để chạy Chrome profile ổn định.')
+    add(chk['playwright'].get('python_playwright'), 'Đã cài Playwright Python', 'pip install playwright')
+    add(chk['playwright'].get('chromium_installed'), 'Đã cài Chromium', 'python -m playwright install chromium')
+    add(chk['playwright'].get('can_launch_browser'), 'Chromium launch được', 'Cài dependencies: python -m playwright install-deps chromium')
+    add(chk['worker'].get('alive'), 'Worker đang chạy', 'Bấm Chạy Worker hoặc bật FB2026_ENABLE_WORKER=1')
+    return jsonify({'ok': True, 'score': min(score, 100), 'items': items, 'check': chk})
+
+
+MKT_V167_FB2026_VPS_READY_UI = '\n<style id="mkt-v167-fb2026-vps-ready-css">\n#fb167VpsCenter{margin:16px 0;padding:18px;border:1px solid rgba(37,99,235,.18);border-radius:24px;background:linear-gradient(135deg,#ffffff,#eff6ff);box-shadow:0 18px 42px rgba(37,99,235,.10);font-family:inherit;color:#0f172a}\n#fb167VpsCenter h3{margin:0 0 8px;font-size:22px;font-weight:1000;color:#0f172a}.fb167-sub{color:#64748b;font-weight:800;line-height:1.55;margin-bottom:14px}.fb167-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:12px 0}.fb167-box{padding:14px;border:1px solid #dbeafe;border-radius:18px;background:#fff}.fb167-box b{display:block;font-size:18px}.fb167-box span{font-size:13px;color:#64748b;font-weight:800}.fb167-actions{display:flex;flex-wrap:wrap;gap:10px}.fb167-actions button,.fb167-actions a{border:0;border-radius:999px;padding:11px 15px;font-weight:1000;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:6px}.fb167-primary{background:linear-gradient(135deg,#2563eb,#7c3aed);color:#fff}.fb167-green{background:linear-gradient(135deg,#16a34a,#22c55e);color:#fff}.fb167-dark{background:#0f172a;color:#fff}.fb167-white{background:#fff;color:#0f172a;border:1px solid #dbeafe!important}.fb167-log{margin-top:12px;padding:12px;border-radius:16px;background:#0f172a;color:#dbeafe;font-size:13px;white-space:pre-wrap;max-height:260px;overflow:auto}\n@media(max-width:760px){#fb167VpsCenter{margin:12px 0;padding:14px;border-radius:20px}.fb167-grid{grid-template-columns:1fr}.fb167-actions button,.fb167-actions a{width:100%;justify-content:center}}\n</style>\n<script id="mkt-v167-fb2026-vps-ready-js">\n(function(){\n  function qs(s,r){return (r||document).querySelector(s)}\n  function qsa(s,r){return Array.from((r||document).querySelectorAll(s))}\n  function log(msg){var el=qs(\'#fb167Log\'); if(el){el.textContent=typeof msg===\'string\'?msg:JSON.stringify(msg,null,2)}}\n  async function getJSON(url,opt){var r=await fetch(url,opt||{});return await r.json()}\n  function build(){\n    if(document.getElementById(\'fb167VpsCenter\')) return;\n    var host=qs(\'#mktFb2026ProPanel\') || qs(\'[data-section="task"]\') || qs(\'.fb2026-hero\') || qs(\'main\') || document.body;\n    var box=document.createElement(\'div\'); box.id=\'fb167VpsCenter\';\n    box.innerHTML=\'<h3>🖥️ VPS Ubuntu Ready Center</h3><div class="fb167-sub">Kiểm tra đủ điều kiện để đăng Facebook thật: VPS Ubuntu, Playwright + Chromium, Worker chạy nền, session tài khoản còn sống và Page Token hợp lệ.</div><div class="fb167-grid"><div class="fb167-box"><b id="fb167Env">...</b><span>Môi trường</span></div><div class="fb167-box"><b id="fb167Pw">...</b><span>Playwright / Chromium</span></div><div class="fb167-box"><b id="fb167Worker">...</b><span>Worker</span></div></div><div class="fb167-actions"><button class="fb167-primary" onclick="fb167CheckVps()">✅ Kiểm tra VPS</button><button class="fb167-green" onclick="fb167StartWorker()">▶️ Chạy Worker</button><button class="fb167-dark" onclick="fb167Doctor()">🩺 AI Doctor</button><a class="fb167-white" href="/api/fb2026/vps/install-script">⬇️ Tải script cài VPS</a><a class="fb167-white" href="/api/fb2026/vps/requirements">⬇️ requirements.txt</a></div><div class="fb167-log" id="fb167Log">Bấm Kiểm tra VPS để xem còn thiếu gì.</div>\';\n    if(host.id===\'mktFb2026ProPanel\') host.insertBefore(box, host.children[1]||null); else host.prepend(box);\n  }\n  window.fb167CheckVps=async function(){try{var j=await getJSON(\'/api/fb2026/vps/check\');qs(\'#fb167Env\').textContent=j.environment&&j.environment.is_render_like?\'Render ⚠️\':\'VPS/Local ✅\';qs(\'#fb167Pw\').textContent=j.playwright&&j.playwright.can_launch_browser?\'Sẵn sàng ✅\':\'Thiếu ⚠️\';qs(\'#fb167Worker\').textContent=j.worker&&j.worker.alive?\'Đang chạy ✅\':\'Đang tắt ⚠️\';log(j);}catch(e){log(\'Lỗi kiểm tra VPS: \'+e)}};\n  window.fb167StartWorker=async function(){try{var j=await getJSON(\'/api/fb2026/worker/ensure-vps\',{method:\'POST\'});log(j);setTimeout(window.fb167CheckVps,700)}catch(e){log(\'Lỗi chạy worker: \'+e)}};\n  window.fb167Doctor=async function(){try{var j=await getJSON(\'/api/fb2026/vps/doctor\');log(j)}catch(e){log(\'Lỗi AI Doctor: \'+e)}};\n  function renameButtons(){qsa(\'button,a\').forEach(function(b){var t=(b.textContent||\'\').trim(); if(t===\'🚀 Lưu task / Đưa vào queue\') b.textContent=\'🚀 Đăng ngay / Lưu lịch đăng\'; if(t===\'▶️ Chạy worker xử lý task đến hạn\') b.textContent=\'▶️ Chạy máy đăng bài\';});}\n  function boot(){build();renameButtons();setTimeout(window.fb167CheckVps,500)}\n  if(document.readyState===\'loading\') document.addEventListener(\'DOMContentLoaded\',boot); else boot();\n  setTimeout(boot,1200);setTimeout(boot,2500);\n})();\n</script>\n'
+
+@app.after_request
+def mkt_v167_fb2026_vps_ready_after_request(response):
+    try:
+        ctype = (response.headers.get('Content-Type') or '').lower()
+        if 'text/html' in ctype:
+            body = response.get_data(as_text=True)
+            if 'mkt-v167-fb2026-vps-ready-js' not in body and '</body>' in body:
+                body = body.replace('</body>', MKT_V167_FB2026_VPS_READY_UI + '</body>')
+                response.set_data(body)
+                response.headers['Content-Length'] = str(len(body.encode('utf-8')))
+    except Exception as _e:
+        print('mkt_v167_fb2026_vps_ready_after_request skipped:', _e)
+    return response
+
+
 if __name__ == "__main__":
     # Không tự tạo kho 50k content khi khởi động để tránh lỗi SQLite database is locked trên Render.
     # Khi cần kiểm tra/tạo kho content, gọi /api/content_50k_stats từ admin.
