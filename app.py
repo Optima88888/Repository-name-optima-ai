@@ -19969,104 +19969,76 @@ def mkt_v155_safe_prepare_ui_after_request(response):
 
 
 # ============================================================
-# V156 - Hard safe UI patch: chặn luồng cũ tự tìm nút Đăng
-# Giữ nguyên giao diện hiện tại. Không đụng menu.
+# V156 - Fix Facebook Personal PC buttons not responding
+# Giữ nguyên toàn bộ giao diện hiện tại. Không đụng menu.
+# Sửa đúng phần nút/extension:
+# - Nút Chuẩn bị bài PC / Chuẩn bị bài Facebook gửi lệnh ổn định hơn.
+# - background.js tự inject lại content.js nếu tab Facebook chưa nhận lệnh.
+# - Nếu chưa có tab Facebook: mở Facebook và báo người dùng đăng nhập rồi bấm lại.
+# - SAFE: Không tự bấm nút Đăng cuối cùng trên Facebook cá nhân.
 # ============================================================
-MKT_V156_HARD_SAFE_UI_PATCH = r"""
-<script id="mkt-v156-hard-safe-ui-js">
-(function(){
-  'use strict';
-  function qs(s,r){return (r||document).querySelector(s)}
-  function qsa(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s))}
-  function log(msg){
-    try{if(typeof window.mktFbLog==='function')return window.mktFbLog(msg);}catch(e){}
-    var box=qs('#mktFbPersonalLog');
-    if(box){var time=new Date().toLocaleTimeString('vi-VN');box.innerHTML='<div>['+time+'] '+msg+'</div>'+box.innerHTML;}
-  }
-  function post(){
-    try{if(typeof window.mktFbCurrentPost==='function')return (window.mktFbCurrentPost()||'').trim();}catch(e){}
-    var el=qs('#mktFbContent');return el?(el.value||'').trim():'';
-  }
-  function copyText(text){
-    if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(text).catch(function(){});}
-    try{var ta=document.createElement('textarea');ta.value=text;ta.style.position='fixed';ta.style.left='-9999px';document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();}catch(e){}
-  }
-  function fbUrl(){return ((qs('#mktFbUrl')||{}).value||'https://www.facebook.com/').trim()||'https://www.facebook.com/'}
-  function sendPrepare(){
-    var content=post();
-    if(!content){alert('Bạn chưa nhập nội dung bài viết.');return false;}
-    copyText(content);
-    window.postMessage({source:'MKT_WEB_FACEBOOK_PERSONAL_V1',action:'prepare_now',content:content,url:fbUrl(),extra:{safePrepare:true,v156:true}},'*');
-    log('Đã copy và gửi lệnh CHUẨN BỊ BÀI. Extension chỉ mở ô đăng/dán nội dung; khách tự bấm Đăng bước cuối.');
-    return false;
-  }
-  function patchText(){
-    qsa('button,a').forEach(function(el){
-      var t=(el.innerText||el.textContent||'');
-      if(/Đăng ngay PC|Chuẩn bị bài PC/.test(t)){
-        el.innerHTML=el.innerHTML.replace('Đăng ngay PC','Chuẩn bị bài PC').replace('Đăng ngay Facebook','Chuẩn bị bài Facebook');
-        el.setAttribute('title','Chỉ chuẩn bị bài: dán nội dung, khách tự bấm Đăng bước cuối');
-      }
-    });
-    qsa('div,span,p').forEach(function(el){
-      if(!el||!el.innerHTML)return;
-      if(el.innerHTML.indexOf('Đăng ngay để Extension dán')>-1){el.innerHTML=el.innerHTML.replace('bấm Đăng ngay để Extension dán nội dung.','bấm Chuẩn bị bài PC để Extension mở ô đăng và dán sẵn nội dung.');}
-    });
-  }
-  function patchFunction(){
-    window.mktFbPostNow=function(){return sendPrepare();};
-    window.mktFbPrepareNow=function(){return sendPrepare();};
-  }
-  function patchClicks(){
-    if(window.__MKT_V156_CLICK_BOUND__)return;window.__MKT_V156_CLICK_BOUND__=true;
-    document.addEventListener('click',function(e){
-      var el=e.target&&e.target.closest&&e.target.closest('button,a');if(!el)return;
-      var t=(el.innerText||el.textContent||'').trim();
-      if(/Đăng ngay PC|Chuẩn bị bài PC|Đăng ngay Facebook|Chuẩn bị bài Facebook/.test(t)){
-        e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();return sendPrepare();
-      }
-    },true);
-  }
-  function patchPostMessage(){
-    if(window.__MKT_V156_POSTMESSAGE_PATCH__)return;window.__MKT_V156_POSTMESSAGE_PATCH__=true;
-    var oldPost=window.postMessage;
-    window.postMessage=function(message,targetOrigin,transfer){
-      try{
-        if(message&&message.source==='MKT_WEB_FACEBOOK_PERSONAL_V1'&&message.action==='post_now'){
-          message=Object.assign({},message,{action:'prepare_now',extra:Object.assign({},message.extra||{},{safePrepare:true,v156:true})});
+try:
+    if 'MKT_FB_PERSONAL_EXTENSION_FILES' in globals() and isinstance(MKT_FB_PERSONAL_EXTENSION_FILES, dict):
+        MKT_FB_PERSONAL_EXTENSION_FILES['manifest.json'] = MKT_FB_PERSONAL_EXTENSION_FILES.get('manifest.json','').replace('"version": "1.5.0"','"version": "1.5.1"').replace('"version": "1.4.0"','"version": "1.5.1"').replace('"version": "1.3.0"','"version": "1.5.1"').replace('"version": "1.1.0"','"version": "1.5.1"')
+        MKT_FB_PERSONAL_EXTENSION_FILES['background.js'] = r'''
+let MKT_LAST_CONTENT = "";
+function mktIsFacebookUrl(url){return !!url && (url.includes("facebook.com") || url.includes("m.facebook.com"));}
+function mktOpenFacebook(url, cb){chrome.tabs.create({url:url||"https://www.facebook.com/"}, function(tab){if(cb) cb(tab);});}
+function mktFindFacebookTab(callback){chrome.tabs.query({}, function(tabs){let fbTab=null;for(let i=0;i<tabs.length;i++){if(mktIsFacebookUrl(tabs[i].url)){fbTab=tabs[i];break;}}callback(fbTab);});}
+function mktSendToFacebookTab(tab, content, callback, retried){
+  if(!tab || !tab.id){callback({ok:false,message:"Chưa tìm thấy tab Facebook."});return;}
+  chrome.tabs.update(tab.id,{active:true},function(){
+    chrome.tabs.sendMessage(tab.id,{type:"MKT_PREPARE_FACEBOOK_POST",content:content},function(res){
+      if(chrome.runtime.lastError){
+        if(!retried && chrome.scripting && chrome.scripting.executeScript){
+          chrome.scripting.executeScript({target:{tabId:tab.id},files:["content.js"]},function(){setTimeout(function(){mktSendToFacebookTab(tab,content,callback,true);},700);});
+          return;
         }
-      }catch(e){}
-      return oldPost.call(window,message,targetOrigin,transfer);
-    };
-  }
-  function patchLogs(){
-    var box=qs('#mktFbPersonalLog');if(!box||box.__mktV156LogPatch)return;box.__mktV156LogPatch=true;
-    var clean=function(){
-      box.innerHTML=box.innerHTML
-      .replaceAll('Đã dán nội dung nhưng chưa tìm thấy nút Đăng. Facebook có thể đổi giao diện hoặc đang chặn tự bấm; hãy bấm Đăng thủ công.','Đã chuẩn bị bài. Khách kiểm tra nội dung rồi tự bấm Đăng bước cuối.')
-      .replaceAll('Đã dán nội dung nhưng chưa tìm thấy nút Đăng. Có thể Facebook đang đổi giao diện/chặn tự bấm. Hãy bấm Đăng thủ công.','Đã chuẩn bị bài. Khách kiểm tra nội dung rồi tự bấm Đăng bước cuối.');
-    };
-    var obs=new MutationObserver(clean);obs.observe(box,{childList:true,subtree:true,characterData:true});clean();
-  }
-  function run(){patchPostMessage();patchText();patchFunction();patchClicks();patchLogs();}
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',run);else run();
-  setTimeout(run,200);setTimeout(run,800);setTimeout(run,1800);setInterval(run,1000);
+        callback({ok:false,message:"Tab Facebook chưa nhận được Extension. Hãy tải lại tab Facebook, đảm bảo đã đăng nhập, rồi bấm Chuẩn bị bài PC lại."});
+        return;
+      }
+      callback(res||{ok:false,message:"Không có phản hồi từ tab Facebook."});
+    });
+  });
+}
+function mktPrepareFacebookPost(content, callback){mktFindFacebookTab(function(tab){if(!tab){mktOpenFacebook("https://www.facebook.com/", function(){callback({ok:false,opened:true,message:"Đã mở Facebook. Hãy đăng nhập xong rồi bấm Chuẩn bị bài PC lại."});});return;}mktSendToFacebookTab(tab, content, callback, false);});}
+chrome.runtime.onInstalled.addListener(function(){console.log("MKT Facebook Personal Assistant v1.5.1 SAFE PREPARE installed");});
+chrome.runtime.onMessage.addListener(function(msg,sender,sendResponse){
+  if(!msg||!msg.type)return;
+  if(msg.type==="MKT_PING"){sendResponse({ok:true,version:"1.5.1",mode:"safe_prepare"});return true;}
+  if(msg.type==="MKT_CHECK_FACEBOOK"){mktFindFacebookTab(function(tab){sendResponse({ok:true,ready:!!tab,url:tab?tab.url:""});});return true;}
+  if(msg.type==="MKT_OPEN_FACEBOOK"){mktOpenFacebook(msg.url||"https://www.facebook.com/",function(tab){sendResponse({ok:true,tabId:tab&&tab.id});});return true;}
+  if(msg.type==="MKT_COPY_CONTENT"){MKT_LAST_CONTENT=msg.content||"";chrome.storage.local.set({mkt_last_content:MKT_LAST_CONTENT},function(){sendResponse({ok:true,message:"Đã lưu/copy nội dung vào Extension."});});return true;}
+  if(msg.type==="MKT_POST_NOW" || msg.type==="MKT_PREPARE_NOW"){MKT_LAST_CONTENT=msg.content||"";chrome.storage.local.set({mkt_last_content:MKT_LAST_CONTENT},function(){mktPrepareFacebookPost(MKT_LAST_CONTENT,function(result){sendResponse(result);});});return true;}
+  if(msg.type==="MKT_NOTIFY"){chrome.notifications.create({type:"basic",title:msg.title||"MKT Facebook Assistant",message:msg.message||"Đến giờ đăng bài Facebook cá nhân."});sendResponse({ok:true});return true;}
+});
+'''
+        MKT_FB_PERSONAL_EXTENSION_FILES['content.js'] = r'''
+(function(){
+"use strict";
+if(window.__MKT_FB_PERSONAL_CONTENT_V156__) return;
+window.__MKT_FB_PERSONAL_CONTENT_V156__ = true;
+function isFacebookPage(){return location.hostname.includes("facebook.com");}
+function sendWebMessage(action,payload){try{window.postMessage(Object.assign({source:"MKT_EXTENSION_FACEBOOK_PERSONAL_V1",action:action},payload||{}),"*");}catch(e){}}
+function visible(el){if(!el) return false;var r=el.getBoundingClientRect();var s=getComputedStyle(el);return r.width>0 && r.height>0 && s.visibility!=="hidden" && s.display!=="none" && s.opacity!=="0";}
+function getLabel(el){if(!el) return "";var arr=[el.innerText,el.textContent,el.getAttribute&&el.getAttribute("aria-label"),el.getAttribute&&el.getAttribute("title"),el.getAttribute&&el.getAttribute("data-testid")].filter(Boolean);return arr.join(" ").replace(/\s+/g," ").trim();}
+function closestButton(el){return el && el.closest && (el.closest('[role="button"]') || el.closest('button') || el.closest('a[role="button"]'));}
+function activeDialog(){var dialogs=Array.from(document.querySelectorAll('[role="dialog"], div[aria-modal="true"]')).filter(visible);return dialogs.length?dialogs[dialogs.length-1]:document;}
+function findComposerTrigger(){var patterns=[/Bạn đang nghĩ gì/i,/What\'?s on your mind/i,/Tạo bài viết/i,/Create post/i,/Viết gì đó/i,/Write something/i,/Bạn muốn chia sẻ/i,/What do you want to share/i];var all=Array.from(document.querySelectorAll('div,span,button,[role="button"],a'));for(var i=0;i<all.length;i++){if(!visible(all[i])) continue;var label=getLabel(all[i]);for(var j=0;j<patterns.length;j++){if(patterns[j].test(label)){var b=closestButton(all[i])||all[i];if(visible(b)) return b;}}}return null;}
+function findComposerBox(){var root=activeDialog();var selectors=['div[role="textbox"][contenteditable="true"]','[contenteditable="true"][role="textbox"]','div[aria-label*="Bạn đang nghĩ gì"]','div[aria-label*="What"]','div[aria-label*="Viết"]','[contenteditable="true"]','textarea'];for(var i=0;i<selectors.length;i++){var list=Array.from(root.querySelectorAll(selectors[i]));for(var j=0;j<list.length;j++) if(visible(list[j])) return list[j];}return null;}
+async function copyText(text){try{await navigator.clipboard.writeText(text);return true;}catch(e){return false;}}
+function insertText(el,text){el.focus();if(el.tagName && el.tagName.toLowerCase()==="textarea"){el.value=text;el.dispatchEvent(new Event("input",{bubbles:true}));}else{try{document.execCommand("selectAll",false,null);document.execCommand("insertText",false,text);}catch(e){el.textContent=text;}try{el.dispatchEvent(new InputEvent("input",{bubbles:true,inputType:"insertText",data:text}));}catch(e){el.dispatchEvent(new Event("input",{bubbles:true}));}}el.dispatchEvent(new Event("change",{bubbles:true}));el.dispatchEvent(new KeyboardEvent("keyup",{bubbles:true,key:" ",code:"Space"}));}
+function waitForComposerBox(callback,tries){tries=tries||0;var box=findComposerBox();if(box){callback(box);return;}if(tries>=60){callback(null);return;}setTimeout(function(){waitForComposerBox(callback,tries+1);},250);}
+function showFinalStepGuide(){try{var old=document.getElementById("mkt-final-post-guide");if(old) old.remove();var box=document.createElement("div");box.id="mkt-final-post-guide";box.style.cssText="position:fixed;right:22px;bottom:22px;z-index:2147483647;max-width:370px;background:linear-gradient(135deg,#052e16,#064e3b);color:#fff;border:2px solid #22c55e;border-radius:22px;padding:16px 18px;box-shadow:0 18px 55px rgba(0,0,0,.35);font-family:Arial,sans-serif;line-height:1.45";box.innerHTML='<div style="font-size:18px;font-weight:900;margin-bottom:6px">Bài đã được chuẩn bị</div><div style="font-size:14px;font-weight:700;color:#dcfce7">Nội dung đã được dán sẵn vào ô tạo bài viết Facebook.</div><div style="margin-top:10px;font-size:15px;font-weight:900;color:#fde68a">Bước cuối: kiểm tra nội dung rồi tự bấm nút Đăng trên Facebook.</div><button id="mkt-close-final-guide" style="margin-top:12px;border:0;border-radius:999px;padding:9px 14px;background:#22c55e;color:#052e16;font-weight:900;cursor:pointer">Đã hiểu</button>';document.body.appendChild(box);var btn=document.getElementById("mkt-close-final-guide");if(btn) btn.onclick=function(){box.remove();};}catch(e){}}
+function prepareFacebookPost(content,sendResponse){if(!isFacebookPage()){sendResponse({ok:false,message:"Tab hiện tại không phải Facebook."});return;}if(!content){sendResponse({ok:false,message:"Bạn chưa nhập nội dung bài viết."});return;}copyText(content);var box=findComposerBox();if(!box){var trigger=findComposerTrigger();if(trigger){trigger.scrollIntoView({block:"center"});trigger.click();}}waitForComposerBox(function(finalBox){if(!finalBox){sendResponse({ok:false,message:"Chưa tìm thấy ô tạo bài viết. Hãy bấm vào ô 'Bạn đang nghĩ gì?' trên Facebook rồi bấm Chuẩn bị bài PC lại."});return;}insertText(finalBox,content);showFinalStepGuide();sendResponse({ok:true,message:"Đã dán nội dung vào Facebook. Khách kiểm tra rồi tự bấm nút Đăng bước cuối."});});}
+window.addEventListener("message",function(event){var data=event.data||{}; if(data.source!=="MKT_WEB_FACEBOOK_PERSONAL_V1") return;var action=data.action, content=data.content||"", url=data.url||"https://www.facebook.com/";if(action==="ping"){chrome.runtime.sendMessage({type:"MKT_PING"},function(res){sendWebMessage("pong",{ok:!!(res&&res.ok),version:res&&res.version,mode:res&&res.mode});});chrome.runtime.sendMessage({type:"MKT_CHECK_FACEBOOK"},function(res){sendWebMessage("facebook_status",{ready:!!(res&&res.ready),message:res&&res.ready?"Đã phát hiện tab Facebook đang mở.":"Chưa thấy tab Facebook đang mở."});});}if(action==="open"){chrome.runtime.sendMessage({type:"MKT_OPEN_FACEBOOK",url:url},function(){sendWebMessage("log",{message:"Đã mở Facebook."});});}if(action==="copy"){chrome.runtime.sendMessage({type:"MKT_COPY_CONTENT",content:content},function(){copyText(content);sendWebMessage("log",{message:"Đã copy nội dung bài viết."});});}if(action==="post_now" || action==="prepare_now"){chrome.runtime.sendMessage({type:"MKT_PREPARE_NOW",content:content},function(res){sendWebMessage("facebook_status",{ready:!!(res&&res.ok),message:res&&res.message?res.message:"Đã gửi lệnh chuẩn bị bài sang Extension."});});}});
+chrome.runtime.onMessage.addListener(function(msg,sender,sendResponse){if(!msg||!msg.type) return;if(msg.type==="MKT_PREPARE_FACEBOOK_POST" || msg.type==="MKT_FILL_FACEBOOK_POST"){prepareFacebookPost(msg.content||"",sendResponse);return true;}if(msg.type==="MKT_CHECK_FACEBOOK_READY"){sendResponse({ok:true,url:location.href,title:document.title});return true;}});
 })();
-</script>
-"""
-@app.after_request
-def mkt_v156_hard_safe_ui_after_request(response):
-    try:
-        ctype=(response.headers.get('Content-Type') or '').lower()
-        if 'text/html' in ctype:
-            body=response.get_data(as_text=True)
-            if 'mkt-v156-hard-safe-ui-js' not in body and '</body>' in body:
-                body=body.replace('</body>', MKT_V156_HARD_SAFE_UI_PATCH + '</body>')
-                response.set_data(body)
-                response.headers['Content-Length']=str(len(body.encode('utf-8')))
-    except Exception as _e:
-        print('mkt_v156_hard_safe_ui_after_request skipped:', _e)
-    return response
+'''
+        MKT_FB_PERSONAL_EXTENSION_FILES['popup.html'] = r'''<!DOCTYPE html><html lang="vi"><head><meta charset="UTF-8"><title>MKT Facebook Assistant</title><style>body{width:340px;margin:0;padding:16px;font-family:Arial,sans-serif;background:#0f172a;color:#fff}h3{margin:0 0 8px}.sub{font-size:13px;color:#cbd5e1;line-height:1.45;margin-bottom:12px}.status{padding:10px;border-radius:12px;background:rgba(255,255,255,.08);margin-bottom:12px;font-size:13px}textarea{width:100%;height:120px;box-sizing:border-box;border-radius:12px;border:1px solid #334155;background:#020617;color:#fff;padding:10px;resize:none;outline:none}button{width:100%;margin-top:10px;border:0;border-radius:999px;padding:11px;cursor:pointer;font-weight:900;color:#fff;background:linear-gradient(135deg,#2563eb,#7c3aed)}button.green{background:linear-gradient(135deg,#16a34a,#22c55e)}button.orange{background:linear-gradient(135deg,#f59e0b,#f97316)}</style></head><body><h3>Facebook cá nhân</h3><div class="sub">Đăng nhập trực tiếp trên facebook.com. Extension chỉ mở ô đăng và dán sẵn nội dung, không lấy mật khẩu, không tự bấm Đăng.</div><div id="status" class="status">Đang kiểm tra Facebook...</div><textarea id="postContent" placeholder="Nhập nội dung bài viết..."></textarea><button id="openFb">🌐 Mở Facebook</button><button id="copyPost" class="green">📋 Copy nội dung</button><button id="fillPost" class="orange">🚀 Chuẩn bị bài Facebook</button><script src="popup.js"></script></body></html>'''
+        MKT_FB_PERSONAL_EXTENSION_FILES['popup.js'] = r'''function setStatus(text){document.getElementById("status").innerText=text;}function getContent(){return document.getElementById("postContent").value.trim();}function checkFacebook(){chrome.runtime.sendMessage({type:"MKT_CHECK_FACEBOOK"},function(res){if(res&&res.ready)setStatus("🟢 Đã phát hiện Facebook đang mở.");else setStatus("🔴 Chưa mở Facebook. Hãy bấm Mở Facebook.");});}document.getElementById("openFb").onclick=function(){chrome.runtime.sendMessage({type:"MKT_OPEN_FACEBOOK",url:"https://www.facebook.com/"},function(){setStatus("Đã mở Facebook. Hãy đăng nhập trực tiếp trên facebook.com rồi bấm Chuẩn bị bài Facebook.");});};document.getElementById("copyPost").onclick=async function(){const content=getContent();if(!content){alert("Bạn chưa nhập nội dung.");return;}try{await navigator.clipboard.writeText(content);}catch(e){}chrome.runtime.sendMessage({type:"MKT_COPY_CONTENT",content:content});alert("Đã copy nội dung.");};document.getElementById("fillPost").onclick=function(){const content=getContent();if(!content){alert("Bạn chưa nhập nội dung.");return;}setStatus("Đang gửi lệnh chuẩn bị bài sang Facebook...");chrome.runtime.sendMessage({type:"MKT_PREPARE_NOW",content:content},function(res){if(res&&res.ok){setStatus("🟢 Đã dán nội dung. Hãy kiểm tra rồi tự bấm Đăng trên Facebook.");}else{setStatus("⚠️ "+((res&&res.message)||"Chưa chuẩn bị được bài."));alert((res&&res.message)||"Chưa chuẩn bị được bài. Hãy mở Facebook rồi thử lại.");}});};checkFacebook();'''
+except Exception as _mkt_v156_ext_error:
+    print('MKT V156 facebook pc button fix skipped:', _mkt_v156_ext_error)
 
 if __name__ == "__main__":
     # Không tự tạo kho 50k content khi khởi động để tránh lỗi SQLite database is locked trên Render.
