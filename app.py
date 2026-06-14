@@ -21133,6 +21133,1163 @@ except Exception as _e:
     print('FB2026 background worker start skipped:', _e)
 
 
+
+
+# ============================================================
+# V163 - FACEBOOK AUTO ENTERPRISE SETUP CENTER
+# Giữ nguyên menu/giao diện cũ. Chỉ bổ sung trung tâm cài đặt/nút dùng thật:
+# - Playwright Setup Center: kiểm tra/cài Playwright/Chromium thuận tiện
+# - AI Doctor: phát hiện thiếu Playwright, Chromium, profile, proxy, session
+# - One-click helper cho khách: không bắt nhập Browser Profile
+# - Fallback an toàn khi server không mở được Chrome GUI
+# Lưu ý an toàn: hệ thống không bypass captcha/checkpoint, khách tự đăng nhập hợp lệ.
+# ============================================================
+
+import sys
+import platform
+import subprocess
+import importlib.util
+
+FB2026_SETUP_LOCK = threading.Lock()
+
+def fb2026_cmd_exists(cmd):
+    try:
+        return shutil.which(cmd) is not None
+    except Exception:
+        return False
+
+def fb2026_check_playwright_runtime():
+    """Kiểm tra Playwright/Chromium/Profile theo kiểu thân thiện cho khách và admin."""
+    result = {
+        "ok": False,
+        "python": sys.version.split()[0],
+        "platform": platform.platform(),
+        "playwright_installed": False,
+        "chromium_ready": False,
+        "profile_root": FB2026_PROFILE_ROOT,
+        "profile_root_exists": os.path.isdir(FB2026_PROFILE_ROOT),
+        "can_install_from_web": os.getenv("FB2026_ALLOW_PLAYWRIGHT_INSTALL", "0").strip() == "1",
+        "headless_supported": True,
+        "gui_supported": False,
+        "messages": [],
+        "install_command": "pip install playwright && python -m playwright install chromium",
+        "vps_command": "pip install playwright && python -m playwright install chromium --with-deps"
+    }
+    try:
+        spec = importlib.util.find_spec("playwright")
+        result["playwright_installed"] = bool(spec)
+        if not spec:
+            result["messages"].append("Chưa có Playwright trong Python environment.")
+    except Exception as e:
+        result["messages"].append("Không kiểm tra được Playwright: " + str(e)[:200])
+
+    if result["playwright_installed"]:
+        try:
+            from playwright.sync_api import sync_playwright
+            with sync_playwright() as p:
+                browser = p.chromium.launch(headless=True)
+                page = browser.new_page()
+                page.goto("about:blank", timeout=10000)
+                browser.close()
+            result["chromium_ready"] = True
+            result["messages"].append("Chromium headless hoạt động.")
+        except Exception as e:
+            msg = str(e)
+            result["messages"].append("Chromium chưa sẵn sàng: " + msg[:500])
+            if "Executable doesn't exist" in msg or "playwright install" in msg:
+                result["messages"].append("Cần chạy: python -m playwright install chromium")
+            if "Host system is missing dependencies" in msg:
+                result["messages"].append("VPS Ubuntu cần chạy: python -m playwright install chromium --with-deps")
+
+    # GUI thật chỉ phù hợp VPS/Desktop có DISPLAY. Render thường không có GUI.
+    result["gui_supported"] = bool(os.getenv("DISPLAY") or os.getenv("WAYLAND_DISPLAY") or platform.system().lower() in ("windows", "darwin"))
+    if not result["gui_supported"]:
+        result["messages"].append("Máy chủ hiện tại có thể không hỗ trợ mở Chrome có giao diện. Nên dùng VPS/Desktop cho đăng nhập Facebook thật.")
+
+    result["ok"] = bool(result["playwright_installed"] and result["chromium_ready"])
+    return result
+
+@app.route('/api/fb2026/system/check', methods=['GET', 'POST'])
+def fb2026_system_check_v163():
+    info = fb2026_check_playwright_runtime()
+    try:
+        fb2026_log('', 'SYSTEM', 'system_check', 'success' if info.get('ok') else 'warning', '; '.join(info.get('messages') or [])[:1200])
+    except Exception:
+        pass
+    return jsonify({"ok": bool(info.get("ok")), "system": info, "message": "Hệ thống sẵn sàng." if info.get("ok") else "Hệ thống chưa đủ Playwright/Chromium hoặc chưa hỗ trợ GUI."})
+
+@app.route('/api/fb2026/system/install-playwright', methods=['POST'])
+def fb2026_install_playwright_v163():
+    """Cài Playwright tiện lợi cho admin. Mặc định khóa để tránh Render tự cài ngoài ý muốn."""
+    if os.getenv("FB2026_ALLOW_PLAYWRIGHT_INSTALL", "0").strip() != "1":
+        return jsonify({
+            "ok": False,
+            "message": "Chức năng cài tự động đang khóa để an toàn. Bật biến môi trường FB2026_ALLOW_PLAYWRIGHT_INSTALL=1 nếu chạy trên VPS riêng.",
+            "commands": [
+                "pip install playwright",
+                "python -m playwright install chromium",
+                "python -m playwright install chromium --with-deps  # dùng cho VPS Ubuntu nếu thiếu thư viện"
+            ]
+        }), 403
+
+    with FB2026_SETUP_LOCK:
+        logs = []
+        ok = True
+        cmds = [
+            [sys.executable, "-m", "pip", "install", "playwright"],
+            [sys.executable, "-m", "playwright", "install", "chromium"]
+        ]
+        for cmd in cmds:
+            try:
+                p = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, timeout=600)
+                logs.append("$ " + " ".join(cmd))
+                logs.append((p.stdout or "")[-4000:])
+                if p.returncode != 0:
+                    ok = False
+                    break
+            except Exception as e:
+                ok = False
+                logs.append("ERROR: " + str(e))
+                break
+        info = fb2026_check_playwright_runtime()
+        try:
+            fb2026_log('', 'SYSTEM', 'install_playwright', 'success' if ok and info.get('ok') else 'failed', "\n".join(logs)[-1800:])
+        except Exception:
+            pass
+        return jsonify({"ok": bool(ok and info.get("ok")), "message": "Đã cài và kiểm tra Playwright." if ok and info.get("ok") else "Cài đặt chưa hoàn tất, xem log.", "logs": logs[-6:], "system": info})
+
+@app.route('/api/fb2026/doctor', methods=['GET', 'POST'])
+def fb2026_doctor_v163():
+    fb2026_init_db()
+    system = fb2026_check_playwright_runtime()
+    conn = db(); c = conn.cursor()
+    c.execute("SELECT COUNT(*) FROM fb2026_accounts WHERE COALESCE(status,'active')!='deleted'")
+    total_accounts = c.fetchone()[0]
+    c.execute("SELECT COUNT(*) FROM fb2026_accounts WHERE login_status LIKE '%Đã kết nối%' OR login_status LIKE '%Page API%'")
+    connected_accounts = c.fetchone()[0]
+    c.execute("SELECT COUNT(*) FROM fb2026_tasks WHERE status IN ('queued','scheduled','retry','running')")
+    queue_count = c.fetchone()[0]
+    c.execute("SELECT COUNT(*) FROM fb2026_tasks WHERE status='failed'")
+    failed_count = c.fetchone()[0]
+    conn.close()
+
+    issues = []
+    suggestions = []
+    if not system.get("playwright_installed"):
+        issues.append("Thiếu Playwright")
+        suggestions.append("Cài Playwright trên VPS hoặc bật nút cài tự động bằng FB2026_ALLOW_PLAYWRIGHT_INSTALL=1.")
+    if system.get("playwright_installed") and not system.get("chromium_ready"):
+        issues.append("Chromium chưa sẵn sàng")
+        suggestions.append("Chạy python -m playwright install chromium.")
+    if not system.get("gui_supported"):
+        issues.append("Máy chủ không có GUI để khách tự đăng nhập Facebook")
+        suggestions.append("Dùng VPS Ubuntu có Chrome/GUI hoặc để khách dùng Extension/Graph API.")
+    if total_accounts == 0:
+        issues.append("Chưa có tài khoản Facebook")
+        suggestions.append("Bấm Thêm tài khoản/Kết nối Facebook.")
+    if total_accounts > 0 and connected_accounts == 0:
+        issues.append("Tài khoản chưa kết nối session/API")
+        suggestions.append("Bấm Kết nối Facebook hoặc cấu hình Page ID + Page Token hợp lệ.")
+    if failed_count:
+        issues.append(f"Có {failed_count} tác vụ lỗi")
+        suggestions.append("Mở Nhật ký & CSV để xem nguyên nhân lỗi.")
+
+    return jsonify({
+        "ok": len(issues) == 0,
+        "doctor": {
+            "system": system,
+            "accounts": {"total": total_accounts, "connected": connected_accounts},
+            "queue": {"pending": queue_count, "failed": failed_count},
+            "issues": issues,
+            "suggestions": suggestions
+        },
+        "message": "AI Doctor: hệ thống ổn." if not issues else "AI Doctor phát hiện phần cần xử lý."
+    })
+
+@app.route('/api/fb2026/accounts/reconnect', methods=['POST'])
+def fb2026_account_reconnect_v163():
+    data = request.get_json(silent=True) or request.form
+    acct_id = str(data.get('account_id') or '').strip()
+    if not acct_id:
+        return jsonify({"ok": False, "message": "Thiếu account_id."}), 400
+    # Không tự bypass checkpoint/captcha. Reconnect mở lại profile để khách xác nhận đăng nhập.
+    return fb2026_login_start()
+
+@app.route('/api/fb2026/profile/cleanup', methods=['POST'])
+def fb2026_profile_cleanup_v163():
+    """Dọn profile rác không còn trong DB, giữ profile đang gắn account."""
+    fb2026_init_db()
+    conn = db(); c = conn.cursor()
+    c.execute("SELECT browser_profile FROM fb2026_accounts WHERE COALESCE(status,'active')!='deleted'")
+    keep = set(os.path.abspath(x[0]) for x in c.fetchall() if x and x[0])
+    conn.close()
+    removed = []
+    try:
+        for name in os.listdir(FB2026_PROFILE_ROOT):
+            path = os.path.abspath(os.path.join(FB2026_PROFILE_ROOT, name))
+            if os.path.isdir(path) and path not in keep and name.startswith(('FB', 'fb', 'acc_', '1000')):
+                shutil.rmtree(path, ignore_errors=True)
+                removed.append(name)
+    except Exception as e:
+        return jsonify({"ok": False, "message": "Dọn profile lỗi: " + str(e)[:300], "removed": removed})
+    return jsonify({"ok": True, "message": f"Đã dọn {len(removed)} profile rác.", "removed": removed[:50]})
+
+MKT_V163_FB2026_ENTERPRISE_SETUP_UI = r"""
+<style id="mkt-v163-fb2026-enterprise-setup-css">
+#fb2026_setup_center{margin:18px 0;padding:18px;border-radius:24px;background:linear-gradient(135deg,#020617,#0f172a 55%,#1e1b4b);color:#fff;box-shadow:0 22px 55px rgba(15,23,42,.25);border:1px solid rgba(147,197,253,.22)}
+#fb2026_setup_center .fb163-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+#fb2026_setup_center h3{margin:0;font-size:22px;font-weight:1000;color:#fff}
+#fb2026_setup_center p{margin:8px 0 0;color:#cbd5e1;font-weight:800;line-height:1.45}
+.fb163-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:16px}
+.fb163-card{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);border-radius:18px;padding:14px;min-height:86px}
+.fb163-card b{display:block;color:#fff;font-size:13px;margin-bottom:7px}
+.fb163-card span{font-size:18px;font-weight:1000;color:#93c5fd}
+.fb163-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
+.fb163-actions button{border:0;border-radius:15px;padding:12px 15px;font-weight:1000;cursor:pointer;background:#fff;color:#0f172a}
+.fb163-actions button.primary{background:linear-gradient(135deg,#2563eb,#7c3aed);color:#fff}
+.fb163-actions button.good{background:linear-gradient(135deg,#16a34a,#22c55e);color:#fff}
+.fb163-actions button.warn{background:linear-gradient(135deg,#f59e0b,#f97316);color:#fff}
+#fb2026_doctor_box{margin-top:14px;background:rgba(15,23,42,.55);border:1px solid rgba(255,255,255,.12);border-radius:16px;padding:12px;white-space:pre-wrap;color:#e5e7eb;font-weight:800;max-height:260px;overflow:auto}
+.fb163-status-ok{color:#86efac!important}.fb163-status-bad{color:#fca5a5!important}.fb163-status-warn{color:#fde68a!important}
+@media(max-width:760px){#fb2026_setup_center{border-radius:20px;padding:14px}.fb163-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.fb163-actions button{flex:1 1 45%;padding:12px 10px}.fb163-card span{font-size:15px}}
+</style>
+<script id="mkt-v163-fb2026-enterprise-setup-js">
+(function(){
+  'use strict';
+  function j(url,opt){return fetch(url,opt||{}).then(function(r){return r.json().catch(function(){return {ok:false,message:'Server không trả JSON'}});});}
+  function esc(x){return String(x==null?'':x).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+  function findRoot(){
+    return document.getElementById('fb2026App') || document.querySelector('[id*="fb2026"]') || document.querySelector('#facebook_personal') || document.body;
+  }
+  function ensureSetupCenter(){
+    var root=findRoot(); if(!root || document.getElementById('fb2026_setup_center')) return;
+    var box=document.createElement('div');
+    box.id='fb2026_setup_center';
+    box.innerHTML =
+      '<div class="fb163-head"><div><h3>⚙️ Playwright Setup Center 2026</h3><p>Khách không cần biết Browser Profile. Hệ thống tự kiểm tra Playwright, Chromium, Profile, Session, Proxy và hướng dẫn dùng thật.</p></div><span id="fb163_ready_badge" class="fb163-status-warn">Đang kiểm tra...</span></div>'+
+      '<div class="fb163-grid">'+
+      '<div class="fb163-card"><b>Playwright</b><span id="fb163_pw">...</span></div>'+
+      '<div class="fb163-card"><b>Chromium</b><span id="fb163_chromium">...</span></div>'+
+      '<div class="fb163-card"><b>Chrome GUI</b><span id="fb163_gui">...</span></div>'+
+      '<div class="fb163-card"><b>Profile</b><span id="fb163_profile">Tự động</span></div>'+
+      '</div>'+
+      '<div class="fb163-actions">'+
+      '<button class="primary" onclick="fb163SystemCheck()">🔍 Kiểm tra hệ thống</button>'+
+      '<button class="good" onclick="fb163InstallPlaywright()">⬇️ Cài Playwright</button>'+
+      '<button onclick="fb163Doctor()">🩺 AI Doctor</button>'+
+      '<button class="warn" onclick="fb163CleanupProfile()">🧹 Dọn Profile</button>'+
+      '</div>'+
+      '<div id="fb2026_doctor_box">Mẹo: VPS riêng mới mở được Chrome đăng nhập Facebook thật ổn định. Render thường chỉ phù hợp API/Page Token hoặc Extension.</div>';
+    var target = document.querySelector('#fb2026Accounts') || root.firstElementChild || root;
+    try{ root.insertBefore(box, target.nextSibling); }catch(e){ root.appendChild(box); }
+  }
+  function renderSystem(d){
+    var s=(d&&d.system)||{};
+    var ok=!!s.ok;
+    var badge=document.getElementById('fb163_ready_badge');
+    if(badge){badge.textContent=ok?'🟢 Sẵn sàng':'🟡 Cần cấu hình';badge.className=ok?'fb163-status-ok':'fb163-status-warn';}
+    var pw=document.getElementById('fb163_pw'), ch=document.getElementById('fb163_chromium'), gui=document.getElementById('fb163_gui'), pf=document.getElementById('fb163_profile');
+    if(pw){pw.textContent=s.playwright_installed?'Đã cài':'Chưa cài';pw.className=s.playwright_installed?'fb163-status-ok':'fb163-status-bad';}
+    if(ch){ch.textContent=s.chromium_ready?'Hoạt động':'Chưa sẵn';ch.className=s.chromium_ready?'fb163-status-ok':'fb163-status-warn';}
+    if(gui){gui.textContent=s.gui_supported?'Có GUI':'Không GUI';gui.className=s.gui_supported?'fb163-status-ok':'fb163-status-warn';}
+    if(pf){pf.textContent=s.profile_root_exists?'Tự động':'Chưa có';pf.className=s.profile_root_exists?'fb163-status-ok':'fb163-status-warn';}
+    var out=document.getElementById('fb2026_doctor_box');
+    if(out){
+      out.textContent=(d.message||'')+'\n\n'+((s.messages||[]).join('\n')||'Không có cảnh báo.')+'\n\nLệnh VPS:\n'+(s.vps_command||s.install_command||'');
+    }
+  }
+  window.fb163SystemCheck=function(){
+    ensureSetupCenter();
+    return j('/api/fb2026/system/check').then(renderSystem).catch(function(e){alert('Kiểm tra lỗi: '+e);});
+  };
+  window.fb163InstallPlaywright=function(){
+    if(!confirm('Chỉ nên cài tự động trên VPS riêng. Nếu đang chạy Render, nên cài bằng Docker/VPS. Tiếp tục?')) return;
+    var out=document.getElementById('fb2026_doctor_box'); if(out) out.textContent='Đang cài Playwright/Chromium...';
+    return j('/api/fb2026/system/install-playwright',{method:'POST'}).then(function(d){
+      renderSystem(d.system?d:{system:(d.system||{}),message:d.message});
+      if(out) out.textContent=(d.message||'')+'\n\n'+(d.logs||[]).join('\n\n');
+      if(!d.ok && d.commands) alert((d.message||'')+'\n\n'+d.commands.join('\n'));
+    }).catch(function(e){alert('Cài lỗi: '+e);});
+  };
+  window.fb163Doctor=function(){
+    ensureSetupCenter();
+    var out=document.getElementById('fb2026_doctor_box'); if(out) out.textContent='AI Doctor đang kiểm tra...';
+    return j('/api/fb2026/doctor').then(function(d){
+      var doc=d.doctor||{}, sys=doc.system||{};
+      if(out){
+        out.textContent=(d.message||'')+
+          '\n\nTài khoản: '+((doc.accounts||{}).connected||0)+'/'+((doc.accounts||{}).total||0)+' đã kết nối'+
+          '\nQueue chờ: '+((doc.queue||{}).pending||0)+' | Lỗi: '+((doc.queue||{}).failed||0)+
+          '\n\nVấn đề:\n- '+((doc.issues||[]).join('\n- ')||'Không có')+
+          '\n\nGợi ý:\n- '+((doc.suggestions||[]).join('\n- ')||'Hệ thống ổn')+
+          '\n\nPlaywright: '+(sys.playwright_installed?'OK':'Thiếu')+' | Chromium: '+(sys.chromium_ready?'OK':'Chưa sẵn')+' | GUI: '+(sys.gui_supported?'Có':'Không');
+      }
+      renderSystem({system:sys,message:d.message});
+    }).catch(function(e){if(out) out.textContent='AI Doctor lỗi: '+e;});
+  };
+  window.fb163CleanupProfile=function(){
+    if(!confirm('Dọn các profile rác không còn gắn với tài khoản?')) return;
+    return j('/api/fb2026/profile/cleanup',{method:'POST'}).then(function(d){alert(d.message||JSON.stringify(d)); fb163Doctor();});
+  };
+
+  function overrideOldLogin(){
+    var old=window.fb26Login;
+    window.fb26Login=function(id){
+      return j('/api/fb2026/login/start',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({account_id:id})}).then(function(d){
+        if(d.ok){
+          alert(d.message||'Đã mở trình duyệt đăng nhập Facebook.');
+        }else{
+          var msg=(d.message||'Không mở được Facebook login.');
+          if(/playwright|chromium|cài/i.test(msg)){
+            ensureSetupCenter();
+            fb163SystemCheck();
+            alert(msg+'\n\nBấm "Cài Playwright" hoặc chạy lệnh VPS được hiển thị trong Playwright Setup Center.');
+          }else{
+            alert(msg);
+          }
+        }
+        try{ if(typeof window.fb26LoadAccounts==='function') window.fb26LoadAccounts(); }catch(e){}
+        try{ if(typeof loadAccounts==='function') loadAccounts(); }catch(e){}
+      });
+    };
+  }
+  function improveAccountLabels(){
+    document.querySelectorAll('input[placeholder*="Profile"],input[name*="profile"]').forEach(function(inp){
+      try{inp.placeholder='Hồ sơ trình duyệt: hệ thống tự tạo';inp.readOnly=true;inp.style.opacity='.75';}catch(e){}
+    });
+    document.querySelectorAll('button,a').forEach(function(b){
+      var t=(b.textContent||'').trim();
+      if(/Kết nối Facebook|Mở trình duyệt đăng nhập/i.test(t)){
+        b.title='Hệ thống tự tạo Browser Profile, khách chỉ cần tự đăng nhập Facebook.';
+      }
+    });
+  }
+  function boot(){
+    ensureSetupCenter();
+    overrideOldLogin();
+    improveAccountLabels();
+    setTimeout(window.fb163SystemCheck, 500);
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',boot); else boot();
+  setTimeout(boot,1200); setTimeout(overrideOldLogin,2500); setInterval(improveAccountLabels,3000);
+})();
+</script>
+"""
+
+@app.after_request
+def mkt_v163_fb2026_enterprise_setup_after_request(response):
+    try:
+        ctype = (response.headers.get("Content-Type") or "").lower()
+        if "text/html" in ctype:
+            body = response.get_data(as_text=True)
+            if "mkt-v163-fb2026-enterprise-setup-js" not in body and "</body>" in body:
+                body = body.replace("</body>", MKT_V163_FB2026_ENTERPRISE_SETUP_UI + "</body>")
+                response.set_data(body)
+                response.headers["Content-Length"] = str(len(body.encode("utf-8")))
+    except Exception as _e:
+        print("mkt_v163_fb2026_enterprise_setup_after_request skipped:", _e)
+    return response
+
+
+# ============================================================
+# V164 - Facebook Automation Enterprise V2
+# Chỉ bổ sung phần chi tiết chưa nâng cao. Không đụng menu/giao diện cũ.
+# Mục tiêu: nút không bị chết, khách dễ dùng, có Health/Preview/Recover/Open Profile/Retry Queue.
+# Lưu ý an toàn: Không lưu mật khẩu, không bypass captcha/checkpoint. Đăng thật ưu tiên Graph API chính thức cho Page.
+# ============================================================
+
+FB2026_V164_LOCK = threading.Lock()
+
+def fb2026_mask_token(token):
+    token = str(token or '').strip()
+    if not token:
+        return ''
+    return token[:8] + '...' + token[-4:] if len(token) > 16 else token[:4] + '...'
+
+def fb2026_account_row(account_id):
+    fb2026_init_db()
+    conn = db(); c = conn.cursor()
+    c.execute("""SELECT id,account_code,display_name,proxy,browser_profile,cookies_json,user_agent,login_status,
+                        page_id,page_token,note,status,created_at,updated_at,last_session_check,proxy_status,session_score,last_login_at
+                 FROM fb2026_accounts WHERE id=? AND COALESCE(status,'active')!='deleted'""", (str(account_id),))
+    row = c.fetchone(); conn.close()
+    if not row:
+        return None
+    keys = ['id','account_code','display_name','proxy','browser_profile','cookies_json','user_agent','login_status','page_id','page_token','note','status','created_at','updated_at','last_session_check','proxy_status','session_score','last_login_at']
+    return dict(zip(keys, row))
+
+def fb2026_health_for_account(row):
+    row = row or {}
+    score = 0
+    issues = []
+    suggestions = []
+    profile = row.get('browser_profile') or fb2026_profile_path(row.get('account_code') or ('FB' + uuid.uuid4().hex[:4]))
+    profile_exists = os.path.isdir(profile)
+    if profile_exists:
+        score += 20
+    else:
+        issues.append('Chưa có Browser Profile')
+        suggestions.append('Bấm Kết nối Facebook để hệ thống tự tạo profile')
+    if str(row.get('login_status') or '').lower().find('kết nối') >= 0:
+        score += 35
+    else:
+        issues.append('Chưa xác nhận đăng nhập Facebook')
+        suggestions.append('Bấm Kết nối/Làm mới kết nối rồi tự đăng nhập Facebook trong Chrome')
+    if row.get('page_id') and row.get('page_token'):
+        score += 25
+    else:
+        issues.append('Chưa có Page ID/Page Token để đăng Page tự động qua API')
+        suggestions.append('Nếu muốn đăng Page thật tự động, nhập Page ID và Page Token hợp lệ')
+    proxy_status = str(row.get('proxy_status') or '')
+    if not row.get('proxy'):
+        score += 10
+    elif 'hoạt động' in proxy_status.lower() or 'ok' in proxy_status.lower():
+        score += 10
+    else:
+        issues.append('Proxy chưa được kiểm tra hoặc đang lỗi')
+        suggestions.append('Bấm Test proxy trước khi chạy nhiều tài khoản')
+    try:
+        if int(row.get('session_score') or 0) >= 70:
+            score += 10
+    except Exception:
+        pass
+    score = max(0, min(100, score))
+    if score >= 85:
+        level = 'Tốt'
+    elif score >= 60:
+        level = 'Cần kiểm tra'
+    else:
+        level = 'Chưa sẵn sàng'
+    return {
+        'account_id': row.get('id'), 'account_code': row.get('account_code'), 'display_name': row.get('display_name'),
+        'score': score, 'level': level, 'profile': profile, 'profile_exists': profile_exists,
+        'login_status': row.get('login_status') or 'Chưa đăng nhập', 'last_session_check': row.get('last_session_check') or '',
+        'last_login_at': row.get('last_login_at') or '', 'proxy_status': row.get('proxy_status') or ('Không dùng proxy' if not row.get('proxy') else 'Chưa kiểm tra'),
+        'page_api_ready': bool(row.get('page_id') and row.get('page_token')), 'page_id': row.get('page_id') or '',
+        'page_token_mask': fb2026_mask_token(row.get('page_token')), 'issues': issues, 'suggestions': suggestions
+    }
+
+def fb2026_build_preview(content, hashtag_pool='', hashtag_min=0, hashtag_max=0, spin_count=0):
+    base = str(content or '').strip()
+    h, dup, level = fb2026_duplicate_check(base)
+    final = fb2026_apply_hashtags(base, hashtag_pool, int(hashtag_min or 0), int(hashtag_max or 0))
+    variants = []
+    if int(spin_count or 0) > 0:
+        variants = fb2026_ai_spin(base, int(spin_count or 1))
+    warnings = []
+    if dup >= 90:
+        warnings.append('Nội dung trùng lặp cao, nên AI Spin lại trước khi đăng.')
+    elif dup >= 70:
+        warnings.append('Nội dung hơi giống bài cũ, nên chỉnh CTA/hashtag/ảnh.')
+    if len(base) < 20:
+        warnings.append('Nội dung quá ngắn.')
+    if base.count('#') > 8:
+        warnings.append('Hashtag nhiều, nên giữ khoảng 3–7 hashtag.')
+    if any(x in base.lower() for x in ['cam kết 100%', 'đảm bảo ra đơn', 'trị khỏi', 'hiệu quả tuyệt đối']):
+        warnings.append('Có cụm từ rủi ro chính sách, nên sửa mềm hơn.')
+    return {'content': base, 'final_content': final, 'content_hash': h, 'duplicate_score': dup, 'duplicate_level': level, 'ai_variants': variants, 'warnings': warnings}
+
+@app.route('/api/fb2026/enterprise/health', methods=['GET', 'POST'])
+def fb2026_enterprise_health_v164():
+    fb2026_init_db()
+    account_id = (request.values.get('account_id') or '')
+    data = request.get_json(silent=True) or {}
+    account_id = str(data.get('account_id') or account_id).strip()
+    if account_id:
+        row = fb2026_account_row(account_id)
+        if not row:
+            return jsonify({'ok': False, 'message': 'Không tìm thấy tài khoản.'}), 404
+        return jsonify({'ok': True, 'health': fb2026_health_for_account(row)})
+    conn = db(); c = conn.cursor(); c.execute("SELECT id FROM fb2026_accounts WHERE COALESCE(status,'active')!='deleted' ORDER BY id DESC LIMIT 300")
+    ids = [r[0] for r in c.fetchall()]; conn.close()
+    items = []
+    for aid in ids:
+        row = fb2026_account_row(aid)
+        if row: items.append(fb2026_health_for_account(row))
+    avg = round(sum(x['score'] for x in items) / max(1, len(items)), 2)
+    return jsonify({'ok': True, 'average_score': avg, 'accounts': items})
+
+@app.route('/api/fb2026/enterprise/preview', methods=['POST'])
+def fb2026_enterprise_preview_v164():
+    data = request.get_json(silent=True) or request.form
+    preview = fb2026_build_preview(data.get('content') or '', data.get('hashtag_pool') or '', data.get('hashtag_min') or 0, data.get('hashtag_max') or 0, data.get('spin_count') or 0)
+    return jsonify({'ok': True, 'preview': preview, 'message': 'Đã kiểm tra nội dung trước khi đưa vào queue.'})
+
+@app.route('/api/fb2026/enterprise/session/recover', methods=['POST'])
+def fb2026_enterprise_session_recover_v164():
+    data = request.get_json(silent=True) or request.form
+    account_id = str(data.get('account_id') or '').strip()
+    if not fb2026_account_row(account_id):
+        return jsonify({'ok': False, 'message': 'Không tìm thấy tài khoản.'}), 404
+    return fb2026_login_start()
+
+@app.route('/api/fb2026/enterprise/browser/open', methods=['POST'])
+def fb2026_enterprise_browser_open_v164():
+    data = request.get_json(silent=True) or request.form
+    account_id = str(data.get('account_id') or '').strip()
+    row = fb2026_account_row(account_id)
+    if not row:
+        return jsonify({'ok': False, 'message': 'Không tìm thấy tài khoản.'}), 404
+    system = fb2026_check_playwright_runtime() if 'fb2026_check_playwright_runtime' in globals() else {'ok': False, 'messages': []}
+    profile = row.get('browser_profile') or fb2026_profile_path(row.get('account_code'))
+    os.makedirs(profile, exist_ok=True)
+    if not system.get('playwright_installed'):
+        return jsonify({'ok': False, 'message': 'Chưa cài Playwright. Không mở được Chrome profile thật.', 'profile': profile, 'open_url': 'https://www.facebook.com/', 'system': system})
+    if not system.get('gui_supported'):
+        return jsonify({'ok': False, 'message': 'Server hiện tại không hỗ trợ Chrome có giao diện. Hãy chạy trên VPS/Desktop có GUI để mở profile đăng nhập.', 'profile': profile, 'open_url': 'https://www.facebook.com/', 'system': system})
+    try:
+        from playwright.sync_api import sync_playwright
+    except Exception as e:
+        return jsonify({'ok': False, 'message': 'Không import được Playwright: ' + str(e)[:200], 'profile': profile, 'system': system})
+    code = row.get('account_code') or ('FB' + str(account_id))
+    def _open_browser():
+        try:
+            with sync_playwright() as p:
+                kwargs = {'headless': False, 'user_data_dir': profile}
+                if row.get('user_agent'): kwargs['user_agent'] = row.get('user_agent')
+                px = fb2026_playwright_proxy(row.get('proxy'))
+                if px: kwargs['proxy'] = px
+                browser = p.chromium.launch_persistent_context(**kwargs)
+                page = browser.new_page(); page.goto('https://www.facebook.com/', wait_until='domcontentloaded', timeout=60000)
+                fb2026_log('', code, 'browser_open', 'opened', 'Đã mở Facebook bằng Browser Profile riêng.')
+                time.sleep(int(os.getenv('FB2026_BROWSER_OPEN_MINUTES', '10')) * 60)
+                try: cookies = browser.cookies('https://www.facebook.com')
+                except Exception: cookies = []
+                login_ok = any(str(x.get('name')) == 'c_user' for x in cookies)
+                conn = db(); c = conn.cursor()
+                c.execute("UPDATE fb2026_accounts SET browser_profile=?, cookies_json=?, login_status=?, session_score=?, last_session_check=?, updated_at=? WHERE id=?",
+                          (profile, json.dumps(cookies, ensure_ascii=False), 'Đã kết nối Facebook' if login_ok else 'Chưa đăng nhập', 95 if login_ok else 20, fb2026_now(), fb2026_now(), account_id))
+                conn.commit(); conn.close()
+                try: browser.close()
+                except Exception: pass
+        except Exception as e:
+            fb2026_log('', code, 'browser_open', 'failed', str(e)[:1000])
+    threading.Thread(target=_open_browser, daemon=True).start()
+    return jsonify({'ok': True, 'message': 'Đã mở Facebook bằng đúng Browser Profile. Khách tự đăng nhập/xác nhận nếu Facebook yêu cầu.', 'profile': profile})
+
+@app.route('/api/fb2026/enterprise/test-page-post', methods=['POST'])
+def fb2026_enterprise_test_page_post_v164():
+    data = request.get_json(silent=True) or request.form
+    account_id = str(data.get('account_id') or '').strip()
+    row = fb2026_account_row(account_id)
+    if not row:
+        return jsonify({'ok': False, 'message': 'Không tìm thấy tài khoản.'}), 404
+    ok, name, msg = fb2026_page_token_check(row.get('page_id'), row.get('page_token')) if 'fb2026_page_token_check' in globals() else (False, '', 'Thiếu hàm kiểm tra Page Token')
+    fb2026_log('', row.get('account_code'), 'page_api_test', 'success' if ok else 'failed', msg)
+    return jsonify({'ok': bool(ok), 'message': ('Page API sẵn sàng: ' + str(name)) if ok else msg, 'page_id': row.get('page_id') or '', 'page_token_mask': fb2026_mask_token(row.get('page_token'))})
+
+@app.route('/api/fb2026/enterprise/retry-failed', methods=['POST'])
+def fb2026_enterprise_retry_failed_v164():
+    fb2026_init_db(); conn = db(); c = conn.cursor()
+    c.execute("UPDATE fb2026_tasks SET status='retry', retry_count=0, updated_at=? WHERE status='failed'", (fb2026_now(),))
+    changed = c.rowcount; conn.commit(); conn.close()
+    fb2026_log('', 'SYSTEM', 'retry_failed', 'success', f'Đã đưa {changed} task lỗi về hàng chờ retry.')
+    return jsonify({'ok': True, 'message': f'Đã đưa {changed} task lỗi về hàng chờ retry.', 'changed': changed})
+
+@app.route('/api/fb2026/enterprise/queue-status')
+def fb2026_enterprise_queue_status_v164():
+    fb2026_init_db(); conn = db(); c = conn.cursor(); statuses = {}
+    for st in ['queued','scheduled','running','retry','success','partial_success','failed']:
+        c.execute('SELECT COUNT(*) FROM fb2026_tasks WHERE status=?', (st,)); statuses[st] = c.fetchone()[0]
+    c.execute("SELECT task_uid,status,schedule_time,result_message,updated_at FROM fb2026_tasks ORDER BY id DESC LIMIT 30")
+    latest = fb2026_rows_to_dicts(c, c.fetchall()); conn.close()
+    return jsonify({'ok': True, 'queue': statuses, 'latest': latest})
+
+MKT_V164_FB2026_ENTERPRISE_V2_UI = r'''
+<style id="mkt-v164-fb2026-enterprise-v2-css">
+.fb2026-v164-box{white-space:pre-wrap;background:#020617;color:#dbeafe;border-radius:16px;padding:12px;max-height:300px;overflow:auto;font-size:12px;line-height:1.5}.fb2026-v164-actions{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}.fb2026-v164-actions .fb2026-btn{margin:0!important}.fb2026-v164-card{border:1px solid #dbeafe;border-radius:20px;padding:14px;background:linear-gradient(135deg,#fff,#eff6ff);box-shadow:0 12px 30px rgba(37,99,235,.10);margin:12px 0}
+</style>
+<script id="mkt-v164-fb2026-enterprise-v2-js">
+(function(){
+  if(window.__mktFb2026V164Loaded) return; window.__mktFb2026V164Loaded=true;
+  async function j(url,opt){var r=await fetch(url,opt||{}); try{return await r.json()}catch(e){return {ok:false,message:'Không đọc được JSON'}}}
+  function accountIdFromButton(btn){var p=(btn.getAttribute('onclick')||'').match(/\((\d+)\)/);return p?p[1]:''}
+  function ensureEnterpriseCard(){var panel=document.getElementById('mktFb2026ProPanel'); if(!panel || document.getElementById('fb2026_v164_card')) return; var card=document.createElement('div'); card.id='fb2026_v164_card'; card.className='fb2026-v164-card'; card.innerHTML='<h2>🧠 Enterprise V2 - Health / Queue / Preview</h2><div class="fb2026-v164-actions"><button class="fb2026-btn" onclick="fb164HealthAll()">🩺 Quét sức khỏe</button><button class="fb2026-btn" onclick="fb164Preview()">👁️ Preview bài</button><button class="fb2026-btn" onclick="fb164Queue()">📦 Queue status</button><button class="fb2026-btn" onclick="fb164RetryFailed()">🔁 Retry task lỗi</button></div><div id="fb2026_v164_output" class="fb2026-v164-box">Sẵn sàng.</div>'; var first=panel.querySelector('.fb2026-card'); if(first) first.parentNode.insertBefore(card, first.nextSibling); else panel.appendChild(card);}
+  function out(t){var el=document.getElementById('fb2026_v164_output'); if(el) el.textContent=t;}
+  window.fb164HealthAll=async function(){ensureEnterpriseCard(); out('Đang quét sức khỏe tài khoản...'); var d=await j('/api/fb2026/enterprise/health'); if(!d.ok){out(d.message||'Lỗi');return} var lines=['Điểm trung bình: '+d.average_score+'%']; (d.accounts||[]).forEach(function(a){lines.push('\n'+a.account_code+' - '+a.level+' - '+a.score+'%'); lines.push('Login: '+a.login_status+' | Proxy: '+a.proxy_status+' | Page API: '+(a.page_api_ready?'OK':'Thiếu')); if(a.issues&&a.issues.length) lines.push('Vấn đề: '+a.issues.join('; ')); if(a.suggestions&&a.suggestions.length) lines.push('Gợi ý: '+a.suggestions.join('; '));}); out(lines.join('\n')); };
+  window.fb164Preview=async function(){ensureEnterpriseCard(); var content=(document.getElementById('fb26Content')||{}).value||''; if(!content.trim()){alert('Nhập nội dung bài viết trước.'); return;} var body={content:content,hashtag_pool:(document.getElementById('fb26HashTags')||{}).value||'',hashtag_min:(document.getElementById('fb26HashMin')||{}).value||0,hashtag_max:(document.getElementById('fb26HashMax')||{}).value||0,spin_count:(document.getElementById('fb26Spin')||{}).value||0}; var d=await j('/api/fb2026/enterprise/preview',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}); var p=d.preview||{}; out('Độ trùng: '+p.duplicate_score+'% - '+p.duplicate_level+'\n\nCảnh báo:\n- '+((p.warnings||[]).join('\n- ')||'Không có')+'\n\nNội dung cuối:\n'+(p.final_content||'')+'\n\nAI variants:\n- '+((p.ai_variants||[]).join('\n- ')||'Không tạo')); };
+  window.fb164Queue=async function(){ensureEnterpriseCard(); var d=await j('/api/fb2026/enterprise/queue-status'); if(!d.ok){out(d.message||'Lỗi queue');return} out('Queue:\n'+JSON.stringify(d.queue,null,2)+'\n\nMới nhất:\n'+(d.latest||[]).map(function(x){return x.task_uid+' | '+x.status+' | '+(x.schedule_time||'')+' | '+(x.result_message||'').slice(0,120)}).join('\n')); };
+  window.fb164RetryFailed=async function(){if(!confirm('Đưa toàn bộ task lỗi về hàng chờ retry?')) return; var d=await j('/api/fb2026/enterprise/retry-failed',{method:'POST'}); alert(d.message||JSON.stringify(d)); fb164Queue(); };
+  window.fb164OpenBrowser=async function(id){var d=await j('/api/fb2026/enterprise/browser/open',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({account_id:id})}); alert(d.message||JSON.stringify(d));};
+  window.fb164Recover=async function(id){var d=await j('/api/fb2026/enterprise/session/recover',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({account_id:id})}); alert(d.message||JSON.stringify(d));};
+  window.fb164HealthOne=async function(id){ensureEnterpriseCard(); var d=await j('/api/fb2026/enterprise/health',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({account_id:id})}); var h=d.health||{}; out((h.account_code||'Account')+' - '+(h.level||'')+' - '+(h.score||0)+'%\nLogin: '+(h.login_status||'')+'\nProxy: '+(h.proxy_status||'')+'\nProfile: '+(h.profile||'')+'\nPage API: '+(h.page_api_ready?'OK':'Thiếu')+'\n\nVấn đề:\n- '+((h.issues||[]).join('\n- ')||'Không có')+'\n\nGợi ý:\n- '+((h.suggestions||[]).join('\n- ')||'Không có'));};
+  window.fb164TestPage=async function(id){var d=await j('/api/fb2026/enterprise/test-page-post',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({account_id:id})}); alert(d.message||JSON.stringify(d));};
+  function enhanceAccountButtons(){document.querySelectorAll('#fb26AccList .fb2026-tabs').forEach(function(row){if(row.dataset.v164==='1') return; var login=[].slice.call(row.querySelectorAll('button')).find(function(b){return /fb26Login/.test(b.getAttribute('onclick')||'')}); var id=login?accountIdFromButton(login):''; if(!id) return; row.dataset.v164='1'; row.insertAdjacentHTML('beforeend','<button class="fb2026-btn green" onclick="fb164OpenBrowser('+id+')">🌐 Mở Facebook</button><button class="fb2026-btn" onclick="fb164Recover('+id+')">🔄 Làm mới kết nối</button><button class="fb2026-btn" onclick="fb164HealthOne('+id+')">🩺 AI Doctor</button><button class="fb2026-btn" onclick="fb164TestPage('+id+')">🧪 Test Page API Pro</button>');});}
+  function enhanceTaskButtons(){var create=document.getElementById('fb26CreateTask'); if(create && !document.getElementById('fb26PreviewBtn')){ var b=document.createElement('button'); b.id='fb26PreviewBtn'; b.className='fb2026-btn full'; b.type='button'; b.textContent='👁️ Preview / Anti Duplicate trước khi lưu'; b.onclick=window.fb164Preview; create.parentNode.insertBefore(b, create); }}
+  function boot(){ensureEnterpriseCard(); enhanceAccountButtons(); enhanceTaskButtons();}
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',boot); else boot(); setTimeout(boot,800); setTimeout(boot,1800); setInterval(function(){enhanceAccountButtons(); enhanceTaskButtons();},2500);
+})();
+</script>
+'''
+
+@app.after_request
+def mkt_v164_fb2026_enterprise_v2_after_request(response):
+    try:
+        ctype = (response.headers.get('Content-Type') or '').lower()
+        if 'text/html' in ctype:
+            body = response.get_data(as_text=True)
+            if 'mkt-v164-fb2026-enterprise-v2-js' not in body and '</body>' in body:
+                body = body.replace('</body>', MKT_V164_FB2026_ENTERPRISE_V2_UI + '</body>')
+                response.set_data(body)
+                response.headers['Content-Length'] = str(len(body.encode('utf-8')))
+    except Exception as _e:
+        print('mkt_v164_fb2026_enterprise_v2_after_request skipped:', _e)
+    return response
+
+
+# ============================================================
+# V165 - FACEBOOK AUTOMATION REAL WORKER ENGINE FOR VPS
+# Hoàn thiện phần còn thiếu:
+# - Worker Playwright chạy nền trên VPS (bật bằng FB2026_ENABLE_WORKER=1 hoặc bấm API start)
+# - Đọc/lưu session bằng browser profile persistent context
+# - Đăng thật qua Page Graph API khi có token; fallback Playwright cho Profile/Page/Group khi khách đã login
+# - Upload ảnh/video bằng Playwright
+# - Queue retry, realtime log, CSV log
+# - Không bypass captcha/checkpoint/2FA: nếu gặp thì dừng và yêu cầu khách xử lý thủ công
+# ============================================================
+
+import traceback
+import threading as _fb2026_threading
+
+FB2026_WORKER_STATE = {
+    "running": False,
+    "started_at": "",
+    "last_tick": "",
+    "processed": 0,
+    "last_error": "",
+    "thread": None,
+}
+
+def fb2026_env_bool(name, default="0"):
+    return str(os.getenv(name, default)).strip().lower() in ("1", "true", "yes", "on")
+
+def fb2026_runtime_mode():
+    is_render = bool(os.getenv("RENDER") or os.getenv("RENDER_SERVICE_ID") or os.getenv("RENDER_EXTERNAL_URL"))
+    return {
+        "is_render": is_render,
+        "headless": fb2026_env_bool("FB2026_HEADLESS", "0"),
+        "enable_worker": fb2026_env_bool("FB2026_ENABLE_WORKER", "0"),
+        "safe_mode": fb2026_env_bool("FB2026_SAFE_MODE", "1"),
+        "min_delay_seconds": int(os.getenv("FB2026_MIN_DELAY_SECONDS", str(FB2026_SAFE_LIMITS.get("min_delay_seconds", 60)))),
+        "worker_interval_seconds": int(os.getenv("FB2026_WORKER_INTERVAL_SECONDS", "12")),
+        "worker_batch": int(os.getenv("FB2026_WORKER_BATCH", str(FB2026_SAFE_LIMITS.get("worker_batch", 3)))),
+    }
+
+def fb2026_import_playwright():
+    try:
+        from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeoutError
+        return sync_playwright, PlaywrightTimeoutError, None
+    except Exception as e:
+        return None, None, e
+
+def fb2026_safe_json_loads(value, default=None):
+    try:
+        return json.loads(value) if value else (default if default is not None else [])
+    except Exception:
+        return default if default is not None else []
+
+def fb2026_parse_destinations(raw, account_row=None):
+    account_row = account_row or {}
+    values = []
+    if isinstance(raw, (list, tuple)):
+        values = list(raw)
+    else:
+        s = str(raw or "").strip()
+        if s.startswith("["):
+            values = fb2026_safe_json_loads(s, [])
+        else:
+            values = [x.strip() for x in s.replace("\n", ",").split(",") if x.strip()]
+    if not values:
+        values = ["page" if account_row.get("page_id") and account_row.get("page_token") else "profile"]
+    out = []
+    for item in values:
+        val = str(item or "").strip()
+        low = val.lower()
+        if low in ("profile", "personal", "trang cá nhân", "ca nhan"):
+            out.append({"type": "profile", "url": "https://www.facebook.com/"})
+        elif low in ("page", "fanpage") and account_row.get("page_id"):
+            out.append({"type": "page", "id": str(account_row.get("page_id")), "url": f"https://www.facebook.com/{account_row.get('page_id')}"})
+        elif low.startswith("page:"):
+            pid = val.split(":", 1)[1].strip()
+            out.append({"type": "page", "id": pid, "url": f"https://www.facebook.com/{pid}"})
+        elif low.startswith("group:"):
+            gid = val.split(":", 1)[1].strip()
+            out.append({"type": "group", "id": gid, "url": f"https://www.facebook.com/groups/{gid}"})
+        elif low.startswith("url:"):
+            out.append({"type": "url", "url": val.split(":", 1)[1].strip()})
+        elif low.startswith("http"):
+            out.append({"type": "url", "url": val})
+    return out or [{"type": "profile", "url": "https://www.facebook.com/"}]
+
+def fb2026_account_row_full(account_id):
+    fb2026_init_db()
+    conn = db(); c = conn.cursor()
+    c.execute("""SELECT id,account_code,display_name,proxy,browser_profile,cookies_json,user_agent,login_status,page_id,page_token,
+                        note,status,created_at,updated_at,last_session_check,proxy_status,session_score,last_login_at
+                 FROM fb2026_accounts WHERE id=? AND COALESCE(status,'active')!='deleted'""", (account_id,))
+    row = c.fetchone()
+    if not row:
+        conn.close(); return None
+    names = [d[0] for d in c.description]
+    conn.close()
+    return dict(zip(names, row))
+
+def fb2026_mark_account(account_id, **fields):
+    if not fields:
+        return
+    allowed = {"login_status","cookies_json","user_agent","last_session_check","proxy_status","session_score","last_login_at","updated_at"}
+    sets=[]; vals=[]
+    for k,v in fields.items():
+        if k in allowed:
+            sets.append(f"{k}=?"); vals.append(v)
+    if not sets:
+        return
+    vals.append(account_id)
+    conn=db(); c=conn.cursor()
+    c.execute(f"UPDATE fb2026_accounts SET {','.join(sets)} WHERE id=?", vals)
+    conn.commit(); conn.close()
+
+def fb2026_context_kwargs(row):
+    profile = row.get("browser_profile") or fb2026_profile_path(row.get("account_code"))
+    os.makedirs(profile, exist_ok=True)
+    kwargs = {
+        "user_data_dir": profile,
+        "headless": fb2026_runtime_mode().get("headless", False),
+        "viewport": {"width": 1365, "height": 900},
+        "locale": "vi-VN",
+        "args": [
+            "--disable-blink-features=AutomationControlled",
+            "--disable-dev-shm-usage",
+            "--no-sandbox",
+            "--start-maximized",
+        ],
+    }
+    proxy_cfg = fb2026_playwright_proxy(row.get("proxy"))
+    if proxy_cfg:
+        kwargs["proxy"] = proxy_cfg
+    if row.get("user_agent"):
+        kwargs["user_agent"] = row.get("user_agent")
+    return kwargs
+
+def fb2026_page_text(page):
+    try:
+        return (page.locator("body").inner_text(timeout=3000) or "")[:5000]
+    except Exception:
+        return ""
+
+def fb2026_detect_blocker(page):
+    text = fb2026_page_text(page).lower()
+    blockers = ["captcha", "checkpoint", "xác minh", "verify", "security check", "two-factor", "2-factor", "mã đăng nhập", "login code", "tạm thời bị khóa"]
+    for b in blockers:
+        if b in text:
+            return True, b
+    return False, ""
+
+def fb2026_is_logged_in(page):
+    url = (page.url or "").lower()
+    if "login" in url or "checkpoint" in url:
+        return False
+    text = fb2026_page_text(page).lower()
+    if "đăng nhập" in text and ("mật khẩu" in text or "email" in text):
+        return False
+    return "facebook.com" in url
+
+def fb2026_save_session_snapshot(context, account_id):
+    try:
+        cookies = context.cookies()
+        fb2026_mark_account(account_id, cookies_json=json.dumps(cookies, ensure_ascii=False)[:200000],
+                            login_status="Đã kết nối", session_score=100,
+                            last_session_check=fb2026_now(), last_login_at=fb2026_now(), updated_at=fb2026_now())
+    except Exception as e:
+        fb2026_log('', str(account_id), 'save_session', 'warning', str(e))
+
+def fb2026_session_check_real(account_id):
+    sync_playwright, PlaywrightTimeoutError, err = fb2026_import_playwright()
+    if err:
+        return False, f"Chưa cài Playwright: {err}"
+    row = fb2026_account_row_full(account_id)
+    if not row:
+        return False, "Không tìm thấy tài khoản."
+    try:
+        with sync_playwright() as pw:
+            context = pw.chromium.launch_persistent_context(**fb2026_context_kwargs(row))
+            page = context.pages[0] if context.pages else context.new_page()
+            page.goto("https://www.facebook.com/", wait_until="domcontentloaded", timeout=45000)
+            time.sleep(3)
+            blocked, reason = fb2026_detect_blocker(page)
+            if blocked:
+                context.close()
+                fb2026_mark_account(account_id, login_status="Cần xác minh", session_score=20, last_session_check=fb2026_now(), updated_at=fb2026_now())
+                return False, f"Facebook yêu cầu xác minh/checkpoint/captcha: {reason}. Cần khách xử lý thủ công."
+            ok = fb2026_is_logged_in(page)
+            if ok:
+                fb2026_save_session_snapshot(context, account_id)
+                msg = "Session còn hiệu lực."
+            else:
+                fb2026_mark_account(account_id, login_status="Hết phiên", session_score=0, last_session_check=fb2026_now(), updated_at=fb2026_now())
+                msg = "Chưa đăng nhập hoặc session hết hạn."
+            context.close()
+            return ok, msg
+    except Exception as e:
+        fb2026_mark_account(account_id, login_status="Lỗi Chrome", session_score=0, last_session_check=fb2026_now(), updated_at=fb2026_now())
+        return False, str(e)
+
+def fb2026_try_click(page, selectors, timeout=2500):
+    for sel in selectors:
+        try:
+            loc = page.locator(sel).first
+            loc.wait_for(state="visible", timeout=timeout)
+            loc.click(timeout=timeout)
+            return True, sel
+        except Exception:
+            continue
+    return False, ""
+
+def fb2026_try_fill_composer(page, content):
+    open_selectors = [
+        "div[role='button']:has-text('Bạn đang nghĩ gì')",
+        "div[role='button']:has-text('What\\'s on your mind')",
+        "span:has-text('Bạn đang nghĩ gì')",
+        "span:has-text('What\\'s on your mind')",
+        "div[aria-label*='Tạo bài viết']",
+        "div[aria-label*='Create post']",
+    ]
+    fb2026_try_click(page, open_selectors, timeout=4000)
+    time.sleep(2)
+    editors = [
+        "div[role='textbox'][contenteditable='true']",
+        "div[aria-label*='Bạn đang nghĩ gì'][contenteditable='true']",
+        "div[aria-label*='What\\'s on your mind'][contenteditable='true']",
+        "div[contenteditable='true']",
+    ]
+    for sel in editors:
+        try:
+            loc = page.locator(sel).last
+            loc.wait_for(state="visible", timeout=5000)
+            loc.click(timeout=3000)
+            page.keyboard.insert_text(str(content or ""))
+            return True, sel
+        except Exception:
+            continue
+    try:
+        page.keyboard.insert_text(str(content or ""))
+        return True, "keyboard_fallback"
+    except Exception as e:
+        return False, str(e)
+
+def fb2026_upload_media_playwright(page, media):
+    if not media or not media.get("file_path") or not os.path.exists(media.get("file_path")):
+        return True, "Không có media."
+    path = media.get("file_path")
+    try:
+        inputs = page.locator("input[type='file']")
+        if inputs.count() > 0:
+            inputs.first.set_input_files(path, timeout=8000)
+            time.sleep(3)
+            return True, "Đã upload media."
+    except Exception:
+        pass
+    fb2026_try_click(page, ["div[aria-label*='Ảnh/video']", "div[aria-label*='Photo/video']", "span:has-text('Ảnh/video')", "span:has-text('Photo/video')"], timeout=2500)
+    time.sleep(1)
+    try:
+        page.locator("input[type='file']").first.set_input_files(path, timeout=12000)
+        time.sleep(4)
+        return True, "Đã upload media."
+    except Exception as e:
+        return False, f"Không upload được media: {e}"
+
+def fb2026_click_post_button(page):
+    selectors = [
+        "div[aria-label='Đăng'][role='button']",
+        "div[aria-label='Post'][role='button']",
+        "div[role='button']:has-text('Đăng')",
+        "div[role='button']:has-text('Post')",
+        "span:has-text('Đăng')",
+        "span:has-text('Post')",
+    ]
+    ok, sel = fb2026_try_click(page, selectors, timeout=6000)
+    if ok:
+        time.sleep(6)
+        return True, f"Đã bấm nút đăng ({sel})."
+    return False, "Không tìm thấy nút Đăng/Post. Có thể Facebook đổi giao diện hoặc tài khoản bị hạn chế."
+
+def fb2026_post_by_playwright(account_id, destination, content, link_url='', media=None):
+    sync_playwright, PlaywrightTimeoutError, err = fb2026_import_playwright()
+    if err:
+        return False, "", f"Chưa cài Playwright/Chromium: {err}"
+    row = fb2026_account_row_full(account_id)
+    if not row:
+        return False, "", "Không tìm thấy tài khoản."
+    dest_url = destination.get("url") or "https://www.facebook.com/"
+    try:
+        with sync_playwright() as pw:
+            context = pw.chromium.launch_persistent_context(**fb2026_context_kwargs(row))
+            page = context.pages[0] if context.pages else context.new_page()
+            page.goto(dest_url, wait_until="domcontentloaded", timeout=60000)
+            time.sleep(5)
+            blocked, reason = fb2026_detect_blocker(page)
+            if blocked:
+                context.close()
+                fb2026_mark_account(account_id, login_status="Cần xác minh", session_score=20, last_session_check=fb2026_now(), updated_at=fb2026_now())
+                return False, "", f"Gặp checkpoint/captcha/xác minh ({reason}). Cần khách xử lý thủ công."
+            if not fb2026_is_logged_in(page):
+                context.close()
+                fb2026_mark_account(account_id, login_status="Hết phiên", session_score=0, last_session_check=fb2026_now(), updated_at=fb2026_now())
+                return False, "", "Session hết hạn hoặc chưa đăng nhập Facebook."
+            fb2026_save_session_snapshot(context, account_id)
+            final_text = str(content or "").strip()
+            if link_url:
+                final_text = (final_text + "\n" + str(link_url).strip()).strip()
+            ok, info = fb2026_try_fill_composer(page, final_text)
+            if not ok:
+                context.close()
+                return False, "", "Không nhập được nội dung: " + info
+            up_ok, up_msg = fb2026_upload_media_playwright(page, media)
+            if not up_ok:
+                context.close()
+                return False, "", up_msg
+            click_ok, click_msg = fb2026_click_post_button(page)
+            context.close()
+            if click_ok:
+                return True, "", click_msg + " Đã gửi thao tác đăng bằng Playwright."
+            return False, "", click_msg
+    except Exception as e:
+        return False, "", str(e)
+
+def fb2026_publish_one(account_id, final_content, destinations_raw, link_url='', media=None):
+    row = fb2026_account_row_full(account_id)
+    if not row:
+        return False, "UNKNOWN", "Không tìm thấy account."
+    account_code = row.get("account_code") or str(account_id)
+    destinations = fb2026_parse_destinations(destinations_raw, row)
+    details = []
+    ok_any = False
+    for dest in destinations:
+        if dest.get("type") == "page" and row.get("page_id") and row.get("page_token"):
+            success, post_id, msg = fb2026_graph_post(row.get("page_id"), row.get("page_token"), final_content, link_url, media)
+            details.append(f"page_api:{'OK' if success else 'FAIL'}:{msg}")
+            ok_any = ok_any or success
+            if success:
+                continue
+        success, post_id, msg = fb2026_post_by_playwright(account_id, dest, final_content, link_url, media)
+        details.append(f"{dest.get('type')}:{'OK' if success else 'FAIL'}:{msg}")
+        ok_any = ok_any or success
+        time.sleep(max(5, int(os.getenv("FB2026_DESTINATION_DELAY_SECONDS", "10"))))
+    return ok_any, account_code, " | ".join(details)[:1800]
+
+def fb2026_process_due_tasks(limit=None):
+    fb2026_init_db()
+    rt = fb2026_runtime_mode()
+    limit = int(limit or rt.get("worker_batch") or 3)
+    now = fb2026_now()
+    conn = db(); c = conn.cursor()
+    c.execute("""SELECT id,task_uid,title,content,link_url,account_ids,destinations,media_ids,media_mode,hashtag_pool,hashtag_min,hashtag_max,schedule_time,repeat_mode,retry_count,max_retry
+        FROM fb2026_tasks
+        WHERE status IN ('queued','scheduled','retry')
+          AND (schedule_time IS NULL OR schedule_time='' OR schedule_time<=?)
+        ORDER BY id ASC LIMIT ?""", (now, limit))
+    tasks = c.fetchall()
+    processed = 0
+    for t in tasks:
+        (row_id, uid, title, content, link_url, account_ids, destinations, media_ids, media_mode, hashtag_pool, hmin, hmax, schedule_time, repeat_mode, retry_count, max_retry) = t
+        c.execute("UPDATE fb2026_tasks SET status='running',updated_at=? WHERE id=? AND status IN ('queued','scheduled','retry')", (fb2026_now(), row_id))
+        conn.commit()
+        acct_ids = [int(x) for x in str(account_ids or '').replace('\n', ',').split(',') if x.strip().isdigit()]
+        if not acct_ids:
+            c.execute("UPDATE fb2026_tasks SET status='failed',result_message=?,updated_at=? WHERE id=?", ('Chưa chọn tài khoản.', fb2026_now(), row_id))
+            conn.commit()
+            processed += 1
+            continue
+        ok_count = 0
+        fail_count = 0
+        details = []
+        for acct_id in acct_ids:
+            final_content = fb2026_apply_hashtags(content, hashtag_pool, int(hmin or 0), int(hmax or 0))
+            media = fb2026_pick_media(media_ids, media_mode)
+            try:
+                success, account_code, msg = fb2026_publish_one(acct_id, final_content, destinations, link_url, media)
+            except Exception as e:
+                success = False
+                row = fb2026_account_row_full(acct_id) or {}
+                account_code = row.get("account_code") or str(acct_id)
+                msg = str(e) + "\n" + traceback.format_exc(limit=2)
+            if success:
+                ok_count += 1
+                fb2026_log(uid, account_code, 'real_worker_post', 'success', msg)
+                try:
+                    c.execute("INSERT OR IGNORE INTO fb2026_content_hashes(content_hash,content,created_at) VALUES(?,?,?)", (fb2026_hash(final_content), final_content, fb2026_now()))
+                    conn.commit()
+                except Exception:
+                    pass
+            else:
+                fail_count += 1
+                fb2026_log(uid, account_code, 'real_worker_post', 'failed', msg)
+            details.append(f"{account_code}: {'OK' if success else 'FAIL'} - {msg}")
+            time.sleep(max(0, int(rt.get("min_delay_seconds") or 60)))
+        processed += 1
+        cur_retry = int(retry_count or 0)
+        max_r = int(max_retry or FB2026_SAFE_LIMITS.get("max_retry", 3))
+        if fail_count == 0 and ok_count > 0:
+            final_status = 'success'
+        elif ok_count > 0:
+            final_status = 'partial_success'
+        else:
+            cur_retry += 1
+            final_status = 'retry' if cur_retry < max_r else 'failed'
+        next_time = fb2026_next_schedule(schedule_time, repeat_mode)
+        if final_status in ('success', 'partial_success') and next_time:
+            new_uid = 'FBT-' + uuid.uuid4().hex[:12].upper()
+            c.execute("""INSERT INTO fb2026_tasks(task_uid,title,content,link_url,account_ids,destinations,media_ids,media_mode,hashtag_pool,hashtag_min,hashtag_max,schedule_time,repeat_mode,status,max_retry,created_at,updated_at)
+                         SELECT ?,title,content,link_url,account_ids,destinations,media_ids,media_mode,hashtag_pool,hashtag_min,hashtag_max,?,repeat_mode,'scheduled',max_retry,?,? FROM fb2026_tasks WHERE id=?""",
+                      (new_uid, next_time, fb2026_now(), fb2026_now(), row_id))
+        c.execute("UPDATE fb2026_tasks SET status=?, retry_count=?, result_message=?, updated_at=? WHERE id=?", (final_status, cur_retry, '\n'.join(details)[:2500], fb2026_now(), row_id))
+        conn.commit()
+    conn.close()
+    return processed
+
+def fb2026_worker_loop_v165():
+    FB2026_WORKER_STATE["running"] = True
+    FB2026_WORKER_STATE["started_at"] = fb2026_now()
+    FB2026_WORKER_STATE["last_error"] = ""
+    while FB2026_WORKER_STATE.get("running"):
+        try:
+            FB2026_WORKER_STATE["last_tick"] = fb2026_now()
+            n = fb2026_process_due_tasks()
+            FB2026_WORKER_STATE["processed"] = int(FB2026_WORKER_STATE.get("processed") or 0) + int(n or 0)
+        except Exception as e:
+            FB2026_WORKER_STATE["last_error"] = str(e)
+            fb2026_log('', 'WORKER', 'worker_loop', 'error', str(e))
+        time.sleep(max(3, int(fb2026_runtime_mode().get("worker_interval_seconds") or 12)))
+    FB2026_WORKER_STATE["last_tick"] = fb2026_now()
+
+def fb2026_start_worker_v165():
+    th = FB2026_WORKER_STATE.get("thread")
+    if th and getattr(th, "is_alive", lambda: False)():
+        FB2026_WORKER_STATE["running"] = True
+        return False, "Worker đang chạy."
+    FB2026_WORKER_STATE["running"] = True
+    th = _fb2026_threading.Thread(target=fb2026_worker_loop_v165, daemon=True, name="fb2026-real-worker")
+    FB2026_WORKER_STATE["thread"] = th
+    th.start()
+    return True, "Đã khởi động worker nền."
+
+@app.route('/api/fb2026/worker/start', methods=['POST','GET'])
+def fb2026_worker_start_v165():
+    ok, msg = fb2026_start_worker_v165()
+    fb2026_log('', 'WORKER', 'worker_start', 'success' if ok else 'info', msg)
+    return jsonify({"ok": True, "started": ok, "message": msg, "state": {k:v for k,v in FB2026_WORKER_STATE.items() if k != "thread"}})
+
+@app.route('/api/fb2026/worker/stop', methods=['POST','GET'])
+def fb2026_worker_stop_v165():
+    FB2026_WORKER_STATE["running"] = False
+    fb2026_log('', 'WORKER', 'worker_stop', 'info', 'Đã yêu cầu dừng worker.')
+    return jsonify({"ok": True, "message": "Đã yêu cầu dừng worker.", "state": {k:v for k,v in FB2026_WORKER_STATE.items() if k != "thread"}})
+
+@app.route('/api/fb2026/worker/status', methods=['GET'])
+def fb2026_worker_status_v165():
+    th = FB2026_WORKER_STATE.get("thread")
+    alive = bool(th and getattr(th, "is_alive", lambda: False)())
+    state = {k:v for k,v in FB2026_WORKER_STATE.items() if k != "thread"}
+    state["alive"] = alive
+    state["runtime"] = fb2026_runtime_mode()
+    return jsonify({"ok": True, "state": state})
+
+@app.route('/api/fb2026/session/check-real', methods=['POST','GET'])
+def fb2026_session_check_real_api_v165():
+    data = request.get_json(silent=True) or request.values
+    account_id = str(data.get("account_id") or "").strip()
+    if not account_id:
+        return jsonify({"ok": False, "message": "Thiếu account_id."})
+    ok, msg = fb2026_session_check_real(account_id)
+    fb2026_log('', account_id, 'session_check_real', 'success' if ok else 'failed', msg)
+    return jsonify({"ok": ok, "message": msg})
+
+@app.route('/api/fb2026/post/test-real', methods=['POST'])
+def fb2026_post_test_real_api_v165():
+    data = request.get_json(silent=True) or request.form
+    account_id = str(data.get("account_id") or "").strip()
+    content = str(data.get("content") or "Test kết nối Facebook Automation.").strip()
+    destinations = data.get("destinations") or data.get("destination") or "profile"
+    if not account_id:
+        return jsonify({"ok": False, "message": "Thiếu account_id."})
+    media = None
+    media_id = str(data.get("media_id") or "").strip()
+    if media_id.isdigit():
+        conn = db(); c = conn.cursor()
+        c.execute("SELECT id,file_name,file_path,media_type,used_count FROM fb2026_media WHERE id=?", (int(media_id),))
+        r = c.fetchone(); conn.close()
+        if r:
+            media = {"id": r[0], "file_name": r[1], "file_path": r[2], "media_type": r[3], "used_count": r[4]}
+    ok, account_code, msg = fb2026_publish_one(int(account_id), content, destinations, data.get("link_url") or "", media)
+    fb2026_log('', account_code, 'post_test_real', 'success' if ok else 'failed', msg)
+    return jsonify({"ok": ok, "account": account_code, "message": msg})
+
+@app.route('/api/fb2026/tasks/retry-one', methods=['POST'])
+def fb2026_retry_one_task_v165():
+    data = request.get_json(silent=True) or request.form
+    task_uid = str(data.get("task_uid") or "").strip()
+    if not task_uid:
+        return jsonify({"ok": False, "message": "Thiếu task_uid."})
+    conn = db(); c = conn.cursor()
+    c.execute("UPDATE fb2026_tasks SET status='retry', retry_count=0, updated_at=? WHERE task_uid=? AND status IN ('failed','retry')", (fb2026_now(), task_uid))
+    changed = c.rowcount
+    conn.commit(); conn.close()
+    return jsonify({"ok": True, "changed": changed, "message": "Đã đưa task về hàng đợi retry."})
+
+MKT_V165_FB2026_REAL_WORKER_UI = r"""
+<script id="mkt-v165-fb2026-real-worker-js">
+(function(){
+  function postJSON(url, data){return fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data||{})}).then(r=>r.json());}
+  window.fb165StartWorker=function(){postJSON('/api/fb2026/worker/start',{}).then(function(j){alert(j.message||'Đã khởi động worker');}).catch(function(e){alert('Lỗi worker: '+e);});};
+  window.fb165StopWorker=function(){postJSON('/api/fb2026/worker/stop',{}).then(function(j){alert(j.message||'Đã dừng worker');}).catch(function(e){alert('Lỗi worker: '+e);});};
+  window.fb165WorkerStatus=function(){fetch('/api/fb2026/worker/status').then(r=>r.json()).then(function(j){var s=j.state||{}; alert('Worker: '+(s.alive?'ĐANG CHẠY':'ĐANG TẮT')+'\nĐã xử lý: '+(s.processed||0)+'\nTick cuối: '+(s.last_tick||'')+'\nLỗi cuối: '+(s.last_error||'Không có'));}).catch(function(e){alert('Lỗi kiểm tra worker: '+e);});};
+  window.fb165CheckRealSession=function(id){postJSON('/api/fb2026/session/check-real',{account_id:id}).then(function(j){alert((j.ok?'✅ ':'⚠️ ')+(j.message||'')); if(window.fb26LoadAccounts) window.fb26LoadAccounts();}).catch(function(e){alert('Lỗi kiểm tra session thật: '+e);});};
+  window.fb165TestRealPost=function(id){var content=prompt('Nội dung test đăng thật:', 'Test kết nối Facebook Automation.'); if(!content) return; var dest=prompt('Nơi đăng: profile, page, group:ID, page:ID hoặc url:https...', 'profile'); postJSON('/api/fb2026/post/test-real',{account_id:id,content:content,destinations:dest||'profile'}).then(function(j){alert((j.ok?'✅ ':'❌ ')+(j.message||''));}).catch(function(e){alert('Lỗi test đăng thật: '+e);});};
+  function ensureWorkerCard(){
+    if(document.getElementById('fb165WorkerCard')) return;
+    var root=document.getElementById('mktFb2026ProPanel')||document.body;
+    var div=document.createElement('div');
+    div.id='fb165WorkerCard';
+    div.className='fb2026-card';
+    div.innerHTML='<h3>⚙️ Real Worker VPS</h3><p class="fb2026-muted">Worker Playwright chạy nền trên VPS, xử lý queue, retry lỗi, log realtime. Render chỉ nên dùng giao diện/API, không nên chạy Chrome lâu dài.</p><div class="fb2026-grid3"><button class="fb2026-btn" onclick="fb165StartWorker()">▶️ Chạy Worker</button><button class="fb2026-btn" onclick="fb165StopWorker()">⏹️ Dừng Worker</button><button class="fb2026-btn" onclick="fb165WorkerStatus()">📡 Trạng thái Worker</button></div>';
+    root.appendChild(div);
+  }
+  function enhanceRealButtons(){
+    document.querySelectorAll('[data-fb2026-account-id]').forEach(function(el){
+      var id=el.getAttribute('data-fb2026-account-id'); if(!id || el.getAttribute('data-v165-real')==='1') return;
+      el.setAttribute('data-v165-real','1');
+      el.insertAdjacentHTML('beforeend','<button class="fb2026-btn" onclick="fb165CheckRealSession(\''+id+'\')">🔐 Check Session Thật</button><button class="fb2026-btn" onclick="fb165TestRealPost(\''+id+'\')">🚀 Test Đăng Thật</button>');
+    });
+  }
+  function boot(){ensureWorkerCard(); enhanceRealButtons();}
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',boot); else boot();
+  setTimeout(boot,800); setTimeout(boot,1800); setInterval(enhanceRealButtons,2500);
+})();
+</script>
+"""
+
+@app.after_request
+def mkt_v165_fb2026_real_worker_after_request(response):
+    try:
+        ctype = (response.headers.get('Content-Type') or '').lower()
+        if 'text/html' in ctype:
+            body = response.get_data(as_text=True)
+            if 'mkt-v165-fb2026-real-worker-js' not in body and '</body>' in body:
+                body = body.replace('</body>', MKT_V165_FB2026_REAL_WORKER_UI + '</body>')
+                response.set_data(body)
+                response.headers['Content-Length'] = str(len(body.encode('utf-8')))
+    except Exception as _e:
+        print('mkt_v165_fb2026_real_worker_after_request skipped:', _e)
+    return response
+
+try:
+    if fb2026_runtime_mode().get("enable_worker"):
+        fb2026_start_worker_v165()
+except Exception as _e:
+    print("FB2026 auto worker start skipped:", _e)
+
+
+
 if __name__ == "__main__":
     # Không tự tạo kho 50k content khi khởi động để tránh lỗi SQLite database is locked trên Render.
     # Khi cần kiểm tra/tạo kho content, gọi /api/content_50k_stats từ admin.
