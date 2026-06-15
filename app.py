@@ -22679,16 +22679,9 @@ MKT_V167_FB2026_VPS_READY_UI = '\n<style id="mkt-v167-fb2026-vps-ready-css">\n#f
 
 @app.after_request
 def mkt_v167_fb2026_vps_ready_after_request(response):
-    try:
-        ctype = (response.headers.get('Content-Type') or '').lower()
-        if 'text/html' in ctype:
-            body = response.get_data(as_text=True)
-            if 'mkt-v167-fb2026-vps-ready-js' not in body and '</body>' in body:
-                body = body.replace('</body>', MKT_V167_FB2026_VPS_READY_UI + '</body>')
-                response.set_data(body)
-                response.headers['Content-Length'] = str(len(body.encode('utf-8')))
-    except Exception as _e:
-        print('mkt_v167_fb2026_vps_ready_after_request skipped:', _e)
+    # V167 debug VPS/AI Doctor panel removed from customer UI.
+    # Giữ nguyên các API phía sau, chỉ không còn chèn khối hiển thị JSON:
+    # Kiểm tra VPS / Chạy Worker / AI Doctor / requirements.txt.
     return response
 
 # ============================================================
