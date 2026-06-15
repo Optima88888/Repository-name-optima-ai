@@ -22691,6 +22691,545 @@ def mkt_v167_fb2026_vps_ready_after_request(response):
         print('mkt_v167_fb2026_vps_ready_after_request skipped:', _e)
     return response
 
+# ============================================================
+# GPTMINI FACEBOOK AUTO POST CENTER - ONE PAGE CUSTOMER MODULE
+# Dán nguyên khối trước if __name__ == "__main__"
+# Chức năng: đăng nhập profile, tạo task, đăng ngay, hẹn giờ,
+# upload ảnh, chọn nhóm, xem trạng thái. Không phá menu cũ.
+# ============================================================
+
+def _mkt_fb_auto_imports():
+    import sys as _sys
+    import subprocess as _subprocess
+    from pathlib import Path as _Path
+    return _sys, _subprocess, _Path
+
+def mkt_fb_auto_root():
+    _sys, _subprocess, _Path = _mkt_fb_auto_imports()
+    env_root = os.getenv("FACEBOOK_AUTO_ROOT", "").strip()
+    candidates = []
+    if env_root:
+        candidates.append(_Path(env_root))
+    app_root = _Path(__file__).resolve().parent
+    candidates.extend([
+        app_root / "facebook_auto",
+        app_root.parent / "FacebookAutomationPro",
+        _Path.home() / "OneDrive" / "Desktop" / "FacebookAutomationPro",
+        _Path.home() / "Desktop" / "FacebookAutomationPro",
+        _Path.home() / "FacebookAutomationPro",
+    ])
+    for c in candidates:
+        try:
+            if (c / "workers" / "post_media_test.py").exists():
+                return c
+        except Exception:
+            pass
+    return app_root / "facebook_auto"
+
+def mkt_fb_auto_paths():
+    root = mkt_fb_auto_root()
+    paths = {
+        "root": root,
+        "workers": root / "workers",
+        "profiles": root / "profiles",
+        "tasks": root / "tasks",
+        "images": root / "media" / "images",
+        "groups": root / "groups",
+        "logs": root / "logs",
+    }
+    for k, p in paths.items():
+        if k != "root":
+            try:
+                p.mkdir(parents=True, exist_ok=True)
+            except Exception:
+                pass
+    return paths
+
+def mkt_fb_read_json(path, default):
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return default
+
+def mkt_fb_write_json(path, data):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+
+def mkt_fb_now():
+    return datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+def mkt_fb_status_label(st):
+    return {
+        "WAITING": "Đang hẹn giờ",
+        "READY": "Sẵn sàng đăng",
+        "RUNNING": "Đang đăng",
+        "SUCCESS": "Đã đăng",
+        "FAILED": "Bị lỗi",
+    }.get(str(st or ""), str(st or ""))
+
+def mkt_fb_safe(value):
+    return (str(value or "")
+            .replace("&", "&amp;")
+            .replace("<", "&lt;")
+            .replace(">", "&gt;")
+            .replace('"', "&quot;")
+            .replace("'", "&#39;"))
+
+def mkt_fb_profiles():
+    paths = mkt_fb_auto_paths()
+    data = []
+    if paths["profiles"].exists():
+        for p in sorted(paths["profiles"].iterdir()):
+            if p.is_dir():
+                online = (p / "Default").exists() or (p / "Local State").exists()
+                data.append({"name": p.name, "status": "ONLINE" if online else "OFFLINE"})
+    if not data:
+        data.append({"name": "FB001", "status": "OFFLINE"})
+    return data
+
+def mkt_fb_tasks():
+    paths = mkt_fb_auto_paths()
+    tasks = []
+    for f in sorted(paths["tasks"].glob("task_*.json")):
+        d = mkt_fb_read_json(f, {})
+        d["_file"] = f.name
+        tasks.append(d)
+    return tasks
+
+def mkt_fb_images(limit=120):
+    paths = mkt_fb_auto_paths()
+    exts = [".jpg", ".jpeg", ".png", ".webp"]
+    items = []
+    for f in sorted(paths["images"].rglob("*"), key=lambda x: x.stat().st_mtime if x.exists() else 0, reverse=True):
+        if f.is_file() and f.suffix.lower() in exts:
+            items.append(str(f.relative_to(paths["images"])).replace("\\", "/"))
+            if len(items) >= limit:
+                break
+    return items
+
+def mkt_fb_save_images(files):
+    paths = mkt_fb_auto_paths()
+    saved = []
+    exts = [".jpg", ".jpeg", ".png", ".webp"]
+    for f in files or []:
+        try:
+            if not f or not getattr(f, "filename", ""):
+                continue
+            name = secure_filename(f.filename)
+            if not name:
+                continue
+            ext = os.path.splitext(name)[1].lower()
+            if ext not in exts:
+                continue
+            base = os.path.splitext(name)[0]
+            final = name
+            target = paths["images"] / final
+            i = 1
+            while target.exists():
+                final = f"{base}_{i}{ext}"
+                target = paths["images"] / final
+                i += 1
+            f.save(str(target))
+            saved.append(final)
+        except Exception as e:
+            print("mkt_fb_save_images skipped:", e)
+    return saved
+
+def mkt_fb_groups():
+    paths = mkt_fb_auto_paths()
+    return mkt_fb_read_json(paths["groups"] / "groups.json", [])
+
+def mkt_fb_group_options():
+    html = ""
+    for g in mkt_fb_groups():
+        name = str(g.get("name") or g.get("group_name") or "").strip()
+        url = str(g.get("url") or g.get("group_url") or g.get("group_id") or "").strip()
+        if not name and not url:
+            continue
+        label = name or url
+        html += f"""
+        <label class="mkt-fb-check">
+          <input type="checkbox" name="target_groups" value="{mkt_fb_safe(url)}">
+          <span><b>{mkt_fb_safe(label)}</b><small>{mkt_fb_safe(url)}</small></span>
+        </label>
+        """
+    if not html:
+        html = "<div class='mkt-fb-help'>Chưa có nhóm. Vào tab Nhóm để thêm nhóm trước.</div>"
+    return html
+
+def mkt_fb_next_task_name():
+    paths = mkt_fb_auto_paths()
+    nums = []
+    for f in paths["tasks"].glob("task_*.json"):
+        try:
+            nums.append(int(f.stem.split("_")[-1]))
+        except Exception:
+            pass
+    return f"task_{(max(nums) + 1 if nums else 1):03d}.json"
+
+def mkt_fb_create_task(account, content, image_value, schedule="now", target_type="profile", target_groups=None, note=""):
+    paths = mkt_fb_auto_paths()
+    target_groups = target_groups or []
+    schedule = schedule or "now"
+    status = "READY" if schedule == "now" else "WAITING"
+    task_name = mkt_fb_next_task_name()
+    task = {
+        "account": account or "FB001",
+        "content": content,
+        "image": image_value,
+        "images": [x.strip() for x in str(image_value or "").replace(";", ",").split(",") if x.strip()],
+        "schedule": schedule,
+        "target_type": target_type or "profile",
+        "target_groups": target_groups,
+        "post_mode": "auto",
+        "note": note,
+        "status": status,
+        "created_from": "gptmini_facebook_auto_center",
+        "created_at": mkt_fb_now()
+    }
+    mkt_fb_write_json(paths["tasks"] / task_name, task)
+    return task_name
+
+def mkt_fb_run_worker():
+    _sys, _subprocess, _Path = _mkt_fb_auto_imports()
+    paths = mkt_fb_auto_paths()
+    worker = paths["workers"] / "post_media_test.py"
+    if not worker.exists():
+        return False, f"Không tìm thấy worker: {worker}"
+    try:
+        flags = getattr(_subprocess, "CREATE_NEW_CONSOLE", 0)
+        _subprocess.Popen([_sys.executable, str(worker)], cwd=str(paths["root"]), creationflags=flags)
+        return True, "Đã mở worker đăng bài."
+    except Exception as e:
+        return False, str(e)
+
+def mkt_fb_open_profile(account):
+    _sys, _subprocess, _Path = _mkt_fb_auto_imports()
+    paths = mkt_fb_auto_paths()
+    profile_path = paths["profiles"] / (account or "FB001")
+    profile_path.mkdir(parents=True, exist_ok=True)
+    temp_file = paths["root"] / "open_fb_profile_temp.py"
+    code = f"""
+from playwright.sync_api import sync_playwright
+profile = r"{str(profile_path)}"
+with sync_playwright() as p:
+    context = p.chromium.launch_persistent_context(user_data_dir=profile, headless=False, viewport={{"width": 1280, "height": 900}})
+    page = context.pages[0] if context.pages else context.new_page()
+    page.goto("https://www.facebook.com", wait_until="domcontentloaded", timeout=60000)
+    page.wait_for_timeout(5000)
+    print("Da mo Facebook. Dang nhap xong thi nhan Enter de luu session...")
+    input("Nhan Enter de dong Chrome va luu session...")
+    context.close()
+"""
+    temp_file.write_text(code, encoding="utf-8")
+    try:
+        flags = getattr(_subprocess, "CREATE_NEW_CONSOLE", 0)
+        _subprocess.Popen([_sys.executable, str(temp_file)], cwd=str(paths["root"]), creationflags=flags)
+        return True
+    except Exception as e:
+        print("mkt_fb_open_profile error:", e)
+        return False
+
+MKT_FB_AUTO_CSS = """
+<style>
+.mkt-fb-page{max-width:1180px;margin:0 auto;padding:18px}
+.mkt-fb-hero{border-radius:28px;padding:26px;background:linear-gradient(135deg,#2563eb,#7c3aed);color:white;box-shadow:0 22px 55px rgba(37,99,235,.24)}
+.mkt-fb-hero h1{margin:0 0 8px;font-size:34px}
+.mkt-fb-hero p{margin:0;color:#e0e7ff;font-weight:800}
+.mkt-fb-card{background:#fff;border:1px solid #dbeafe;border-radius:24px;padding:22px;margin-top:18px;box-shadow:0 18px 45px rgba(15,23,42,.08);color:#0f172a}
+.mkt-fb-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.mkt-fb-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.mkt-fb-card label{font-weight:900;display:block;margin:10px 0 6px}
+.mkt-fb-card input,.mkt-fb-card select,.mkt-fb-card textarea{width:100%;box-sizing:border-box;border:1px solid #cbd5e1;border-radius:16px;padding:13px;font-size:15px;background:#fff;color:#0f172a}
+.mkt-fb-actions{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px}
+.mkt-fb-btn{border:0;border-radius:18px;padding:15px 18px;font-weight:1000;color:white;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:8px;cursor:pointer}
+.mkt-fb-now{background:linear-gradient(135deg,#16a34a,#22c55e)}
+.mkt-fb-schedule{background:linear-gradient(135deg,#f59e0b,#f97316)}
+.mkt-fb-blue{background:linear-gradient(135deg,#2563eb,#7c3aed)}
+.mkt-fb-muted{background:#eef2ff;color:#3730a3}
+.mkt-fb-targets{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.mkt-fb-radio{border:1px solid #cbd5e1;border-radius:16px;padding:13px;background:#f8fafc;font-weight:900}
+.mkt-fb-radio input{width:auto;margin-right:8px}
+.mkt-fb-groups{max-height:230px;overflow:auto;background:#f8fafc;border:1px solid #dbeafe;border-radius:16px;padding:10px}
+.mkt-fb-check{display:flex!important;gap:10px;align-items:flex-start;background:white;border:1px solid #e5e7eb;border-radius:14px;padding:10px;margin:7px 0!important}
+.mkt-fb-check input{width:auto!important;margin-top:3px}
+.mkt-fb-check small{display:block;color:#64748b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:420px}
+.mkt-fb-help{background:#eff6ff;border:1px dashed #93c5fd;border-radius:16px;padding:14px;color:#1e3a8a;font-weight:800}
+.mkt-fb-notice{background:#ecfdf5;color:#166534;border:1px solid #bbf7d0;border-radius:16px;padding:12px;margin-top:14px;font-weight:900}
+.mkt-fb-images{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;max-height:360px;overflow:auto;border:1px solid #dbeafe;background:#f8fafc;border-radius:16px;padding:10px}
+.mkt-fb-image{position:relative;background:white;border:1px solid #e5e7eb;border-radius:14px;padding:8px;overflow:hidden}
+.mkt-fb-image input{position:absolute;top:8px;left:8px;width:auto!important;z-index:3}
+.mkt-fb-image img{width:100%;height:90px;object-fit:cover;border-radius:11px;display:block}
+.mkt-fb-image span{display:block;font-size:11px;color:#475569;margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mkt-fb-table{width:100%;border-collapse:collapse;margin-top:12px;background:white;border-radius:16px;overflow:hidden}
+.mkt-fb-table th,.mkt-fb-table td{padding:12px;border-bottom:1px solid #e5e7eb;text-align:left;font-size:14px}
+.mkt-fb-table th{background:#f8fafc}
+.mkt-fb-badge{display:inline-block;padding:6px 10px;border-radius:999px;font-weight:1000;font-size:12px;background:#dbeafe;color:#1d4ed8}
+.mkt-fb-badge.SUCCESS{background:#dcfce7;color:#166534}.mkt-fb-badge.FAILED{background:#fee2e2;color:#991b1b}.mkt-fb-badge.WAITING{background:#fef3c7;color:#92400e}.mkt-fb-badge.RUNNING{background:#ede9fe;color:#6d28d9}
+.mkt-fb-mobile-menu{display:none}
+@media(max-width:760px){
+  .mkt-fb-page{padding:12px 10px 90px}
+  .mkt-fb-hero h1{font-size:25px}
+  .mkt-fb-grid,.mkt-fb-row,.mkt-fb-actions,.mkt-fb-targets{grid-template-columns:1fr}
+  .mkt-fb-images{grid-template-columns:repeat(2,1fr);max-height:280px}
+  .mkt-fb-mobile-menu{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);z-index:999999;display:flex;gap:8px;padding:9px;border-radius:999px;background:rgba(15,23,42,.94);border:1px solid rgba(147,197,253,.35);box-shadow:0 18px 45px rgba(0,0,0,.35);backdrop-filter:blur(14px)}
+  .mkt-fb-mobile-menu a{width:46px;height:46px;border-radius:999px;display:flex;align-items:center;justify-content:center;text-decoration:none;color:white;font-size:20px;font-weight:1000;background:linear-gradient(135deg,#2563eb,#7c3aed)}
+}
+</style>
+"""
+
+@app.route("/facebook-auto", methods=["GET", "POST"])
+def mkt_facebook_auto_center():
+    msg = ""
+    if request.method == "POST":
+        account = (request.form.get("account") or "FB001").strip()
+        content = (request.form.get("content") or "").strip()
+        target_type = (request.form.get("target_type") or "profile").strip()
+        target_groups = request.form.getlist("target_groups")
+        schedule = (request.form.get("schedule") or "now").strip()
+        action = (request.form.get("action") or "now").strip()
+        note = (request.form.get("note") or "").strip()
+        uploaded = mkt_fb_save_images(request.files.getlist("upload_images"))
+        selected = request.form.getlist("selected_images")
+        manual = (request.form.get("image") or "").strip()
+        images = []
+        for item in selected + uploaded:
+            item = str(item).strip()
+            if item and item not in images:
+                images.append(item)
+        for item in manual.replace(";", ",").split(","):
+            item = item.strip()
+            if item and item not in images:
+                images.append(item)
+        image_value = ",".join(images)
+        if action == "now":
+            schedule = "now"
+        if not content:
+            msg = "Bạn cần nhập nội dung bài viết."
+        elif target_type == "groups" and not target_groups:
+            msg = "Bạn đã chọn đăng nhóm nhưng chưa tick nhóm nào."
+        else:
+            task_name = mkt_fb_create_task(account, content, image_value, schedule, target_type, target_groups, note)
+            if action == "now":
+                ok, detail = mkt_fb_run_worker()
+                msg = f"Đã tạo {task_name}. {detail}"
+            else:
+                msg = f"Đã lưu lịch {task_name}. Bài nằm trong hàng đợi hẹn giờ."
+
+    profiles = mkt_fb_profiles()
+    opts = "".join([f"<option value='{mkt_fb_safe(p['name'])}'>{mkt_fb_safe(p['name'])} - {mkt_fb_safe(p['status'])}</option>" for p in profiles])
+    cards = ""
+    for img in mkt_fb_images():
+        safe = mkt_fb_safe(img)
+        cards += f"<label class='mkt-fb-image'><input type='checkbox' name='selected_images' value='{safe}'><img src='/facebook-auto-media/{safe}'><span>{safe}</span></label>"
+    if not cards:
+        cards = "<div class='mkt-fb-help'>Chưa có ảnh trong kho. Bạn có thể upload ảnh mới.</div>"
+
+    html = MKT_FB_AUTO_CSS + """
+    <div class="mkt-fb-page">
+      <div class="mkt-fb-hero">
+        <h1>Facebook Auto Post Center</h1>
+        <p>Một màn hình duy nhất: đăng nhập Facebook, chọn nơi đăng, nhập nội dung, chọn ảnh, đăng ngay hoặc hẹn giờ.</p>
+      </div>
+      {% if msg %}<div class="mkt-fb-notice">{{msg}}</div>{% endif %}
+
+      <div class="mkt-fb-card">
+        <h2>🔐 Đăng nhập Facebook</h2>
+        <p>Chỉ cần làm 1 lần cho mỗi tài khoản. Sau khi Online, khách có thể đăng bài ngay.</p>
+        <form method="post" action="/facebook-auto-open-profile" class="mkt-fb-row">
+          <select name="account">{{opts|safe}}</select>
+          <button class="mkt-fb-btn mkt-fb-blue">Mở Facebook để đăng nhập</button>
+        </form>
+      </div>
+
+      <form method="post" enctype="multipart/form-data" class="mkt-fb-card">
+        <h2>🚀 Đăng bài / Hẹn giờ</h2>
+        <div class="mkt-fb-grid">
+          <div>
+            <label>Tài khoản Facebook</label>
+            <select name="account">{{opts|safe}}</select>
+
+            <label>Nơi đăng</label>
+            <div class="mkt-fb-targets">
+              <label class="mkt-fb-radio"><input type="radio" name="target_type" value="profile" checked> Trang cá nhân</label>
+              <label class="mkt-fb-radio"><input type="radio" name="target_type" value="groups"> Nhóm đã chọn</label>
+            </div>
+
+            <label>Chọn nhóm nếu đăng vào Group</label>
+            <div class="mkt-fb-groups">{{groups|safe}}</div>
+
+            <label>Nội dung bài viết</label>
+            <textarea name="content" rows="9" placeholder="Nhập nội dung bài viết..."></textarea>
+
+            <div class="mkt-fb-row">
+              <div>
+                <label>Hẹn giờ</label>
+                <select name="schedule">
+                  <option value="now">Đăng ngay</option>
+                  <option value="30min">Sau 30 phút</option>
+                  <option value="1h">Sau 1 giờ</option>
+                  <option value="2h">Sau 2 giờ</option>
+                  <option value="3h">Sau 3 giờ</option>
+                </select>
+              </div>
+              <div>
+                <label>Ghi chú</label>
+                <input name="note" placeholder="VD: chiến dịch hôm nay">
+              </div>
+            </div>
+
+            <div class="mkt-fb-actions">
+              <button class="mkt-fb-btn mkt-fb-now" type="submit" name="action" value="now">🚀 ĐĂNG NGAY</button>
+              <button class="mkt-fb-btn mkt-fb-schedule" type="submit" name="action" value="schedule">⏰ LƯU LỊCH</button>
+            </div>
+          </div>
+
+          <div>
+            <label>Upload ảnh mới</label>
+            <input type="file" name="upload_images" accept="image/*" multiple>
+            <label>Hoặc nhập tên ảnh thủ công</label>
+            <input name="image" placeholder="vd: 17.png hoặc a.jpg,b.jpg">
+            <label>Chọn ảnh có sẵn</label>
+            <div class="mkt-fb-images">{{cards|safe}}</div>
+          </div>
+        </div>
+      </form>
+
+      <div class="mkt-fb-card">
+        <h2>📊 Trạng thái gần đây</h2>
+        <a class="mkt-fb-btn mkt-fb-blue" href="/facebook-auto-status">Xem toàn bộ trạng thái</a>
+        <a class="mkt-fb-btn mkt-fb-muted" href="/">Về Dashboard</a>
+      </div>
+    </div>
+
+    <div class="mkt-fb-mobile-menu">
+      <a href="/facebook-auto" title="Đăng bài">📝</a>
+      <a href="/facebook-auto-status" title="Trạng thái">📊</a>
+      <a href="/facebook-auto-groups" title="Nhóm">👥</a>
+      <a href="/" title="Trang chủ">🏠</a>
+    </div>
+    """
+    return render_template_string(html, msg=msg, opts=opts, cards=cards, groups=mkt_fb_group_options())
+
+@app.route("/facebook-auto-open-profile", methods=["POST"])
+def mkt_facebook_auto_open_profile():
+    from flask import redirect as _redirect
+    account = (request.form.get("account") or "FB001").strip()
+    mkt_fb_open_profile(account)
+    return _redirect("/facebook-auto")
+
+@app.route("/facebook-auto-run")
+def mkt_facebook_auto_run():
+    from flask import redirect as _redirect
+    mkt_fb_run_worker()
+    return _redirect("/facebook-auto-status")
+
+@app.route("/facebook-auto-status")
+def mkt_facebook_auto_status():
+    rows = ""
+    for t in mkt_fb_tasks():
+        st = str(t.get("status", ""))
+        rows += f"""
+        <tr>
+          <td>{mkt_fb_safe(t.get('_file'))}</td>
+          <td>{mkt_fb_safe(t.get('account'))}</td>
+          <td>{mkt_fb_safe(t.get('target_type','profile'))}</td>
+          <td>{mkt_fb_safe(t.get('content'))[:120]}</td>
+          <td>{mkt_fb_safe(t.get('image'))}</td>
+          <td><span class="mkt-fb-badge {mkt_fb_safe(st)}">{mkt_fb_safe(mkt_fb_status_label(st))}</span></td>
+          <td><a class="mkt-fb-btn mkt-fb-blue" href="/facebook-auto-run">Chạy đăng</a></td>
+        </tr>
+        """
+    html = MKT_FB_AUTO_CSS + f"""
+    <div class="mkt-fb-page">
+      <div class="mkt-fb-hero"><h1>Trạng thái đăng bài Facebook</h1><p>Theo dõi bài đang chờ, đang đăng, đã đăng và lỗi.</p></div>
+      <div class="mkt-fb-card">
+        <a class="mkt-fb-btn mkt-fb-now" href="/facebook-auto">+ Tạo bài mới</a>
+        <a class="mkt-fb-btn mkt-fb-blue" href="/facebook-auto-run">🚀 Đăng tất cả bài sẵn sàng</a>
+        <table class="mkt-fb-table">
+          <tr><th>File</th><th>Account</th><th>Nơi đăng</th><th>Nội dung</th><th>Ảnh</th><th>Trạng thái</th><th>Hành động</th></tr>
+          {rows}
+        </table>
+      </div>
+    </div>
+    """
+    return render_template_string(html)
+
+@app.route("/facebook-auto-groups", methods=["GET", "POST"])
+def mkt_facebook_auto_groups():
+    if request.method == "POST":
+        paths = mkt_fb_auto_paths()
+        data = mkt_fb_groups()
+        data.append({
+            "name": (request.form.get("name") or "").strip(),
+            "url": (request.form.get("url") or "").strip(),
+            "note": (request.form.get("note") or "").strip(),
+            "created_at": mkt_fb_now()
+        })
+        mkt_fb_write_json(paths["groups"] / "groups.json", data)
+    rows = ""
+    for g in mkt_fb_groups():
+        rows += f"<tr><td>{mkt_fb_safe(g.get('name'))}</td><td>{mkt_fb_safe(g.get('url'))}</td><td>{mkt_fb_safe(g.get('note'))}</td></tr>"
+    html = MKT_FB_AUTO_CSS + f"""
+    <div class="mkt-fb-page">
+      <div class="mkt-fb-hero"><h1>Nhóm Facebook</h1><p>Lưu nhóm để khách tick chọn khi đăng bài.</p></div>
+      <form class="mkt-fb-card" method="post">
+        <div class="mkt-fb-row">
+          <input name="name" placeholder="Tên nhóm">
+          <input name="url" placeholder="Link nhóm hoặc UID nhóm">
+        </div>
+        <input name="note" placeholder="Ghi chú">
+        <button class="mkt-fb-btn mkt-fb-now">Lưu nhóm</button>
+        <a class="mkt-fb-btn mkt-fb-blue" href="/facebook-auto">Quay lại đăng bài</a>
+      </form>
+      <div class="mkt-fb-card">
+        <table class="mkt-fb-table"><tr><th>Tên nhóm</th><th>URL/UID</th><th>Ghi chú</th></tr>{rows}</table>
+      </div>
+    </div>
+    """
+    return render_template_string(html)
+
+@app.route("/facebook-auto-media/<path:filename>")
+def mkt_facebook_auto_media(filename):
+    from flask import send_from_directory
+    paths = mkt_fb_auto_paths()
+    return send_from_directory(str(paths["images"]), filename)
+
+@app.route("/api/facebook-auto/status")
+def mkt_facebook_auto_api_status():
+    return jsonify({"ok": True, "root": str(mkt_fb_auto_root()), "tasks": mkt_fb_tasks()})
+
+MKT_FB_AUTO_MENU_INJECTION = """
+<style id="mkt-fb-auto-menu-injection-css">
+@media(max-width:760px){
+  .mkt-fb-auto-floating{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);z-index:999999;display:flex;gap:8px;padding:9px;border-radius:999px;background:rgba(15,23,42,.94);border:1px solid rgba(147,197,253,.35);box-shadow:0 18px 45px rgba(0,0,0,.35);backdrop-filter:blur(14px)}
+  .mkt-fb-auto-floating a{width:46px;height:46px;border-radius:999px;display:flex;align-items:center;justify-content:center;text-decoration:none;color:white;font-size:20px;font-weight:1000;background:linear-gradient(135deg,#2563eb,#7c3aed)}
+}
+@media(min-width:761px){.mkt-fb-auto-floating{display:none}}
+</style>
+<div class="mkt-fb-auto-floating">
+  <a href="/facebook-auto" title="Đăng bài Facebook">📝</a>
+  <a href="/facebook-auto-status" title="Trạng thái">📊</a>
+  <a href="/facebook-auto-groups" title="Nhóm">👥</a>
+  <a href="/" title="Trang chủ">🏠</a>
+</div>
+"""
+
+@app.after_request
+def mkt_fb_auto_menu_after_request(response):
+    try:
+        ctype = (response.headers.get("Content-Type") or "").lower()
+        if "text/html" in ctype:
+            body = response.get_data(as_text=True)
+            if "mkt-fb-auto-menu-injection-css" not in body and "</body>" in body:
+                body = body.replace("</body>", MKT_FB_AUTO_MENU_INJECTION + "</body>")
+                response.set_data(body)
+                response.headers["Content-Length"] = str(len(body.encode("utf-8")))
+    except Exception as e:
+        print("mkt_fb_auto_menu_after_request skipped:", e)
+    return response
+# =================== END GPTMINI FACEBOOK AUTO POST CENTER ===================
+
 
 if __name__ == "__main__":
     # Không tự tạo kho 50k content khi khởi động để tránh lỗi SQLite database is locked trên Render.
