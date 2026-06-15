@@ -23826,6 +23826,49 @@ def mkt_v216_facebook_publish_center_after_request(response):
     return response
 
 
+# ============================================================
+# V217 - Facebook Worker Download Center
+# Giữ nguyên giao diện/menu cũ. Chỉ bổ sung gói tải Worker để khách chạy đăng thật trên PC.
+# ============================================================
+
+@app.route("/download/facebook-worker.zip")
+def mkt_v217_download_facebook_worker_zip():
+    import zipfile
+    import io as _io
+    mem = _io.BytesIO()
+    readme = 'FACEBOOK WORKER - GPTMINI / MARKETING AUTOMATION PRO\n\nMỤC ĐÍCH\n- Render/Web chỉ tạo task đăng bài.\n- Máy tính khách chạy Worker để đăng Facebook thật bằng Chrome/profile đã đăng nhập.\n- Cách này ổn định hơn, tránh Render bị thiếu Chrome/profile/cookie Facebook.\n\nCÁCH DÙNG NHANH\n1. Giải nén file này vào đúng thư mục dự án FB_POSTER_PRO.\n2. Đảm bảo trong thư mục có sẵn:\n   - app.py\n   - tasks\\\n   - media\\\n   - profiles\\\n   - workers\\post_media_test.py\n   - workers\\queue_engine.py\n3. Bấm đúp START_FACEBOOK_WORKER.bat.\n4. Mở web, vào Facebook cá nhân, tạo task đăng ngay hoặc hẹn giờ.\n5. Worker sẽ tự quét task READY/WAITING và xử lý.\n\nLƯU Ý\n- Nếu dùng Render cho khách, khách vẫn cần chạy Worker trên máy có đăng nhập Facebook.\n- Không cần mở CMD thủ công nếu dùng file START_FACEBOOK_WORKER.bat.\n- Lần đầu nên test bằng nội dung mới, tránh Facebook chặn trùng nội dung.\n'
+    bat = '@echo off\nchcp 65001 >nul\ntitle GPTMini Facebook Worker\ncolor 0A\n\necho =====================================================\necho        GPTMini Facebook Worker - Dang Facebook that\necho =====================================================\necho.\ncd /d "%~dp0"\n\nif not exist workers mkdir workers\nif not exist tasks mkdir tasks\nif not exist media mkdir media\nif not exist profiles mkdir profiles\nif not exist logs mkdir logs\n\nwhere py >nul 2>nul\nif errorlevel 1 (\n  echo Khong tim thay Python launcher py.\n  echo Hay cai Python truoc, hoac chay bang python workers\\worker.py\n  pause\n  exit /b\n)\n\necho Dang cai/kiem tra thu vien co ban...\npy -m pip install -r requirements_worker.txt\n\necho.\necho Dang khoi dong worker. De cua so nay mo trong luc dang bai.\necho Bam CTRL + C neu muon dung.\necho.\npy workers\\worker.py\npause\n'
+    requirements = "playwright\nrequests\npython-dotenv\n"
+    worker_py = 'import os\nimport time\nimport subprocess\nimport sys\nfrom pathlib import Path\n\nROOT = Path(__file__).resolve().parent.parent\nWORKERS = ROOT / "workers"\nQUEUE = WORKERS / "queue_engine.py"\nPOST = WORKERS / "post_media_test.py"\nLOGS = ROOT / "logs"\nLOGS.mkdir(exist_ok=True)\n\nprint("=" * 58)\nprint("GPTMini Facebook Worker V217")\nprint("Root:", ROOT)\nprint("=" * 58)\n\ndef run_py(path):\n    if not path.exists():\n        print("CHUA THAY FILE:", path)\n        return 1\n    print("\\n>>> RUN:", path.name)\n    try:\n        return subprocess.call([sys.executable, str(path)], cwd=str(ROOT))\n    except KeyboardInterrupt:\n        raise\n    except Exception as e:\n        print("LOI CHAY", path.name, e)\n        return 1\n\nwhile True:\n    try:\n        run_py(QUEUE)\n        run_py(POST)\n        print("\\nWorker nghi 10 giay roi quet tiep...")\n        time.sleep(10)\n    except KeyboardInterrupt:\n        print("\\nDa dung worker.")\n        break\n'
+    with zipfile.ZipFile(mem, "w", zipfile.ZIP_DEFLATED) as z:
+        z.writestr("HUONG_DAN_SU_DUNG.txt", readme)
+        z.writestr("START_FACEBOOK_WORKER.bat", bat)
+        z.writestr("requirements_worker.txt", requirements)
+        z.writestr("workers/worker.py", worker_py)
+        z.writestr("tasks/.keep", "")
+        z.writestr("media/.keep", "")
+        z.writestr("profiles/.keep", "")
+        z.writestr("logs/.keep", "")
+    mem.seek(0)
+    return send_file(mem, mimetype="application/zip", as_attachment=True, download_name="GPTMini_Facebook_Worker_V217.zip")
+
+MKT_V217_FACEBOOK_WORKER_DOWNLOAD_UI = '\n<style id="mkt-v217-worker-download-css">\n#mktV217WorkerBox{margin-top:16px;border-radius:22px;padding:16px;background:linear-gradient(135deg,#ecfeff,#eff6ff,#f5f3ff);border:1px solid rgba(96,165,250,.45);box-shadow:0 16px 40px rgba(37,99,235,.12)}\n#mktV217WorkerBox h4{margin:0 0 8px;color:#0f172a;font-size:17px;font-weight:1000}\n#mktV217WorkerBox p{margin:5px 0;color:#475569;font-weight:800;line-height:1.45}\n#mktV217WorkerBox .mkt-v217-worker-steps{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:12px 0}\n#mktV217WorkerBox .mkt-v217-step{border-radius:16px;background:rgba(255,255,255,.9);border:1px solid #dbeafe;padding:10px;font-weight:900;color:#1e293b;font-size:12.5px}\n#mktV217WorkerBox .mkt-v217-download{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:0;border-radius:999px;padding:12px 18px;color:#fff;font-weight:1000;text-decoration:none;background:linear-gradient(135deg,#16a34a,#22c55e);box-shadow:0 14px 30px rgba(34,197,94,.22)}\n#mktV217WorkerBox .mkt-v217-note{margin-top:10px;border-radius:14px;background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;padding:10px;font-weight:900;font-size:13px}\n@media(max-width:900px){#mktV217WorkerBox .mkt-v217-worker-steps{grid-template-columns:1fr}}\n</style>\n<script id="mkt-v217-worker-download-js">\n(function(){\n  if(window.__mktV217WorkerDownloadLoaded) return; window.__mktV217WorkerDownloadLoaded=true;\n  function qs(s,r){return (r||document).querySelector(s)}\n  function addBox(){\n    var panel=qs(\'#facebook_personal[data-v216="1"] [data-panel="worker"] .mkt-v216-card\');\n    if(!panel || qs(\'#mktV217WorkerBox\')) return;\n    var div=document.createElement(\'div\');\n    div.id=\'mktV217WorkerBox\';\n    div.innerHTML=\'<h4>⬇ Cài Facebook Worker cho khách dùng thật</h4><p>Khách không cần gõ CMD. Chỉ tải gói Worker, giải nén và bấm <b>START_FACEBOOK_WORKER.bat</b>.</p><div class="mkt-v217-worker-steps"><div class="mkt-v217-step">1. Tải Worker</div><div class="mkt-v217-step">2. Giải nén vào FB_POSTER_PRO</div><div class="mkt-v217-step">3. Bấm START</div><div class="mkt-v217-step">4. Web tạo task, PC tự đăng</div></div><a class="mkt-v217-download" href="/download/facebook-worker.zip" target="_blank">⬇ Tải Facebook Worker V217</a><div class="mkt-v217-note">Render chỉ tạo task. Muốn đăng Facebook thật ổn định, máy khách phải mở Worker trên PC đã đăng nhập Facebook.</div>\';\n    panel.appendChild(div);\n  }\n  function patchText(){\n    var pills=document.querySelectorAll(\'.mkt-v216-pill.warn\');\n    pills.forEach(function(p){ if((p.textContent||\'\').indexOf(\'Render\')>-1 || (p.textContent||\'\').indexOf(\'worker\')>-1){ p.innerHTML=\'⚠️ Tải Facebook Worker V217 để khách bấm 1 lần và đăng thật\'; }});\n  }\n  document.addEventListener(\'click\',function(){setTimeout(function(){addBox();patchText()},200)},true);\n  if(document.readyState===\'loading\')document.addEventListener(\'DOMContentLoaded\',function(){setTimeout(addBox,800);setTimeout(patchText,800)}); else {setTimeout(addBox,800);setTimeout(patchText,800)}\n  setInterval(function(){addBox();patchText()},2500);\n})();\n</script>\n'
+
+@app.after_request
+def mkt_v217_worker_download_ui_after_request(response):
+    try:
+        ctype = (response.headers.get("Content-Type") or "").lower()
+        if "text/html" in ctype:
+            body = response.get_data(as_text=True)
+            if "mkt-v217-worker-download-js" not in body and "</body>" in body:
+                body = body.replace("</body>", MKT_V217_FACEBOOK_WORKER_DOWNLOAD_UI + "</body>")
+                response.set_data(body)
+                response.headers["Content-Length"] = str(len(body.encode("utf-8")))
+    except Exception as _e:
+        print("mkt_v217_worker_download_ui_after_request skipped:", _e)
+    return response
+
+
 if __name__ == "__main__":
     # Không tự tạo kho 50k content khi khởi động để tránh lỗi SQLite database is locked trên Render.
     # Khi cần kiểm tra/tạo kho content, gọi /api/content_50k_stats từ admin.
