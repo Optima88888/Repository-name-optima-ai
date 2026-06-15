@@ -1,4 +1,99 @@
-aortant;align-items:center!important;justify-content:center!important;font-size:0!important;}
+from flask import Flask, request, render_template_string, jsonify, send_file, session, redirect
+from dotenv import load_dotenv
+import google.generativeai as genai
+from werkzeug.utils import secure_filename
+import os
+import json
+import requests
+import sqlite3
+import datetime
+import threading
+import time
+import tempfile
+import csv
+import random
+import io
+import shutil
+
+try:
+    import openpyxl
+except Exception:
+    openpyxl = None
+
+load_dotenv()
+
+APP_TITLE = "Gptmini-Trợ Lý AI Marketing Đa Kênh"
+DB = "marketing_automation_pro_v11.db"
+UPLOAD_DIR = "uploads"
+REPORT_DIR = "reports"
+BACKUP_DIR = "backups"
+
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+os.makedirs(REPORT_DIR, exist_ok=True)
+os.makedirs(BACKUP_DIR, exist_ok=True)
+
+app = Flask(__name__)
+app.config["MAX_CONTENT_LENGTH"] = 100 * 1024 * 1024
+app.secret_key = os.getenv("SECRET_KEY", "gptmini-change-this-secret-key")
+# Giữ phiên đăng nhập admin ổn định khi bấm Duyệt trên Render / domain HTTPS.
+app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+app.config["SESSION_COOKIE_HTTPONLY"] = True
+if os.getenv("FLASK_ENV", "production").lower() == "production":
+    app.config["SESSION_COOKIE_SECURE"] = True
+
+ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "GptMini@2026")
+ADMIN_ACTION_TOKEN = os.getenv("ADMIN_ACTION_TOKEN", ADMIN_PASSWORD)
+
+def admin_action_token_ok():
+    token = (request.form.get("admin_token") or request.args.get("admin_token") or request.headers.get("X-Admin-Token") or "").strip()
+    return bool(token and token == ADMIN_ACTION_TOKEN)
+
+def admin_login_html(error=""):
+    err = f"<div class='err'>{error}</div>" if error else ""
+    return f"""
+<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Đăng nhập Web Admin</title>
+<style>
+body{{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;font-family:system-ui;background:linear-gradient(135deg,#020617,#1e1b4b,#312e81);color:#0f172a;padding:18px}}
+.box{{width:min(440px,94vw);background:#fff;border:1px solid #c7d2fe;border-radius:28px;padding:28px;box-shadow:0 35px 100px rgba(0,0,0,.35)}}
+h1{{margin:0 0 8px;font-size:28px;color:#1e1b4b}}p{{margin:0 0 20px;color:#64748b;font-weight:700;line-height:1.5}}
+input{{width:100%;box-sizing:border-box;padding:15px;border:1px solid #cbd5e1;border-radius:16px;font-size:16px;outline:none}}
+button{{width:100%;margin-top:14px;border:0;border-radius:16px;padding:15px;font-weight:1000;color:white;background:linear-gradient(135deg,#2563eb,#7c3aed);cursor:pointer;box-shadow:0 16px 35px rgba(37,99,235,.25)}}
+a{{display:block;text-align:center;margin-top:14px;color:#4f46e5;text-decoration:none;font-weight:900}}.err{{background:#fee2e2;color:#991b1b;border:1px solid #fecaca;border-radius:14px;padding:10px;margin-bottom:12px;font-weight:800}}
+</style>
+
+<style id="mkt-v179-brand-svg-logos">
+/* V179 - Brand SVG logos + Premium CTA wording (admin login only) */
+.mkt-brand-logo{{display:inline-flex!important;align-items:center!important;justify-content:center!important;width:24px!important;height:24px!important;min-width:24px!important;border-radius:999px!important;margin-right:10px!important;vertical-align:middle!important;box-shadow:0 8px 18px rgba(15,23,42,.10)!important;background:#fff!important;overflow:hidden!important}}
+.mkt-brand-logo svg{{width:100%!important;height:100%!important;display:block!important}}
+.v2-nav-text{{display:inline-flex!important;align-items:center!important;gap:0!important;line-height:1.15!important}}
+.mkt-channel-strip{{display:flex!important;align-items:center!important;gap:12px!important;flex-wrap:wrap!important;margin:18px 0 22px!important;padding:12px 16px!important;border:1px solid rgba(24,119,242,.14)!important;background:rgba(255,255,255,.82)!important;box-shadow:0 16px 36px rgba(15,23,42,.08)!important;border-radius:999px!important;backdrop-filter:blur(14px)!important}}
+.mkt-channel-pill{{display:inline-flex!important;align-items:center!important;font-weight:1000!important;color:#0f172a!important;font-size:14px!important;white-space:nowrap!important}}
+.mkt-cta-note-v177{{color:#92400e!important;font-weight:1000!important;line-height:1.45!important;background:linear-gradient(135deg,rgba(255,251,235,.98),rgba(254,243,199,.92))!important;border:1px solid rgba(245,158,11,.28)!important;border-radius:16px!important;padding:10px 12px!important;box-shadow:0 10px 26px rgba(245,158,11,.12)!important}}
+.mkt-cta-note-v177 .mkt-cta-main{{display:block!important;color:#0f172a!important;font-weight:1000!important}}
+.mkt-cta-note-v177 .mkt-cta-sub{{display:block!important;color:#b45309!important;font-weight:1000!important;margin-top:3px!important}}
+.app-quick-card .app-ico .mkt-brand-logo{{width:42px!important;height:42px!important;margin:0!important;border-radius:16px!important}}
+@media(max-width:760px){{.mkt-channel-strip{{border-radius:22px!important;gap:10px!important}}.mkt-channel-pill{{font-size:13px!important}}.mkt-brand-logo{{width:22px!important;height:22px!important;min-width:22px!important}}}}
+</style>
+
+</head><body><form class="box" method="post" action="/admin"><h1>🔐 Web Admin</h1><p>Nhập mật khẩu quản trị để xem Premium, CTV, doanh thu và hỗ trợ khách hàng.</p>{err}<input type="password" name="password" placeholder="Mật khẩu quản trị" autofocus><button>Đăng nhập Admin</button><a href="/">← Về trang khách</a></form>
+
+<!-- V181 - bright enterprise theme + logo sizing correction -->
+<style id="mkt-v181-bright-logo-fix">
+:root{--mkt-primary:#1877F2;--mkt-primary2:#3B82F6;--mkt-navy:#0F172A;--mkt-card:#FFFFFF;--mkt-gold:#F59E0B;--mkt-border:#E8EEF8}
+body{background:radial-gradient(circle at 15% 0%,rgba(24,119,242,.11),transparent 34%),radial-gradient(circle at 88% 6%,rgba(124,58,237,.09),transparent 32%),linear-gradient(135deg,#F8FBFF 0%,#EEF5FF 48%,#FFFFFF 100%)!important;color:#0F172A!important;}
+.sidebar,.mkt-clean-nav{background:linear-gradient(180deg,#0E3A80 0%,#123F88 55%,#174A9A 100%)!important;border-right:1px solid rgba(255,255,255,.10)!important;box-shadow:18px 0 48px rgba(14,58,128,.24)!important;}
+.main,.content,.module-section{background:transparent!important;}
+.hero,.dashboard-hero,.main-card,.app-quick-card,.enterprise-hub,.enterprise-module-wrap,.kpi-card,.stat-card{border:1px solid var(--mkt-border)!important;background:linear-gradient(135deg,rgba(255,255,255,.98),rgba(248,251,255,.94))!important;box-shadow:0 18px 48px rgba(24,119,242,.10)!important;}
+.enterprise-hub{background:linear-gradient(135deg,#FFFFFF 0%,#F6FAFF 58%,#F2F7FF 100%)!important;border-color:#DDEBFF!important;}
+.enterprise-hub-head h2,.enterprise-module-title{background:linear-gradient(90deg,#1877F2,#2563EB,#7C3AED)!important;-webkit-background-clip:text!important;background-clip:text!important;color:transparent!important;}
+.enterprise-hub-head p{color:#64748B!important;}
+.enterprise-card{background:linear-gradient(180deg,#FFFFFF,#F9FBFF)!important;border:1px solid #E3EDFB!important;border-radius:22px!important;box-shadow:0 16px 36px rgba(15,23,42,.08)!important;}
+.enterprise-card:hover{transform:translateY(-5px)!important;border-color:#93C5FD!important;box-shadow:0 22px 52px rgba(24,119,242,.16)!important;}
+.enterprise-card .ec-icon{width:46px!important;height:46px!important;display:flex!important;align-items:center!important;justify-content:center!important;margin-bottom:12px!important;font-size:0!important;overflow:hidden!important;border-radius:15px!important;background:#EFF6FF!important;}
+.enterprise-card .ec-icon .mkt-brand-logo{width:36px!important;height:36px!important;min-width:36px!important;max-width:36px!important;max-height:36px!important;margin:0!important;border-radius:12px!important;box-shadow:none!important;}
+.enterprise-module-title .mkt-brand-logo{width:38px!important;height:38px!important;min-width:38px!important;margin-right:0!important;border-radius:13px!important;box-shadow:0 10px 22px rgba(24,119,242,.16)!important;}
+.enterprise-module-title span:first-child{display:inline-flex!important;align-items:center!important;justify-content:center!important;font-size:0!important;}
 .mkt-clean-nav .v2-nav-link{background:transparent!important;color:#E5E7EB!important;}
 .mkt-clean-nav .v2-nav-link.active,.mkt-clean-nav .v2-nav-link:hover{background:linear-gradient(90deg,#1877F2,#3B82F6)!important;color:#FFFFFF!important;box-shadow:0 12px 26px rgba(24,119,242,.28)!important;}
 .mkt-dot-tag.enterprise{background:rgba(251,191,36,.14)!important;color:#FDE68A!important;border:1px solid rgba(251,191,36,.32)!important;box-shadow:0 0 16px rgba(251,191,36,.22)!important;}
@@ -45,42 +140,7 @@ def admin_logout():
 
 
 # V184 - Enterprise Blue Sidebar + Omni Channel bot icon injection
-MKT_V182_PASTEL_UI_INJECTION = "\n<style id=\"mkt-v182-pastel-gradient-ui\">\n:root{\n  --pastel-blue:#DBEAFE;--pastel-blue-2:#BFDBFE;--pastel-lavender:#EDE9FE;\n  --pastel-pink:#FCE7F3;--pastel-cream:#FEF3C7;--pastel-mint:#D1FAE5;\n  --pastel-text:#0F172A;--pastel-muted:#64748B;--pastel-border:#E8EEF8;\n}\nbody{\n  background:\n    radial-gradient(circle at 10% 0%,rgba(191,219,254,.72),transparent 34%),\n    radial-gradient(circle at 72% 4%,rgba(237,233,254,.72),transparent 34%),\n    radial-gradient(circle at 42% 100%,rgba(252,231,243,.62),transparent 36%),\n    linear-gradient(135deg,#F8FBFF 0%,#F5F7FF 42%,#FFF7ED 100%)!important;\n  color:var(--pastel-text)!important;\n}\n.sidebar,.mkt-clean-nav{\n  background:linear-gradient(180deg,#0E3A80 0%,#123F88 55%,#174A9A 100%)!important;\n  border-right:1px solid rgba(255,255,255,.10)!important;\n  box-shadow:18px 0 50px rgba(14,58,128,.24)!important;\n  color:#FFFFFF!important;\n}\n.mkt-clean-nav .v2-nav-link,.sidebar .v2-nav-link,.mkt-clean-nav a,.sidebar a{color:#EAF2FF!important;text-shadow:none!important;}\n.mkt-clean-nav .v2-nav-link.active,.mkt-clean-nav .v2-nav-link:hover,.sidebar .v2-nav-link.active,.sidebar .v2-nav-link:hover{\n  background:linear-gradient(90deg,#2563EB,#3B82F6)!important;color:#FFFFFF!important;\n  box-shadow:0 14px 30px rgba(37,99,235,.32)!important;\n}\n.hero,.dashboard-hero,.main-card,.app-quick-card,.enterprise-hub,.enterprise-module-wrap,.premium-card,.trial-card{\n  background:linear-gradient(135deg,rgba(255,255,255,.98),rgba(248,251,255,.96))!important;\n  border:1px solid rgba(219,234,254,.95)!important;box-shadow:0 22px 54px rgba(148,163,184,.16)!important;color:#0F172A!important;\n}\n.app-quick-card:nth-of-type(3n+1){background:linear-gradient(135deg,#FFFFFF,#EFF6FF)!important;}\n.app-quick-card:nth-of-type(3n+2){background:linear-gradient(135deg,#FFFFFF,#F5F3FF)!important;}\n.app-quick-card:nth-of-type(3n+3){background:linear-gradient(135deg,#FFFFFF,#FDF2F8)!important;}\n.app-quick-card b,.enterprise-card b,.enterprise-card h3{color:#0F172A!important;}\n.app-quick-card span,.enterprise-card p,.enterprise-hub-head p{color:#64748B!important;}\n.enterprise-hub{background:linear-gradient(135deg,#FFFFFF 0%,#F0F7FF 36%,#F8F3FF 66%,#FFF7ED 100%)!important;border-color:rgba(196,181,253,.55)!important;}\n.enterprise-hub-head h2,.enterprise-module-title,.dashboard-hero h1,.hero h1{\n  background:linear-gradient(90deg,#0E3A80,#2563EB,#7C3AED)!important;-webkit-background-clip:text!important;background-clip:text!important;color:transparent!important;\n}\n.enterprise-card{background:linear-gradient(180deg,#FFFFFF,#F8FBFF)!important;border:1px solid rgba(219,234,254,.98)!important;box-shadow:0 18px 42px rgba(148,163,184,.14)!important;}\n.enterprise-card:hover,.app-quick-card:hover{transform:translateY(-4px)!important;border-color:#C4B5FD!important;box-shadow:0 26px 60px rgba(147,197,253,.22)!important;}\n.mkt-channel-strip,.topbar,.ticker,.live-bar{\n  background:rgba(255,255,255,.88)!important;border:1px solid rgba(219,234,254,.9)!important;box-shadow:0 16px 40px rgba(148,163,184,.14)!important;backdrop-filter:blur(16px)!important;\n}\n.mkt-dot-tag.enterprise,.v2-nav-link .mkt-dot-tag,.mkt-dot-tag{\n  background:rgba(254,243,199,.92)!important;color:#92400E!important;border:1px solid rgba(251,191công.';actions.innerHTML='<button class="orange" type="button" id="mktV218CopyOpenFb">📋 Copy + Mở FB</button><button class="gray" type="button" data-close="1">Đóng</button>';setTimeout(function(){var b=qs('#mktV218CopyOpenFb');if(b)b.onclick=async function(){var t=textContent();if(t)await copyText(t);window.open('https://www.facebook.com/','_blank');alert(t?'Đã copy nội dung. Hãy dán vào Facebook rồi bấm Đăng.':'Chưa có nội dung để copy. Hãy nhập bài trước.')}},60)} sheet.classList.add('show')}
-  function ensure(){
-    if(!qs('#mktV218MobileSheet')){var s=document.createElement('div');s.id='mktV218MobileSheet';s.innerHTML='<div class="mkt-v218-sheet-card"><h3></h3><p class="mkt-v218-body"></p><div class="mkt-v218-sheet-actions"></div></div>';document.body.appendChild(s);s.addEventListener('click',function(e){if(e.target===s||e.target.getAttribute('data-close')==='1')s.classList.remove('show')},true)}
-    if(!qs('#mktV218MobileDock')){var d=document.createElement('div');d.id='mktV218MobileDock';d.innerHTML='<button class="mkt-v218-close" title="Ẩn">×</button><button class="mkt-v218-btn mkt-v218-primary" data-act="post">🚀<span>Đăng bài</span><small>Tạo task</small></button><button class="mkt-v218-btn mkt-v218-green" data-act="pc">💻<span>Máy tính</span><small>Tải Worker</small></button><button class="mkt-v218-btn mkt-v218-orange" data-act="phone">📱<span>Điện thoại</span><small>Copy + Mở</small></button><button class="mkt-v218-btn mkt-v218-dark" data-act="support">💬<span>Hỗ trợ</span><small>Zalo</small></button>';document.body.appendChild(d);d.addEventListener('click',function(e){var close=e.target.closest('.mkt-v218-close');if(close){d.style.display='none';var h=qs('#mktV218MobileMenuHint');if(h)h.style.display='none';return}var b=e.target.closest('[data-act]');if(!b)return;var a=b.getAttribute('data-act');if(a==='post'){openFacebookPersonal('post')}if(a==='pc'){openFacebookPersonal('worker');openSheet('pc')}if(a==='phone'){openFacebookPersonal('post');openSheet('phone')}if(a==='support'){window.open('https://zalo.me/0363382629','_blank')}},true)}
-    if(!qs('#mktV218MobileMenuHint')){var h=document.createElement('div');h.id='mktV218MobileMenuHint';h.textContent='Menu nhanh: Đăng bài • Tải Worker • Đăng bằng điện thoại • Hỗ trợ';document.body.appendChild(h);setTimeout(function(){if(h)h.style.display='none'},7000)}
-  }
-  function patchWorkerBox(){var box=qs('#mktV217WorkerBox');if(!box||box.dataset.v218)return;box.dataset.v218='1';var p=qs('p',box);if(p)p.innerHTML='Khách chọn đúng thiết bị: <b>Máy tính</b> tải Worker để tự đăng, <b>Điện thoại</b> dùng Copy & Mở Facebook.';var a=qs('.mkt-v217-download',box);if(a)a.textContent='💻 Tải App Đăng Tự Động cho Máy Tính'}
-  function boot(){ensure();patchWorkerBox()} if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();setTimeout(boot,500);setTimeout(boot,1500);setInterval(function(){ensure();patchWorkerBox()},2500);
-})();
-</script>
-'''
-
-@app.after_request
-def mkt_v218_mobile_quick_dock_after_request(response):
-    try:
-        ctype = (response.headers.get("Content-Type") or "").lower()
-        if "text/html" in ctype:
-            body = response.get_data(as_text=True)
-            if "mkt-v218-mobile-quick-dock-js" not in body and "</body>" in body:
-                body = body.replace("</body>", MKT_V218_MOBILE_QUICK_DOCK + "</body>")
-                response.set_data(body)
-                response.headers["Content-Length"] = str(len(body.encode("utf-8")))
-    except Exception as _e:
-        print("mkt_v218_mobile_quick_dock_after_request skipped:", _e)
-    return response
-
-
-if __name__ == "__main__":
-    # Không tự tạo kho 50k content khi khởi động để tránh lỗi SQLite database is locked trên Render.
-    # Khi cần kiểm tra/tạo kho content, gọi /api/content_50k_stats từ admin.
-    threading.Thread(target=scheduler_loop, daemon=True).start()
-    port = int(os.environ.get("PORT", 10000))
-    app.run(host="0.0.0.0", port=port, debug=False)
-
-
-);\n  setTimeout(fixOmniBotIcon, 1800);\n})();\n</script>\n"
+MKT_V182_PASTEL_UI_INJECTION = "\n<style id=\"mkt-v182-pastel-gradient-ui\">\n:root{\n  --pastel-blue:#DBEAFE;--pastel-blue-2:#BFDBFE;--pastel-lavender:#EDE9FE;\n  --pastel-pink:#FCE7F3;--pastel-cream:#FEF3C7;--pastel-mint:#D1FAE5;\n  --pastel-text:#0F172A;--pastel-muted:#64748B;--pastel-border:#E8EEF8;\n}\nbody{\n  background:\n    radial-gradient(circle at 10% 0%,rgba(191,219,254,.72),transparent 34%),\n    radial-gradient(circle at 72% 4%,rgba(237,233,254,.72),transparent 34%),\n    radial-gradient(circle at 42% 100%,rgba(252,231,243,.62),transparent 36%),\n    linear-gradient(135deg,#F8FBFF 0%,#F5F7FF 42%,#FFF7ED 100%)!important;\n  color:var(--pastel-text)!important;\n}\n.sidebar,.mkt-clean-nav{\n  background:linear-gradient(180deg,#0E3A80 0%,#123F88 55%,#174A9A 100%)!important;\n  border-right:1px solid rgba(255,255,255,.10)!important;\n  box-shadow:18px 0 50px rgba(14,58,128,.24)!important;\n  color:#FFFFFF!important;\n}\n.mkt-clean-nav .v2-nav-link,.sidebar .v2-nav-link,.mkt-clean-nav a,.sidebar a{color:#EAF2FF!important;text-shadow:none!important;}\n.mkt-clean-nav .v2-nav-link.active,.mkt-clean-nav .v2-nav-link:hover,.sidebar .v2-nav-link.active,.sidebar .v2-nav-link:hover{\n  background:linear-gradient(90deg,#2563EB,#3B82F6)!important;color:#FFFFFF!important;\n  box-shadow:0 14px 30px rgba(37,99,235,.32)!important;\n}\n.hero,.dashboard-hero,.main-card,.app-quick-card,.enterprise-hub,.enterprise-module-wrap,.premium-card,.trial-card{\n  background:linear-gradient(135deg,rgba(255,255,255,.98),rgba(248,251,255,.96))!important;\n  border:1px solid rgba(219,234,254,.95)!important;box-shadow:0 22px 54px rgba(148,163,184,.16)!important;color:#0F172A!important;\n}\n.app-quick-card:nth-of-type(3n+1){background:linear-gradient(135deg,#FFFFFF,#EFF6FF)!important;}\n.app-quick-card:nth-of-type(3n+2){background:linear-gradient(135deg,#FFFFFF,#F5F3FF)!important;}\n.app-quick-card:nth-of-type(3n+3){background:linear-gradient(135deg,#FFFFFF,#FDF2F8)!important;}\n.app-quick-card b,.enterprise-card b,.enterprise-card h3{color:#0F172A!important;}\n.app-quick-card span,.enterprise-card p,.enterprise-hub-head p{color:#64748B!important;}\n.enterprise-hub{background:linear-gradient(135deg,#FFFFFF 0%,#F0F7FF 36%,#F8F3FF 66%,#FFF7ED 100%)!important;border-color:rgba(196,181,253,.55)!important;}\n.enterprise-hub-head h2,.enterprise-module-title,.dashboard-hero h1,.hero h1{\n  background:linear-gradient(90deg,#0E3A80,#2563EB,#7C3AED)!important;-webkit-background-clip:text!important;background-clip:text!important;color:transparent!important;\n}\n.enterprise-card{background:linear-gradient(180deg,#FFFFFF,#F8FBFF)!important;border:1px solid rgba(219,234,254,.98)!important;box-shadow:0 18px 42px rgba(148,163,184,.14)!important;}\n.enterprise-card:hover,.app-quick-card:hover{transform:translateY(-4px)!important;border-color:#C4B5FD!important;box-shadow:0 26px 60px rgba(147,197,253,.22)!important;}\n.mkt-channel-strip,.topbar,.ticker,.live-bar{\n  background:rgba(255,255,255,.88)!important;border:1px solid rgba(219,234,254,.9)!important;box-shadow:0 16px 40px rgba(148,163,184,.14)!important;backdrop-filter:blur(16px)!important;\n}\n.mkt-dot-tag.enterprise,.v2-nav-link .mkt-dot-tag,.mkt-dot-tag{\n  background:rgba(254,243,199,.92)!important;color:#92400E!important;border:1px solid rgba(251,191,36,.38)!important;box-shadow:0 0 18px rgba(251,191,36,.16)!important;\n}\n.mkt-dot-tag.enterprise i,.mkt-dot-tag i{background:#FBBF24!important;box-shadow:0 0 12px #FBBF24!important;}\n.kpi-card,.stat-card{background:linear-gradient(135deg,#FFFFFF,#EFF6FF)!important;color:#0F172A!important;border:1px solid rgba(191,219,254,.72)!important;box-shadow:0 20px 50px rgba(147,197,253,.18)!important;}\n.kpi-card:nth-child(2),.stat-card:nth-child(2){background:linear-gradient(135deg,#FFFFFF,#FEF3C7)!important;}\n.kpi-card:nth-child(3),.stat-card:nth-child(3){background:linear-gradient(135deg,#FFFFFF,#D1FAE5)!important;}\n.kpi-card:nth-child(4),.stat-card:nth-child(4){background:linear-gradient(135deg,#FFFFFF,#EDE9FE)!important;}\n.mkt-bot-app-icon{\n  display:inline-flex!important;align-items:center!important;justify-content:center!important;width:46px!important;height:46px!important;min-width:46px!important;max-width:46px!important;max-height:46px!important;\n  border-radius:18px!important;background:linear-gradient(135deg,#DBEAFE,#EDE9FE,#FCE7F3)!important;box-shadow:0 14px 28px rgba(124,58,237,.18)!important;overflow:hidden!important;\n}\n.mkt-bot-app-icon svg{width:40px!important;height:40px!important;display:block!important;}\n.app-quick-card .app-ico.mkt-omni-bot-ico{\n  width:58px!important;height:58px!important;min-width:58px!important;border-radius:20px!important;background:linear-gradient(135deg,#DBEAFE,#EDE9FE,#FCE7F3)!important;box-shadow:0 14px 30px rgba(124,58,237,.16)!important;\n}\n.app-quick-card .app-ico.mkt-omni-bot-ico .mkt-bot-app-icon{width:48px!important;height:48px!important;min-width:48px!important;box-shadow:none!important;background:transparent!important;}\n.enterprise-card .ec-icon .mkt-brand-logo,.enterprise-module-title .mkt-brand-logo,.app-quick-card .app-ico .mkt-brand-logo{max-width:42px!important;max-height:42px!important;object-fit:contain!important;}\n.mkt-logo-stack{max-width:74px!important;gap:4px!important}.mkt-logo-stack .mkt-brand-logo{width:18px!important;height:18px!important;min-width:18px!important;max-width:18px!important;max-height:18px!important;margin:0!important}\n</style>\n\n<script id=\"mkt-v182-omni-bot-fix\">\n(function(){\n  var botHtml = \"<span class=\\\"mkt-bot-app-icon\\\" aria-label=\\\"GPTMini Bot\\\">\\n<svg viewBox=\\\"0 0 64 64\\\" role=\\\"img\\\" xmlns=\\\"http://www.w3.org/2000/svg\\\">\\n  <defs>\\n    <linearGradient id=\\\"botPastelG\\\" x1=\\\"0\\\" y1=\\\"0\\\" x2=\\\"1\\\" y2=\\\"1\\\">\\n      <stop offset=\\\"0\\\" stop-color=\\\"#93C5FD\\\"/>\\n      <stop offset=\\\".45\\\" stop-color=\\\"#C4B5FD\\\"/>\\n      <stop offset=\\\".75\\\" stop-color=\\\"#F9A8D4\\\"/>\\n      <stop offset=\\\"1\\\" stop-color=\\\"#A7F3D0\\\"/>\\n    </linearGradient>\\n  </defs>\\n  <rect x=\\\"10\\\" y=\\\"14\\\" width=\\\"44\\\" height=\\\"38\\\" rx=\\\"16\\\" fill=\\\"url(#botPastelG)\\\"/>\\n  <rect x=\\\"17\\\" y=\\\"22\\\" width=\\\"30\\\" height=\\\"21\\\" rx=\\\"10\\\" fill=\\\"#fff\\\"/>\\n  <circle cx=\\\"26\\\" cy=\\\"32\\\" r=\\\"3.2\\\" fill=\\\"#2563EB\\\"/>\\n  <circle cx=\\\"38\\\" cy=\\\"32\\\" r=\\\"3.2\\\" fill=\\\"#EC4899\\\"/>\\n  <path d=\\\"M27 39h10\\\" stroke=\\\"#7C3AED\\\" stroke-width=\\\"3\\\" stroke-linecap=\\\"round\\\"/>\\n  <path d=\\\"M32 8v7\\\" stroke=\\\"#60A5FA\\\" stroke-width=\\\"4\\\" stroke-linecap=\\\"round\\\"/>\\n  <circle cx=\\\"32\\\" cy=\\\"7\\\" r=\\\"3\\\" fill=\\\"#A78BFA\\\"/>\\n</svg></span>\";\n  function fixOmniBotIcon(){\n    document.querySelectorAll('.app-quick-card').forEach(function(card){\n      var title = ((card.querySelector('b')||{}).textContent || '').trim();\n      if(title === 'Omni Channel Center'){\n        var ico = card.querySelector('.app-ico');\n        if(ico){ ico.classList.add('mkt-omni-bot-ico'); ico.innerHTML = botHtml; }\n      }\n    });\n  }\n  if(document.readyState === 'loading'){document.addEventListener('DOMContentLoaded', fixOmniBotIcon);}else{fixOmniBotIcon();}\n  setTimeout(fixOmniBotIcon, 600);\n  setTimeout(fixOmniBotIcon, 1800);\n})();\n</script>\n"
 
 
 
