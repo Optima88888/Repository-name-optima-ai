@@ -23222,6 +23222,166 @@ def mkt_fb_auto_menu_after_request(response):
     return response
 # =================== END GPTMINI FACEBOOK AUTO POST CENTER ===================
 
+# ============================================================
+# GPTMINI -> FACEBOOK WORKER REAL POST BRIDGE
+# Nối nút "🚀 Đăng ngay PC" với workers/post_media_test.py
+# ============================================================
+
+import subprocess
+import sys
+from pathlib import Path
+
+FB_REAL_ROOT = Path(__file__).resolve().parent
+FB_TASK_DIR = FB_REAL_ROOT / "tasks"
+FB_MEDIA_DIR = FB_REAL_ROOT / "media" / "images"
+FB_WORKER_FILE = FB_REAL_ROOT / "workers" / "post_media_test.py"
+
+FB_TASK_DIR.mkdir(parents=True, exist_ok=True)
+FB_MEDIA_DIR.mkdir(parents=True, exist_ok=True)
+
+
+def fb_next_task_file():
+    nums = []
+    for f in FB_TASK_DIR.glob("task_*.json"):
+        try:
+            nums.append(int(f.stem.replace("task_", "")))
+        except Exception:
+            pass
+    n = max(nums or [0]) + 1
+    return FB_TASK_DIR / f"task_{n:03d}.json"
+
+
+@app.route("/api/facebook/real-post-now", methods=["POST"])
+def api_facebook_real_post_now():
+    try:
+        content = (
+            request.form.get("content")
+            or request.json.get("content") if request.is_json else ""
+        )
+        content = str(content or "").strip()
+
+        account = (
+            request.form.get("account")
+            or request.form.get("fb_account")
+            or "FB001"
+        ).strip()
+
+        target_type = (
+            request.form.get("target_type")
+            or request.form.get("where")
+            or "profile"
+        ).strip()
+
+        image_name = ""
+
+        if "image" in request.files:
+            img = request.files["image"]
+            if img and img.filename:
+                safe_name = secure_filename(img.filename)
+                save_path = FB_MEDIA_DIR / safe_name
+                img.save(save_path)
+                image_name = safe_name
+
+        if not content:
+            return jsonify({"ok": False, "message": "Bạn cần nhập nội dung bài viết."})
+
+        task_file = fb_next_task_file()
+
+        task = {
+            "account": account,
+            "content": content,
+            "image": image_name,
+            "target_type": target_type,
+            "status": "READY",
+            "schedule": "now",
+            "created_from": "gptmini",
+            "created_at": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        }
+
+        with open(task_file, "w", encoding="utf-8") as f:
+            json.dump(task, f, ensure_ascii=False, indent=2)
+
+        if not FB_WORKER_FILE.exists():
+            return jsonify({
+                "ok": False,
+                "message": "Đã tạo task nhưng chưa thấy workers/post_media_test.py"
+            })
+
+        subprocess.Popen(
+            [sys.executable, str(FB_WORKER_FILE)],
+            cwd=str(FB_REAL_ROOT),
+            creationflags=subprocess.CREATE_NEW_CONSOLE if os.name == "nt" else 0
+        )
+
+        return jsonify({
+            "ok": True,
+            "message": "Đã tạo task và gọi worker đăng Facebook thật.",
+            "task": task_file.name
+        })
+
+    except Exception as e:
+        return jsonify({"ok": False, "message": str(e)})
+
+
+MKT_FB_REAL_POST_OVERRIDE = """
+<script id="mkt-fb-real-post-worker-bridge">
+(function(){
+  async function sendRealPost(){
+    try{
+      var contentEl = document.querySelector('#mktFbContent');
+      var content = contentEl ? contentEl.value.trim() : '';
+
+      if(!content){
+        alert('Bạn cần nhập nội dung bài viết.');
+        return;
+      }
+
+      var fd = new FormData();
+      fd.append('content', content);
+      fd.append('account', 'FB001');
+      fd.append('target_type', 'profile');
+
+      var fileInput = document.querySelector('input[type="file"]');
+      if(fileInput && fileInput.files && fileInput.files[0]){
+        fd.append('image', fileInput.files[0]);
+      }
+
+      var res = await fetch('/api/facebook/real-post-now', {
+        method:'POST',
+        body: fd
+      });
+
+      var data = await res.json();
+
+      if(data.ok){
+        alert('✅ Đã gửi lệnh đăng thật: ' + data.task);
+      }else{
+        alert('❌ Lỗi: ' + data.message);
+      }
+    }catch(e){
+      alert('❌ Không gọi được worker: ' + e);
+    }
+  }
+
+  window.mktFbPostNow = sendRealPost;
+})();
+</script>
+"""
+
+
+@app.after_request
+def mkt_fb_real_post_bridge_after_request(response):
+    try:
+        ctype = (response.headers.get("Content-Type") or "").lower()
+        if "text/html" in ctype:
+            body = response.get_data(as_text=True)
+            if "mkt-fb-real-post-worker-bridge" not in body and "</body>" in body:
+                body = body.replace("</body>", MKT_FB_REAL_POST_OVERRIDE + "</body>")
+                response.set_data(body)
+                response.headers["Content-Length"] = str(len(body.encode("utf-8")))
+    except Exception as e:
+        print("mkt_fb_real_post_bridge_after_request skipped:", e)
+    return response
 
 if __name__ == "__main__":
     # Không tự tạo kho 50k content khi khởi động để tránh lỗi SQLite database is locked trên Render.
