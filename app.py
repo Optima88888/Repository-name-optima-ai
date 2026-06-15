@@ -23383,6 +23383,198 @@ def mkt_fb_real_post_bridge_after_request(response):
         print("mkt_fb_real_post_bridge_after_request skipped:", e)
     return response
 
+
+# ============================================================
+# V214 - SINGLE FACEBOOK PERSONAL CENTER CLEAN FINAL
+# - Gỡ các UI Facebook cá nhân cũ bị chồng nhau.
+# - Chỉ giữ 1 giao diện đăng trang cá nhân chuẩn.
+# - Giữ nguyên menu/giao diện tổng thể hiện tại.
+# ============================================================
+
+try:
+    _mkt_v214_drop_after_request_names = {
+        'mkt_v143_facebook_personal_pc_mobile_after_request',
+        'mkt_v144_facebook_personal_visible_fix_after_request',
+        'mkt_v145_facebook_personal_mobile_menu_after_request',
+        'mkt_v146_facebook_personal_real_ready_after_request',
+        'mkt_v147_facebook_personal_menu_card_extension_fix_after_request',
+        'mkt_v148_mobile_facebook_menu_inside_fix_after_request',
+        'mkt_v149_facebook_target_choice_ux_after_request',
+        'mkt_v150_facebook_one_tap_copy_open_after_request',
+        'mkt_v151_extension_install_guide_after_request',
+        'mkt_v152_fb_button_click_repair_after_request',
+        'mkt_v153_facebook_real_post_status_after_request',
+        'mkt_v153_extension_download_direct_fix_after_request',
+        'mkt_v154_facebook_post_note_after_request',
+        'mkt_v155_safe_prepare_ui_after_request',
+        'mkt_v157_fb_input_button_fix_after_request',
+        'mkt_v158_fb_hard_input_button_fix_after_request',
+        'mkt_v160_fb2026_real_backend_after_request',
+        'mkt_v163_fb2026_enterprise_setup_after_request',
+        'mkt_v164_fb2026_enterprise_v2_after_request',
+        'mkt_v165_fb2026_real_worker_after_request',
+        'mkt_v166_fb2026_customer_wizard_after_request',
+        'mkt_v167_fb2026_vps_ready_after_request',
+        'mkt_fb_auto_menu_after_request',
+        'mkt_fb_real_post_bridge_after_request',
+        'mkt_v200_facebook_final_after_request',
+        'mkt_v201_facebook_personal_pro_omni_after_request',
+        'mkt_v207_facebook_publish_center_after_request',
+        'mkt_v208_runner_personal_status_after_request',
+        'mkt_v210_runner_api_complete_after_request',
+        'mkt_v211_runner_login_split_buttons_after_request',
+        'mkt_v212_layout_final_after_request',
+        'mkt_v213_safe_layout_fix_after_request',
+    }
+    for _scope, _funcs in list(app.after_request_funcs.items()):
+        app.after_request_funcs[_scope] = [
+            _f for _f in _funcs
+            if getattr(_f, '__name__', '') not in _mkt_v214_drop_after_request_names
+        ]
+except Exception as _e:
+    print('mkt_v214 drop old facebook after_request skipped:', _e)
+
+
+def _mkt_v214_root_dir():
+    try:
+        return Path(__file__).resolve().parent
+    except Exception:
+        return Path(os.getcwd()).resolve()
+
+
+def _mkt_v214_next_task_file(task_dir):
+    task_dir.mkdir(parents=True, exist_ok=True)
+    max_no = 0
+    for f in task_dir.glob('task_*.json'):
+        try:
+            max_no = max(max_no, int(f.stem.replace('task_', '')))
+        except Exception:
+            pass
+    return task_dir / ('task_%03d.json' % (max_no + 1))
+
+
+@app.route('/api/facebook/personal-single/create', methods=['POST'])
+def mkt_v214_api_facebook_personal_single_create():
+    try:
+        root = _mkt_v214_root_dir()
+        task_dir = root / 'tasks'
+        media_dir = root / 'media' / 'images'
+        worker_file = root / 'workers' / 'post_media_test.py'
+        task_dir.mkdir(parents=True, exist_ok=True)
+        media_dir.mkdir(parents=True, exist_ok=True)
+
+        content = (request.form.get('content') or '').strip()
+        account = (request.form.get('account') or 'FB001').strip() or 'FB001'
+        mode = (request.form.get('mode') or 'now').strip()
+        schedule_at = (request.form.get('schedule_at') or '').strip()
+        start_worker = (request.form.get('start_worker') or '1').strip() == '1'
+
+        if not content:
+            return jsonify({'ok': False, 'message': 'Bạn cần nhập nội dung bài viết.'}), 400
+
+        saved_images = []
+        files = []
+        try:
+            files.extend(request.files.getlist('media_files'))
+            files.extend(request.files.getlist('image'))
+        except Exception:
+            pass
+        for file in files:
+            if not file or not getattr(file, 'filename', ''):
+                continue
+            safe_name = secure_filename(file.filename)
+            if not safe_name:
+                continue
+            dest = media_dir / safe_name
+            if dest.exists():
+                stem, suffix = dest.stem, dest.suffix
+                dest = media_dir / (stem + '_' + datetime.datetime.now().strftime('%H%M%S') + suffix)
+            file.save(str(dest))
+            saved_images.append(dest.name)
+
+        task_file = _mkt_v214_next_task_file(task_dir)
+        now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        task = {
+            'account': account,
+            'content': content,
+            'image': ','.join(saved_images),
+            'schedule': 'now' if mode == 'now' else 'schedule',
+            'status': 'READY' if mode == 'now' else 'WAITING',
+            'created_from': 'v214_single_facebook_personal_center',
+            'created_at': now,
+            'scheduler_status': 'READY' if mode == 'now' else 'WAITING',
+            'scheduler_message': 'V214 tạo task đăng cá nhân',
+            'scheduler_at': schedule_at or now,
+            'target_type': 'profile',
+        }
+        with open(task_file, 'w', encoding='utf-8') as f:
+            json.dump(task, f, ensure_ascii=False, indent=2)
+
+        worker_started = False
+        worker_message = 'Đã tạo task. Nếu worker nền đang chạy, task sẽ được xử lý tự động.'
+        if start_worker and mode == 'now' and worker_file.exists():
+            try:
+                import subprocess as _subprocess
+                import sys as _sys
+                _creationflags = _subprocess.CREATE_NEW_CONSOLE if os.name == 'nt' else 0
+                _subprocess.Popen([_sys.executable, str(worker_file)], cwd=str(root), creationflags=_creationflags)
+                worker_started = True
+                worker_message = 'Đã tạo task và gọi post_media_test.py đăng thật.'
+            except Exception as _e:
+                worker_message = 'Đã tạo task nhưng chưa gọi được worker: ' + str(_e)
+
+        return jsonify({'ok': True, 'task': task_file.name, 'image_count': len(saved_images), 'worker_started': worker_started, 'message': worker_message})
+    except Exception as e:
+        return jsonify({'ok': False, 'message': str(e)}), 500
+
+
+MKT_V214_SINGLE_FACEBOOK_PERSONAL_CENTER = r"""
+<style id="mkt-v214-single-facebook-personal-css">
+#mktV214FbPersonalCenter{display:none;margin:18px 0 28px!important;color:#0f172a!important;box-sizing:border-box!important;width:100%!important;}
+#mktV214FbPersonalCenter.mkt-v214-active{display:block!important;}
+.mkt-v214-fb-hero{border-radius:30px;padding:26px;background:linear-gradient(135deg,#ffffff 0%,#eef6ff 48%,#f5f3ff 100%);border:1px solid rgba(147,197,253,.58);box-shadow:0 28px 70px rgba(15,23,42,.12);position:relative;overflow:hidden}
+.mkt-v214-head{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;position:relative;z-index:1}.mkt-v214-head h2{margin:0;font-size:34px;line-height:1.12;background:linear-gradient(90deg,#1877f2,#2563eb,#7c3aed);-webkit-background-clip:text;background-clip:text;color:transparent;font-weight:1000}.mkt-v214-head p{margin:10px 0 0;color:#475569;font-weight:800;line-height:1.55}.mkt-v214-badge{display:inline-flex;align-items:center;gap:8px;border-radius:999px;background:#020617;color:white;padding:10px 14px;font-weight:1000;box-shadow:0 14px 30px rgba(2,6,23,.20);white-space:nowrap}.mkt-v214-badge i{width:10px;height:10px;border-radius:50%;background:#22c55e;box-shadow:0 0 16px #22c55e;display:block}
+.mkt-v214-steps{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:22px 0}.mkt-v214-step{background:rgba(255,255,255,.84);border:1px solid rgba(191,219,254,.8);border-radius:22px;padding:16px;box-shadow:0 16px 38px rgba(15,23,42,.08)}.mkt-v214-step b{display:flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:12px;background:linear-gradient(135deg,#2563eb,#7c3aed);color:white;margin-bottom:10px}.mkt-v214-step h3{margin:0 0 6px;font-size:16px}.mkt-v214-step p{margin:0;color:#64748b;font-size:13px;font-weight:800;line-height:1.45}
+.mkt-v214-grid{display:grid;grid-template-columns:1.2fr .8fr;gap:18px;position:relative;z-index:1}.mkt-v214-card{background:rgba(255,255,255,.92);border:1px solid rgba(226,232,240,.9);border-radius:24px;padding:20px;box-shadow:0 18px 44px rgba(15,23,42,.09)}.mkt-v214-card label{display:block;margin:0 0 8px;color:#1e293b;font-weight:1000}.mkt-v214-card textarea,.mkt-v214-card input,.mkt-v214-card select{width:100%;box-sizing:border-box;border:1px solid #cbd5e1;background:#fff;color:#0f172a;border-radius:16px;padding:13px 14px;font-weight:800;outline:none}.mkt-v214-card textarea{min-height:230px;resize:vertical;line-height:1.55}.mkt-v214-help{margin:8px 0 14px;color:#64748b;font-size:13px;font-weight:800}.mkt-v214-actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:16px}.mkt-v214-btn{border:0;border-radius:999px;padding:13px 18px;color:#fff;font-weight:1000;cursor:pointer;background:linear-gradient(135deg,#2563eb,#7c3aed);box-shadow:0 16px 34px rgba(37,99,235,.20)}.mkt-v214-btn.green{background:linear-gradient(135deg,#16a34a,#22c55e)}.mkt-v214-btn.orange{background:linear-gradient(135deg,#f59e0b,#f97316)}.mkt-v214-btn.dark{background:linear-gradient(135deg,#0f172a,#020617)}.mkt-v214-btn.gray{background:#475569}.mkt-v214-btn:disabled{opacity:.55;cursor:not-allowed}.mkt-v214-log{margin-top:16px;min-height:48px;max-height:170px;overflow:auto;border-radius:18px;background:#020617;color:#dbeafe;padding:14px;font-family:ui-monospace,Consolas,monospace;font-size:12.5px;line-height:1.45}.mkt-v214-status{display:flex;gap:10px;flex-wrap:wrap;margin:14px 0}.mkt-v214-pill{display:inline-flex;align-items:center;gap:8px;border-radius:999px;background:#eff6ff;border:1px solid #bfdbfe;color:#1d4ed8;padding:9px 12px;font-weight:1000;font-size:13px}.mkt-v214-pill.ok{background:#dcfce7;border-color:#bbf7d0;color:#166534}.mkt-v214-pill.warn{background:#fef3c7;border-color:#fde68a;color:#92400e}.mkt-v214-hidden-old{display:none!important;visibility:hidden!important;pointer-events:none!important;height:0!important;overflow:hidden!important;margin:0!important;padding:0!important;opacity:0!important}
+@media(max-width:900px){.mkt-v214-grid,.mkt-v214-steps{grid-template-columns:1fr}.mkt-v214-head{flex-direction:column}.mkt-v214-head h2{font-size:28px}.mkt-v214-btn{width:100%}.mkt-v214-card textarea{min-height:190px}}
+</style>
+<script id="mkt-v214-single-facebook-personal-js">
+(function(){
+  if(window.__mktV214SingleFbLoaded) return; window.__mktV214SingleFbLoaded=true;
+  function qs(s,r){return (r||document).querySelector(s)}
+  function qsa(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s))}
+  function log(msg,type){var box=qs('#mktV214FbLog'); if(!box) return; var t=new Date().toLocaleTimeString('vi-VN'); box.innerHTML='<div>['+t+'] '+(type==='err'?'❌ ':type==='ok'?'✅ ':'')+msg+'</div>'+box.innerHTML;}
+  function mainHost(){return qs('.main-content')||qs('.content')||qs('.app-content')||qs('main')||qs('.module-content')||document.body;}
+  function oldSelectors(){return ['#facebook_personal','#mktFbPersonalBox','#mktV193FbCenter','#mktV194FbCenter','#mktV195SessionCenter','#mktV196FbFullCenter','#mktV197FbCenter','#mktV198PersonalQuick','#mktV199FbFinalCenter','#mktV200FbFinalCenter','#mktV201FbCenter','#mktV207FbCenter','#mktV208FbCenter','#fb2026App','#mktFbAutoCenter'];}
+  function hideOld(){oldSelectors().forEach(function(sel){qsa(sel).forEach(function(el){if(el.id!=='mktV214FbPersonalCenter') el.classList.add('mkt-v214-hidden-old');});}); qsa('[data-module="facebook_personal"],a[href="#facebook_personal"],[data-module="facebook_personal_mobile"]').forEach(function(a){if(a.id!=='mktV214FbMenu') a.classList.add('mkt-v214-hidden-old');});}
+  function ensureMenu(){var nav=qs('.sidebar')||qs('.mkt-clean-nav')||document.body; var existing=qs('#mktV214FbMenu'); if(existing) return existing; var ref=qs('[data-module="post"]',nav)||qs('[data-module="fanpage_manager"]',nav)||qs('.v2-nav-link',nav); var a=document.createElement('a'); a.id='mktV214FbMenu'; a.className='v2-nav-link mkt-menu-pro'; a.href='#facebook_personal'; a.setAttribute('data-module','facebook_personal'); a.innerHTML='<span class="v2-nav-text">👤 Facebook cá nhân</span><span class="mkt-dot-tag pro"><i></i><span>Pro</span></span>'; if(ref&&ref.parentNode){ref.parentNode.insertBefore(a, ref.nextSibling)}else{nav.appendChild(a)} return a;}
+  function centerHtml(){return '<section id="mktV214FbPersonalCenter" class="module-section panel"><div class="mkt-v214-fb-hero"><div class="mkt-v214-head"><div><h2>👤 Đăng Facebook cá nhân</h2><p>Một màn hình duy nhất: đăng nhập Facebook, nhập nội dung, chọn ảnh/video, bấm Đăng ngay hoặc Hẹn giờ. Task được đẩy về worker Python đang chạy thật.</p></div><div class="mkt-v214-badge"><i></i> PC + Worker</div></div><div class="mkt-v214-steps"><div class="mkt-v214-step"><b>1</b><h3>Đăng nhập</h3><p>Mở profile Facebook FB001 và lưu phiên.</p></div><div class="mkt-v214-step"><b>2</b><h3>Viết bài</h3><p>Nhập nội dung bài đăng cá nhân.</p></div><div class="mkt-v214-step"><b>3</b><h3>Thêm ảnh</h3><p>Upload một hoặc nhiều ảnh/video.</p></div><div class="mkt-v214-step"><b>4</b><h3>Đăng</h3><p>Tạo task và worker tự xử lý.</p></div></div><div class="mkt-v214-status"><span class="mkt-v214-pill ok">🟢 Giao diện chuẩn V214</span><span class="mkt-v214-pill" id="mktV214TaskStatus">📋 Chưa tạo task</span><span class="mkt-v214-pill warn">⚠️ Cần mở worker.py hoặc post_media_test.py</span></div><div class="mkt-v214-grid"><div class="mkt-v214-card"><label>Nội dung bài viết</label><textarea id="mktV214Content" placeholder="Nhập bài viết đăng trang cá nhân tại đây..."></textarea><div class="mkt-v214-help">Mẹo: mỗi lần test nên dùng nội dung mới để tránh Facebook chặn trùng.</div><label>Ảnh / Video</label><input id="mktV214Media" type="file" multiple accept="image/*,video/*"><div class="mkt-v214-actions"><button class="mkt-v214-btn green" type="button" onclick="mktV214PostNow()">🚀 Đăng ngay</button><button class="mkt-v214-btn orange" type="button" onclick="mktV214Schedule()">⏰ Đăng hẹn giờ</button><button class="mkt-v214-btn gray" type="button" onclick="mktV214Clear()">🧹 Xóa nội dung</button></div></div><div class="mkt-v214-card"><label>Tài khoản Facebook</label><select id="mktV214Account"><option value="FB001">FB001 - Profile chính</option></select><label style="margin-top:14px">Thời gian hẹn giờ</label><input id="mktV214ScheduleAt" type="datetime-local"><div class="mkt-v214-actions"><button class="mkt-v214-btn" type="button" onclick="mktV214OpenFacebook()">🌐 Mở Facebook</button><button class="mkt-v214-btn dark" type="button" onclick="mktV214RunWorkerHint()">⚙️ Cách chạy worker</button></div><div class="mkt-v214-log" id="mktV214FbLog">Nhật ký: giao diện Facebook cá nhân chuẩn đã sẵn sàng.</div></div></div></div></section>';}
+  function ensureCenter(){var el=qs('#mktV214FbPersonalCenter'); if(el) return el; var wrap=document.createElement('div'); wrap.innerHTML=centerHtml(); el=wrap.firstElementChild; mainHost().appendChild(el); return el;}
+  function showCenter(){hideOld(); ensureMenu(); var el=ensureCenter(); qsa('.module-section,.panel.module-section').forEach(function(x){if(x!==el){x.classList.remove('active','active-module','show'); if(!x.closest('#mktV214FbPersonalCenter')) x.style.display='none';}}); el.classList.add('mkt-v214-active','active','active-module','show'); el.style.setProperty('display','block','important'); el.style.setProperty('visibility','visible','important'); el.scrollIntoView({behavior:'smooth',block:'start'}); qsa('.v2-nav-link').forEach(function(a){a.classList.remove('active')}); var m=qs('#mktV214FbMenu'); if(m)m.classList.add('active');}
+  function hideCenter(){var el=qs('#mktV214FbPersonalCenter'); if(el){el.classList.remove('mkt-v214-active','active','active-module','show'); el.style.display='none';}}
+  async function createTask(mode){var content=(qs('#mktV214Content')||{}).value||''; content=content.trim(); if(!content){alert('Bạn cần nhập nội dung bài viết.'); return;} var fd=new FormData(); fd.append('content',content); fd.append('account',(qs('#mktV214Account')||{}).value||'FB001'); fd.append('mode',mode||'now'); fd.append('start_worker',mode==='now'?'1':'0'); fd.append('schedule_at',(qs('#mktV214ScheduleAt')||{}).value||''); var inp=qs('#mktV214Media'); if(inp&&inp.files){Array.prototype.forEach.call(inp.files,function(f){fd.append('media_files',f);});} var btns=qsa('#mktV214FbPersonalCenter button'); btns.forEach(function(b){b.disabled=true}); try{log('Đang tạo task '+(mode==='now'?'đăng ngay':'hẹn giờ')+'...'); var res=await fetch('/api/facebook/personal-single/create',{method:'POST',body:fd}); var data=await res.json(); if(data.ok){var st=qs('#mktV214TaskStatus'); if(st){st.textContent='📋 '+data.task; st.classList.add('ok');} log(data.message+' Task: '+data.task,'ok'); alert('✅ '+data.message+'\nTask: '+data.task);}else{log(data.message||'Tạo task thất bại','err'); alert('❌ '+(data.message||'Tạo task thất bại'));}}catch(e){log('Không gọi được API tạo task: '+e,'err'); alert('❌ Không gọi được API tạo task: '+e);} finally{btns.forEach(function(b){b.disabled=false});}}
+  window.mktV214PostNow=function(){createTask('now')}; window.mktV214Schedule=function(){createTask('schedule')}; window.mktV214Clear=function(){var c=qs('#mktV214Content'); if(c)c.value=''; var f=qs('#mktV214Media'); if(f)f.value=''; log('Đã xóa nội dung.');}; window.mktV214OpenFacebook=function(){window.open('https://www.facebook.com/','_blank'); log('Đã mở Facebook.');}; window.mktV214RunWorkerHint=function(){alert('Mở CMD trong thư mục FB_POSTER_PRO rồi chạy:\n\npy workers\\worker.py\n\nHoặc chạy đăng 1 lần:\npy workers\\post_media_test.py');};
+  function bind(){hideOld(); ensureMenu(); ensureCenter(); document.addEventListener('click',function(e){var a=e.target.closest('[data-module],a[href^="#"]'); if(!a)return; var mod=a.getAttribute('data-module')||''; var href=a.getAttribute('href')||''; if(mod==='facebook_personal'||href==='#facebook_personal'){e.preventDefault(); showCenter();} else if(mod && mod!=='facebook_personal' && !a.closest('#mktV214FbPersonalCenter')){hideCenter();}}); if(location.hash==='#facebook_personal'){setTimeout(showCenter,250);} }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bind);else bind(); setTimeout(function(){hideOld();ensureMenu();},600); setTimeout(function(){hideOld();ensureMenu();},1600); setInterval(function(){hideOld();ensureMenu();},3000);
+})();
+</script>
+"""
+
+
+@app.after_request
+def mkt_v214_single_facebook_personal_after_request(response):
+    try:
+        ctype = (response.headers.get('Content-Type') or '').lower()
+        if 'text/html' in ctype:
+            body = response.get_data(as_text=True)
+            if 'mkt-v214-single-facebook-personal-js' not in body and '</body>' in body:
+                body = body.replace('</body>', MKT_V214_SINGLE_FACEBOOK_PERSONAL_CENTER + '</body>')
+                response.set_data(body)
+                response.headers['Content-Length'] = str(len(body.encode('utf-8')))
+    except Exception as _e:
+        print('mkt_v214_single_facebook_personal_after_request skipped:', _e)
+    return response
+
 if __name__ == "__main__":
     # Không tự tạo kho 50k content khi khởi động để tránh lỗi SQLite database is locked trên Render.
     # Khi cần kiểm tra/tạo kho content, gọi /api/content_50k_stats từ admin.
