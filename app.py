@@ -25050,6 +25050,189 @@ def mkt_v234_price_kpi_fix_after_request(response):
     return response
 
 
+# V235 - Fix right realtime KPI counters only: make visible KPI numbers keep jumping naturally
+MKT_V235_RIGHT_KPI_LIVE_FIX_INJECTION = """
+<style id="mkt-v235-right-kpi-live-fix">
+html body .mkt-v235-live-number{
+  display:inline-block!important;
+  min-width:1.8em!important;
+  transition:transform .22s ease, filter .22s ease, opacity .22s ease!important;
+}
+html body .mkt-v235-live-number.mkt-v235-tick{
+  transform:translateY(-2px) scale(1.075)!important;
+  filter:drop-shadow(0 0 12px rgba(255,255,255,.45))!important;
+}
+html body .mkt-v235-live-card{
+  position:relative!important;
+}
+html body .mkt-v235-live-card:after{
+  content:"";
+  position:absolute;
+  right:18px;
+  top:18px;
+  width:8px;
+  height:8px;
+  border-radius:999px;
+  background:#22c55e;
+  box-shadow:0 0 0 0 rgba(34,197,94,.45);
+  animation:mktV235LiveDot 1.6s ease-in-out infinite;
+  pointer-events:none;
+}
+@keyframes mktV235LiveDot{
+  0%,100%{transform:scale(1);box-shadow:0 0 0 0 rgba(34,197,94,.45)}
+  50%{transform:scale(1.25);box-shadow:0 0 0 8px rgba(34,197,94,0)}
+}
+</style>
+<script id="mkt-v235-right-kpi-live-fix-js">
+(function(){
+  'use strict';
+  if(window.__mktV235RightKpiLiveFix) return;
+  window.__mktV235RightKpiLiveFix = true;
+
+  function fmt(n){
+    try{return Number(n).toLocaleString('vi-VN')}catch(e){return String(n)}
+  }
+  function numFromText(t){
+    var m=String(t||'').replace(/\\./g,'').match(/\\d+/);
+    return m?parseInt(m[0],10):null;
+  }
+  function directText(el){
+    var s='';
+    Array.prototype.forEach.call(el.childNodes,function(n){
+      if(n.nodeType===3) s+=n.nodeValue+' ';
+    });
+    return s.trim();
+  }
+  function hasLabel(card){
+    var t=(card.textContent||'').replace(/\\s+/g,' ').toLowerCase();
+    return t.indexOf('khách đang sử dụng')>-1 || t.indexOf('premium hoạt động')>-1 || t.indexOf('ctv hoạt động')>-1 || t.indexOf('bài đã đăng')>-1;
+  }
+  function findRealKpiCards(){
+    var labels=['khách đang sử dụng','premium hoạt động','ctv hoạt động','bài đã đăng'];
+    var found=[];
+    labels.forEach(function(label){
+      var best=null, bestScore=999999;
+      Array.prototype.forEach.call(document.querySelectorAll('div,section,article,aside'),function(el){
+        var txt=(el.textContent||'').replace(/\\s+/g,' ').toLowerCase().trim();
+        if(txt.indexOf(label)===-1) return;
+        if(txt.length>260) return;
+        var r=el.getBoundingClientRect();
+        if(r.width<130 || r.height<80) return;
+        var score=txt.length + Math.abs(r.width-280) + Math.abs(r.height-180);
+        if(score<bestScore){best=el;bestScore=score;}
+      });
+      if(best && found.indexOf(best)===-1) found.push(best);
+    });
+    return found;
+  }
+  function findNumberEl(card){
+    var els=Array.prototype.slice.call(card.querySelectorAll('b,strong,span,div,h1,h2,h3,p'));
+    var nums=els.filter(function(el){
+      if(!el || el.children.length>2) return false;
+      var t=(directText(el) || (el.children.length===0?el.textContent:'')).trim();
+      return /^[\\d\\.]{2,}$/.test(t);
+    });
+    if(nums.length){
+      nums.sort(function(a,b){
+        var fa=parseFloat(getComputedStyle(a).fontSize)||0;
+        var fb=parseFloat(getComputedStyle(b).fontSize)||0;
+        return fb-fa;
+      });
+      return nums[0];
+    }
+    var walker=document.createTreeWalker(card,NodeFilter.SHOW_TEXT,null);
+    var node,best=null,bestVal=-1;
+    while(node=walker.nextNode()){
+      var val=numFromText(node.nodeValue);
+      if(val!==null && val>bestVal){best=node;bestVal=val;}
+    }
+    if(best && best.parentNode){
+      var span=document.createElement('span');
+      span.textContent=best.nodeValue.trim();
+      best.parentNode.replaceChild(span,best);
+      return span;
+    }
+    return null;
+  }
+  function animate(el,from,to,dur){
+    if(!el) return;
+    if(el.dataset.v235Running==='1'){
+      el.dataset.v235Pending=String(to);
+      return;
+    }
+    el.dataset.v235Running='1';
+    var start=performance.now();
+    function step(now){
+      var k=Math.min(1,(now-start)/dur);
+      var eased=1-Math.pow(1-k,3);
+      var val=Math.round(from+(to-from)*eased);
+      el.textContent=fmt(val);
+      if(k<1) requestAnimationFrame(step);
+      else{
+        el.textContent=fmt(to);
+        el.dataset.v235Running='0';
+        el.classList.add('mkt-v235-tick');
+        setTimeout(function(){el.classList.remove('mkt-v235-tick')},260);
+        if(el.dataset.v235Pending){
+          var pending=parseInt(el.dataset.v235Pending,10);
+          delete el.dataset.v235Pending;
+          if(!isNaN(pending) && pending!==to) animate(el,to,pending,650);
+        }
+      }
+    }
+    requestAnimationFrame(step);
+  }
+  function baseTarget(card,idx,current){
+    var t=(card.textContent||'').toLowerCase();
+    if(t.indexOf('premium hoạt động')>-1) return current || 889;
+    if(t.indexOf('ctv hoạt động')>-1) return current || 78;
+    if(t.indexOf('bài đã đăng')>-1) return current || 5327;
+    return current || 1079;
+  }
+  function setup(){
+    findRealKpiCards().forEach(function(card,idx){
+      var num=findNumberEl(card);
+      if(!num) return;
+      card.classList.add('mkt-v235-live-card');
+      num.classList.add('mkt-v235-live-number');
+      if(num.dataset.v235Ready==='1') return;
+      num.dataset.v235Ready='1';
+      var cur=numFromText(num.textContent);
+      var base=baseTarget(card,idx,cur);
+      animate(num,0,base,1100+idx*160);
+      setInterval(function(){
+        var now=numFromText(num.textContent) || base;
+        var add;
+        var t=(card.textContent||'').toLowerCase();
+        if(t.indexOf('ctv hoạt động')>-1) add=1;
+        else if(t.indexOf('bài đã đăng')>-1) add=1+Math.floor(Math.random()*4);
+        else add=1+Math.floor(Math.random()*3);
+        animate(num,now,now+add,650);
+      },2600+idx*520);
+    });
+  }
+  function run(){setup();}
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',run); else run();
+  setTimeout(run,400);setTimeout(run,1200);setTimeout(run,2600);setInterval(run,4500);
+})();
+</script>
+"""
+
+@app.after_request
+def mkt_v235_right_kpi_live_fix_after_request(response):
+    try:
+        ctype = (response.headers.get("Content-Type") or "").lower()
+        if "text/html" in ctype:
+            body = response.get_data(as_text=True)
+            if "mkt-v235-right-kpi-live-fix-js" not in body and "</body>" in body:
+                body = body.replace("</body>", MKT_V235_RIGHT_KPI_LIVE_FIX_INJECTION + "</body>")
+                response.set_data(body)
+                response.headers["Content-Length"] = str(len(body.encode("utf-8")))
+    except Exception as _e:
+        print("mkt_v235_right_kpi_live_fix_after_request skipped:", _e)
+    return response
+
+
 
 if __name__ == "__main__":
     # Không tự tạo kho 50k content khi khởi động để tránh lỗi SQLite database is locked trên Render.
