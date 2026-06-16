@@ -25474,6 +25474,157 @@ html body .compact-price-card .price{font-size:clamp(17px,1.42vw,22px)!important
 """
 
 
+# V238 - Conversion polish only: social proof above pricing, softer natural KPI, stop-view pricing hint
+MKT_V238_CONVERSION_POLISH_INJECTION = """
+<style id="mkt-v238-conversion-polish">
+html body .mkt-v238-pricing-proof{
+  display:flex!important;gap:10px!important;align-items:stretch!important;justify-content:center!important;flex-wrap:wrap!important;
+  margin:0 auto 18px!important;padding:12px!important;border-radius:22px!important;
+  background:linear-gradient(135deg,rgba(15,23,42,.92),rgba(30,41,59,.88))!important;
+  border:1px solid rgba(96,165,250,.28)!important;box-shadow:0 18px 44px rgba(15,23,42,.18)!important;
+  color:#fff!important;max-width:940px!important;box-sizing:border-box!important;
+}
+html body .mkt-v238-pricing-proof .mkt-v238-proof-chip{
+  flex:1 1 170px!important;min-width:150px!important;padding:10px 12px!important;border-radius:16px!important;
+  background:linear-gradient(135deg,rgba(255,255,255,.12),rgba(255,255,255,.06))!important;
+  border:1px solid rgba(255,255,255,.12)!important;font-weight:1000!important;line-height:1.25!important;color:#fff!important;text-align:center!important;
+}
+html body .mkt-v238-pricing-proof .mkt-v238-proof-chip span{
+  display:block!important;color:#cbd5e1!important;font-size:12px!important;font-weight:900!important;margin-top:2px!important;
+}
+html body .mkt-v238-price-hint{
+  margin:12px auto 0!important;padding:10px 13px!important;border-radius:16px!important;max-width:360px!important;
+  background:linear-gradient(135deg,#fff7ed,#fef3c7)!important;border:1px solid rgba(245,158,11,.34)!important;
+  box-shadow:0 12px 28px rgba(245,158,11,.13)!important;color:#92400e!important;font-weight:1000!important;font-size:13px!important;line-height:1.35!important;text-align:center!important;
+  opacity:0;transform:translateY(8px);transition:opacity .32s ease,transform .32s ease!important;
+}
+html body .mkt-v238-price-hint.show{opacity:1!important;transform:translateY(0)!important;}
+html body .mkt-v238-kpi-pulse{animation:mktV238KpiPulse .38s ease!important;}
+@keyframes mktV238KpiPulse{0%{transform:scale(1)}45%{transform:scale(1.085);filter:drop-shadow(0 0 15px rgba(255,255,255,.55))}100%{transform:scale(1)}}
+html body .compact-price-card .price{font-size:clamp(17px,1.38vw,21px)!important;letter-spacing:-1.35px!important;white-space:nowrap!important;max-width:100%!important;overflow:visible!important;}
+@media(max-width:760px){
+  html body .mkt-v238-pricing-proof{margin-bottom:14px!important;padding:10px!important;border-radius:18px!important}
+  html body .mkt-v238-pricing-proof .mkt-v238-proof-chip{min-width:130px!important;font-size:12.5px!important;padding:9px!important}
+  html body .mkt-v238-price-hint{font-size:12px!important;max-width:92%!important}
+}
+</style>
+<script id="mkt-v238-conversion-polish-js">
+(function(){
+  'use strict';
+  if(window.__mktV238ConversionPolish) return;
+  window.__mktV238ConversionPolish=true;
+
+  function fmt(n){try{return Number(n).toLocaleString('vi-VN')}catch(e){return String(n)}}
+  function parseNum(t){var m=String(t||'').replace(/\./g,'').match(/\d+/);return m?parseInt(m[0],10):null}
+  function directText(el){var s='';Array.prototype.forEach.call(el.childNodes,function(n){if(n.nodeType===3)s+=n.nodeValue+' '});return s.trim()}
+  function text(el){return (el&&el.textContent||'').replace(/\s+/g,' ').toLowerCase()}
+
+  function findCard(label){
+    var best=null,score=1e9;
+    Array.prototype.forEach.call(document.querySelectorAll('aside div, .kpi-card,.stat-card,.activity-card,.mkt-v172-card,.live-stat-card,div'),function(el){
+      var t=text(el); if(t.indexOf(label)===-1 || t.length>340) return;
+      var r=el.getBoundingClientRect(); if(r.width<110||r.height<60) return;
+      var sc=t.length+Math.abs(r.width-280)*.3+Math.abs(r.height-160)*.45;
+      if(r.left>window.innerWidth*.56) sc-=140;
+      if((getComputedStyle(el).backgroundImage||'').indexOf('gradient')>-1) sc-=50;
+      if(sc<score){score=sc;best=el;}
+    });
+    return best;
+  }
+  function findNum(card){
+    if(!card) return null;
+    var all=Array.prototype.slice.call(card.querySelectorAll('b,strong,span,div,h1,h2,h3,p'));
+    var nums=all.filter(function(el){
+      if(!el||el.children.length>1) return false;
+      var t=(directText(el)||(el.children.length===0?el.textContent:'')).trim();
+      return /^[\d\.]{2,}$/.test(t);
+    });
+    nums.sort(function(a,b){return (parseFloat(getComputedStyle(b).fontSize)||0)-(parseFloat(getComputedStyle(a).fontSize)||0)});
+    return nums[0]||null;
+  }
+  var kpiState={
+    'khách đang sử dụng':{base:1086,seq:[1,2,0,1,-1,2,1,0,3,-1],delay:4700,i:0},
+    'premium hoạt động':{base:893,seq:[0,1,0,1,-1,1,0,2,0,-1],delay:6900,i:0},
+    'ctv hoạt động':{base:74,seq:[0,1,0,0,-1,1,0,1,0,0],delay:8800,i:0},
+    'bài đã đăng':{base:5332,seq:[2,4,1,0,3,5,2,1,0,4],delay:4100,i:0}
+  };
+  function animateNumber(el,from,to){
+    if(!el) return;
+    var start=performance.now(),dur=520;
+    function step(now){
+      var k=Math.min(1,(now-start)/dur),e=1-Math.pow(1-k,3);
+      el.textContent=fmt(Math.round(from+(to-from)*e));
+      if(k<1) requestAnimationFrame(step); else {el.textContent=fmt(to);el.classList.remove('mkt-v238-kpi-pulse');void el.offsetWidth;el.classList.add('mkt-v238-kpi-pulse');setTimeout(function(){el.classList.remove('mkt-v238-kpi-pulse')},420)}
+    }
+    requestAnimationFrame(step);
+  }
+  function startKpi(){
+    Object.keys(kpiState).forEach(function(label){
+      var card=findCard(label), num=findNum(card), st=kpiState[label];
+      if(!num) return;
+      if(!st.el || !document.body.contains(st.el)){st.el=num;st.val=parseNum(num.textContent)||st.base;}
+      if(!st.timer){
+        st.timer=setInterval(function(){
+          if(!st.el || !document.body.contains(st.el)){st.el=null;st.timer=null;startKpi();return;}
+          var cur=parseNum(st.el.textContent); if(cur!==null) st.val=cur;
+          var d=st.seq[st.i++%st.seq.length];
+          var next=Math.max(0,st.val+d);
+          if(next!==st.val){animateNumber(st.el,st.val,next);st.val=next;} else {st.el.classList.add('mkt-v238-kpi-pulse');setTimeout(function(){st.el&&st.el.classList.remove('mkt-v238-kpi-pulse')},260)}
+        },st.delay+Math.floor(Math.random()*900));
+      }
+    });
+  }
+
+  function addPricingProof(){
+    var pricing=document.querySelector('.premium-pricing-compact,.pricing-grid-5,.pricing-section');
+    if(!pricing || document.querySelector('.mkt-v238-pricing-proof')) return;
+    var proof=document.createElement('div');
+    proof.className='mkt-v238-pricing-proof';
+    proof.innerHTML='<div class="mkt-v238-proof-chip">👥 389+ khách<span>đang sử dụng</span></div><div class="mkt-v238-proof-chip">🤖 18.000+ nội dung AI<span>đã được tạo</span></div><div class="mkt-v238-proof-chip">📈 53.000+ bài viết<span>đã đăng / lên lịch</span></div><div class="mkt-v238-proof-chip">⭐ 95% khách<span>tiếp tục gia hạn</span></div>';
+    pricing.parentNode.insertBefore(proof,pricing);
+  }
+
+  function addStopViewHints(){
+    document.querySelectorAll('.compact-price-card').forEach(function(card,idx){
+      if(card.querySelector('.mkt-v238-price-hint')) return;
+      var t=text(card), msg='🔥 Gói này đang được nhiều khách hàng cân nhắc hôm nay';
+      if(t.indexOf('6 tháng')>-1) msg='🔥 Gói 6 Tháng đang được nhiều khách hàng lựa chọn nhất tuần này';
+      else if(t.indexOf('1 năm')>-1) msg='💎 Gói 1 Năm giúp tiết kiệm chi phí nhiều nhất';
+      else if(t.indexOf('vĩnh')>-1) msg='👑 Phù hợp khách muốn sở hữu lâu dài và ưu tiên hỗ trợ';
+      else if(t.indexOf('3 tháng')>-1) msg='⚡ Lựa chọn ổn định hơn cho shop nhỏ và cá nhân bán hàng';
+      var hint=document.createElement('div');hint.className='mkt-v238-price-hint';hint.textContent=msg;card.appendChild(hint);
+      var timer=null;
+      function show(){clearTimeout(timer);timer=setTimeout(function(){hint.classList.add('show')},4300)}
+      function hide(){clearTimeout(timer);hint.classList.remove('show')}
+      card.addEventListener('mouseenter',show);card.addEventListener('focusin',show);card.addEventListener('click',show);card.addEventListener('mouseleave',hide);
+      if(idx===2 || idx===3){setTimeout(function(){hint.classList.add('show');setTimeout(function(){hint.classList.remove('show')},5200)},2600+idx*700)}
+    });
+  }
+
+  function fixPriceSize(){document.querySelectorAll('.compact-price-card .price,.premium-pricing-compact .price').forEach(function(el){el.style.setProperty('font-size','clamp(17px,1.38vw,21px)','important');el.style.setProperty('letter-spacing','-1.35px','important');el.style.setProperty('white-space','nowrap','important');});}
+  function run(){startKpi();addPricingProof();addStopViewHints();fixPriceSize();}
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',run); else run();
+  setTimeout(run,800);setTimeout(run,1800);setInterval(run,5000);
+  try{new MutationObserver(function(){setTimeout(run,150)}).observe(document.body,{childList:true,subtree:true});}catch(e){}
+})();
+</script>
+"""
+
+@app.after_request
+def mkt_v238_conversion_polish_after_request(response):
+    try:
+        ctype = (response.headers.get("Content-Type") or "").lower()
+        if "text/html" in ctype:
+            body = response.get_data(as_text=True)
+            if "mkt-v238-conversion-polish-js" not in body and "</body>" in body:
+                body = body.replace("</body>", MKT_V238_CONVERSION_POLISH_INJECTION + "</body>")
+                response.set_data(body)
+                response.headers["Content-Length"] = str(len(body.encode("utf-8")))
+    except Exception as _e:
+        print("mkt_v238_conversion_polish_after_request skipped:", _e)
+    return response
+
+
 if __name__ == "__main__":
     # Không tự tạo kho 50k content khi khởi động để tránh lỗi SQLite database is locked trên Render.
     # Khi cần kiểm tra/tạo kho content, gọi /api/content_50k_stats từ admin.
