@@ -24730,7 +24730,7 @@ MKT_V233_MOBILE_MAIN_ACTIONS_CLEANUP = r"""
     if(qs('#mktV233MobileMainActions')) return;
     var box=document.createElement('div');
     box.id='mktV233MobileMainActions';
-    box.innerHTML='<div class="mkt-v233-title">⚡ Thao tác nhanh Facebook</div><div class="mkt-v233-grid"><button class="mkt-v233-btn mkt-v233-post" type="button" data-act="post"><span class="ico">🚀</span><b>Đăng bài</b><small>Tạo task</small></button><button class="mkt-v233-btn mkt-v233-pc" type="button" data-act="pc"><span class="ico">💻</span><b>Máy tính</b><small>Tải Worker</small></button><button class="mkt-v233-btn mkt-v233-phone" type="button" data-act="phone"><span class="ico">📱</span><b>Điện thoại</b><small>Copy + Mở</small></button></div>';
+    box.innerHTML='<div class="mkt-v233-title">⚡ Thao tác nhanh Facebook</div><div class="mkt-v233-grid"><button class="mkt-v233-btn mkt-v233-post" type="button" data-act="post"><span class="ico">💬</span><b>Đăng bài</b><small>Tạo task</small></button><button class="mkt-v233-btn mkt-v233-pc" type="button" data-act="pc"><span class="ico">💻</span><b>Máy tính</b><small>Tải Worker</small></button><button class="mkt-v233-btn mkt-v233-phone" type="button" data-act="phone"><span class="ico">📱</span><b>Điện thoại</b><small>Copy + Mở</small></button></div>';
     var place=bestPlace();
     if(place && place.parentNode && (place.classList.contains('mkt-channel-strip') || place.classList.contains('dashboard-hero') || place.classList.contains('hero'))){
       place.insertAdjacentElement('afterend',box);
