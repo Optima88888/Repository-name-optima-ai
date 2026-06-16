@@ -16766,73 +16766,264 @@ except Exception as _mkt_v178_error:
 
 
 # ============================================================
-# FACEBOOK PERSONAL CENTER V1 - CLEAN REBUILD
-# Giữ nguyên menu/database/Premium. Bỏ toàn bộ Facebook Personal cũ.
+# V230 CUSTOMER INSTALLER READY - Facebook Personal Center chỉnh chu
+# Giữ nguyên menu/database/Premium. Thay cụm Facebook Personal cũ bằng:
+# - Trang chính có card nổi bật ngay menu/dashboard.
+# - Trang /facebook-personal chia PC/Mobile rõ ràng.
+# - Bộ cài Worker ZIP có đủ API: /, /health, /status, /post, /tasks, /open-facebook.
 # ============================================================
 
+MKT_V230_WORKER_VERSION = "V230"
+MKT_V230_WORKER_PORT = 8765
+
+
+def _mkt_v230_worker_files():
+    readme = """GPTMini Facebook Worker Local V230\n\nCACH CAI CHUAN CHO KHACH:\n1. Tai file ZIP tu web.\n2. Bam chuot phai vao ZIP -> Extract All / Giai nen tat ca.\n3. Mo thu muc vua giai nen.\n4. Bam CAI_DAT_WORKER_GPTMINI.bat mot lan.\n5. Bam START_FACEBOOK_WORKER.bat de chay Worker.\n6. Mo Chrome, dang nhap Facebook.\n7. Quay lai gptmini.pro/facebook-personal -> bam Kiem tra ket noi.\n\nLUU Y:\n- Khong chay file .bat truc tiep ben trong ZIP. Phai giai nen truoc.\n- Neu Windows hoi Firewall, bam Allow access.\n- Worker chi chay local tai http://127.0.0.1:8765.\n- Worker khong lay mat khau, cookie, 2FA.\n- Neu may chua co Python, cai Python 3 va tich Add Python to PATH.\n"""
+    install_bat = r'''@echo off
+chcp 65001 >nul
+title Cai dat GPTMini Facebook Worker V230
+cd /d "%~dp0"
+echo ===============================================
+echo   CAI DAT GPTMINI FACEBOOK WORKER V230
+echo ===============================================
+echo.
+echo Dang kiem tra Python...
+where py >nul 2>&1
+if not errorlevel 1 (
+  py -3 --version
+  goto OKPY
+)
+where python >nul 2>&1
+if not errorlevel 1 (
+  python --version
+  goto OKPY
+)
+echo.
+echo [CAN CAI] May chua co Python hoac Python chua nam trong PATH.
+echo Vui long cai Python 3, tich Add Python to PATH, roi chay lai file nay.
+echo Trang tai Python se duoc mo sau khi bam phim bat ky.
+pause
+start https://www.python.org/downloads/windows/
+exit /b
+:OKPY
+echo.
+echo [OK] Python san sang.
+echo Dang tao thu muc tasks/logs...
+if not exist tasks mkdir tasks
+if not exist logs mkdir logs
+echo.
+echo [OK] Cai dat xong.
+echo Lan sau chi can bam START_FACEBOOK_WORKER.bat.
+echo.
+pause
+'''
+    start_bat = r'''@echo off
+chcp 65001 >nul
+title GPTMini Facebook Worker Local V230
+cd /d "%~dp0"
+echo ===============================================
+echo   GPTMini Facebook Worker Local V230
+echo ===============================================
+echo.
+echo Dang chay tai: http://127.0.0.1:8765
+echo De tat Worker: bam Ctrl + C
+echo.
+where py >nul 2>&1
+if not errorlevel 1 (
+  py -3 worker_server.py
+  pause
+  exit /b
+)
+where python >nul 2>&1
+if not errorlevel 1 (
+  python worker_server.py
+  pause
+  exit /b
+)
+echo [LOI] May chua co Python hoac Python chua nam trong PATH.
+echo Hay chay CAI_DAT_WORKER_GPTMINI.bat de kiem tra/cai dat.
+pause
+'''
+    worker_py = r'''# GPTMini Facebook Worker Local V230
+from http.server import BaseHTTPRequestHandler, HTTPServer
+from urllib.parse import urlparse, parse_qs
+from pathlib import Path
+from datetime import datetime
+import json, webbrowser, traceback
+
+ROOT = Path(__file__).resolve().parent
+TASK_DIR = ROOT / "tasks"
+LOG_DIR = ROOT / "logs"
+TASK_DIR.mkdir(exist_ok=True)
+LOG_DIR.mkdir(exist_ok=True)
+VERSION = "V230"
+PORT = 8765
+
+def _headers(handler, code=200, ctype="application/json; charset=utf-8"):
+    handler.send_response(code)
+    handler.send_header("Content-Type", ctype)
+    handler.send_header("Access-Control-Allow-Origin", "*")
+    handler.send_header("Access-Control-Allow-Methods", "GET,POST,OPTIONS")
+    handler.send_header("Access-Control-Allow-Headers", "Content-Type")
+    handler.end_headers()
+
+def _json(handler, data, code=200):
+    _headers(handler, code)
+    handler.wfile.write(json.dumps(data, ensure_ascii=False, indent=2).encode("utf-8"))
+
+def _read_body(handler):
+    try:
+        n = int(handler.headers.get("Content-Length", "0") or 0)
+        if n <= 0:
+            return {}
+        raw = handler.rfile.read(n).decode("utf-8", errors="ignore")
+        return json.loads(raw or "{}")
+    except Exception:
+        return {}
+
+def _make_task(data):
+    content = (data.get("content") or "").strip()
+    if not content:
+        return None, {"ok": False, "message": "Chưa có nội dung bài viết."}
+    task_id = datetime.now().strftime("%Y%m%d_%H%M%S")
+    task = {
+        "task_id": task_id,
+        "account": (data.get("account") or "FB001").strip(),
+        "target_type": (data.get("target_type") or "profile").strip(),
+        "target_groups": (data.get("target_groups") or "").strip(),
+        "schedule": (data.get("schedule") or "now").strip(),
+        "image": (data.get("image") or "").strip(),
+        "content": content,
+        "status": "created",
+        "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    }
+    (TASK_DIR / f"{task_id}.json").write_text(json.dumps(task, ensure_ascii=False, indent=2), encoding="utf-8")
+    try:
+        groups = task.get("target_groups") or ""
+        if task.get("target_type") == "groups" and groups.splitlines():
+            webbrowser.open(groups.splitlines()[0].strip())
+        else:
+            webbrowser.open("https://www.facebook.com/")
+    except Exception:
+        pass
+    return task, None
+
+class Handler(BaseHTTPRequestHandler):
+    def do_OPTIONS(self):
+        _headers(self)
+
+    def do_GET(self):
+        try:
+            u = urlparse(self.path)
+            qs = parse_qs(u.query)
+            if u.path in ["/", "/health", "/status", "/api/status"]:
+                return _json(self, {"ok": True, "name": "GPTMini Facebook Worker", "version": VERSION, "port": PORT, "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S")})
+            if u.path == "/open-facebook":
+                webbrowser.open("https://www.facebook.com/")
+                return _json(self, {"ok": True, "message": "Đã mở Facebook."})
+            if u.path == "/tasks":
+                rows = []
+                for f in sorted(TASK_DIR.glob("*.json"), reverse=True)[:50]:
+                    try:
+                        rows.append(json.loads(f.read_text(encoding="utf-8")))
+                    except Exception:
+                        pass
+                return _json(self, {"ok": True, "count": len(rows), "tasks": rows})
+            if u.path == "/post":
+                data = {k: (v[0] if v else "") for k, v in qs.items()}
+                task, err = _make_task(data)
+                if err:
+                    return _json(self, err, 400)
+                return _json(self, {"ok": True, "message": "Đã tạo task local và mở Facebook.", "task_id": task["task_id"], "task": task})
+            return _json(self, {"ok": False, "error": "Not found", "available": ["/", "/health", "/status", "/post", "/tasks", "/open-facebook"]}, 404)
+        except Exception as e:
+            (LOG_DIR / "error.log").write_text(traceback.format_exc(), encoding="utf-8")
+            return _json(self, {"ok": False, "error": str(e)}, 500)
+
+    def do_POST(self):
+        try:
+            u = urlparse(self.path)
+            if u.path in ["/post", "/create-task", "/api/create-task"]:
+                data = _read_body(self)
+                task, err = _make_task(data)
+                if err:
+                    return _json(self, err, 400)
+                return _json(self, {"ok": True, "message": "Đã tạo task local và mở Facebook.", "task_id": task["task_id"], "task": task})
+            return _json(self, {"ok": False, "error": "Not found"}, 404)
+        except Exception as e:
+            (LOG_DIR / "error.log").write_text(traceback.format_exc(), encoding="utf-8")
+            return _json(self, {"ok": False, "error": str(e)}, 500)
+
+    def log_message(self, fmt, *args):
+        return
+
+if __name__ == "__main__":
+    print("=" * 50)
+    print("GPTMini Facebook Worker Local", VERSION)
+    print("Đang chạy tại: http://127.0.0.1:%s" % PORT)
+    print("Mở Chrome, đăng nhập Facebook, rồi quay lại web bấm Kiểm tra kết nối.")
+    print("=" * 50)
+    HTTPServer(("127.0.0.1", PORT), Handler).serve_forever()
+'''
+    return {
+        "README.txt": readme,
+        "CAI_DAT_WORKER_GPTMINI.bat": install_bat,
+        "START_FACEBOOK_WORKER.bat": start_bat,
+        "worker_server.py": worker_py,
+    }
+
+
 @app.route('/download/facebook-worker.zip')
-def download_facebook_worker_v1_zip():
+@app.route('/download/facebook-worker-installer.zip')
+def download_facebook_worker_v230_zip():
     import zipfile, io as _io
     mem = _io.BytesIO()
-    readme = 'GPTMini Facebook Worker Local - V229\n\nCACH DUNG NHANH:\n1. Tai ZIP ve may tinh Windows.\n2. Bam chuot phai -> Extract All / Giai nen tat ca.\n3. Mo thu muc vua giai nen.\n4. Bam START_FACEBOOK_WORKER.bat.\n5. Quay lai gptmini.pro/facebook-personal -> bam Kiem tra Worker.\n6. Neu hien Worker dang chay -> bam Dang bang Worker.\n\nLUU Y:\n- Khong chay file .bat truc tiep ben trong ZIP. Phai giai nen truoc.\n- May can co Python. Neu chua co, cai Python 3 tu python.org va tich Add Python to PATH.\n- Worker chay tren may khach tai dia chi http://127.0.0.1:8765.\n- Worker khong lay mat khau, cookie, 2FA. No chi nhan noi dung tu web va mo Facebook de khach dang/cap quyen theo may.\n'
-    bat = '@echo off\nchcp 65001 >nul\ntitle GPTMini Facebook Worker Local V229\ncd /d "%~dp0"\necho ===============================================\necho   GPTMini Facebook Worker Local V229\necho ===============================================\necho.\necho Dang khoi dong Worker tai http://127.0.0.1:8765 ...\necho Neu Windows Firewall hoi quyen, hay bam Allow access.\necho.\npython --version >nul 2>&1\nif errorlevel 1 (\n  echo [LOI] May chua co Python hoac Python chua nam trong PATH.\n  echo Cai Python 3, tich Add Python to PATH, roi chay lai file nay.\n  pause\n  exit /b\n)\npython worker_server.py\npause\n'
-    worker_py = '# GPTMini Facebook Worker Local V229\nfrom http.server import BaseHTTPRequestHandler, HTTPServer\nfrom urllib.parse import urlparse, parse_qs\nfrom pathlib import Path\nfrom datetime import datetime\nimport json, webbrowser, traceback\nROOT = Path(__file__).resolve().parent\nTASK_DIR = ROOT / \'tasks\'\nLOG_DIR = ROOT / \'logs\'\nTASK_DIR.mkdir(exist_ok=True)\nLOG_DIR.mkdir(exist_ok=True)\ndef headers(handler, code=200, ctype=\'application/json; charset=utf-8\'):\n    handler.send_response(code)\n    handler.send_header(\'Content-Type\', ctype)\n    handler.send_header(\'Access-Control-Allow-Origin\', \'*\')\n    handler.send_header(\'Access-Control-Allow-Methods\', \'GET,POST,OPTIONS\')\n    handler.send_header(\'Access-Control-Allow-Headers\', \'Content-Type\')\n    handler.end_headers()\ndef write_json(handler, data, code=200):\n    headers(handler, code)\n    handler.wfile.write(json.dumps(data, ensure_ascii=False, indent=2).encode(\'utf-8\'))\ndef html_escape(s):\n    return str(s or \'\').replace(\'&\',\'&amp;\').replace(\'<\',\'&lt;\').replace(\'>\',\'&gt;\')\nclass Handler(BaseHTTPRequestHandler):\n    def do_OPTIONS(self):\n        headers(self)\n    def do_GET(self):\n        try:\n            u = urlparse(self.path)\n            qs = parse_qs(u.query)\n            if u.path in [\'/\', \'/health\']:\n                return write_json(self, {\'ok\': True, \'name\': \'GPTMini Facebook Worker\', \'version\': \'V229\', \'time\': datetime.now().strftime(\'%Y-%m-%d %H:%M:%S\')})\n            if u.path == \'/post\':\n                content = (qs.get(\'content\', [\'\'])[0] or \'\').strip()\n                account = (qs.get(\'account\', [\'FB001\'])[0] or \'FB001\').strip()\n                target_type = (qs.get(\'target_type\', [\'profile\'])[0] or \'profile\').strip()\n                groups = (qs.get(\'target_groups\', [\'\'])[0] or \'\').strip()\n                schedule = (qs.get(\'schedule\', [\'now\'])[0] or \'now\').strip()\n                image = (qs.get(\'image\', [\'\'])[0] or \'\').strip()\n                if not content:\n                    return write_json(self, {\'ok\': False, \'message\': \'Chua co noi dung bai viet.\'}, 400)\n                task_id = datetime.now().strftime(\'%Y%m%d_%H%M%S\')\n                task = {\'task_id\': task_id, \'account\': account, \'target_type\': target_type, \'content\': content, \'target_groups\': groups, \'schedule\': schedule, \'image\': image, \'status\': \'created\', \'created_at\': datetime.now().strftime(\'%Y-%m-%d %H:%M:%S\')}\n                (TASK_DIR / f\'{task_id}.json\').write_text(json.dumps(task, ensure_ascii=False, indent=2), encoding=\'utf-8\')\n                if target_type == \'groups\' and groups.splitlines():\n                    webbrowser.open(groups.splitlines()[0].strip())\n                else:\n                    webbrowser.open(\'https://www.facebook.com/\')\n                return write_json(self, {\'ok\': True, \'message\': \'Da tao task local va mo Facebook.\', \'task_id\': task_id, \'task_file\': str(TASK_DIR / f\'{task_id}.json\')})\n            if u.path == \'/tasks\':\n                files = sorted(TASK_DIR.glob(\'*.json\'), reverse=True)[:50]\n                rows = []\n                for f in files:\n                    try:\n                        rows.append(json.loads(f.read_text(encoding=\'utf-8\')))\n                    except Exception:\n                        pass\n                body = \'<!doctype html><meta charset="utf-8"><title>GPTMini Tasks</title><style>body{font-family:Arial;background:#f8fafc;padding:20px}pre{background:#fff;border:1px solid #ddd;border-radius:14px;padding:12px;white-space:pre-wrap}</style><h2>GPTMini Facebook Worker - Task local</h2>\'\n                if not rows:\n                    body += \'<p>Chua co task nao.</p>\'\n                for r in rows:\n                    body += \'<pre>\'+html_escape(json.dumps(r, ensure_ascii=False, indent=2))+\'</pre>\'\n                headers(self, 200, \'text/html; charset=utf-8\')\n                self.wfile.write(body.encode(\'utf-8\'))\n                return\n            write_json(self, {\'ok\': False, \'message\': \'Not found\'}, 404)\n        except Exception as e:\n            traceback.print_exc()\n            write_json(self, {\'ok\': False, \'message\': str(e)}, 500)\n    def log_message(self, format, *args):\n        print(\'[GPTMini Worker]\', format % args)\nif __name__ == \'__main__\':\n    host, port = \'127.0.0.1\', 8765\n    print(\'===============================================\')\n    print(\' GPTMini Facebook Worker Local V229\')\n    print(\' Dang chay tai: http://127.0.0.1:8765\')\n    print(\' De tat Worker: bam Ctrl + C\')\n    print(\'===============================================\')\n    HTTPServer((host, port), Handler).serve_forever()\n'
     with zipfile.ZipFile(mem, 'w', zipfile.ZIP_DEFLATED) as z:
-        z.writestr('HUONG_DAN_SU_DUNG.txt', readme)
-        z.writestr('START_FACEBOOK_WORKER.bat', bat)
-        z.writestr('worker_server.py', worker_py)
-        z.writestr('tasks/.gitkeep', '')
-        z.writestr('logs/.gitkeep', '')
+        for name, data in _mkt_v230_worker_files().items():
+            z.writestr(name, data)
     mem.seek(0)
-    return send_file(mem, mimetype='application/zip', as_attachment=True, download_name='GPTMini_Facebook_Worker_Local_V229.zip')
+    return send_file(mem, mimetype='application/zip', as_attachment=True, download_name='GPTMini_Facebook_Worker_Local_V230.zip')
+
 
 @app.route('/facebook-personal')
-def facebook_personal_center_v1():
-    return render_template_string(r'''<!doctype html>
-<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
-<title>Facebook Personal Center V2</title>
+def facebook_personal_center_v230():
+    return render_template_string(r'''<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Facebook Personal Center V230</title>
 <style>
-*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Arial,sans-serif;color:#0f172a;background:radial-gradient(circle at 8% 0%,rgba(34,197,94,.18),transparent 34%),radial-gradient(circle at 90% 2%,rgba(124,58,237,.15),transparent 34%),linear-gradient(135deg,#f8fafc,#eef6ff 52%,#fff7ed)}
-#mktFixSupportFloat,#mktFixSupportPanel,#mktFixSupportBtn{display:none!important;visibility:hidden!important;pointer-events:none!important}.page{width:min(1180px,calc(100vw - 28px));margin:18px auto 92px}.top{display:flex;gap:10px;justify-content:space-between;align-items:center;margin-bottom:14px}.back{display:inline-flex;align-items:center;gap:8px;text-decoration:none;border:1px solid #dbeafe;background:#fff;color:#1d4ed8;border-radius:999px;padding:11px 15px;font-weight:1000;box-shadow:0 12px 30px rgba(37,99,235,.10);white-space:nowrap}.hero,.card{border:1px solid rgba(34,197,94,.26);background:rgba(255,255,255,.97);border-radius:28px;padding:20px;box-shadow:0 24px 70px rgba(15,23,42,.11)}.hero{display:grid;grid-template-columns:1.2fr .8fr;gap:16px;align-items:center}.badge{display:inline-flex;align-items:center;gap:8px;background:#052e16;color:#bbf7d0;border-radius:999px;padding:8px 13px;font-weight:1000;font-size:13px}.badge i{width:9px;height:9px;border-radius:999px;background:#22c55e;box-shadow:0 0 14px #22c55e}.hero h1{margin:12px 0 8px;font-size:clamp(27px,3.8vw,42px);line-height:1.06;color:#052e16}.hero p,.mini{color:#475569;font-weight:850;line-height:1.55}.mode{display:grid;grid-template-columns:1fr 1fr;gap:10px}.mode button{border:1px solid #dbeafe;background:#fff;border-radius:20px;padding:14px;text-align:left;cursor:pointer;font-weight:1000;color:#334155;box-shadow:0 10px 26px rgba(15,23,42,.06)}.mode button.active{background:linear-gradient(135deg,#16a34a,#2563eb);color:white;border-color:transparent}.card{margin-top:14px;border-color:#dbeafe}.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.step{border:1px solid #e2e8f0;border-radius:18px;padding:13px;background:#fff}.step b{display:block}.step span{display:block;margin-top:5px;color:#64748b;font-weight:800;font-size:13px}.form{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px}.full{grid-column:1/-1}label{display:block;font-weight:1000;margin-bottom:7px}input,select,textarea{width:100%;border:1px solid #bbf7d0;background:#fff;border-radius:16px;padding:14px 15px;font-size:15px;font-weight:850;outline:none;color:#0f172a}textarea{min-height:150px;resize:vertical}.groups{min-height:92px}.quick{display:flex;flex-wrap:wrap;gap:8px;margin-top:9px}.quick button{border:0;border-radius:999px;background:#ecfeff;color:#0369a1;padding:9px 12px;font-weight:1000;cursor:pointer}.actions{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:16px}.btn{border:0;border-radius:18px;padding:14px 13px;font-weight:1000;color:#fff;cursor:pointer;text-decoration:none;box-shadow:0 16px 36px rgba(37,99,235,.18);font-size:14.5px;text-align:center}.green{background:linear-gradient(135deg,#16a34a,#22c55e)}.blue{background:linear-gradient(135deg,#2563eb,#7c3aed)}.orange{background:linear-gradient(135deg,#f97316,#f59e0b)}.gray{background:linear-gradient(135deg,#334155,#0f172a)}#status{margin-top:14px;border:1px dashed #86efac;background:#f0fdf4;color:#14532d;border-radius:17px;padding:13px 15px;font-weight:950;white-space:pre-wrap}.warn{border-color:#fed7aa!important;background:#fff7ed!important;color:#9a3412!important}.ok{border-color:#86efac!important;background:#f0fdf4!important;color:#14532d!important}.mobileHelp{display:none}.bottomBar{position:fixed;left:0;right:0;bottom:0;background:rgba(255,255,255,.94);backdrop-filter:blur(14px);border-top:1px solid #dbeafe;padding:9px 12px;z-index:9999;box-shadow:0 -14px 40px rgba(15,23,42,.10)}.bottomBar .inner{width:min(1180px,100%);margin:auto;display:grid;grid-template-columns:1fr 1fr;gap:9px}.bottomBar .btn{border-radius:999px;padding:13px 10px}.hide{display:none!important}@media(max-width:860px){.page{width:calc(100vw - 16px);margin-top:10px}.top{gap:8px;overflow:auto;padding-bottom:2px}.hero{grid-template-columns:1fr;padding:16px;border-radius:23px}.hero h1{font-size:28px}.card{padding:15px;border-radius:22px}.steps,.form,.actions{grid-template-columns:1fr}.mode{grid-template-columns:1fr}.btn{width:100%;font-size:15px}textarea{min-height:135px}.mobileHelp{display:block}.pcHelp{display:none}.bottomBar .inner{grid-template-columns:1fr 1fr}.desktopOnly{display:none!important}}
-</style></head><body>
-<div class="page"><div class="top"><a class="back" href="/">← Trang chính</a><a class="back" href="/download/facebook-worker.zip" target="_blank">⬇ Tải Worker PC</a></div>
-<section class="hero"><div><span class="badge"><i></i> Facebook Personal Center V2</span><h1>Đăng cá nhân gọn cho máy tính & điện thoại</h1><p class="pcHelp">Máy tính dùng Worker local để đăng thật. Điện thoại dùng chế độ copy nội dung + mở Facebook, không bị bể giao diện.</p><p class="mobileHelp">Điện thoại: nhập bài → bấm Copy & mở Facebook → dán bài thủ công. Máy tính: chạy Worker rồi bấm Đăng bằng Worker.</p></div><div class="mode"><button id="pcMode" class="active" onclick="setMode('pc')">💻 Máy tính<br><small>Worker local, kiểm tra API, tạo task</small></button><button id="mobileMode" onclick="setMode('mobile')">📱 Điện thoại<br><small>Copy bài + mở Facebook nhanh</small></button></div></section>
-<section class="card"><div class="steps pcOnly"><div class="step"><b>1. Tải Worker</b><span>Giải nén ZIP ra thư mục thật.</span></div><div class="step"><b>2. Mở Worker</b><span>Chạy START_FACEBOOK_WORKER.bat.</span></div><div class="step"><b>3. Đăng bài</b><span>Nhập nội dung rồi bấm Đăng bằng Worker.</span></div></div><div class="steps mobileOnly hide"><div class="step"><b>1. Nhập bài</b><span>Soạn nội dung ở khung dưới.</span></div><div class="step"><b>2. Copy</b><span>Bấm Copy & mở Facebook.</span></div><div class="step"><b>3. Dán đăng</b><span>Dán vào Facebook và bấm Đăng.</span></div></div>
-<div class="form"><div class="pcOnly"><label>Profile</label><input id="acc" value="FB001"></div><div><label>Kiểu đăng</label><select id="target"><option value="profile">Đăng trang cá nhân</option><option value="groups">Đăng vào Group</option></select></div><div class="pcOnly"><label>Thời gian</label><input id="schedule" value="now" placeholder="now hoặc 2026-06-16 20:30"></div><div class="pcOnly"><label>Ảnh / Video</label><input id="image" placeholder="Tên file trong media/images"></div><div class="full"><label>Nội dung bài viết</label><textarea id="content" placeholder="Nhập nội dung bài đăng..."></textarea><div class="quick"><button type="button" onclick="addText('Inbox em để được tư vấn nhanh ạ.')">+ CTA Inbox</button><button type="button" onclick="addText('\n#marketing #banhangonline')">+ Hashtag</button><button type="button" onclick="clearText()">Xóa nội dung</button></div></div><div class="full"><label>Link group <small style="color:#64748b">bỏ trống nếu đăng trang cá nhân</small></label><textarea class="groups" id="groups" placeholder="Mỗi dòng 1 link group"></textarea></div></div>
-<div class="actions"><button class="btn green pcOnly" type="button" onclick="postByWorker()">🚀 Đăng bằng Worker</button><button class="btn blue pcOnly" type="button" onclick="checkWorker()">🔌 Kiểm tra Worker</button><button class="btn green mobileOnly hide" type="button" onclick="copyAndOpenMobile()">📱 Copy & mở Facebook</button><button class="btn blue" type="button" onclick="copyContent()">📋 Copy nội dung</button><a class="btn orange pcOnly" href="/download/facebook-worker.zip" target="_blank">⬇ Tải Worker</a><a class="btn gray pcOnly" href="http://127.0.0.1:8765/tasks" target="_blank">📋 Task local</a></div><div id="status">Sẵn sàng. Chọn Máy tính hoặc Điện thoại để dùng đúng cách.</div><div class="mini pcOnly">Lưu ý: gptmini.pro/Render không thể tự mở Chrome Facebook của khách. Muốn đăng tự động thật phải chạy Worker trên PC khách hoặc VPS Windows.</div></section></div>
-<div class="bottomBar"><div class="inner"><button class="btn green" onclick="mainAction()">🚀 Thao tác chính</button><button class="btn blue" onclick="copyContent()">📋 Copy bài</button></div></div>
-<script>
-(function(){var LOCAL='http://127.0.0.1:8765',mode='pc';function id(x){return document.getElementById(x)}function all(s){return Array.prototype.slice.call(document.querySelectorAll(s))}function v(x){var e=id(x);return e?(e.value||'').trim():''}function st(t,c){var s=id('status');if(s){s.textContent=t;s.className=c||''}}function show(sel,on){all(sel).forEach(function(e){e.classList.toggle('hide',!on)})}function build(){var p=new URLSearchParams();p.set('account',v('acc')||'FB001');p.set('target_type',v('target')||'profile');p.set('schedule',v('schedule')||'now');p.set('image',v('image'));p.set('content',v('content'));p.set('target_groups',v('groups'));return LOCAL+'/post?'+p.toString()}window.setMode=function(m){mode=m||'pc';id('pcMode').classList.toggle('active',mode==='pc');id('mobileMode').classList.toggle('active',mode==='mobile');show('.pcOnly',mode==='pc');show('.mobileOnly',mode==='mobile');st(mode==='pc'?'💻 Chế độ máy tính: chạy Worker rồi đăng.':'📱 Chế độ điện thoại: copy nội dung rồi mở Facebook để dán đăng.','ok')};window.checkWorker=async function(){try{var r=await fetch(LOCAL+'/health',{mode:'cors'});var j=await r.json();if(j&&j.ok){st('✅ Worker API đang chạy. Bây giờ có thể bấm Đăng bằng Worker.','ok');return true}}catch(e){}st('⚠️ Chưa thấy Worker API. Hãy mở START_FACEBOOK_WORKER.bat từ thư mục đã giải nén.','warn');return false};window.postByWorker=function(){if(!v('content')){st('⚠️ Chưa có nội dung bài viết. Nhập nội dung trước.','warn');return}st('Đang mở Worker local để tạo task đăng bài.','ok');window.open(build(),'_blank')};window.copyContent=async function(){var text=v('content');if(!text){st('⚠️ Chưa có nội dung để copy.','warn');return false}try{await navigator.clipboard.writeText(text);st('✅ Đã copy nội dung bài viết.','ok');return true}catch(e){id('content').focus();id('content').select();document.execCommand('copy');st('✅ Đã chọn/copy nội dung.','ok');return true}};window.copyAndOpenMobile=async function(){await copyContent();window.open('https://m.facebook.com/','_blank')};window.mainAction=function(){if(mode==='mobile')copyAndOpenMobile();else postByWorker()};window.addText=function(t){var e=id('content');e.value=(e.value?e.value+' ':'')+t;e.focus()};window.clearText=function(){id('content').value='';st('Đã xóa nội dung.','ok')};function clean(){try{all('#mktFixSupportFloat,#mktFixSupportPanel,#mktFixSupportBtn').forEach(function(x){x.remove()});var w=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT),bad=[];while(w.nextNode()){var n=w.currentNode,t=n.nodeValue||'';if(t.trim()==='\\n\\n\\n'||t.trim()==='\n\n\n')bad.push(n)}bad.forEach(function(n){n.parentNode&&n.parentNode.removeChild(n)})}catch(e){}}clean();setInterval(clean,800);if(/Android|iPhone|iPad|Mobile/i.test(navigator.userAgent))setMode('mobile');else setTimeout(checkWorker,700)})();
+*{box-sizing:border-box}body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Arial,sans-serif;background:radial-gradient(circle at 10% 0%,#dbeafe 0,transparent 30%),radial-gradient(circle at 90% 12%,#ede9fe 0,transparent 34%),linear-gradient(135deg,#f8fbff,#fff7ed);color:#0f172a;padding-bottom:82px}.wrap{width:min(1180px,calc(100vw - 24px));margin:18px auto}.top{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}.pill{display:inline-flex;gap:8px;align-items:center;border:1px solid #bbf7d0;background:#f0fdf4;color:#14532d;padding:10px 14px;border-radius:999px;font-weight:1000}.pill i{width:9px;height:9px;border-radius:99px;background:#22c55e;box-shadow:0 0 16px #22c55e}.link{border:0;background:#fff;color:#2563eb;text-decoration:none;border-radius:999px;padding:11px 14px;font-weight:1000;box-shadow:0 10px 28px rgba(37,99,235,.10)}.hero{margin-top:14px;border:1px solid #dbeafe;background:rgba(255,255,255,.94);box-shadow:0 28px 80px rgba(37,99,235,.12);border-radius:30px;padding:22px;display:grid;grid-template-columns:1.15fr .85fr;gap:18px}.hero h1{margin:10px 0 8px;font-size:clamp(28px,4vw,46px);line-height:1.04;color:#052e16}.hero p{color:#475569;font-weight:850;line-height:1.55;margin:0}.panel{border:1px solid #e2e8f0;border-radius:24px;background:#fff;padding:16px}.mode{display:grid;grid-template-columns:1fr 1fr;gap:10px}.mode button{border:1px solid #dbeafe;background:#fff;border-radius:18px;padding:14px;text-align:left;cursor:pointer;font-weight:1000;color:#334155}.mode button.active{background:linear-gradient(135deg,#16a34a,#2563eb);color:white;border-color:transparent}.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px}.step{border:1px solid #e2e8f0;border-radius:20px;padding:14px;background:#fff}.step b{display:block}.step span{display:block;margin-top:5px;color:#64748b;font-weight:800;font-size:13px}.form{margin-top:14px;display:grid;grid-template-columns:1fr 1fr;gap:12px}.full{grid-column:1/-1}label{display:block;font-weight:1000;margin-bottom:7px}input,select,textarea{width:100%;border:1px solid #bbf7d0;background:#fff;border-radius:17px;padding:14px 15px;font-size:15px;font-weight:850;outline:none;color:#0f172a}textarea{min-height:155px;resize:vertical}.groups{min-height:88px}.quick{display:flex;flex-wrap:wrap;gap:8px;margin-top:9px}.quick button{border:0;border-radius:999px;background:#ecfeff;color:#0369a1;padding:9px 12px;font-weight:1000;cursor:pointer}.actions{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:16px}.btn{border:0;border-radius:18px;padding:14px 13px;font-weight:1000;color:#fff;cursor:pointer;text-decoration:none;box-shadow:0 16px 36px rgba(37,99,235,.18);font-size:14.5px;text-align:center}.green{background:linear-gradient(135deg,#16a34a,#22c55e)}.blue{background:linear-gradient(135deg,#2563eb,#7c3aed)}.orange{background:linear-gradient(135deg,#f97316,#f59e0b)}.gray{background:linear-gradient(135deg,#334155,#0f172a)}#status{margin-top:14px;border:1px dashed #86efac;background:#f0fdf4;color:#14532d;border-radius:17px;padding:13px 15px;font-weight:950;white-space:pre-wrap}.warn{border-color:#fed7aa!important;background:#fff7ed!important;color:#9a3412!important}.ok{border-color:#86efac!important;background:#f0fdf4!important;color:#14532d!important}.hide{display:none!important}.bottom{position:fixed;left:0;right:0;bottom:0;background:rgba(255,255,255,.95);backdrop-filter:blur(14px);border-top:1px solid #dbeafe;padding:10px 12px;z-index:9999;box-shadow:0 -16px 40px rgba(15,23,42,.10)}.bottom .inner{width:min(1180px,100%);margin:auto;display:grid;grid-template-columns:1fr 1fr;gap:9px}.bottom .btn{border-radius:999px}.pcNote{font-weight:900;color:#334155;margin-top:10px;line-height:1.55}@media(max-width:860px){.wrap{width:calc(100vw - 16px);margin-top:8px}.hero{grid-template-columns:1fr;padding:16px;border-radius:24px}.mode,.steps,.form,.actions{grid-template-columns:1fr}.hero h1{font-size:28px}.panel{padding:14px}.btn{width:100%;font-size:15px}textarea{min-height:132px}.desktopOnly{display:none!important}}
+</style></head><body><div class="wrap"><div class="top"><a class="link" href="/">← Menu chính</a><a class="link" href="/download/facebook-worker-installer.zip">⬇ Tải bộ cài Worker V230</a></div><section class="hero"><div><span class="pill"><i></i> Facebook Personal Center V230</span><h1>Đăng Facebook cá nhân gọn cho máy tính & điện thoại</h1><p>Khách dùng máy tính thì chạy Worker local để tạo task và mở Facebook. Khách dùng điện thoại thì copy bài + mở Facebook mobile, không còn bể giao diện.</p><div class="steps"><div class="step"><b>1. Tải bộ cài</b><span>Giải nén ZIP, bấm CAI_DAT_WORKER_GPTMINI.bat một lần.</span></div><div class="step"><b>2. Chạy Worker</b><span>Bấm START_FACEBOOK_WORKER.bat, giữ cửa sổ đang chạy.</span></div><div class="step"><b>3. Đăng bài</b><span>Quay lại web, kiểm tra kết nối rồi đăng.</span></div></div></div><div class="panel"><label>Chọn thiết bị</label><div class="mode"><button id="pcMode" class="active" onclick="setMode('pc')">💻 Máy tính<br><small>Đăng bằng Worker</small></button><button id="mobileMode" onclick="setMode('mobile')">📱 Điện thoại<br><small>Copy & mở Facebook</small></button></div><div id="status">Sẵn sàng. Chọn Máy tính hoặc Điện thoại để dùng đúng cách.</div></div></section><section class="panel" style="margin-top:14px"><div class="form"><div><label>Tài khoản</label><input id="acc" value="FB001" placeholder="FB001"></div><div><label>Đăng tới</label><select id="target"><option value="profile">Trang cá nhân</option><option value="groups">Group</option></select></div><div><label>Thời gian</label><select id="schedule"><option value="now">Đăng ngay</option><option value="30m">Sau 30 phút</option><option value="1h">Sau 1 giờ</option><option value="2h">Sau 2 giờ</option><option value="3h">Sau 3 giờ</option></select></div><div><label>Ảnh / Video</label><input id="image" placeholder="Tên file trong media/images"></div><div class="full"><label>Nội dung bài viết</label><textarea id="content" placeholder="Nhập bài viết tại đây..."></textarea><div class="quick"><button type="button" onclick="addText('Inbox để được tư vấn ngay nhé!')">+ CTA Inbox</button><button type="button" onclick="addText('#gptmini #marketing')">+ Hashtag</button><button type="button" onclick="clearText()">Xóa</button></div></div><div class="full"><label>Link group <small style="color:#64748b">mỗi dòng 1 link, bỏ trống nếu đăng trang cá nhân</small></label><textarea class="groups" id="groups" placeholder="Mỗi dòng 1 link group"></textarea></div></div><div class="actions"><button class="btn green pcOnly" type="button" onclick="postByWorker()">🚀 Đăng bằng Worker</button><button class="btn blue pcOnly" type="button" onclick="checkWorker()">🔌 Kiểm tra kết nối</button><button class="btn green mobileOnly hide" type="button" onclick="copyAndOpenMobile()">📱 Copy & mở Facebook</button><button class="btn blue" type="button" onclick="copyContent()">📋 Copy nội dung</button><a class="btn orange pcOnly" href="/download/facebook-worker-installer.zip">⬇ Tải bộ cài</a><a class="btn gray pcOnly" href="http://127.0.0.1:8765/tasks" target="_blank">📋 Task local</a></div><div class="pcNote pcOnly">Lưu ý: Web trên Render/gptmini.pro không thể tự mở Chrome Facebook trong máy khách nếu không có Worker local. Muốn đăng thật bằng máy tính phải chạy Worker trên PC khách hoặc VPS Windows.</div></section></div><div class="bottom"><div class="inner"><button class="btn green" onclick="mainAction()">🚀 Thao tác chính</button><button class="btn blue" onclick="copyContent()">📋 Copy bài</button></div></div><script>
+(function(){var LOCAL='http://127.0.0.1:8765',mode='pc';function id(x){return document.getElementById(x)}function all(s){return Array.prototype.slice.call(document.querySelectorAll(s))}function v(x){var e=id(x);return e?(e.value||'').trim():''}function st(t,c){var s=id('status');if(s){s.textContent=t;s.className=c||''}}function show(sel,on){all(sel).forEach(function(e){e.classList.toggle('hide',!on)})}function payload(){return {account:v('acc')||'FB001',target_type:v('target')||'profile',schedule:v('schedule')||'now',image:v('image'),content:v('content'),target_groups:v('groups')}}function build(){var p=new URLSearchParams(payload());return LOCAL+'/post?'+p.toString()}window.setMode=function(m){mode=m||'pc';id('pcMode').classList.toggle('active',mode==='pc');id('mobileMode').classList.toggle('active',mode==='mobile');show('.pcOnly',mode==='pc');show('.mobileOnly',mode==='mobile');st(mode==='pc'?'💻 Chế độ máy tính: chạy Worker rồi đăng.':'📱 Chế độ điện thoại: copy nội dung rồi mở Facebook để dán đăng.','ok')};window.checkWorker=async function(){try{var r=await fetch(LOCAL+'/health',{mode:'cors'});var j=await r.json();if(j&&j.ok){st('✅ Worker V230 đang chạy. Bây giờ có thể bấm Đăng bằng Worker.','ok');return true}}catch(e){}st('⚠️ Chưa thấy Worker API. Tải bộ cài, giải nén, chạy CAI_DAT_WORKER_GPTMINI.bat rồi START_FACEBOOK_WORKER.bat.','warn');return false};window.postByWorker=async function(){if(!v('content')){st('⚠️ Chưa có nội dung bài viết. Nhập nội dung trước.','warn');return}st('Đang gửi task sang Worker local...','ok');try{var r=await fetch(LOCAL+'/post',{method:'POST',mode:'cors',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload())});var j=await r.json();if(j&&j.ok){st('✅ Đã tạo task '+j.task_id+' và mở Facebook. Kiểm tra cửa sổ Chrome để hoàn tất đăng.','ok');return}}catch(e){}window.open(build(),'_blank');st('Đã mở Worker bằng tab mới. Nếu không chạy, hãy bấm Kiểm tra kết nối.','warn')};window.copyContent=async function(){var text=v('content');if(!text){st('⚠️ Chưa có nội dung để copy.','warn');return false}try{await navigator.clipboard.writeText(text);st('✅ Đã copy nội dung bài viết.','ok');return true}catch(e){id('content').focus();id('content').select();document.execCommand('copy');st('✅ Đã chọn/copy nội dung.','ok');return true}};window.copyAndOpenMobile=async function(){await copyContent();window.open('https://m.facebook.com/','_blank')};window.mainAction=function(){if(mode==='mobile')copyAndOpenMobile();else postByWorker()};window.addText=function(t){var e=id('content');e.value=(e.value?e.value+' ':'')+t;e.focus()};window.clearText=function(){id('content').value='';st('Đã xóa nội dung.','ok')};function clean(){try{all('#mktFixSupportFloat,#mktFixSupportPanel,#mktFixSupportBtn').forEach(function(x){x.remove()});var w=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT),bad=[];while(w.nextNode()){var n=w.currentNode,t=n.nodeValue||'';if(t.trim()==='\\n\\n\\n'||t.trim()==='\n\n\n'||t.indexOf('html body .sidebar .mkt-dot-tag')>-1)bad.push(n)}bad.forEach(function(n){n.parentNode&&n.parentNode.removeChild(n)})}catch(e){}}clean();setInterval(clean,800);if(/Android|iPhone|iPad|Mobile/i.test(navigator.userAgent))setMode('mobile');else setTimeout(checkWorker,600)})();
 </script></body></html>''')
 
-MKT_FACEBOOK_PERSONAL_CENTER_V1_MENU = r'''
-<style id="mkt-facebook-personal-center-v1-menu-css">#mktV225FbFloatBtn,#mktV226MainPersonalCard{display:none!important;visibility:hidden!important}.mkt-fb-v1-menu{background:linear-gradient(135deg,#16a34a,#2563eb)!important;color:#fff!important;border-radius:16px!important;box-shadow:0 12px 28px rgba(37,99,235,.26)!important}.mkt-fb-v1-card{background:linear-gradient(135deg,#ecfeff,#eff6ff,#f5f3ff)!important;border:1px solid rgba(34,197,94,.36)!important;border-radius:24px!important;padding:20px!important;box-shadow:0 22px 58px rgba(37,99,235,.13)!important;cursor:pointer!important;min-height:142px!important;display:flex!important;flex-direction:column!important;gap:9px!important}.mkt-fb-v1-card .ico{width:52px;height:52px;border-radius:18px;background:linear-gradient(135deg,#16a34a,#2563eb,#7c3aed);display:flex;align-items:center;justify-content:center;color:white;font-size:24px}.mkt-fb-v1-card h3{margin:0!important;font-size:22px!important;color:#0f172a!important}.mkt-fb-v1-card p{margin:0!important;font-size:14px!important;font-weight:800!important;color:#475569!important}</style>
-<script id="mkt-facebook-personal-center-v1-menu-js">(function(){if(window.__mktFbPersonalCenterV1Menu)return;window.__mktFbPersonalCenterV1Menu=true;function qs(s,r){return(r||document).querySelector(s)}function qsa(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s))}function openPage(){window.location.href='/facebook-personal'}function makeMenu(){var a=document.createElement('a');a.href='/facebook-personal';a.setAttribute('data-module','facebook_personal');a.className='v2-nav-link mkt-fb-v1-menu';a.innerHTML='<span class="v2-nav-text">👤 Đăng cá nhân</span><span class="mkt-dot-tag pro"><i></i><span>V1</span></span>';a.onclick=function(e){e.preventDefault();openPage()};return a}function addMenu(){var old=qsa('[data-module="facebook_personal"],a[href="#facebook_personal"]');if(old.length){old.forEach(function(a){a.href='/facebook-personal';a.classList.add('mkt-fb-v1-menu');a.innerHTML='<span class="v2-nav-text">👤 Đăng cá nhân</span><span class="mkt-dot-tag pro"><i></i><span>V1</span></span>';a.onclick=function(e){e.preventDefault();openPage()};a.style.setProperty('display','flex','important')});return}var nav=qs('.mkt-clean-nav')||qs('.sidebar')||qs('nav')||qs('.v2-nav')||qs('.menu');if(!nav)return;var ref=qs('[data-module="facebook"],[data-module="fanpage_manager"],[data-module="dashboard"],.v2-nav-link',nav);if(ref&&ref.parentNode===nav)nav.insertBefore(makeMenu(),ref.nextSibling);else nav.appendChild(makeMenu())}function addCard(){if(qs('#mktFbPersonalCenterV1Card'))return;var grid=qs('.enterprise-grid')||qs('.app-grid')||qs('.quick-grid')||qs('.dashboard-grid')||qs('.main-grid')||qs('.features-grid');if(!grid)return;var c=document.createElement('div');c.id='mktFbPersonalCenterV1Card';c.className='app-quick-card enterprise-card mkt-fb-v1-card';c.innerHTML='<div class="ico">👤</div><h3>Đăng Facebook cá nhân</h3><p>Facebook Personal Center V2: dùng gọn trên máy tính và điện thoại.</p>';c.onclick=openPage;grid.insertBefore(c,grid.firstChild)}function clean(){qsa('#mktV225FbFloatBtn,#mktV226MainPersonalCard').forEach(function(x){try{x.remove()}catch(e){x.style.display='none'}})}function boot(){addMenu();addCard();clean()}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();setTimeout(boot,500);setTimeout(boot,1500);setInterval(boot,3000)})();</script>
+
+MKT_FACEBOOK_PERSONAL_CENTER_V230_MENU = r'''
+<style id="mkt-facebook-personal-center-v230-menu-css">
+#mktV225FbFloatBtn,#mktV226MainPersonalCard{display:none!important;visibility:hidden!important}.mkt-fb-v230-menu{background:linear-gradient(135deg,#16a34a,#2563eb)!important;color:#fff!important;border-radius:16px!important;box-shadow:0 12px 28px rgba(37,99,235,.26)!important}.mkt-fb-v230-card,.mkt-fb-v230-hero{background:linear-gradient(135deg,#ecfeff,#eff6ff,#f5f3ff)!important;border:1px solid rgba(34,197,94,.36)!important;border-radius:26px!important;padding:22px!important;box-shadow:0 22px 58px rgba(37,99,235,.13)!important;cursor:pointer!important}.mkt-fb-v230-card{min-height:150px!important;display:flex!important;flex-direction:column!important;gap:9px!important}.mkt-fb-v230-card .ico{width:54px;height:54px;border-radius:18px;background:linear-gradient(135deg,#16a34a,#2563eb,#7c3aed);display:flex;align-items:center;justify-content:center;color:white;font-size:25px}.mkt-fb-v230-card h3,.mkt-fb-v230-hero h2{margin:0!important;color:#0f172a!important}.mkt-fb-v230-card p,.mkt-fb-v230-hero p{margin:0!important;font-size:14px!important;font-weight:850!important;color:#475569!important;line-height:1.5}.mkt-fb-v230-hero{margin:12px 0 18px!important;cursor:default!important}.mkt-fb-v230-hero .row{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}.mkt-fb-v230-hero a{display:inline-flex;align-items:center;justify-content:center;text-decoration:none;border-radius:999px;padding:12px 16px;font-weight:1000;color:#fff;background:linear-gradient(135deg,#16a34a,#2563eb);box-shadow:0 12px 28px rgba(37,99,235,.18)}.mkt-fb-v230-hero a.orange{background:linear-gradient(135deg,#f97316,#f59e0b)}
+</style>
+<script id="mkt-facebook-personal-center-v230-menu-js">(function(){if(window.__mktFbPersonalCenterV230Menu)return;window.__mktFbPersonalCenterV230Menu=true;function qs(s,r){return(r||document).querySelector(s)}function qsa(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s))}function openPage(){window.location.href='/facebook-personal'}function makeMenu(){var a=document.createElement('a');a.href='/facebook-personal';a.setAttribute('data-module','facebook_personal');a.className='v2-nav-link mkt-fb-v230-menu';a.innerHTML='<span class="v2-nav-text">👤 Đăng cá nhân</span><span class="mkt-dot-tag pro"><i></i><span>V230</span></span>';a.onclick=function(e){e.preventDefault();openPage()};return a}function addMenu(){var old=qsa('[data-module="facebook_personal"],a[href="#facebook_personal"],a[href="/facebook-personal"]');if(old.length){old.forEach(function(a){a.href='/facebook-personal';a.classList.add('mkt-fb-v230-menu');a.innerHTML='<span class="v2-nav-text">👤 Đăng cá nhân</span><span class="mkt-dot-tag pro"><i></i><span>V230</span></span>';a.onclick=function(e){e.preventDefault();openPage()};a.style.setProperty('display','flex','important')});return}var nav=qs('.mkt-clean-nav')||qs('.sidebar')||qs('nav')||qs('.v2-nav')||qs('.menu');if(!nav)return;var ref=qs('[data-module="facebook"],[data-module="fanpage_manager"],[data-module="dashboard"],.v2-nav-link',nav);if(ref&&ref.parentNode===nav)nav.insertBefore(makeMenu(),ref.nextSibling);else nav.appendChild(makeMenu())}function addCard(){if(qs('#mktFbPersonalCenterV230Card'))return;var grid=qs('.enterprise-grid')||qs('.app-grid')||qs('.quick-grid')||qs('.dashboard-grid')||qs('.main-grid')||qs('.features-grid')||qs('.cards')||qs('.content');if(!grid)return;var c=document.createElement('div');c.id='mktFbPersonalCenterV230Card';c.className='app-quick-card enterprise-card mkt-fb-v230-card';c.innerHTML='<div class="ico">👤</div><h3>Đăng Facebook cá nhân</h3><p>Bộ cài Worker V230 + chế độ máy tính/điện thoại. Khách mở menu chính là thấy ngay.</p>';c.onclick=openPage;grid.insertBefore(c,grid.firstChild)}function addHero(){if(location.pathname!=='/'&&location.pathname!=='/dashboard')return;if(qs('#mktFbPersonalCenterV230Hero'))return;var host=qs('.main')||qs('.content')||qs('main')||document.body;var h=document.createElement('div');h.id='mktFbPersonalCenterV230Hero';h.className='mkt-fb-v230-hero';h.innerHTML='<h2>👤 Facebook Personal Center V230</h2><p>Cài Worker một lần, dùng cho máy tính và điện thoại. Máy tính đăng bằng Worker local, điện thoại copy & mở Facebook mobile.</p><div class="row"><a href="/facebook-personal">🚀 Mở trang đăng cá nhân</a><a class="orange" href="/download/facebook-worker-installer.zip">⬇ Tải bộ cài Worker</a></div>';if(host.firstChild)host.insertBefore(h,host.firstChild);else host.appendChild(h)}function clean(){qsa('#mktV225FbFloatBtn,#mktV226MainPersonalCard').forEach(function(x){try{x.remove()}catch(e){x.style.display='none'}})}function boot(){addMenu();addHero();addCard();clean()}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();setTimeout(boot,500);setTimeout(boot,1500);setInterval(boot,3000)})();</script>
 '''
 
 @app.after_request
-def mkt_facebook_personal_center_v1_menu_after_request(response):
+def mkt_facebook_personal_center_v230_menu_after_request(response):
     try:
+        if (request.path or '') == '/facebook-personal':
+            return response
         ctype=(response.headers.get('Content-Type') or '').lower()
         if 'text/html' in ctype:
             body=response.get_data(as_text=True)
-            if 'mkt-facebook-personal-center-v1-menu-js' not in body and '</body>' in body:
-                body=body.replace('</body>', MKT_FACEBOOK_PERSONAL_CENTER_V1_MENU + '</body>')
+            if 'mkt-facebook-personal-center-v230-menu-js' not in body and '</body>' in body:
+                body=body.replace('</body>', MKT_FACEBOOK_PERSONAL_CENTER_V230_MENU + '</body>')
                 response.set_data(body)
                 response.headers['Content-Length']=str(len(body.encode('utf-8')))
     except Exception as _e:
-        print('mkt_facebook_personal_center_v1_menu_after_request skipped:', _e)
+        print('mkt_facebook_personal_center_v230_menu_after_request skipped:', _e)
     return response
 
 
-# ============================================================
-# V229 - Chặn toàn bộ CSS/JS global cũ bơm vào trang /facebook-personal
-# để không còn hiện chữ CSS ra màn hình và không bị support/ticker đè layout.
-# ============================================================
-def _mkt_v229_disable_global_injection_on_facebook_personal():
+# Chặn toàn bộ CSS/JS global cũ bơm vào trang /facebook-personal.
+def _mkt_v230_disable_global_injection_on_facebook_personal():
     try:
         funcs = list(app.after_request_funcs.get(None, []))
-        if getattr(app, '_mkt_v229_disable_fb_personal_done', False):
+        if getattr(app, '_mkt_v230_disable_fb_personal_done', False):
             return
         wrapped = []
         def make_wrap(fn):
@@ -16842,18 +17033,20 @@ def _mkt_v229_disable_global_injection_on_facebook_personal():
                         return response
                     return fn(response)
                 except Exception as e:
-                    print('V229 after_request wrapper skipped:', getattr(fn, '__name__', 'unknown'), e)
+                    print('V230 after_request wrapper skipped:', getattr(fn, '__name__', 'unknown'), e)
                     return response
-            _wrap.__name__ = 'v229_wrap_' + getattr(fn, '__name__', 'after_request')
+            _wrap.__name__ = 'v230_wrap_' + getattr(fn, '__name__', 'after_request')
             return _wrap
         for fn in funcs:
             wrapped.append(make_wrap(fn))
         app.after_request_funcs[None] = wrapped
-        app._mkt_v229_disable_fb_personal_done = True
+        app._mkt_v230_disable_fb_personal_done = True
     except Exception as e:
-        print('V229 disable global injection install skipped:', e)
+        print('V230 disable global injection install skipped:', e)
 
-_mkt_v229_disable_global_injection_on_facebook_personal()
+_mkt_v230_disable_global_injection_on_facebook_personal()
+
+
 
 if __name__ == "__main__":
     # Không tự tạo kho 50k content khi khởi động để tránh lỗi SQLite database is locked trên Render.
