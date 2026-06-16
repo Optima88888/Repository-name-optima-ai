@@ -281,9 +281,8 @@ html body .premium-pricing-compact{
   border:1px solid rgba(191,219,254,.85)!important;
   box-shadow:0 26px 70px rgba(15,23,42,.12)!important;
 }
-html body .pricing-compact-head .mini{
-  background:linear-gradient(135deg,#111827,#2563eb,#7c3aed)!important;color:#fff!important;border:0!important;
-}
+html body .pricing-compact-head .mini{display:none!important;}
+
 html body .compact-price-card{
   position:relative!important;overflow:hidden!important;border-radius:26px!important;
   border:1px solid rgba(219,234,254,.95)!important;
@@ -304,20 +303,17 @@ html body .compact-price-card.popular{
   border:2px solid rgba(245,158,11,.72)!important;
   box-shadow:0 26px 70px rgba(245,158,11,.18)!important;
 }
-html body .compact-price-card.popular:after{
-  content:"🔥 Được quan tâm nhiều";position:absolute;right:14px;top:14px;z-index:2;
-  background:linear-gradient(135deg,#f59e0b,#facc15);color:#111827;border-radius:999px;padding:7px 11px;
-  font-size:11px;font-weight:1000;box-shadow:0 10px 25px rgba(245,158,11,.25);
-}
+html body .compact-price-card.popular:after{content:none!important;display:none!important;}
+
 html body .compact-price-card .price{
   background:linear-gradient(90deg,#2563eb,#7c3aed,#db2777)!important;
   -webkit-background-clip:text!important;background-clip:text!important;color:transparent!important;
 }
 html body .compact-price-card .old-price{color:#94a3b8!important;text-decoration:line-through!important}
 html body .mkt-v230-proof{
-  margin:12px 0 10px;padding:10px 12px;border-radius:16px;
-  background:linear-gradient(135deg,#eff6ff,#f5f3ff);border:1px solid rgba(191,219,254,.82);
-  color:#1e293b;font-size:13px;font-weight:1000;display:flex;gap:8px;align-items:center;justify-content:center;
+  margin:10px 0 10px!important;padding:9px 8px!important;border-radius:16px!important;
+  background:linear-gradient(135deg,#eff6ff,#f5f3ff)!important;border:1px solid rgba(191,219,254,.82)!important;
+  color:#1e293b!important;font-size:13px!important;font-weight:1000!important;display:flex!important;gap:7px!important;align-items:center!important;justify-content:center!important;line-height:1.32!important;min-height:50px!important;box-sizing:border-box!important;
 }
 html body .mkt-v230-reader-note{
   margin-top:10px;padding:9px 11px;border-radius:14px;background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;
@@ -330,6 +326,20 @@ html body .btn-upgrade{
 }
 html body .compact-price-card.mkt-v230-active .btn-upgrade{animation:mktV230BtnPulse 1.7s ease-in-out infinite}
 @keyframes mktV230BtnPulse{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}
+
+html body .compact-price-card.popular:before{content:none!important;display:none!important;}
+html body .compact-price-card.popular{background:linear-gradient(180deg,#fff7ed,#ffffff)!important;color:#111827!important;overflow:hidden!important;}
+html body .compact-price-card.popular h3,
+html body .compact-price-card.popular .price,
+html body .compact-price-card.popular .old-price,
+html body .compact-price-card.popular .deal-note,
+html body .compact-price-card.popular .sub{position:relative!important;z-index:3!important;opacity:1!important;visibility:visible!important;}
+html body .compact-price-card.popular .discount-badge{top:12px!important;right:12px!important;z-index:6!important;transform:none!important;}
+html body .compact-price-card .price{font-size:clamp(22px,2.1vw,28px)!important;white-space:nowrap!important;line-height:1.05!important;max-width:100%!important;overflow:visible!important;}
+html body .compact-price-card h3{position:relative!important;z-index:3!important;line-height:1.18!important;}
+html body .compact-price-card .sub{position:relative!important;z-index:3!important;color:#64748b!important;font-weight:800!important;}
+html body .compact-price-card.pro .sub{color:#e5e7eb!important;}
+html body .compact-price-card .plan-actions{position:relative!important;z-index:5!important;}
 </style>
 <script id="mkt-v230-pricing-value-upgrade-js">
 (function(){
@@ -364,14 +374,14 @@ html body .compact-price-card.mkt-v230-active .btn-upgrade{animation:mktV230BtnP
     return p;
   }
   function animate(el,end){
-    if(el.dataset.done==='1') return;
-    el.dataset.done='1';
+    if(el.dataset.animating==='1') return;
+    el.dataset.animating='1';
     var start=0, t0=performance.now(), dur=1700;
     function tick(now){
       var k=Math.min(1,(now-t0)/dur);
       var val=Math.floor(start+(end-start)*(1-Math.pow(1-k,3)));
       el.textContent=fmt(val)+'+ khách đang quan tâm';
-      if(k<1) requestAnimationFrame(tick);
+      if(k<1) requestAnimationFrame(tick); else {el.dataset.animating='0'; el.textContent=fmt(end)+'+ khách đang quan tâm';}
     }
     requestAnimationFrame(tick);
   }
@@ -390,9 +400,11 @@ html body .compact-price-card.mkt-v230-active .btn-upgrade{animation:mktV230BtnP
       note.className='mkt-v230-reader-note';
       note.textContent=notes[p]||notes.monthly;
       card.appendChild(note);
-      card.addEventListener('mouseenter',function(){card.classList.add('mkt-v230-active'); setTimeout(function(){card.classList.remove('mkt-v230-active')},6500);});
-      card.addEventListener('click',function(){card.classList.add('mkt-v230-active'); setTimeout(function(){card.classList.remove('mkt-v230-active')},6500);});
+      card.addEventListener('mouseenter',function(){card.classList.add('mkt-v230-active'); card.querySelectorAll('.mkt-v230-proof span[data-count]').forEach(function(s){animate(s,parseInt(s.getAttribute('data-count')||target,10));}); setTimeout(function(){card.classList.remove('mkt-v230-active')},6500);});
+      card.addEventListener('click',function(){card.classList.add('mkt-v230-active'); card.querySelectorAll('.mkt-v230-proof span[data-count]').forEach(function(s){animate(s,parseInt(s.getAttribute('data-count')||target,10));}); setTimeout(function(){card.classList.remove('mkt-v230-active')},6500);});
+      setTimeout(function(){card.querySelectorAll('.mkt-v230-proof span[data-count]').forEach(function(s){animate(s,parseInt(s.getAttribute('data-count')||target,10));});},350);
     });
+    if(!('IntersectionObserver' in window)){document.querySelectorAll('.mkt-v230-proof span[data-count]').forEach(function(s){animate(s,parseInt(s.getAttribute('data-count')||'389',10));}); return;}
     var io=new IntersectionObserver(function(entries){
       entries.forEach(function(en){
         if(en.isIntersecting){
@@ -7232,7 +7244,6 @@ Thời gian tạo: {{ h[9] }}
 
   <div class="premium-pricing-compact">
     <div class="pricing-compact-head">
-      <span class="mini">PREMIUM SAAS</span>
       <h2>Bảng Giá Premium</h2>
       <p>Chọn gói phù hợp để mở khóa công cụ AI Marketing, CRM và Automation bán hàng.</p>
     </div>
@@ -14507,11 +14518,11 @@ _MKT_CUSTOMER_SMOOTH_V142_ADDON = r"""
     return map[k]||k||'monthly';
   }
   var PLANS={
-    monthly:{title:'Gói 1 tháng',price:'490.000đ',old_price:'690.000đ',amount:289000,code:'GOI1THANG',pkg:'monthly',days:30,desc:'Phù hợp người mới bắt đầu, shop nhỏ cần đăng bài, tạo content và quản lý Fanpage cơ bản.',benefits:['Đăng bài Facebook','Quản lý Fanpage','Quản lý Group','AI Comment','Token Fanpage','Hỗ trợ kích hoạt theo ID thiết bị']},
-    quarterly:{title:'Gói 3 tháng',price:'890.000đ',old_price:'1.470.000đ',amount:529000,code:'GOI3THANG',pkg:'quarterly',days:90,desc:'Tối ưu cho shop đang bán hàng cần dùng ổn định hơn và tiết kiệm hơn.',benefits:['Bao gồm toàn bộ tính năng của Gói 1 Tháng','AI Messenger','CRM Kanban','AI Content Studio','Omni Channel cơ bản','Hỗ trợ ưu tiên']},
-    halfyear:{title:'Gói 6 tháng',price:'1.390.000đ',old_price:'2.940.000đ',amount:859000,code:'GOI6THANG',pkg:'halfyear',days:180,desc:'Phù hợp đội nhóm nhỏ cần dùng dài hạn và tối ưu quy trình bán hàng.',benefits:['Bao gồm toàn bộ tính năng của Gói 3 Tháng','Marketing Director','Analytics Center','Group Finder Pro','Auto Comment/Inbox','Nhắc gia hạn tự động']},
-    yearly:{title:'Gói 1 năm',price:'1.890.000đ',old_price:'2.690.000đ',amount:1589000,code:'GOI1NAM',pkg:'yearly',days:365,desc:'Gói phổ biến cho shop/doanh nghiệp muốn vận hành marketing ổn định cả năm.',benefits:['Bao gồm toàn bộ tính năng của Gói 6 Tháng','Omnichannel nâng cao','CTV Center','Web Admin đầy đủ','Ưu tiên hỗ trợ Premium']},
-    sellerpro:{title:'Gói Vĩnh Viễn',price:'3.890.000đ',old_price:'12.000.000đ',amount:2589000,code:'GOIVINHVIEN',pkg:'sellerpro',days:3650,desc:'Mở khóa dài hạn cho nhà bán hàng chuyên nghiệp.',benefits:['Mở khóa toàn bộ tính năng','Dùng dài hạn','Cập nhật nâng cấp sau này','Hỗ trợ kích hoạt theo ID thiết bị']}
+    monthly:{title:'Gói 1 tháng',price:'490.000đ',old_price:'690.000đ',amount:490000,code:'GOI1THANG',pkg:'monthly',days:30,desc:'Phù hợp người mới bắt đầu, shop nhỏ cần đăng bài, tạo content và quản lý Fanpage cơ bản.',benefits:['Đăng bài Facebook','Quản lý Fanpage','Quản lý Group','AI Comment','Token Fanpage','Hỗ trợ kích hoạt theo ID thiết bị']},
+    quarterly:{title:'Gói 3 tháng',price:'890.000đ',old_price:'1.470.000đ',amount:890000,code:'GOI3THANG',pkg:'quarterly',days:90,desc:'Tối ưu cho shop đang bán hàng cần dùng ổn định hơn và tiết kiệm hơn.',benefits:['Bao gồm toàn bộ tính năng của Gói 1 Tháng','AI Messenger','CRM Kanban','AI Content Studio','Omni Channel cơ bản','Hỗ trợ ưu tiên']},
+    halfyear:{title:'Gói 6 tháng',price:'1.390.000đ',old_price:'2.940.000đ',amount:1390000,code:'GOI6THANG',pkg:'halfyear',days:180,desc:'Phù hợp đội nhóm nhỏ cần dùng dài hạn và tối ưu quy trình bán hàng.',benefits:['Bao gồm toàn bộ tính năng của Gói 3 Tháng','Marketing Director','Analytics Center','Group Finder Pro','Auto Comment/Inbox','Nhắc gia hạn tự động']},
+    yearly:{title:'Gói 1 năm',price:'1.890.000đ',old_price:'2.690.000đ',amount:1890000,code:'GOI1NAM',pkg:'yearly',days:365,desc:'Gói phổ biến cho shop/doanh nghiệp muốn vận hành marketing ổn định cả năm.',benefits:['Bao gồm toàn bộ tính năng của Gói 6 Tháng','Omnichannel nâng cao','CTV Center','Web Admin đầy đủ','Ưu tiên hỗ trợ Premium']},
+    sellerpro:{title:'Gói Vĩnh Viễn',price:'3.890.000đ',old_price:'12.000.000đ',amount:3890000,code:'GOIVINHVIEN',pkg:'sellerpro',days:3650,desc:'Mở khóa dài hạn cho nhà bán hàng chuyên nghiệp.',benefits:['Mở khóa toàn bộ tính năng','Dùng dài hạn','Cập nhật nâng cấp sau này','Hỗ trợ kích hoạt theo ID thiết bị']}
   };
   PLANS.lifetime = PLANS.sellerpro;
   window.MKT_PREMIUM_PLANS = PLANS;
