@@ -23840,7 +23840,145 @@ def mkt_v217_download_facebook_worker_zip():
     bat = '@echo off\nchcp 65001 >nul\ntitle GPTMini Facebook Worker\ncolor 0A\n\necho =====================================================\necho        GPTMini Facebook Worker - Dang Facebook that\necho =====================================================\necho.\ncd /d "%~dp0"\n\nif not exist workers mkdir workers\nif not exist tasks mkdir tasks\nif not exist media mkdir media\nif not exist profiles mkdir profiles\nif not exist logs mkdir logs\n\nwhere py >nul 2>nul\nif errorlevel 1 (\n  echo Khong tim thay Python launcher py.\n  echo Hay cai Python truoc, hoac chay bang python workers\\worker.py\n  pause\n  exit /b\n)\n\necho Dang cai/kiem tra thu vien co ban...\npy -m pip install -r requirements_worker.txt\n\necho.\necho Dang khoi dong worker. De cua so nay mo trong luc dang bai.\necho Bam CTRL + C neu muon dung.\necho.\npy workers\\worker.py\npause\n'
     requirements = 'playwright\nrequests\npython-dotenv\n'
     worker_py = 'import os\nimport time\nimport subprocess\nimport sys\nfrom pathlib import Path\n\nROOT = Path(__file__).resolve().parent.parent\nWORKERS = ROOT / "workers"\nQUEUE = WORKERS / "queue_engine.py"\nPOST = WORKERS / "post_media_test.py"\nLOGS = ROOT / "logs"\nLOGS.mkdir(exist_ok=True)\n\nprint("=" * 58)\nprint("GPTMini Facebook Worker V217")\nprint("Root:", ROOT)\nprint("=" * 58)\n\ndef run_py(path):\n    if not path.exists():\n        print("CHUA THAY FILE:", path)\n        return 1\n    print("\\n>>> RUN:", path.name)\n    try:\n        return subprocess.call([sys.executable, str(path)], cwd=str(ROOT))\n    except KeyboardInterrupt:\n        raise\n    except Exception as e:\n        print("LOI CHAY", path.name, e)\n        return 1\n\nwhile True:\n    try:\n        run_py(QUEUE)\n        run_py(POST)\n        print("\\nWorker nghi 10 giay roi quet tiep...")\n        time.sleep(10)\n    except KeyboardInterrupt:\n        print("\\nDa dung worker.")\n        break\n'
-    queue_engine_py = 'import json\nimport csv\nfrom pathlib import Path\nfrom datetime import datetime\n\nROOT = Path(__file__).resolve().parent.parent\nTASK_DIR = ROOT / "tasks"\nLOG_DIR = ROOT / "logs"\nLOG_DIR.mkdir(exist_ok=True)\n\nREPORT_FILE = LOG_DIR / "report.csv"\n\n\ndef write_log(account, task_id, status, message):\n    file_exists = REPORT_FILE.exists()\n\n    with open(REPORT_FILE, "a", newline="", encoding="utf-8-sig") as f:\n        writer = csv.writer(f)\n\n        if not file_exists:\n            writer.writerow(["time", "account", "task_id", "status", "message"])\n\n        writer.writerow([\n            datetime.now().strftime("%Y-%m-%d %H:%M:%S"),\n            account,\n            task_id,\n            status,\n            message\n        ])\n\n\ndef save_task(path, task):\n    with open(path, "w", encoding="utf-8") as f:\n        json.dump(task, f, ensure_ascii=False, indent=2)\n\n\ndef parse_schedule(schedule_value):\n    if not schedule_value:\n        return None\n\n    text = str(schedule_value).strip()\n\n    if text.lower() == "now":\n        return None\n\n    formats = [\n        "%Y-%m-%d %H:%M",\n        "%Y-%m-%d %H:%M:%S",\n        "%Y-%m-%dT%H:%M",\n        "%Y-%m-%dT%H:%M:%S",\n    ]\n\n    for fmt in formats:\n        try:\n            return datetime.strptime(text, fmt)\n        except Exception:\n            pass\n\n    return None\n\n\nprint("=" * 45)\nprint("QUEUE ENGINE PRO")\nprint("=" * 45)\n\ntasks = sorted(TASK_DIR.glob("task_*.json"))\n\nif not tasks:\n    print("Không có task.")\nelse:\n    count_ready = 0\n    now = datetime.now()\n\n    for task_file in tasks:\n        try:\n            with open(task_file, "r", encoding="utf-8") as f:\n                task = json.load(f)\n\n            status = str(task.get("status", "")).upper().strip()\n            schedule = str(task.get("schedule", "now")).strip()\n\n            if status == "SUCCESS":\n                continue\n\n            if status == "FAILED":\n                continue\n\n            if status == "RUNNING":\n                continue\n\n            task_id = task_file.stem\n            account = task.get("account", "")\n            content = task.get("content", "")\n            image = task.get("image", "")\n\n            if status == "READY":\n                print(f"\nTask đã sẵn sàng: {task_file.name}")\n                print("Account:", account)\n                print("Content:", content)\n                print("Image:", image)\n                count_ready += 1\n                continue\n\n            if status == "WAITING":\n                run_at = parse_schedule(schedule)\n\n                if run_at is None:\n                    task["status"] = "READY"\n                    task["scheduler_status"] = "READY"\n                    task["scheduler_message"] = "Đã chuyển sang READY"\n                    task["scheduler_at"] = now.strftime("%Y-%m-%d %H:%M:%S")\n                    save_task(task_file, task)\n                    write_log(account, task_id, "READY", "WAITING -> READY")\n                    print(f"\nĐã duyệt: {task_file.name}")\n                    count_ready += 1\n                    continue\n\n                if run_at <= now:\n                    task["status"] = "READY"\n                    task["scheduler_status"] = "READY"\n                    task["scheduler_message"] = "Đã đến giờ đăng"\n                    task["scheduler_at"] = now.strftime("%Y-%m-%d %H:%M:%S")\n                    save_task(task_file, task)\n                    write_log(account, task_id, "READY", "Đã đến giờ đăng")\n                    print(f"\nĐã đến giờ: {task_file.name}")\n                    count_ready += 1\n                else:\n                    print(f"\nChưa tới giờ: {task_file.name} -> {schedule}")\n\n        except Exception as e:\n            print("Lỗi task:", task_file.name, e)\n\n    print("\nTổng task READY/đã duyệt:", count_ready)\n'
+    queue_engine_py = r'''import json
+import csv
+from pathlib import Path
+from datetime import datetime
+
+ROOT = Path(__file__).resolve().parent.parent
+TASK_DIR = ROOT / "tasks"
+LOG_DIR = ROOT / "logs"
+LOG_DIR.mkdir(exist_ok=True)
+
+REPORT_FILE = LOG_DIR / "report.csv"
+
+
+def write_log(account, task_id, status, message):
+    file_exists = REPORT_FILE.exists()
+
+    with open(REPORT_FILE, "a", newline="", encoding="utf-8-sig") as f:
+        writer = csv.writer(f)
+
+        if not file_exists:
+            writer.writerow(["time", "account", "task_id", "status", "message"])
+
+        writer.writerow([
+            datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            account,
+            task_id,
+            status,
+            message
+        ])
+
+
+def save_task(path, task):
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(task, f, ensure_ascii=False, indent=2)
+
+
+def parse_schedule(schedule_value):
+    if not schedule_value:
+        return None
+
+    text = str(schedule_value).strip()
+
+    if text.lower() == "now":
+        return None
+
+    formats = [
+        "%Y-%m-%d %H:%M",
+        "%Y-%m-%d %H:%M:%S",
+        "%Y-%m-%dT%H:%M",
+        "%Y-%m-%dT%H:%M:%S",
+    ]
+
+    for fmt in formats:
+        try:
+            return datetime.strptime(text, fmt)
+        except Exception:
+            pass
+
+    return None
+
+
+print("=" * 45)
+print("QUEUE ENGINE PRO")
+print("=" * 45)
+
+tasks = sorted(TASK_DIR.glob("task_*.json"))
+
+if not tasks:
+    print("Không có task.")
+else:
+    count_ready = 0
+    now = datetime.now()
+
+    for task_file in tasks:
+        try:
+            with open(task_file, "r", encoding="utf-8") as f:
+                task = json.load(f)
+
+            status = str(task.get("status", "")).upper().strip()
+            schedule = str(task.get("schedule", "now")).strip()
+
+            if status == "SUCCESS":
+                continue
+
+            if status == "FAILED":
+                continue
+
+            if status == "RUNNING":
+                continue
+
+            task_id = task_file.stem
+            account = task.get("account", "")
+            content = task.get("content", "")
+            image = task.get("image", "")
+
+            if status == "READY":
+                print()
+                print("Task đã sẵn sàng:", task_file.name)
+                print("Account:", account)
+                print("Content:", content)
+                print("Image:", image)
+                count_ready += 1
+                continue
+
+            if status == "WAITING":
+                run_at = parse_schedule(schedule)
+
+                if run_at is None:
+                    task["status"] = "READY"
+                    task["scheduler_status"] = "READY"
+                    task["scheduler_message"] = "Đã chuyển sang READY"
+                    task["scheduler_at"] = now.strftime("%Y-%m-%d %H:%M:%S")
+                    save_task(task_file, task)
+                    write_log(account, task_id, "READY", "WAITING -> READY")
+                    print()
+                    print("Đã duyệt:", task_file.name)
+                    count_ready += 1
+                    continue
+
+                if run_at <= now:
+                    task["status"] = "READY"
+                    task["scheduler_status"] = "READY"
+                    task["scheduler_message"] = "Đã đến giờ đăng"
+                    task["scheduler_at"] = now.strftime("%Y-%m-%d %H:%M:%S")
+                    save_task(task_file, task)
+                    write_log(account, task_id, "READY", "Đã đến giờ đăng")
+                    print()
+                    print("Đã đến giờ:", task_file.name)
+                    count_ready += 1
+                else:
+                    print()
+                    print("Chưa tới giờ:", task_file.name, "->", schedule)
+
+        except Exception as e:
+            print("Lỗi task:", task_file.name, e)
+
+    print()
+    print("Tổng task READY/đã duyệt:", count_ready)
+'''
     post_media_fallback_py = r'''import json
 import csv
 from pathlib import Path
@@ -24338,7 +24476,6 @@ def mkt_v218_mobile_quick_dock_after_request(response):
     except Exception as _e:
         print("mkt_v218_mobile_quick_dock_after_request skipped:", _e)
     return response
-
 
 if __name__ == "__main__":
     # Không tự tạo kho 50k content khi khởi động để tránh lỗi SQLite database is locked trên Render.
