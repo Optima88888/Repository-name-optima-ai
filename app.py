@@ -23841,16 +23841,51 @@ def mkt_v217_download_facebook_worker_zip():
     requirements = "playwright\nrequests\npython-dotenv\n"
     worker_py = 'import os\nimport time\nimport subprocess\nimport sys\nfrom pathlib import Path\n\nROOT = Path(__file__).resolve().parent.parent\nWORKERS = ROOT / "workers"\nQUEUE = WORKERS / "queue_engine.py"\nPOST = WORKERS / "post_media_test.py"\nLOGS = ROOT / "logs"\nLOGS.mkdir(exist_ok=True)\n\nprint("=" * 58)\nprint("GPTMini Facebook Worker V217")\nprint("Root:", ROOT)\nprint("=" * 58)\n\ndef run_py(path):\n    if not path.exists():\n        print("CHUA THAY FILE:", path)\n        return 1\n    print("\\n>>> RUN:", path.name)\n    try:\n        return subprocess.call([sys.executable, str(path)], cwd=str(ROOT))\n    except KeyboardInterrupt:\n        raise\n    except Exception as e:\n        print("LOI CHAY", path.name, e)\n        return 1\n\nwhile True:\n    try:\n        run_py(QUEUE)\n        run_py(POST)\n        print("\\nWorker nghi 10 giay roi quet tiep...")\n        time.sleep(10)\n    except KeyboardInterrupt:\n        print("\\nDa dung worker.")\n        break\n'
     with zipfile.ZipFile(mem, "w", zipfile.ZIP_DEFLATED) as z:
-        z.writestr("HUONG_DAN_SU_DUNG.txt", readme)
-        z.writestr("START_FACEBOOK_WORKER.bat", bat)
-        z.writestr("requirements_worker.txt", requirements)
-        z.writestr("workers/worker.py", worker_py)
-        z.writestr("tasks/.keep", "")
-        z.writestr("media/.keep", "")
-        z.writestr("profiles/.keep", "")
-        z.writestr("logs/.keep", "")
-    mem.seek(0)
-    return send_file(mem, mimetype="application/zip", as_attachment=True, download_name="GPTMini_Facebook_Worker_V217.zip")
+
+z.writestr("HUONG_DAN_SU_DUNG.txt", readme)
+z.writestr("START_FACEBOOK_WORKER.bat", bat)
+z.writestr("requirements_worker.txt", requirements)
+z.writestr("workers/worker.py", worker_py)
+
+# ====================================================
+# COPY FILE THẬT TỪ PROJECT VÀO FILE ZIP
+# ====================================================
+try:
+    import os
+
+    root = os.path.dirname(os.path.abspath(__file__))
+
+    queue_file = os.path.join(root, "workers", "queue_engine.py")
+    post_file = os.path.join(root, "workers", "post_media_test.py")
+
+    if os.path.exists(queue_file):
+        z.write(queue_file, "workers/queue_engine.py")
+        print("V217 ZIP: Added queue_engine.py")
+    else:
+        print("V217 ZIP: Missing queue_engine.py")
+
+    if os.path.exists(post_file):
+        z.write(post_file, "workers/post_media_test.py")
+        print("V217 ZIP: Added post_media_test.py")
+    else:
+        print("V217 ZIP: Missing post_media_test.py")
+
+except Exception as e:
+    print("V217 ZIP COPY ERROR:", e)
+
+z.writestr("tasks/.keep", "")
+z.writestr("media/.keep", "")
+z.writestr("profiles/.keep", "")
+z.writestr("logs/.keep", "")
+
+mem.seek(0)
+
+return send_file(
+mem,
+mimetype="application/zip",
+as_attachment=True,
+download_name="GPTMini_Facebook_Worker_V217.zip"
+)
 
 MKT_V217_FACEBOOK_WORKER_DOWNLOAD_UI = '\n<style id="mkt-v217-worker-download-css">\n#mktV217WorkerBox{margin-top:16px;border-radius:22px;padding:16px;background:linear-gradient(135deg,#ecfeff,#eff6ff,#f5f3ff);border:1px solid rgba(96,165,250,.45);box-shadow:0 16px 40px rgba(37,99,235,.12)}\n#mktV217WorkerBox h4{margin:0 0 8px;color:#0f172a;font-size:17px;font-weight:1000}\n#mktV217WorkerBox p{margin:5px 0;color:#475569;font-weight:800;line-height:1.45}\n#mktV217WorkerBox .mkt-v217-worker-steps{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:12px 0}\n#mktV217WorkerBox .mkt-v217-step{border-radius:16px;background:rgba(255,255,255,.9);border:1px solid #dbeafe;padding:10px;font-weight:900;color:#1e293b;font-size:12.5px}\n#mktV217WorkerBox .mkt-v217-download{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:0;border-radius:999px;padding:12px 18px;color:#fff;font-weight:1000;text-decoration:none;background:linear-gradient(135deg,#16a34a,#22c55e);box-shadow:0 14px 30px rgba(34,197,94,.22)}\n#mktV217WorkerBox .mkt-v217-note{margin-top:10px;border-radius:14px;background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;padding:10px;font-weight:900;font-size:13px}\n@media(max-width:900px){#mktV217WorkerBox .mkt-v217-worker-steps{grid-template-columns:1fr}}\n</style>\n<script id="mkt-v217-worker-download-js">\n(function(){\n  if(window.__mktV217WorkerDownloadLoaded) return; window.__mktV217WorkerDownloadLoaded=true;\n  function qs(s,r){return (r||document).querySelector(s)}\n  function addBox(){\n    var panel=qs(\'#facebook_personal[data-v216="1"] [data-panel="worker"] .mkt-v216-card\');\n    if(!panel || qs(\'#mktV217WorkerBox\')) return;\n    var div=document.createElement(\'div\');\n    div.id=\'mktV217WorkerBox\';\n    div.innerHTML=\'<h4>⬇ Cài Facebook Worker cho khách dùng thật</h4><p>Khách không cần gõ CMD. Chỉ tải gói Worker, giải nén và bấm <b>START_FACEBOOK_WORKER.bat</b>.</p><div class="mkt-v217-worker-steps"><div class="mkt-v217-step">1. Tải Worker</div><div class="mkt-v217-step">2. Giải nén vào FB_POSTER_PRO</div><div class="mkt-v217-step">3. Bấm START</div><div class="mkt-v217-step">4. Web tạo task, PC tự đăng</div></div><a class="mkt-v217-download" href="/download/facebook-worker.zip" target="_blank">⬇ Tải Facebook Worker V217</a><div class="mkt-v217-note">Render chỉ tạo task. Muốn đăng Facebook thật ổn định, máy khách phải mở Worker trên PC đã đăng nhập Facebook.</div>\';\n    panel.appendChild(div);\n  }\n  function patchText(){\n    var pills=document.querySelectorAll(\'.mkt-v216-pill.warn\');\n    pills.forEach(function(p){ if((p.textContent||\'\').indexOf(\'Render\')>-1 || (p.textContent||\'\').indexOf(\'worker\')>-1){ p.innerHTML=\'⚠️ Tải Facebook Worker V217 để khách bấm 1 lần và đăng thật\'; }});\n  }\n  document.addEventListener(\'click\',function(){setTimeout(function(){addBox();patchText()},200)},true);\n  if(document.readyState===\'loading\')document.addEventListener(\'DOMContentLoaded\',function(){setTimeout(addBox,800);setTimeout(patchText,800)}); else {setTimeout(addBox,800);setTimeout(patchText,800)}\n  setInterval(function(){addBox();patchText()},2500);\n})();\n</script>\n'
 
