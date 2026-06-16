@@ -23841,7 +23841,384 @@ def mkt_v217_download_facebook_worker_zip():
     requirements = 'playwright\nrequests\npython-dotenv\n'
     worker_py = 'import os\nimport time\nimport subprocess\nimport sys\nfrom pathlib import Path\n\nROOT = Path(__file__).resolve().parent.parent\nWORKERS = ROOT / "workers"\nQUEUE = WORKERS / "queue_engine.py"\nPOST = WORKERS / "post_media_test.py"\nLOGS = ROOT / "logs"\nLOGS.mkdir(exist_ok=True)\n\nprint("=" * 58)\nprint("GPTMini Facebook Worker V217")\nprint("Root:", ROOT)\nprint("=" * 58)\n\ndef run_py(path):\n    if not path.exists():\n        print("CHUA THAY FILE:", path)\n        return 1\n    print("\\n>>> RUN:", path.name)\n    try:\n        return subprocess.call([sys.executable, str(path)], cwd=str(ROOT))\n    except KeyboardInterrupt:\n        raise\n    except Exception as e:\n        print("LOI CHAY", path.name, e)\n        return 1\n\nwhile True:\n    try:\n        run_py(QUEUE)\n        run_py(POST)\n        print("\\nWorker nghi 10 giay roi quet tiep...")\n        time.sleep(10)\n    except KeyboardInterrupt:\n        print("\\nDa dung worker.")\n        break\n'
     queue_engine_py = 'import json\nimport csv\nfrom pathlib import Path\nfrom datetime import datetime\n\nROOT = Path(__file__).resolve().parent.parent\nTASK_DIR = ROOT / "tasks"\nLOG_DIR = ROOT / "logs"\nLOG_DIR.mkdir(exist_ok=True)\n\nREPORT_FILE = LOG_DIR / "report.csv"\n\n\ndef write_log(account, task_id, status, message):\n    file_exists = REPORT_FILE.exists()\n\n    with open(REPORT_FILE, "a", newline="", encoding="utf-8-sig") as f:\n        writer = csv.writer(f)\n\n        if not file_exists:\n            writer.writerow(["time", "account", "task_id", "status", "message"])\n\n        writer.writerow([\n            datetime.now().strftime("%Y-%m-%d %H:%M:%S"),\n            account,\n            task_id,\n            status,\n            message\n        ])\n\n\ndef save_task(path, task):\n    with open(path, "w", encoding="utf-8") as f:\n        json.dump(task, f, ensure_ascii=False, indent=2)\n\n\ndef parse_schedule(schedule_value):\n    if not schedule_value:\n        return None\n\n    text = str(schedule_value).strip()\n\n    if text.lower() == "now":\n        return None\n\n    formats = [\n        "%Y-%m-%d %H:%M",\n        "%Y-%m-%d %H:%M:%S",\n        "%Y-%m-%dT%H:%M",\n        "%Y-%m-%dT%H:%M:%S",\n    ]\n\n    for fmt in formats:\n        try:\n            return datetime.strptime(text, fmt)\n        except Exception:\n            pass\n\n    return None\n\n\nprint("=" * 45)\nprint("QUEUE ENGINE PRO")\nprint("=" * 45)\n\ntasks = sorted(TASK_DIR.glob("task_*.json"))\n\nif not tasks:\n    print("Không có task.")\nelse:\n    count_ready = 0\n    now = datetime.now()\n\n    for task_file in tasks:\n        try:\n            with open(task_file, "r", encoding="utf-8") as f:\n                task = json.load(f)\n\n            status = str(task.get("status", "")).upper().strip()\n            schedule = str(task.get("schedule", "now")).strip()\n\n            if status == "SUCCESS":\n                continue\n\n            if status == "FAILED":\n                continue\n\n            if status == "RUNNING":\n                continue\n\n            task_id = task_file.stem\n            account = task.get("account", "")\n            content = task.get("content", "")\n            image = task.get("image", "")\n\n            if status == "READY":\n                print(f"\nTask đã sẵn sàng: {task_file.name}")\n                print("Account:", account)\n                print("Content:", content)\n                print("Image:", image)\n                count_ready += 1\n                continue\n\n            if status == "WAITING":\n                run_at = parse_schedule(schedule)\n\n                if run_at is None:\n                    task["status"] = "READY"\n                    task["scheduler_status"] = "READY"\n                    task["scheduler_message"] = "Đã chuyển sang READY"\n                    task["scheduler_at"] = now.strftime("%Y-%m-%d %H:%M:%S")\n                    save_task(task_file, task)\n                    write_log(account, task_id, "READY", "WAITING -> READY")\n                    print(f"\nĐã duyệt: {task_file.name}")\n                    count_ready += 1\n                    continue\n\n                if run_at <= now:\n                    task["status"] = "READY"\n                    task["scheduler_status"] = "READY"\n                    task["scheduler_message"] = "Đã đến giờ đăng"\n                    task["scheduler_at"] = now.strftime("%Y-%m-%d %H:%M:%S")\n                    save_task(task_file, task)\n                    write_log(account, task_id, "READY", "Đã đến giờ đăng")\n                    print(f"\nĐã đến giờ: {task_file.name}")\n                    count_ready += 1\n                else:\n                    print(f"\nChưa tới giờ: {task_file.name} -> {schedule}")\n\n        except Exception as e:\n            print("Lỗi task:", task_file.name, e)\n\n    print("\nTổng task READY/đã duyệt:", count_ready)\n'
-    post_media_fallback_py = 'from pathlib import Path\nprint("=" * 58)\nprint("POST MEDIA PRO - FILE CHƯA ĐƯỢC ĐÓNG GÓI")\nprint("=" * 58)\nprint("Gói Worker này chưa có workers/post_media_test.py thật.")\nprint("Hãy copy file post_media_test.py thật từ FB_POSTER_PRO/workers vào thư mục workers rồi chạy lại START_FACEBOOK_WORKER.bat")\nprint("Root:", Path(__file__).resolve().parent.parent)\n'
+    post_media_fallback_py = r'''import json
+import csv
+from pathlib import Path
+from datetime import datetime
+from playwright.sync_api import sync_playwright
+
+ROOT = Path(__file__).resolve().parent.parent
+TASK_DIR = ROOT / "tasks"
+PROFILE_DIR = ROOT / "profiles"
+MEDIA_IMAGE_DIR = ROOT / "media" / "images"
+LOG_DIR = ROOT / "logs"
+POST_HISTORY = LOG_DIR / "post_history.csv"
+IMAGE_EXT = [".jpg", ".jpeg", ".png", ".webp"]
+
+
+def now():
+    return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+
+def save_task(path, task):
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(task, f, ensure_ascii=False, indent=2)
+
+
+def log_history(task, task_file, target_name, target_url, status, message):
+    LOG_DIR.mkdir(parents=True, exist_ok=True)
+    exists = POST_HISTORY.exists()
+    with open(POST_HISTORY, "a", encoding="utf-8-sig", newline="") as f:
+        writer = csv.writer(f)
+        if not exists:
+            writer.writerow(["time", "task", "account", "target_type", "target_name", "target_url", "status", "message", "content", "image"])
+        writer.writerow([now(), task_file.name, task.get("account", ""), task.get("target_type", "profile"), target_name, target_url, status, message, task.get("content", ""), task.get("image", "")])
+
+
+def find_first_ready_task():
+    for task_file in sorted(TASK_DIR.glob("task_*.json")):
+        try:
+            with open(task_file, "r", encoding="utf-8") as f:
+                task = json.load(f)
+            if task.get("status") in ["READY", "WAITING"]:
+                return task_file, task
+        except Exception as e:
+            print("Bỏ qua task lỗi:", task_file.name, e)
+    return None, None
+
+
+def get_task_content(task):
+    content = (task.get("content") or task.get("caption") or task.get("text") or task.get("message") or task.get("post_content") or "")
+    content = str(content).strip()
+    if not content:
+        content = "Xin chào khách hàng"
+        task["content"] = content
+        task["auto_content_filled"] = True
+        task["auto_content_at"] = now()
+    return content
+
+
+def add_image_file(files, name):
+    name = str(name).strip()
+    if not name:
+        return
+    p = Path(name)
+    if p.is_absolute() and p.exists() and p.suffix.lower() in IMAGE_EXT:
+        files.append(str(p.resolve()))
+        return
+    p1 = MEDIA_IMAGE_DIR / name
+    if p1.exists() and p1.suffix.lower() in IMAGE_EXT:
+        files.append(str(p1.resolve()))
+
+
+def find_images_from_task(task):
+    files = []
+    images_value = task.get("images", [])
+    if isinstance(images_value, list):
+        for name in images_value:
+            add_image_file(files, name)
+    image_value = str(task.get("image", "")).strip()
+    if image_value:
+        for name in image_value.replace(";", ",").split(","):
+            add_image_file(files, name)
+    clean = []
+    for f in files:
+        if f not in clean:
+            clean.append(f)
+    if clean:
+        return clean
+    for f in MEDIA_IMAGE_DIR.rglob("*"):
+        if f.is_file() and f.suffix.lower() in IMAGE_EXT:
+            clean.append(str(f.resolve()))
+    return sorted(clean)
+
+
+def open_post_box(page):
+    selectors = [
+        "div[role='button']:has-text('Bạn đang nghĩ gì')",
+        "div[role='button']:has-text('What’s on your mind')",
+        "div[role='button']:has-text(\"What's on your mind\")",
+        "span:has-text('Bạn đang nghĩ gì')",
+        "span:has-text('What’s on your mind')",
+        "span:has-text(\"What's on your mind\")",
+        "div[aria-label='Tạo bài viết']",
+        "div[aria-label='Create post']",
+        "div[role='button']:has-text('Viết gì đó')",
+        "div[role='button']:has-text('Write something')",
+    ]
+    for selector in selectors:
+        try:
+            el = page.locator(selector).first
+            el.wait_for(state="visible", timeout=9000)
+            el.click(timeout=9000)
+            page.wait_for_timeout(3000)
+            return True
+        except Exception:
+            pass
+    return False
+
+
+def fill_post_content(page, content):
+    selectors = ["div[role='dialog'] div[role='textbox']", "div[role='textbox']", "[contenteditable='true']"]
+    for selector in selectors:
+        try:
+            box = page.locator(selector).first
+            box.wait_for(state="visible", timeout=12000)
+            box.click(timeout=6000)
+            try:
+                box.fill(content)
+            except Exception:
+                page.keyboard.insert_text(content)
+            page.wait_for_timeout(2000)
+            return True
+        except Exception:
+            pass
+    return False
+
+
+def click_photo_video_button(page):
+    selectors = [
+        "div[role='dialog'] div[role='button']:has-text('Ảnh/video')",
+        "div[role='dialog'] div[role='button']:has-text('Photo/video')",
+        "div[role='dialog'] span:has-text('Ảnh/video')",
+        "div[role='dialog'] span:has-text('Photo/video')",
+        "div[aria-label='Ảnh/video']",
+        "div[aria-label='Photo/video']",
+    ]
+    for selector in selectors:
+        try:
+            btn = page.locator(selector).first
+            btn.wait_for(state="visible", timeout=5000)
+            btn.click(timeout=5000)
+            page.wait_for_timeout(2000)
+            return True
+        except Exception:
+            pass
+    return False
+
+
+def upload_images(page, task):
+    images = find_images_from_task(task)
+    if not images:
+        return True, "Không có ảnh để upload, chỉ đăng nội dung."
+    print("Tổng ảnh tìm thấy:", len(images))
+    click_photo_video_button(page)
+    page.wait_for_timeout(2000)
+    try:
+        file_inputs = page.locator("input[type='file']")
+        total_inputs = file_inputs.count()
+        if total_inputs <= 0:
+            return False, "Không tìm thấy input upload ảnh."
+        last_error = None
+        for i in range(total_inputs):
+            try:
+                file_input = file_inputs.nth(i)
+                file_input.wait_for(state="attached", timeout=15000)
+                accept = file_input.get_attribute("accept") or ""
+                if "image" not in accept.lower() and accept.strip():
+                    continue
+                multiple = file_input.get_attribute("multiple")
+                if multiple is not None:
+                    print("Đang upload", len(images), "ảnh...")
+                    file_input.set_input_files(images)
+                    page.wait_for_timeout(15000)
+                    return True, f"Đã upload {len(images)} ảnh."
+                uploaded = 0
+                for img in images:
+                    try:
+                        file_input.set_input_files(img)
+                        uploaded += 1
+                        page.wait_for_timeout(5000)
+                    except Exception as e:
+                        last_error = e
+                        print("Bỏ qua ảnh lỗi:", img, e)
+                if uploaded > 0:
+                    page.wait_for_timeout(10000)
+                    return True, f"Đã upload {uploaded}/{len(images)} ảnh."
+            except Exception as e:
+                last_error = e
+                continue
+        return False, f"Không upload được ảnh nào. Lỗi cuối: {last_error}"
+    except Exception as e:
+        return False, f"Upload ảnh lỗi: {e}"
+
+
+def click_post_button(page):
+    print("Đang tìm nút Đăng...")
+    page.wait_for_timeout(5000)
+    selectors = [
+        "div[role='dialog'] div[aria-label='Đăng'][role='button']",
+        "div[role='dialog'] div[aria-label='Post'][role='button']",
+        "div[role='dialog'] div[role='button']:has-text('Đăng')",
+        "div[role='dialog'] div[role='button']:has-text('Post')",
+        "div[role='dialog'] button:has-text('Đăng')",
+        "div[role='dialog'] button:has-text('Post')",
+        "div[aria-label='Đăng'][role='button']",
+        "div[aria-label='Post'][role='button']",
+    ]
+    for selector in selectors:
+        try:
+            btn = page.locator(selector).last
+            btn.wait_for(state="visible", timeout=8000)
+            disabled = None
+            try:
+                disabled = btn.get_attribute("aria-disabled")
+            except Exception:
+                pass
+            if disabled == "true":
+                print("Nút Đăng đang khóa, chờ thêm...")
+                page.wait_for_timeout(5000)
+            btn.click(timeout=8000)
+            page.wait_for_timeout(8000)
+            return True, "Đã bấm nút Đăng."
+        except Exception:
+            pass
+    return False, "Không tìm thấy nút Đăng hoặc nút đang bị khóa."
+
+
+def post_one_target(page, task, task_file, content, target_name, target_url):
+    try:
+        if target_url:
+            print("Mở nơi đăng:", target_url)
+            page.goto(target_url, wait_until="domcontentloaded", timeout=60000)
+            page.wait_for_timeout(7000)
+        else:
+            page.goto("https://www.facebook.com", wait_until="domcontentloaded", timeout=60000)
+            page.wait_for_timeout(6000)
+
+        print("Đang tìm ô tạo bài viết...")
+        if not open_post_box(page):
+            msg = "Không tìm thấy ô tạo bài viết."
+            log_history(task, task_file, target_name, target_url, "FAILED", msg)
+            return False, msg
+
+        print("Đang dán nội dung...")
+        if not fill_post_content(page, content):
+            msg = "Không dán được nội dung."
+            log_history(task, task_file, target_name, target_url, "FAILED", msg)
+            return False, msg
+
+        print("SUCCESS: Đã dán nội dung.")
+        print("Đang upload ảnh...")
+        upload_ok, upload_message = upload_images(page, task)
+        print(("SUCCESS: " if upload_ok else "FAILED: ") + upload_message)
+
+        print("Đang chờ Facebook xử lý bài viết...")
+        page.wait_for_timeout(8000)
+        post_ok, post_message = click_post_button(page)
+        final_message = upload_message + " | " + post_message
+
+        if post_ok:
+            print("SUCCESS:", post_message)
+            log_history(task, task_file, target_name, target_url, "SUCCESS", final_message)
+            return True, final_message
+
+        print("FAILED:", post_message)
+        log_history(task, task_file, target_name, target_url, "FAILED", final_message)
+        return False, final_message
+    except Exception as e:
+        msg = "Lỗi khi đăng: " + str(e)
+        log_history(task, task_file, target_name, target_url, "FAILED", msg)
+        return False, msg
+
+
+def get_targets(task):
+    target_type = str(task.get("target_type") or "profile").strip().lower()
+    target_groups = task.get("target_groups") or []
+    if target_type in ["groups", "group"] and target_groups:
+        targets = []
+        for idx, url in enumerate(target_groups, start=1):
+            url = str(url).strip()
+            if url:
+                targets.append((f"Group {idx}", url))
+        return "groups", targets
+    return "profile", [("Trang cá nhân", "")]
+
+
+def main():
+    print("=" * 60)
+    print("POST MEDIA PRO - PROFILE/GROUP + UPLOAD ẢNH + BẤM ĐĂNG")
+    print("=" * 60)
+
+    task_file, task = find_first_ready_task()
+    if not task:
+        print("Không có task READY/WAITING để đăng.")
+        input("Enter để thoát...")
+        raise SystemExit
+
+    account = str(task.get("account", "")).strip()
+    content = get_task_content(task)
+    profile_path = PROFILE_DIR / account
+
+    if task.get("auto_content_filled"):
+        save_task(task_file, task)
+        print("Task thiếu nội dung, đã tự thêm nội dung mặc định.")
+
+    print("Task:", task_file.name)
+    print("Account:", account)
+    print("Content:", content)
+
+    if not account:
+        print("Task thiếu account.")
+        input("Enter để thoát...")
+        raise SystemExit
+    if not profile_path.exists():
+        print("Không tìm thấy profile:", profile_path)
+        input("Enter để thoát...")
+        raise SystemExit
+
+    task["status"] = "RUNNING"
+    task["post_publish_status"] = "RUNNING"
+    task["post_publish_at"] = now()
+    save_task(task_file, task)
+
+    target_type, targets = get_targets(task)
+    success_count = 0
+    failed_count = 0
+    messages = []
+
+    with sync_playwright() as p:
+        context = p.chromium.launch_persistent_context(user_data_dir=str(profile_path), headless=False, viewport={"width": 1280, "height": 900})
+        page = context.new_page()
+
+        for target_name, target_url in targets:
+            print("-" * 60)
+            print("Nơi đăng:", target_name, target_url or "profile")
+            ok, msg = post_one_target(page, task, task_file, content, target_name, target_url)
+            messages.append(f"{target_name}: {msg}")
+            if ok:
+                success_count += 1
+            else:
+                failed_count += 1
+            delay_seconds = int(task.get("delay_seconds") or 8)
+            page.wait_for_timeout(max(delay_seconds, 3) * 1000)
+
+        context.close()
+
+    if success_count > 0 and failed_count == 0:
+        task["status"] = "SUCCESS"
+        task["post_publish_status"] = "SUCCESS"
+    elif success_count > 0 and failed_count > 0:
+        task["status"] = "PARTIAL_SUCCESS"
+        task["post_publish_status"] = "PARTIAL_SUCCESS"
+    else:
+        task["status"] = "FAILED"
+        task["post_publish_status"] = "FAILED"
+
+    task["post_publish_at"] = now()
+    task["post_publish_message"] = " | ".join(messages)
+    task["post_success_count"] = success_count
+    task["post_failed_count"] = failed_count
+    task["target_type"] = target_type
+    save_task(task_file, task)
+
+    print("=" * 60)
+    print("Hoàn tất. Thành công:", success_count, "| Lỗi:", failed_count)
+    input("Kiểm tra trên Chrome xong thì nhấn Enter để đóng...")
+
+
+
+'''
 
     with zipfile.ZipFile(mem, "w", zipfile.ZIP_DEFLATED) as z:
         z.writestr("HUONG_DAN_SU_DUNG.txt", readme)
