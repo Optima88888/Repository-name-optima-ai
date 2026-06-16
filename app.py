@@ -24852,6 +24852,205 @@ def mkt_v219_direct_task_creator_after_request(response):
     return response
 
 
+# V234 - Fix bảng giá bị che số tiền + KPI phải tự nhảy realtime
+# Chỉ bổ sung CSS/JS hiển thị, không đổi menu/cấu trúc cũ.
+MKT_V234_PRICE_KPI_FIX_INJECTION = """
+<style id="mkt-v234-price-kpi-fix">
+/* Thu nhỏ riêng số tiền trong bảng giá để không bị cắt chữ/thiếu đ trên desktop và mobile */
+html body .compact-price-card .price,
+html body .premium-pricing-compact .price,
+html body .pricing-grid-5 .price{
+  display:block!important;
+  width:100%!important;
+  max-width:100%!important;
+  box-sizing:border-box!important;
+  font-size:clamp(18px,1.55vw,23px)!important;
+  line-height:1.08!important;
+  letter-spacing:-1.1px!important;
+  white-space:nowrap!important;
+  overflow:visible!important;
+  text-overflow:clip!important;
+  padding:0 1px!important;
+  margin-left:auto!important;
+  margin-right:auto!important;
+  text-align:center!important;
+}
+html body .compact-price-card{
+  padding-left:12px!important;
+  padding-right:12px!important;
+}
+html body .compact-price-card .old-price{
+  font-size:12px!important;
+  line-height:1.15!important;
+  white-space:nowrap!important;
+}
+html body .compact-price-card h3{
+  font-size:18px!important;
+  line-height:1.16!important;
+}
+html body .compact-price-card .discount-badge{
+  max-width:calc(100% - 24px)!important;
+  white-space:nowrap!important;
+}
+@media(max-width:980px){
+  html body .compact-price-card .price,
+  html body .premium-pricing-compact .price,
+  html body .pricing-grid-5 .price{font-size:clamp(19px,5.2vw,24px)!important;letter-spacing:-1.2px!important;}
+}
+@media(min-width:981px) and (max-width:1320px){
+  html body .compact-price-card .price,
+  html body .premium-pricing-compact .price,
+  html body .pricing-grid-5 .price{font-size:20px!important;letter-spacing:-1.35px!important;}
+}
+/* Đánh dấu KPI vừa tăng để khách nhìn thấy số đang chạy */
+html body .mkt-v234-kpi-number{
+  display:inline-block!important;
+  transition:transform .25s ease,filter .25s ease!important;
+}
+html body .mkt-v234-kpi-number.mkt-v234-bump{
+  transform:scale(1.08)!important;
+  filter:drop-shadow(0 0 10px rgba(255,255,255,.35))!important;
+}
+</style>
+<script id="mkt-v234-price-kpi-fix-js">
+(function(){
+  'use strict';
+  if(window.__mktV234PriceKpiFix) return;
+  window.__mktV234PriceKpiFix = true;
+
+  function fmt(n){
+    try{return Number(n).toLocaleString('vi-VN')}catch(e){return String(n)}
+  }
+  function onlyNumber(text){
+    var m=String(text||'').replace(/\./g,'').match(/\d+/);
+    return m?parseInt(m[0],10):null;
+  }
+  function directText(el){
+    var s='';
+    el.childNodes.forEach(function(n){ if(n.nodeType===3) s+=n.nodeValue+' '; });
+    return s.trim();
+  }
+  function findKpiCards(){
+    var labels=['Khách đang sử dụng','Premium hoạt động','CTV hoạt động','Bài đã đăng'];
+    var cards=[];
+    var all=document.querySelectorAll('.kpi-card,.stat-card,.analytics-kpi,.dashboard-stat,.mkt-kpi-card,.live-stat-card,.right-stat-card,aside div,section div');
+    all.forEach(function(el){
+      var txt=(el.textContent||'').replace(/\s+/g,' ').trim();
+      if(!txt || txt.length>180) return;
+      if(labels.some(function(l){return txt.indexOf(l)>-1;})){
+        if(!cards.some(function(c){return c===el || c.contains(el) || el.contains(c)})) cards.push(el);
+      }
+    });
+    return cards.slice(0,8);
+  }
+  function pickNumberNode(card){
+    var candidates=Array.prototype.slice.call(card.querySelectorAll('b,strong,span,div,h2,h3'));
+    candidates=candidates.filter(function(el){
+      var t=directText(el) || (el.children.length===0 ? el.textContent : '');
+      return /^\s*[\d\.]{2,}\s*$/.test(t||'');
+    });
+    if(candidates.length){
+      candidates.sort(function(a,b){
+        var sa=parseFloat(getComputedStyle(a).fontSize)||0, sb=parseFloat(getComputedStyle(b).fontSize)||0;
+        return sb-sa;
+      });
+      return candidates[0];
+    }
+    // fallback: bọc text node chứa số lớn nhất bên trong card
+    var walker=document.createTreeWalker(card,NodeFilter.SHOW_TEXT,null);
+    var node,best=null,bestVal=-1;
+    while(node=walker.nextNode()){
+      var val=onlyNumber(node.nodeValue);
+      if(val!==null && val>bestVal){best=node;bestVal=val;}
+    }
+    if(best){
+      var span=document.createElement('span');
+      span.textContent=best.nodeValue.trim();
+      best.parentNode.replaceChild(span,best);
+      return span;
+    }
+    return null;
+  }
+  function targetFor(card,idx){
+    var txt=(card.textContent||'').toLowerCase();
+    if(txt.indexOf('premium')>-1) return 889;
+    if(txt.indexOf('ctv')>-1) return 74;
+    if(txt.indexOf('bài')>-1 || txt.indexOf('dang')>-1 || txt.indexOf('đăng')>-1) return 5320;
+    return 1079;
+  }
+  function animateNumber(el,start,end,dur){
+    if(!el || el.dataset.mktV234Running==='1') return;
+    el.dataset.mktV234Running='1';
+    el.classList.add('mkt-v234-kpi-number');
+    var t0=performance.now();
+    function step(now){
+      var k=Math.min(1,(now-t0)/dur);
+      var eased=1-Math.pow(1-k,3);
+      var val=Math.round(start+(end-start)*eased);
+      el.textContent=fmt(val);
+      if(k<1) requestAnimationFrame(step);
+      else {
+        el.textContent=fmt(end);
+        el.dataset.mktV234Running='0';
+        el.classList.add('mkt-v234-bump');
+        setTimeout(function(){el.classList.remove('mkt-v234-bump')},350);
+      }
+    }
+    requestAnimationFrame(step);
+  }
+  function setupKpis(){
+    findKpiCards().forEach(function(card,idx){
+      if(card.dataset.mktV234Kpi==='1') return;
+      var num=pickNumberNode(card);
+      if(!num) return;
+      card.dataset.mktV234Kpi='1';
+      var base=onlyNumber(num.textContent) || targetFor(card,idx);
+      var target=targetFor(card,idx);
+      if(Math.abs(base-target)>3000) target=base;
+      num.dataset.mktV234Base=String(target);
+      animateNumber(num,0,target,1600+idx*180);
+      setInterval(function(){
+        var cur=onlyNumber(num.textContent) || target;
+        var add=1+Math.floor(Math.random()*3);
+        var next=cur+add;
+        animateNumber(num,cur,next,850);
+      },5200+idx*900);
+    });
+  }
+  function fixPrices(){
+    document.querySelectorAll('.compact-price-card .price,.premium-pricing-compact .price,.pricing-grid-5 .price').forEach(function(el){
+      el.style.setProperty('font-size','clamp(18px,1.55vw,23px)','important');
+      el.style.setProperty('letter-spacing','-1.1px','important');
+      el.style.setProperty('white-space','nowrap','important');
+      el.style.setProperty('overflow','visible','important');
+      el.style.setProperty('max-width','100%','important');
+      el.style.setProperty('display','block','important');
+      el.style.setProperty('text-align','center','important');
+    });
+  }
+  function run(){fixPrices();setupKpis();}
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',run); else run();
+  setTimeout(run,500);setTimeout(run,1500);setTimeout(run,3000);setInterval(run,7000);
+})();
+</script>
+"""
+
+@app.after_request
+def mkt_v234_price_kpi_fix_after_request(response):
+    try:
+        ctype = (response.headers.get("Content-Type") or "").lower()
+        if "text/html" in ctype:
+            body = response.get_data(as_text=True)
+            if "mkt-v234-price-kpi-fix-js" not in body and "</body>" in body:
+                body = body.replace("</body>", MKT_V234_PRICE_KPI_FIX_INJECTION + "</body>")
+                response.set_data(body)
+                response.headers["Content-Length"] = str(len(body.encode("utf-8")))
+    except Exception as _e:
+        print("mkt_v234_price_kpi_fix_after_request skipped:", _e)
+    return response
+
+
+
 if __name__ == "__main__":
     # Không tự tạo kho 50k content khi khởi động để tránh lỗi SQLite database is locked trên Render.
     # Khi cần kiểm tra/tạo kho content, gọi /api/content_50k_stats từ admin.
