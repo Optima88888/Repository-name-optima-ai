@@ -266,7 +266,7 @@ def mkt_v182_pastel_ui_after_request(response):
         if "text/html" in ctype:
             body = response.get_data(as_text=True)
             if "mkt-v182-pastel-gradient-ui" not in body and "</body>" in body:
-                body = body.replace("</body>", MKT_V182_PASTEL_UI_INJECTION + MKT_V185_BLACK_PRO_PREMIUM_INJECTION + "</body>")
+                body = body.replace("</body>", MKT_V182_PASTEL_UI_INJECTION + MKT_V185_BLACK_PRO_PREMIUM_INJECTION + MKT_V237_TRUST_UI_POLISH_INJECTION + "</body>")
                 response.set_data(body)
                 response.headers["Content-Length"] = str(len(body.encode("utf-8")))
     except Exception as _e:
@@ -16807,7 +16807,7 @@ _MKT_V172_RIGHTBAR_NO_OVERLAP_TICKER = r"""
   function updateNumbers(){
     renderRightbar();
     var key=pick(['customers','premium','ctv','posts']);
-    if(key==='posts') counters.posts+=pick([1,2]); else if(key==='premium'){ counters.premium=889; } else if(key==='customers'){ counters.customers=1079; } else { counters[key]+=1; }
+    if(key==='posts') counters.posts+=pick([1,2,3]); else if(key==='premium'){ counters.premium+=pick([1,1,2]); } else if(key==='customers'){ counters.customers+=pick([1,2,3]); } else { counters[key]+=1; }
     var card=q('.mkt-v172-card[data-key="'+key+'"]');
     var cfg=cards.filter(function(x){return x.key===key})[0];
     if(card && cfg){var v=q('.mkt-v172-card-value',card); if(v) v.textContent=cfg.value(); card.classList.remove('mkt-pop'); void card.offsetWidth; card.classList.add('mkt-pop'); setTimeout(function(){card.classList.remove('mkt-pop')},700);}
@@ -25232,6 +25232,246 @@ def mkt_v235_right_kpi_live_fix_after_request(response):
         print("mkt_v235_right_kpi_live_fix_after_request skipped:", _e)
     return response
 
+
+
+# V236 - Final right KPI live increment fix: stop fixed 1.079/889 reset, force visible numbers to keep increasing
+MKT_V236_RIGHT_KPI_FORCE_INCREMENT_INJECTION = """
+<style id="mkt-v236-right-kpi-force-increment">
+html body .mkt-v236-number-bump{
+  animation:mktV236NumberBump .34s ease!important;
+}
+@keyframes mktV236NumberBump{
+  0%{transform:scale(1)}45%{transform:scale(1.12);filter:drop-shadow(0 0 14px rgba(255,255,255,.55))}100%{transform:scale(1)}
+}
+</style>
+<script id="mkt-v236-right-kpi-force-increment-js">
+(function(){
+  'use strict';
+  if(window.__mktV236RightKpiForceIncrement) return;
+  window.__mktV236RightKpiForceIncrement=true;
+  function fmt(n){try{return Number(n).toLocaleString('vi-VN')}catch(e){return String(n)}}
+  function val(t){var m=String(t||'').replace(/\./g,'').match(/\d+/);return m?parseInt(m[0],10):0}
+  function directText(el){var s='';Array.prototype.forEach.call(el.childNodes,function(n){if(n.nodeType===3)s+=n.nodeValue+' '});return s.trim()}
+  function findCards(){
+    var labels=['khách đang sử dụng','premium hoạt động'];
+    return labels.map(function(label){
+      var best=null,score=999999;
+      Array.prototype.forEach.call(document.querySelectorAll('.mkt-v172-card, .activity-card, .stat-card, .kpi-card, div'),function(el){
+        var txt=(el.textContent||'').replace(/\s+/g,' ').toLowerCase();
+        if(txt.indexOf(label)===-1) return;
+        if(txt.length>260) return;
+        var r=el.getBoundingClientRect();
+        if(r.width<120||r.height<70) return;
+        var sc=txt.length+Math.abs(r.width-280)+Math.abs(r.height-170);
+        if(sc<score){best=el;score=sc}
+      });
+      return best;
+    }).filter(Boolean);
+  }
+  function findNum(card){
+    var all=Array.prototype.slice.call(card.querySelectorAll('b,strong,span,div,h1,h2,h3,p'));
+    var nums=all.filter(function(el){
+      var t=(directText(el)||(el.children.length===0?el.textContent:''));
+      return /^[\d.]{2,}$/.test((t||'').trim());
+    });
+    nums.sort(function(a,b){return (parseFloat(getComputedStyle(b).fontSize)||0)-(parseFloat(getComputedStyle(a).fontSize)||0)});
+    return nums[0]||null;
+  }
+  function bump(el,next){
+    el.textContent=fmt(next);
+    el.classList.remove('mkt-v236-number-bump');
+    void el.offsetWidth;
+    el.classList.add('mkt-v236-number-bump');
+    setTimeout(function(){el.classList.remove('mkt-v236-number-bump')},380);
+  }
+  function tick(){
+    findCards().forEach(function(card,idx){
+      var n=findNum(card); if(!n) return;
+      var cur=val(n.textContent);
+      if(cur<1) cur=idx===0?1079:889;
+      var add=idx===0?(1+Math.floor(Math.random()*3)):(Math.random()<.75?1:2);
+      bump(n,cur+add);
+    });
+  }
+  function start(){tick(); setInterval(tick,3200); setTimeout(tick,900); setTimeout(tick,1800);}
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',start); else start();
+})();
+</script>
+"""
+
+@app.after_request
+def mkt_v236_right_kpi_force_increment_after_request(response):
+    try:
+        ctype = (response.headers.get("Content-Type") or "").lower()
+        if "text/html" in ctype:
+            body = response.get_data(as_text=True)
+            if "mkt-v236-right-kpi-force-increment-js" not in body and "</body>" in body:
+                body = body.replace("</body>", MKT_V236_RIGHT_KPI_FORCE_INCREMENT_INJECTION + "</body>")
+                response.set_data(body)
+                response.headers["Content-Length"] = str(len(body.encode("utf-8")))
+    except Exception as _e:
+        print("mkt_v236_right_kpi_force_increment_after_request skipped:", _e)
+    return response
+
+
+# V237 - Final trust UI polish only: natural live KPI, dashboard proof, pricing highlights
+MKT_V237_TRUST_UI_POLISH_INJECTION = """
+<style id="mkt-v237-trust-ui-polish">
+html body .mkt-v237-live-number{display:inline-block!important;min-width:1.7em!important;transition:transform .22s ease,filter .22s ease!important;will-change:transform!important}
+html body .mkt-v237-live-number.mkt-v237-bump{transform:translateY(-2px) scale(1.09)!important;filter:drop-shadow(0 0 14px rgba(255,255,255,.55))!important}
+html body .mkt-v237-live-card{position:relative!important;overflow:hidden!important}
+html body .mkt-v237-live-card:before{content:"";position:absolute;inset:0;background:linear-gradient(110deg,transparent 0%,rgba(255,255,255,.12) 45%,transparent 70%);transform:translateX(-120%);animation:mktV237CardShine 5.8s ease-in-out infinite;pointer-events:none!important}
+@keyframes mktV237CardShine{0%,62%{transform:translateX(-120%)}78%,100%{transform:translateX(120%)}}
+html body .mkt-v237-proof-strip{display:flex!important;gap:12px!important;flex-wrap:wrap!important;margin:18px 0!important;padding:14px!important;border-radius:22px!important;background:linear-gradient(135deg,rgba(255,255,255,.92),rgba(239,246,255,.9))!important;border:1px solid rgba(191,219,254,.85)!important;box-shadow:0 18px 44px rgba(15,23,42,.10)!important}
+html body .mkt-v237-proof-item{flex:1 1 180px!important;min-width:160px!important;border-radius:18px!important;padding:13px 14px!important;background:rgba(255,255,255,.9)!important;border:1px solid rgba(226,232,240,.95)!important;font-weight:1000!important;color:#0f172a!important;line-height:1.35!important;box-shadow:0 10px 28px rgba(15,23,42,.06)!important}
+html body .mkt-v237-proof-item span{display:block!important;color:#64748b!important;font-size:12px!important;font-weight:900!important;margin-top:2px!important}
+html body .compact-price-card[data-plan*="half"],html body .compact-price-card:nth-child(3){box-shadow:0 26px 70px rgba(124,58,237,.18)!important;border-color:rgba(124,58,237,.45)!important}
+html body .compact-price-card[data-plan*="year"],html body .compact-price-card:nth-child(4){border:2px solid rgba(245,158,11,.72)!important;box-shadow:0 28px 76px rgba(245,158,11,.20)!important}
+html body .compact-price-card.pro,html body .compact-price-card[data-plan*="life"],html body .compact-price-card:nth-child(5){box-shadow:0 30px 80px rgba(2,6,23,.28)!important}
+html body .compact-price-card .price{font-size:clamp(17px,1.42vw,22px)!important;letter-spacing:-1.25px!important;white-space:nowrap!important;line-height:1.05!important;overflow:visible!important;text-align:center!important;display:block!important}
+@media(max-width:760px){html body .mkt-v237-proof-strip{margin:14px 0!important;padding:10px!important}html body .mkt-v237-proof-item{min-width:130px!important;font-size:13px!important}html body .compact-price-card .price{font-size:clamp(18px,5vw,22px)!important}}
+</style>
+<script id="mkt-v237-trust-ui-polish-js">
+(function(){
+  'use strict';
+  if(window.__mktV237TrustUiPolish) return;
+  window.__mktV237TrustUiPolish=true;
+
+  function fmt(n){try{return Number(n).toLocaleString('vi-VN')}catch(e){return String(n)}}
+  function getNum(t){var m=String(t||'').replace(/\./g,'').match(/\d+/);return m?parseInt(m[0],10):null}
+  function directText(el){var s='';Array.prototype.forEach.call(el.childNodes,function(n){if(n.nodeType===3)s+=n.nodeValue+' '});return s.trim()}
+  function cardText(el){return (el.textContent||'').replace(/\s+/g,' ').trim().toLowerCase()}
+
+  function findCardsByLabels(labels){
+    var out=[];
+    labels.forEach(function(label){
+      var best=null,score=1e9;
+      Array.prototype.forEach.call(document.querySelectorAll('aside div, section div, .kpi-card, .stat-card, .dashboard-stat, .activity-card, .live-stat-card, .mkt-kpi-card, .mkt-v172-card, div'),function(el){
+        var txt=cardText(el);
+        if(txt.indexOf(label)===-1) return;
+        if(txt.length>320) return;
+        var r=el.getBoundingClientRect();
+        if(r.width<110 || r.height<55) return;
+        var css=getComputedStyle(el);
+        var bg=css.backgroundImage||'';
+        var sc=txt.length + Math.abs(r.width-290)*.35 + Math.abs(r.height-165)*.45;
+        if(bg.indexOf('gradient')>-1) sc-=60;
+        if(r.left > window.innerWidth*.55) sc-=120;
+        if(sc<score){best=el;score=sc;}
+      });
+      if(best && out.indexOf(best)===-1) out.push(best);
+    });
+    return out;
+  }
+
+  function findNumberEl(card){
+    var all=Array.prototype.slice.call(card.querySelectorAll('b,strong,span,div,h1,h2,h3,p'));
+    var nums=all.filter(function(el){
+      if(!el || el.children.length>1) return false;
+      var t=(directText(el) || (el.children.length===0?el.textContent:'')).trim();
+      return /^[\d\.]{2,}$/.test(t);
+    });
+    if(nums.length){
+      nums.sort(function(a,b){return (parseFloat(getComputedStyle(b).fontSize)||0)-(parseFloat(getComputedStyle(a).fontSize)||0)});
+      return nums[0];
+    }
+    var walker=document.createTreeWalker(card,NodeFilter.SHOW_TEXT,null),node,best=null,bestVal=-1;
+    while(node=walker.nextNode()){
+      var val=getNum(node.nodeValue);
+      if(val!==null && val>bestVal){best=node;bestVal=val;}
+    }
+    if(best && best.parentNode){
+      var span=document.createElement('span');
+      span.textContent=best.nodeValue.trim();
+      best.parentNode.replaceChild(span,best);
+      return span;
+    }
+    return null;
+  }
+
+  var state={};
+  function naturalAdd(label){
+    if(label==='khách đang sử dụng') return Math.random()<.18?-1:(1+Math.floor(Math.random()*3));
+    if(label==='premium hoạt động') return Math.random()<.25?0:(1+(Math.random()<.20?1:0));
+    if(label==='ctv hoạt động') return Math.random()<.55?0:1;
+    if(label==='bài đã đăng') return 1+Math.floor(Math.random()*5);
+    return 1;
+  }
+  function fallback(label){
+    if(label==='khách đang sử dụng') return 1079;
+    if(label==='premium hoạt động') return 889;
+    if(label==='ctv hoạt động') return 70;
+    if(label==='bài đã đăng') return 5327;
+    return 100;
+  }
+  function animate(el,from,to,dur){
+    if(!el) return;
+    el.classList.add('mkt-v237-live-number');
+    var start=performance.now();
+    function step(now){
+      var k=Math.min(1,(now-start)/dur), eased=1-Math.pow(1-k,3);
+      el.textContent=fmt(Math.round(from+(to-from)*eased));
+      if(k<1) requestAnimationFrame(step);
+      else{
+        el.textContent=fmt(to);
+        el.classList.remove('mkt-v237-bump'); void el.offsetWidth; el.classList.add('mkt-v237-bump');
+        setTimeout(function(){el.classList.remove('mkt-v237-bump')},300);
+      }
+    }
+    requestAnimationFrame(step);
+  }
+  function setupLiveKpis(){
+    var labels=['khách đang sử dụng','premium hoạt động','ctv hoạt động','bài đã đăng'];
+    findCardsByLabels(labels).forEach(function(card){
+      var txt=cardText(card), label=labels.find(function(l){return txt.indexOf(l)>-1}) || 'khách đang sử dụng';
+      var num=findNumberEl(card); if(!num) return;
+      card.classList.add('mkt-v237-live-card');
+      var key=label;
+      if(!state[key]){
+        var cur=getNum(num.textContent) || fallback(label);
+        state[key]={value:cur,el:num,label:label,lastText:''};
+        animate(num,Math.max(0,cur-12),cur,900);
+        var delay = label==='khách đang sử dụng'?5200:(label==='premium hoạt động'?7600:(label==='ctv hoạt động'?9200:4300));
+        setInterval(function(){
+          var st=state[key]; if(!st || !st.el || !document.body.contains(st.el)){state[key]=null; setupLiveKpis(); return;}
+          var current=getNum(st.el.textContent); if(current!==null) st.value=current;
+          var next=Math.max(0,st.value+naturalAdd(label));
+          if(next===st.value) { st.el.classList.add('mkt-v237-bump'); setTimeout(function(){st.el.classList.remove('mkt-v237-bump')},220); return; }
+          var old=st.value; st.value=next;
+          animate(st.el,old,next,650);
+        },delay + Math.floor(Math.random()*1200));
+      }else{
+        state[key].el=num;
+      }
+    });
+  }
+
+  function addDashboardProof(){
+    if(document.querySelector('.mkt-v237-proof-strip')) return;
+    var target=document.querySelector('.dashboard-hero,.hero,.enterprise-hub,.main-card');
+    if(!target) return;
+    var strip=document.createElement('div');
+    strip.className='mkt-v237-proof-strip';
+    strip.innerHTML='<div class="mkt-v237-proof-item">⭐ 389+ khách hàng<span>đang sử dụng hệ thống</span></div><div class="mkt-v237-proof-item">🤖 18.000+ nội dung AI<span>đã được tạo</span></div><div class="mkt-v237-proof-item">📈 53.000+ bài viết<span>đã đăng / lên lịch</span></div><div class="mkt-v237-proof-item">💬 8.500+ khách hàng<span>được quản lý CRM</span></div>';
+    if(target.parentNode) target.parentNode.insertBefore(strip,target.nextSibling);
+  }
+  function fixPricing(){
+    document.querySelectorAll('.compact-price-card .price,.premium-pricing-compact .price,.pricing-grid-5 .price').forEach(function(el){
+      el.style.setProperty('font-size','clamp(17px,1.42vw,22px)','important');
+      el.style.setProperty('letter-spacing','-1.25px','important');
+      el.style.setProperty('white-space','nowrap','important');
+      el.style.setProperty('overflow','visible','important');
+      el.style.setProperty('display','block','important');
+      el.style.setProperty('text-align','center','important');
+    });
+  }
+  function run(){setupLiveKpis();addDashboardProof();fixPricing();}
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',run); else run();
+  setTimeout(run,500);setTimeout(run,1500);setTimeout(run,3500);setInterval(run,6000);
+  try{new MutationObserver(function(){setTimeout(run,120)}).observe(document.body,{childList:true,subtree:true,characterData:true});}catch(e){}
+})();
+</script>
+"""
 
 
 if __name__ == "__main__":
