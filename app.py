@@ -23839,7 +23839,7 @@ def mkt_v217_download_facebook_worker_zip():
     readme = 'FACEBOOK WORKER - GPTMINI / MARKETING AUTOMATION PRO\n\nMỤC ĐÍCH\n- Render/Web chỉ tạo task đăng bài.\n- Máy tính khách chạy Worker để đăng Facebook thật bằng Chrome/profile đã đăng nhập.\n- Cách này ổn định hơn, tránh Render bị thiếu Chrome/profile/cookie Facebook.\n\nCÁCH DÙNG NHANH\n1. Giải nén file này vào đúng thư mục dự án FB_POSTER_PRO.\n2. Đảm bảo trong thư mục có sẵn:\n   - app.py\n   - tasks\\\n   - media\\\n   - profiles\\\n   - workers\\post_media_test.py\n   - workers\\queue_engine.py\n3. Bấm đúp START_FACEBOOK_WORKER.bat.\n4. Mở web, vào Facebook cá nhân, tạo task đăng ngay hoặc hẹn giờ.\n5. Worker sẽ tự quét task READY/WAITING và xử lý.\n\nLƯU Ý\n- Nếu dùng Render cho khách, khách vẫn cần chạy Worker trên máy có đăng nhập Facebook.\n- Không cần mở CMD thủ công nếu dùng file START_FACEBOOK_WORKER.bat.\n- Lần đầu nên test bằng nội dung mới, tránh Facebook chặn trùng nội dung.\n'
     bat = '@echo off\nchcp 65001 >nul\ntitle GPTMini Facebook Worker\ncolor 0A\n\necho =====================================================\necho        GPTMini Facebook Worker - Dang Facebook that\necho =====================================================\necho.\ncd /d "%~dp0"\n\nif not exist workers mkdir workers\nif not exist tasks mkdir tasks\nif not exist media mkdir media\nif not exist profiles mkdir profiles\nif not exist logs mkdir logs\n\nwhere py >nul 2>nul\nif errorlevel 1 (\n  echo Khong tim thay Python launcher py.\n  echo Hay cai Python truoc, hoac chay bang python workers\\worker.py\n  pause\n  exit /b\n)\n\necho Dang cai/kiem tra thu vien co ban...\npy -m pip install -r requirements_worker.txt\n\necho.\necho Dang khoi dong worker. De cua so nay mo trong luc dang bai.\necho Bam CTRL + C neu muon dung.\necho.\npy workers\\worker.py\npause\n'
     requirements = 'playwright\nrequests\npython-dotenv\n'
-    worker_py = 'import os\nimport time\nimport subprocess\nimport sys\nfrom pathlib import Path\n\nROOT = Path(__file__).resolve().parent.parent\nWORKERS = ROOT / "workers"\nQUEUE = WORKERS / "queue_engine.py"\nPOST = WORKERS / "post_media_test.py"\nLOGS = ROOT / "logs"\nLOGS.mkdir(exist_ok=True)\n\nprint("=" * 58)\nprint("GPTMini Facebook Worker V217")\nprint("Root:", ROOT)\nprint("=" * 58)\n\ndef run_py(path):\n    if not path.exists():\n        print("CHUA THAY FILE:", path)\n        return 1\n    print("\\n>>> RUN:", path.name)\n    try:\n        return subprocess.call([sys.executable, str(path)], cwd=str(ROOT))\n    except KeyboardInterrupt:\n        raise\n    except Exception as e:\n        print("LOI CHAY", path.name, e)\n        return 1\n\nwhile True:\n    try:\n        run_py(QUEUE)\n        run_py(POST)\n        print("\\nWorker nghi 10 giay roi quet tiep...")\n        time.sleep(10)\n    except KeyboardInterrupt:\n        print("\\nDa dung worker.")\n        break\n'
+    worker_py = 'import os\nimport time\nimport subprocess\nimport sys\nfrom pathlib import Path\n\nROOT = Path(__file__).resolve().parent.parent\nWORKERS = ROOT / "workers"\nQUEUE = WORKERS / "queue_engine.py"\nPOST = WORKERS / "post_media_test.py"\nLOGS = ROOT / "logs"\nLOGS.mkdir(exist_ok=True)\n\nprint("=" * 58)\nprint("GPTMini Facebook Worker V217")\nprint("Root:", ROOT)\nprint("=" * 58)\n\ndef run_py(path):\n    if not path.exists():\n        print("CHUA THAY FILE:", path)\n        return 1\n    print("\\n>>> RUN:", path.name)\n    try:\n        return subprocess.call([sys.executable, str(path)], cwd=str(ROOT))\n    except KeyboardInterrupt:\n        raise\n    except Exception as e:\n        print("LOI CHAY", path.name, e)\n        return 1\n\nwhile True:\n    try:\n        run_py(QUEUE)\n        run_py(POST)\n        print("\\nWorker đang chờ bài đăng từ web... 10 giây nữa quét tiếp.")\n        time.sleep(10)\n    except KeyboardInterrupt:\n        print("\\nDa dung worker.")\n        break\n'
     queue_engine_py = r'''import json
 import csv
 from pathlib import Path
@@ -23908,7 +23908,7 @@ print("=" * 45)
 tasks = sorted(TASK_DIR.glob("task_*.json"))
 
 if not tasks:
-    print("Không có task.")
+    print("Đang chờ bài đăng từ web... (chưa có task)")
 else:
     count_ready = 0
     now = datetime.now()
@@ -24280,8 +24280,7 @@ def main():
 
     task_file, task = find_first_ready_task()
     if not task:
-        print("Không có task READY/WAITING để đăng.")
-        input("Enter để thoát...")
+        print("Đang chờ bài đăng từ web... chưa có task READY/WAITING.")
         raise SystemExit
 
     account = str(task.get("account", "")).strip()
@@ -24297,12 +24296,21 @@ def main():
     print("Content:", content)
 
     if not account:
-        print("Task thiếu account.")
-        input("Enter để thoát...")
+        task["status"] = "FAILED"
+        task["post_publish_status"] = "FAILED"
+        task["post_publish_message"] = "Task thiếu account/profile."
+        task["post_publish_at"] = now()
+        save_task(task_file, task)
+        print("Task thiếu account/profile. Đã đánh dấu FAILED để không bị chạy lặp.")
         raise SystemExit
     if not profile_path.exists():
+        task["status"] = "FAILED"
+        task["post_publish_status"] = "FAILED"
+        task["post_publish_message"] = "Không tìm thấy profile: " + str(profile_path)
+        task["post_publish_at"] = now()
+        save_task(task_file, task)
         print("Không tìm thấy profile:", profile_path)
-        input("Enter để thoát...")
+        print("Đã đánh dấu FAILED để không bị chạy lặp.")
         raise SystemExit
 
     task["status"] = "RUNNING"
@@ -24352,7 +24360,7 @@ def main():
 
     print("=" * 60)
     print("Hoàn tất. Thành công:", success_count, "| Lỗi:", failed_count)
-    input("Kiểm tra trên Chrome xong thì nhấn Enter để đóng...")
+    print("Worker đã xử lý xong task này. Quay lại vòng quét tiếp theo.")
 
 
 
