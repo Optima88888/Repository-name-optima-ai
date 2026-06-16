@@ -16913,6 +16913,52 @@ def mkt_v225_force_facebook_menu_after_request(response):
     return response
 
 
+
+# ============================================================
+# V226 - Fix bố cục Đăng cá nhân: đưa vào màn hình chính, bỏ nút nổi, dọn chữ CSS tràn
+# Giữ menu trái, giữ route /facebook-personal, không tạo task giả.
+# ============================================================
+MKT_V226_FIX_FACEBOOK_LAYOUT_UI = r'''
+<style id="mkt-v226-fix-facebook-layout-css">
+#mktV225FbFloatBtn{display:none!important;visibility:hidden!important;opacity:0!important;pointer-events:none!important}
+.mkt-v226-personal-card{background:linear-gradient(135deg,#ecfeff,#eff6ff,#f5f3ff)!important;border:1px solid rgba(34,197,94,.35)!important;border-radius:24px!important;padding:22px!important;box-shadow:0 22px 58px rgba(37,99,235,.14)!important;color:#0f172a!important;cursor:pointer!important;min-height:150px!important;display:flex!important;flex-direction:column!important;justify-content:center!important;gap:10px!important}
+.mkt-v226-personal-card:hover{transform:translateY(-4px)!important;box-shadow:0 28px 70px rgba(37,99,235,.22)!important;border-color:#86efac!important}
+.mkt-v226-personal-card .mkt-v226-ico{width:54px;height:54px;border-radius:18px;background:linear-gradient(135deg,#16a34a,#2563eb,#7c3aed);display:flex;align-items:center;justify-content:center;color:#fff;font-size:25px;box-shadow:0 14px 32px rgba(37,99,235,.25)}
+.mkt-v226-personal-card h3{margin:0!important;font-size:23px!important;font-weight:1000!important;color:#0f172a!important}.mkt-v226-personal-card p{margin:0!important;font-size:14px!important;font-weight:800!important;color:#475569!important;line-height:1.45!important}.mkt-v226-personal-card .mkt-v226-badge{display:inline-flex;align-items:center;gap:7px;width:max-content;border-radius:999px;background:#052e16;color:#bbf7d0;padding:7px 12px;font-size:12px;font-weight:1000;box-shadow:0 0 18px rgba(34,197,94,.22)}.mkt-v226-personal-card .mkt-v226-badge i{width:8px;height:8px;border-radius:999px;background:#22c55e;box-shadow:0 0 10px #22c55e;display:block}
+@media(max-width:900px){.mkt-v226-personal-card{margin:12px 0!important;min-height:135px!important;padding:18px!important}.mkt-v226-personal-card h3{font-size:20px!important}}
+</style>
+<script id="mkt-v226-fix-facebook-layout-js">
+(function(){
+ if(window.__mktV226FixFacebookLayout)return; window.__mktV226FixFacebookLayout=true;
+ function qs(s,r){return (r||document).querySelector(s)}
+ function qsa(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s))}
+ function showFacebook(){try{location.hash='facebook_personal'}catch(e){} var menu=qs('[data-module="facebook_personal"],a[href="#facebook_personal"]'); if(menu){try{menu.click()}catch(e){}} setTimeout(function(){var box=qs('#facebook_personal'); if(box){qsa('.module-section,.panel,.content-section').forEach(function(x){if(x.id!=='facebook_personal')x.style.display='none'});box.style.display='block';box.scrollIntoView({behavior:'smooth',block:'start'});}else{window.location.href='/facebook-personal';}},220)}
+ function removeFloating(){qsa('#mktV225FbFloatBtn').forEach(function(b){try{b.remove()}catch(e){b.style.display='none'}})}
+ function removeRawCssText(){try{var walker=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT,null);var bad=[];while(walker.nextNode()){var n=walker.currentNode;var t=n.nodeValue||'';if(t.indexOf('html body .sidebar .mkt-dot-tag')>-1 || t.indexOf('mktV185GreenPulse')>-1 || t.indexOf('mkt-v185-black-pro-premium')>-1){bad.push(n)}}bad.forEach(function(n){try{n.parentNode.removeChild(n)}catch(e){}})}catch(e){}}
+ function makeCard(){var card=document.createElement('div');card.id='mktV226MainPersonalCard';card.className='app-quick-card enterprise-card mkt-v226-personal-card';card.setAttribute('role','button');card.setAttribute('tabindex','0');card.innerHTML='<div class="mkt-v226-ico">👤</div><h3>Đăng Facebook cá nhân</h3><p>Mở Worker local, tạo task sạch trên máy khách và đăng bằng profile đã đăng nhập. Không tạo READY giả trên web.</p><span class="mkt-v226-badge"><i></i> V226 Worker Local</span>';card.onclick=showFacebook;card.onkeydown=function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();showFacebook();}};return card}
+ function addMainCard(){if(qs('#mktV226MainPersonalCard'))return;var grid=qs('.enterprise-grid')||qs('.app-grid')||qs('.quick-grid')||qs('.dashboard-grid')||qs('.main-grid')||qs('.features-grid');if(grid){grid.insertBefore(makeCard(),grid.firstChild);return;}var main=qs('.main')||qs('.content')||qs('main')||qs('.module-section')||document.body;main.insertBefore(makeCard(),main.firstChild)}
+ function fixMenuText(){qsa('[data-module="facebook_personal"],a[href="#facebook_personal"]').forEach(function(a){a.style.setProperty('display','flex','important');a.classList.add('mkt-v225-facebook-menu');if((a.textContent||'').indexOf('Đăng cá nhân')<0){a.innerHTML='<span class="v2-nav-text">👤 Đăng cá nhân</span><span class="mkt-dot-tag pro"><i></i><span>V226</span></span>';}})}
+ function boot(){removeFloating();removeRawCssText();addMainCard();fixMenuText()}
+ document.addEventListener('click',function(e){var a=e.target.closest('#mktV226MainPersonalCard');if(a){e.preventDefault();showFacebook();}},true);
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();setTimeout(boot,400);setTimeout(boot,1200);setTimeout(boot,2500);setInterval(boot,3000);
+})();
+</script>
+'''
+
+@app.after_request
+def mkt_v226_fix_facebook_layout_after_request(response):
+    try:
+        ctype=(response.headers.get('Content-Type') or '').lower()
+        if 'text/html' in ctype:
+            body=response.get_data(as_text=True)
+            if 'mkt-v226-fix-facebook-layout-js' not in body and '</body>' in body:
+                body=body.replace('</body>', MKT_V226_FIX_FACEBOOK_LAYOUT_UI + '</body>')
+                response.set_data(body)
+                response.headers['Content-Length']=str(len(body.encode('utf-8')))
+    except Exception as _e:
+        print('mkt_v226_fix_facebook_layout_after_request skipped:', _e)
+    return response
+
 if __name__ == "__main__":
     # Không tự tạo kho 50k content khi khởi động để tránh lỗi SQLite database is locked trên Render.
     # Khi cần kiểm tra/tạo kho content, gọi /api/content_50k_stats từ admin.
