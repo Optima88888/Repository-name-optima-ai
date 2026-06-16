@@ -23835,11 +23835,13 @@ def mkt_v216_facebook_publish_center_after_request(response):
 def mkt_v217_download_facebook_worker_zip():
     import zipfile
     import io as _io
+    import os
     mem = _io.BytesIO()
     readme = 'FACEBOOK WORKER - GPTMINI / MARKETING AUTOMATION PRO\n\nMỤC ĐÍCH\n- Render/Web chỉ tạo task đăng bài.\n- Máy tính khách chạy Worker để đăng Facebook thật bằng Chrome/profile đã đăng nhập.\n- Cách này ổn định hơn, tránh Render bị thiếu Chrome/profile/cookie Facebook.\n\nCÁCH DÙNG NHANH\n1. Giải nén file này vào đúng thư mục dự án FB_POSTER_PRO.\n2. Đảm bảo trong thư mục có sẵn:\n   - app.py\n   - tasks\\\n   - media\\\n   - profiles\\\n   - workers\\post_media_test.py\n   - workers\\queue_engine.py\n3. Bấm đúp START_FACEBOOK_WORKER.bat.\n4. Mở web, vào Facebook cá nhân, tạo task đăng ngay hoặc hẹn giờ.\n5. Worker sẽ tự quét task READY/WAITING và xử lý.\n\nLƯU Ý\n- Nếu dùng Render cho khách, khách vẫn cần chạy Worker trên máy có đăng nhập Facebook.\n- Không cần mở CMD thủ công nếu dùng file START_FACEBOOK_WORKER.bat.\n- Lần đầu nên test bằng nội dung mới, tránh Facebook chặn trùng nội dung.\n'
     bat = '@echo off\nchcp 65001 >nul\ntitle GPTMini Facebook Worker\ncolor 0A\n\necho =====================================================\necho        GPTMini Facebook Worker - Dang Facebook that\necho =====================================================\necho.\ncd /d "%~dp0"\n\nif not exist workers mkdir workers\nif not exist tasks mkdir tasks\nif not exist media mkdir media\nif not exist profiles mkdir profiles\nif not exist logs mkdir logs\n\nwhere py >nul 2>nul\nif errorlevel 1 (\n  echo Khong tim thay Python launcher py.\n  echo Hay cai Python truoc, hoac chay bang python workers\\worker.py\n  pause\n  exit /b\n)\n\necho Dang cai/kiem tra thu vien co ban...\npy -m pip install -r requirements_worker.txt\n\necho.\necho Dang khoi dong worker. De cua so nay mo trong luc dang bai.\necho Bam CTRL + C neu muon dung.\necho.\npy workers\\worker.py\npause\n'
     requirements = 'playwright\nrequests\npython-dotenv\n'
     worker_py = 'import os\nimport time\nimport subprocess\nimport sys\nfrom pathlib import Path\n\nROOT = Path(__file__).resolve().parent.parent\nWORKERS = ROOT / "workers"\nQUEUE = WORKERS / "queue_engine.py"\nPOST = WORKERS / "post_media_test.py"\nLOGS = ROOT / "logs"\nLOGS.mkdir(exist_ok=True)\n\nprint("=" * 58)\nprint("GPTMini Facebook Worker V217")\nprint("Root:", ROOT)\nprint("=" * 58)\n\ndef run_py(path):\n    if not path.exists():\n        print("CHUA THAY FILE:", path)\n        return 1\n    print("\\n>>> RUN:", path.name)\n    try:\n        return subprocess.call([sys.executable, str(path)], cwd=str(ROOT))\n    except KeyboardInterrupt:\n        raise\n    except Exception as e:\n        print("LOI CHAY", path.name, e)\n        return 1\n\nwhile True:\n    try:\n        run_py(QUEUE)\n        run_py(POST)\n        print("\\nWorker đang chờ bài đăng từ web... 10 giây nữa quét tiếp.")\n        time.sleep(10)\n    except KeyboardInterrupt:\n        print("\\nDa dung worker.")\n        break\n'
+    worker_api_py = 'import json\nimport uuid\nfrom pathlib import Path\nfrom datetime import datetime\nfrom http.server import BaseHTTPRequestHandler, HTTPServer\n\nROOT = Path(__file__).resolve().parent.parent\nTASK_DIR = ROOT / "tasks"\nPROFILE_DIR = ROOT / "profiles"\nLOG_DIR = ROOT / "logs"\nTASK_DIR.mkdir(parents=True, exist_ok=True)\nPROFILE_DIR.mkdir(parents=True, exist_ok=True)\nLOG_DIR.mkdir(parents=True, exist_ok=True)\nHOST = "127.0.0.1"\nPORT = 8765\n\ndef now_text():\n    return datetime.now().strftime("%Y-%m-%d %H:%M:%S")\n\ndef make_task(data):\n    account = str(data.get("account") or data.get("profile") or "").strip()\n    content = str(data.get("content") or data.get("caption") or data.get("text") or "").strip()\n    schedule = str(data.get("schedule") or "now").strip()\n    target_type = str(data.get("target_type") or "profile").strip().lower()\n    target_groups = data.get("target_groups") or data.get("groups") or []\n    if isinstance(target_groups, str):\n        target_groups = [x.strip() for x in target_groups.replace("\\r", "\\n").split("\\n") if x.strip()]\n    if not account:\n        return None, "Thiếu account/profile. Hãy chọn đúng thư mục trong profiles/."\n    if not content:\n        return None, "Thiếu nội dung bài đăng."\n    if not (PROFILE_DIR / account).exists():\n        return None, "Không tìm thấy profile: profiles/" + account\n    status = "READY" if schedule.lower() in ["", "now", "ngay", "now()"] else "WAITING"\n    task_id = "task_" + datetime.now().strftime("%Y%m%d_%H%M%S_") + uuid.uuid4().hex[:8]\n    task = {\n        "id": task_id,\n        "status": status,\n        "account": account,\n        "content": content,\n        "schedule": schedule or "now",\n        "target_type": target_type,\n        "target_groups": target_groups,\n        "image": data.get("image", ""),\n        "images": data.get("images", []),\n        "delay_seconds": int(data.get("delay_seconds") or 8),\n        "source": "local_worker_api",\n        "created_at": now_text(),\n        "message": "Task được tạo trực tiếp từ web vào máy khách"\n    }\n    path = TASK_DIR / (task_id + ".json")\n    with open(path, "w", encoding="utf-8") as f:\n        json.dump(task, f, ensure_ascii=False, indent=2)\n    return {"ok": True, "task_id": task_id, "file": str(path), "status": status}, None\n\nclass Handler(BaseHTTPRequestHandler):\n    def _headers(self, code=200):\n        self.send_response(code)\n        self.send_header("Content-Type", "application/json; charset=utf-8")\n        self.send_header("Access-Control-Allow-Origin", "*")\n        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")\n        self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization")\n        self.send_header("Access-Control-Allow-Private-Network", "true")\n        self.end_headers()\n    def _send(self, data, code=200):\n        self._headers(code)\n        self.wfile.write(json.dumps(data, ensure_ascii=False).encode("utf-8"))\n    def do_OPTIONS(self):\n        self._headers(204)\n    def do_GET(self):\n        if self.path.startswith("/health"):\n            self._send({"ok": True, "name": "GPTMini Local Worker API", "root": str(ROOT), "time": now_text()}); return\n        if self.path.startswith("/profiles"):\n            self._send({"ok": True, "profiles": [p.name for p in PROFILE_DIR.iterdir() if p.is_dir()]}); return\n        if self.path.startswith("/tasks"):\n            tasks = []\n            for f in sorted(TASK_DIR.glob("task_*.json"), reverse=True)[:50]:\n                try: tasks.append(json.loads(f.read_text(encoding="utf-8")))\n                except Exception: pass\n            self._send({"ok": True, "tasks": tasks}); return\n        self._send({"ok": False, "error": "Not found"}, 404)\n    def do_POST(self):\n        if not self.path.startswith("/tasks"):\n            self._send({"ok": False, "error": "Not found"}, 404); return\n        try:\n            length = int(self.headers.get("Content-Length") or 0)\n            raw = self.rfile.read(length).decode("utf-8") if length else "{}"\n            data = json.loads(raw or "{}")\n            result, err = make_task(data)\n            if err:\n                self._send({"ok": False, "error": err}, 400); return\n            self._send(result)\n        except Exception as e:\n            self._send({"ok": False, "error": str(e)}, 500)\n    def log_message(self, fmt, *args):\n        print("[LocalAPI]", fmt % args)\n\nprint("=" * 58)\nprint("GPTMini Local Task API")\nprint("Web gửi task vào:", "http://%s:%s/tasks" % (HOST, PORT))\nprint("Profiles:", PROFILE_DIR)\nprint("Tasks:", TASK_DIR)\nprint("=" * 58)\nHTTPServer((HOST, PORT), Handler).serve_forever()\n'
     queue_engine_py = r'''import json
 import csv
 from pathlib import Path
@@ -24371,6 +24373,7 @@ def main():
         z.writestr("START_FACEBOOK_WORKER.bat", bat)
         z.writestr("requirements_worker.txt", requirements)
         z.writestr("workers/worker.py", worker_py)
+        z.writestr("workers/worker_api.py", worker_api_py)
 
         # Quan trọng: luôn đóng gói queue_engine.py bản thật, không để queue tự chuyển READY thành SUCCESS.
         z.writestr("workers/queue_engine.py", queue_engine_py)
@@ -24483,6 +24486,90 @@ def mkt_v218_mobile_quick_dock_after_request(response):
                 response.headers["Content-Length"] = str(len(body.encode("utf-8")))
     except Exception as _e:
         print("mkt_v218_mobile_quick_dock_after_request skipped:", _e)
+    return response
+
+
+
+# ============================================================
+# V219 - Direct Task Creator + Local Worker API Bridge
+# Khách bấm Đăng trên web -> tạo task trực tiếp cho Worker trên PC.
+# ============================================================
+
+@app.route("/api/facebook/create-task", methods=["POST"])
+def mkt_v219_create_facebook_task_api():
+    import os, json, uuid
+    from pathlib import Path
+    from datetime import datetime
+    try:
+        data = request.get_json(silent=True) or request.form.to_dict() or {}
+        root = Path(os.path.dirname(os.path.abspath(__file__)))
+        task_dir = root / "tasks"
+        task_dir.mkdir(parents=True, exist_ok=True)
+        account = str(data.get("account") or data.get("profile") or "").strip()
+        content = str(data.get("content") or data.get("caption") or data.get("text") or "").strip()
+        schedule = str(data.get("schedule") or "now").strip()
+        target_type = str(data.get("target_type") or "profile").strip().lower()
+        target_groups = data.get("target_groups") or data.get("groups") or []
+        if isinstance(target_groups, str):
+            target_groups = [x.strip() for x in target_groups.replace("\r", "\n").split("\n") if x.strip()]
+        if not account:
+            return jsonify({"ok": False, "error": "Thiếu account/profile."}), 400
+        if not content:
+            return jsonify({"ok": False, "error": "Thiếu nội dung bài đăng."}), 400
+        status = "READY" if schedule.lower() in ["", "now", "ngay", "now()"] else "WAITING"
+        task_id = "task_" + datetime.now().strftime("%Y%m%d_%H%M%S_") + uuid.uuid4().hex[:8]
+        task = {"id": task_id, "status": status, "account": account, "content": content, "schedule": schedule or "now", "target_type": target_type, "target_groups": target_groups, "image": data.get("image", ""), "images": data.get("images", []), "delay_seconds": int(data.get("delay_seconds") or 8), "source": "web_api_same_machine", "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+        path = task_dir / (task_id + ".json")
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(task, f, ensure_ascii=False, indent=2)
+        return jsonify({"ok": True, "task_id": task_id, "status": status, "file": str(path)})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+MKT_V219_DIRECT_TASK_CREATOR_UI = r'''
+<style id="mkt-v219-direct-task-css">
+#mktV219DirectTaskBox{margin-top:16px;border-radius:24px;padding:16px;background:linear-gradient(135deg,#f0fdf4,#ecfeff,#eff6ff);border:1px solid rgba(34,197,94,.35);box-shadow:0 18px 48px rgba(22,163,74,.12)}
+#mktV219DirectTaskBox h4{margin:0 0 8px;color:#052e16;font-size:18px;font-weight:1000}
+#mktV219DirectTaskBox p{margin:5px 0 12px;color:#334155;font-weight:850;line-height:1.45}
+#mktV219DirectTaskBox .mkt-v219-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+#mktV219DirectTaskBox input,#mktV219DirectTaskBox textarea,#mktV219DirectTaskBox select{width:100%;box-sizing:border-box;border-radius:16px;border:1px solid #bbf7d0;background:#fff;padding:12px 13px;font-weight:850;color:#0f172a;outline:none}
+#mktV219DirectTaskBox textarea{min-height:110px;resize:vertical;grid-column:1/-1}
+#mktV219DirectTaskBox .mkt-v219-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+#mktV219DirectTaskBox button{border:0;border-radius:999px;padding:12px 16px;font-weight:1000;color:#fff;cursor:pointer;box-shadow:0 14px 30px rgba(37,99,235,.18)}
+#mktV219CreateTaskBtn{background:linear-gradient(135deg,#16a34a,#22c55e)}
+#mktV219CheckBtn{background:linear-gradient(135deg,#2563eb,#7c3aed)}
+#mktV219Status{margin-top:10px;border-radius:16px;padding:10px 12px;background:#fff;border:1px dashed #86efac;color:#14532d;font-weight:950;white-space:pre-wrap}
+@media(max-width:900px){#mktV219DirectTaskBox .mkt-v219-grid{grid-template-columns:1fr}}
+</style>
+<script id="mkt-v219-direct-task-js">
+(function(){
+ if(window.__mktV219DirectTaskLoaded) return; window.__mktV219DirectTaskLoaded=true;
+ var LOCAL='http://127.0.0.1:8765';
+ function qs(s,r){return (r||document).querySelector(s)}
+ function val(id){var e=qs(id);return e?(e.value||'').trim():''}
+ function status(t){var s=qs('#mktV219Status'); if(s)s.textContent=t}
+ async function localFetch(path,opt){return fetch(LOCAL+path,Object.assign({mode:'cors'},opt||{}))}
+ async function checkLocal(){try{var r=await localFetch('/health'); var j=await r.json(); if(j.ok){status('✅ Worker API đã kết nối. Khách có thể bấm Đăng trực tiếp từ web.\nRoot: '+j.root); return true}}catch(e){} status('⚠️ Chưa thấy Worker API trên máy khách. Hãy mở START_FACEBOOK_WORKER.bat trước.'); return false}
+ async function loadProfiles(){try{var r=await localFetch('/profiles'); var j=await r.json(); if(j.ok&&j.profiles&&j.profiles.length){var a=qs('#mktV219Account'); if(a&&!a.value)a.value=j.profiles[0];}}catch(e){}}
+ async function createTask(){var data={account:val('#mktV219Account'),content:val('#mktV219Content'),schedule:val('#mktV219Schedule')||'now',target_type:val('#mktV219TargetType')||'profile',target_groups:val('#mktV219Groups'),image:val('#mktV219Image'),delay_seconds:8}; if(!data.account){status('❌ Chưa nhập tên profile. Ví dụ: profiles/toiph thì nhập toiph.');return} if(!data.content){status('❌ Chưa nhập nội dung bài đăng.');return} status('⏳ Đang gửi task vào Worker trên máy khách...'); try{var r=await localFetch('/tasks',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}); var j=await r.json(); if(j.ok){status('✅ Đã tạo task trực tiếp trên máy khách: '+j.task_id+'\nTrạng thái: '+j.status+'\nWorker sẽ tự quét và đăng.');return} status('❌ Worker API báo lỗi: '+(j.error||'Không rõ lỗi')); return}catch(e){status('⚠️ Không gửi được vào Worker API localhost. Đang thử tạo task trên web server...')} try{var r2=await fetch('/api/facebook/create-task',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}); var j2=await r2.json(); if(j2.ok){status('✅ Đã tạo task trên web server: '+j2.task_id+'\nLưu ý: chỉ dùng được nếu Worker và web chạy cùng máy/thư mục.');return} status('❌ Web server báo lỗi: '+(j2.error||'Không rõ lỗi'))}catch(e2){status('❌ Không tạo được task. Hãy mở START_FACEBOOK_WORKER.bat và thử lại.')}}
+ function addBox(){var panel=qs('#facebook_personal[data-v216="1"] [data-panel="post"] .mkt-v216-card')||qs('#facebook_personal[data-v216="1"] .mkt-v216-card')||qs('#facebook_personal')||document.body; if(!panel||qs('#mktV219DirectTaskBox'))return; var div=document.createElement('div'); div.id='mktV219DirectTaskBox'; div.innerHTML='<h4>🚀 Đăng trực tiếp từ trang vào Worker</h4><p>Khách mở <b>START_FACEBOOK_WORKER.bat</b> trước. Sau đó nhập bài ở đây và bấm <b>Tạo task & Đăng</b>, Worker trên máy khách sẽ tự nhận bài.</p><div class="mkt-v219-grid"><input id="mktV219Account" placeholder="Tên profile, ví dụ: toiph"><select id="mktV219TargetType"><option value="profile">Đăng trang cá nhân</option><option value="groups">Đăng vào Group</option></select><input id="mktV219Schedule" placeholder="now hoặc 2026-06-16 20:30"><input id="mktV219Image" placeholder="Tên ảnh trong media/images, có thể bỏ trống"><textarea id="mktV219Content" placeholder="Nhập nội dung bài đăng..."></textarea><textarea id="mktV219Groups" placeholder="Link group, mỗi dòng 1 link. Bỏ trống nếu đăng trang cá nhân."></textarea></div><div class="mkt-v219-actions"><button id="mktV219CreateTaskBtn" type="button">🚀 Tạo task & Đăng</button><button id="mktV219CheckBtn" type="button">🔌 Kiểm tra Worker</button></div><div id="mktV219Status">Sẵn sàng. Hãy mở Worker trên máy khách trước.</div>'; panel.appendChild(div); qs('#mktV219CreateTaskBtn',div).onclick=createTask; qs('#mktV219CheckBtn',div).onclick=checkLocal; setTimeout(loadProfiles,500); setTimeout(checkLocal,900)}
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',addBox); else addBox(); setTimeout(addBox,800); setTimeout(addBox,1800); setInterval(addBox,3000);
+})();
+</script>
+'''
+
+@app.after_request
+def mkt_v219_direct_task_creator_after_request(response):
+    try:
+        ctype = (response.headers.get("Content-Type") or "").lower()
+        if "text/html" in ctype:
+            body = response.get_data(as_text=True)
+            if "mkt-v219-direct-task-js" not in body and "</body>" in body:
+                body = body.replace("</body>", MKT_V219_DIRECT_TASK_CREATOR_UI + "</body>")
+                response.set_data(body)
+                response.headers["Content-Length"] = str(len(body.encode("utf-8")))
+    except Exception as _e:
+        print("mkt_v219_direct_task_creator_after_request skipped:", _e)
     return response
 
 if __name__ == "__main__":
