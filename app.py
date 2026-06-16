@@ -16763,62 +16763,429 @@ except Exception as _mkt_v178_error:
 # - Không lấy UID/MK/2FA, không lấy cookie, không tự bấm Đăng.
 # ============================================================
 
+import json
+import csv
+from pathlib import Path
+from datetime import datetime
+from playwright.sync_api import sync_playwright
+
+ROOT = Path(__file__).resolve().parent.parent
+TASK_DIR = ROOT / "tasks"
+PROFILE_DIR = ROOT / "profiles"
+MEDIA_IMAGE_DIR = ROOT / "media" / "images"
+LOG_DIR = ROOT / "logs"
+LOG_FILE = LOG_DIR / "post_history.csv"
+
+IMAGE_EXT = [".jpg", ".jpeg", ".png", ".webp"]
 
 
-# ============================================================
-# FACEBOOK PERSONAL CENTER V1 - CLEAN REBUILD
-# Giữ nguyên menu/database/Premium. Bỏ toàn bộ Facebook Personal cũ.
-# ============================================================
+def now():
+    return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-@app.route('/download/facebook-worker.zip')
-def download_facebook_worker_v1_zip():
-    import zipfile, io as _io
-    mem = _io.BytesIO()
-    readme = 'GPTMini Facebook Worker Local\n\nCACH DUNG:\n1. Giai nen ZIP ra thu muc that.\n2. Chay START_FACEBOOK_WORKER.bat tu bo Worker day du.\n3. Mo /facebook-personal, bam Kiem tra Worker.\n\nLuu y: Web gptmini.pro khong tu mo Chrome Facebook cua khach. Worker phai chay tren PC khach hoac VPS Windows.\n'
-    bat = '@echo off\nchcp 65001 >nul\necho GPTMini Facebook Worker\necho Vui long dat file nay trong thu muc Worker day du roi chay lai.\necho Neu chua co bo Worker day du, lien he admin de cap nhat.\npause\n'
-    with zipfile.ZipFile(mem, 'w', zipfile.ZIP_DEFLATED) as z:
-        z.writestr('HUONG_DAN_SU_DUNG.txt', readme)
-        z.writestr('START_FACEBOOK_WORKER.bat', bat)
-    mem.seek(0)
-    return send_file(mem, mimetype='application/zip', as_attachment=True, download_name='GPTMini_Facebook_Worker_Local.zip')
 
-@app.route('/facebook-personal')
-def facebook_personal_center_v1():
-    return render_template_string(r'''<!doctype html>
-<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
-<title>Facebook Personal Center V2</title>
-<style>
-*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Arial,sans-serif;color:#0f172a;background:radial-gradient(circle at 8% 0%,rgba(34,197,94,.18),transparent 34%),radial-gradient(circle at 90% 2%,rgba(124,58,237,.15),transparent 34%),linear-gradient(135deg,#f8fafc,#eef6ff 52%,#fff7ed)}
-#mktFixSupportFloat,#mktFixSupportPanel,#mktFixSupportBtn{display:none!important;visibility:hidden!important;pointer-events:none!important}.page{width:min(1180px,calc(100vw - 28px));margin:18px auto 92px}.top{display:flex;gap:10px;justify-content:space-between;align-items:center;margin-bottom:14px}.back{display:inline-flex;align-items:center;gap:8px;text-decoration:none;border:1px solid #dbeafe;background:#fff;color:#1d4ed8;border-radius:999px;padding:11px 15px;font-weight:1000;box-shadow:0 12px 30px rgba(37,99,235,.10);white-space:nowrap}.hero,.card{border:1px solid rgba(34,197,94,.26);background:rgba(255,255,255,.97);border-radius:28px;padding:20px;box-shadow:0 24px 70px rgba(15,23,42,.11)}.hero{display:grid;grid-template-columns:1.2fr .8fr;gap:16px;align-items:center}.badge{display:inline-flex;align-items:center;gap:8px;background:#052e16;color:#bbf7d0;border-radius:999px;padding:8px 13px;font-weight:1000;font-size:13px}.badge i{width:9px;height:9px;border-radius:999px;background:#22c55e;box-shadow:0 0 14px #22c55e}.hero h1{margin:12px 0 8px;font-size:clamp(27px,3.8vw,42px);line-height:1.06;color:#052e16}.hero p,.mini{color:#475569;font-weight:850;line-height:1.55}.mode{display:grid;grid-template-columns:1fr 1fr;gap:10px}.mode button{border:1px solid #dbeafe;background:#fff;border-radius:20px;padding:14px;text-align:left;cursor:pointer;font-weight:1000;color:#334155;box-shadow:0 10px 26px rgba(15,23,42,.06)}.mode button.active{background:linear-gradient(135deg,#16a34a,#2563eb);color:white;border-color:transparent}.card{margin-top:14px;border-color:#dbeafe}.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.step{border:1px solid #e2e8f0;border-radius:18px;padding:13px;background:#fff}.step b{display:block}.step span{display:block;margin-top:5px;color:#64748b;font-weight:800;font-size:13px}.form{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px}.full{grid-column:1/-1}label{display:block;font-weight:1000;margin-bottom:7px}input,select,textarea{width:100%;border:1px solid #bbf7d0;background:#fff;border-radius:16px;padding:14px 15px;font-size:15px;font-weight:850;outline:none;color:#0f172a}textarea{min-height:150px;resize:vertical}.groups{min-height:92px}.quick{display:flex;flex-wrap:wrap;gap:8px;margin-top:9px}.quick button{border:0;border-radius:999px;background:#ecfeff;color:#0369a1;padding:9px 12px;font-weight:1000;cursor:pointer}.actions{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:16px}.btn{border:0;border-radius:18px;padding:14px 13px;font-weight:1000;color:#fff;cursor:pointer;text-decoration:none;box-shadow:0 16px 36px rgba(37,99,235,.18);font-size:14.5px;text-align:center}.green{background:linear-gradient(135deg,#16a34a,#22c55e)}.blue{background:linear-gradient(135deg,#2563eb,#7c3aed)}.orange{background:linear-gradient(135deg,#f97316,#f59e0b)}.gray{background:linear-gradient(135deg,#334155,#0f172a)}#status{margin-top:14px;border:1px dashed #86efac;background:#f0fdf4;color:#14532d;border-radius:17px;padding:13px 15px;font-weight:950;white-space:pre-wrap}.warn{border-color:#fed7aa!important;background:#fff7ed!important;color:#9a3412!important}.ok{border-color:#86efac!important;background:#f0fdf4!important;color:#14532d!important}.mobileHelp{display:none}.bottomBar{position:fixed;left:0;right:0;bottom:0;background:rgba(255,255,255,.94);backdrop-filter:blur(14px);border-top:1px solid #dbeafe;padding:9px 12px;z-index:9999;box-shadow:0 -14px 40px rgba(15,23,42,.10)}.bottomBar .inner{width:min(1180px,100%);margin:auto;display:grid;grid-template-columns:1fr 1fr;gap:9px}.bottomBar .btn{border-radius:999px;padding:13px 10px}.hide{display:none!important}@media(max-width:860px){.page{width:calc(100vw - 16px);margin-top:10px}.top{gap:8px;overflow:auto;padding-bottom:2px}.hero{grid-template-columns:1fr;padding:16px;border-radius:23px}.hero h1{font-size:28px}.card{padding:15px;border-radius:22px}.steps,.form,.actions{grid-template-columns:1fr}.mode{grid-template-columns:1fr}.btn{width:100%;font-size:15px}textarea{min-height:135px}.mobileHelp{display:block}.pcHelp{display:none}.bottomBar .inner{grid-template-columns:1fr 1fr}.desktopOnly{display:none!important}}
-</style></head><body>
-<div class="page"><div class="top"><a class="back" href="/">← Trang chính</a><a class="back" href="/download/facebook-worker.zip" target="_blank">⬇ Tải Worker PC</a></div>
-<section class="hero"><div><span class="badge"><i></i> Facebook Personal Center V2</span><h1>Đăng cá nhân gọn cho máy tính & điện thoại</h1><p class="pcHelp">Máy tính dùng Worker local để đăng thật. Điện thoại dùng chế độ copy nội dung + mở Facebook, không bị bể giao diện.</p><p class="mobileHelp">Điện thoại: nhập bài → bấm Copy & mở Facebook → dán bài thủ công. Máy tính: chạy Worker rồi bấm Đăng bằng Worker.</p></div><div class="mode"><button id="pcMode" class="active" onclick="setMode('pc')">💻 Máy tính<br><small>Worker local, kiểm tra API, tạo task</small></button><button id="mobileMode" onclick="setMode('mobile')">📱 Điện thoại<br><small>Copy bài + mở Facebook nhanh</small></button></div></section>
-<section class="card"><div class="steps pcOnly"><div class="step"><b>1. Tải Worker</b><span>Giải nén ZIP ra thư mục thật.</span></div><div class="step"><b>2. Mở Worker</b><span>Chạy START_FACEBOOK_WORKER.bat.</span></div><div class="step"><b>3. Đăng bài</b><span>Nhập nội dung rồi bấm Đăng bằng Worker.</span></div></div><div class="steps mobileOnly hide"><div class="step"><b>1. Nhập bài</b><span>Soạn nội dung ở khung dưới.</span></div><div class="step"><b>2. Copy</b><span>Bấm Copy & mở Facebook.</span></div><div class="step"><b>3. Dán đăng</b><span>Dán vào Facebook và bấm Đăng.</span></div></div>
-<div class="form"><div class="pcOnly"><label>Profile</label><input id="acc" value="FB001"></div><div><label>Kiểu đăng</label><select id="target"><option value="profile">Đăng trang cá nhân</option><option value="groups">Đăng vào Group</option></select></div><div class="pcOnly"><label>Thời gian</label><input id="schedule" value="now" placeholder="now hoặc 2026-06-16 20:30"></div><div class="pcOnly"><label>Ảnh / Video</label><input id="image" placeholder="Tên file trong media/images"></div><div class="full"><label>Nội dung bài viết</label><textarea id="content" placeholder="Nhập nội dung bài đăng..."></textarea><div class="quick"><button type="button" onclick="addText('Inbox em để được tư vấn nhanh ạ.')">+ CTA Inbox</button><button type="button" onclick="addText('\n#marketing #banhangonline')">+ Hashtag</button><button type="button" onclick="clearText()">Xóa nội dung</button></div></div><div class="full"><label>Link group <small style="color:#64748b">bỏ trống nếu đăng trang cá nhân</small></label><textarea class="groups" id="groups" placeholder="Mỗi dòng 1 link group"></textarea></div></div>
-<div class="actions"><button class="btn green pcOnly" type="button" onclick="postByWorker()">🚀 Đăng bằng Worker</button><button class="btn blue pcOnly" type="button" onclick="checkWorker()">🔌 Kiểm tra Worker</button><button class="btn green mobileOnly hide" type="button" onclick="copyAndOpenMobile()">📱 Copy & mở Facebook</button><button class="btn blue" type="button" onclick="copyContent()">📋 Copy nội dung</button><a class="btn orange pcOnly" href="/download/facebook-worker.zip" target="_blank">⬇ Tải Worker</a><a class="btn gray pcOnly" href="http://127.0.0.1:8765/tasks" target="_blank">📋 Task local</a></div><div id="status">Sẵn sàng. Chọn Máy tính hoặc Điện thoại để dùng đúng cách.</div><div class="mini pcOnly">Lưu ý: gptmini.pro/Render không thể tự mở Chrome Facebook của khách. Muốn đăng tự động thật phải chạy Worker trên PC khách hoặc VPS Windows.</div></section></div>
-<div class="bottomBar"><div class="inner"><button class="btn green" onclick="mainAction()">🚀 Thao tác chính</button><button class="btn blue" onclick="copyContent()">📋 Copy bài</button></div></div>
-<script>
-(function(){var LOCAL='http://127.0.0.1:8765',mode='pc';function id(x){return document.getElementById(x)}function all(s){return Array.prototype.slice.call(document.querySelectorAll(s))}function v(x){var e=id(x);return e?(e.value||'').trim():''}function st(t,c){var s=id('status');if(s){s.textContent=t;s.className=c||''}}function show(sel,on){all(sel).forEach(function(e){e.classList.toggle('hide',!on)})}function build(){var p=new URLSearchParams();p.set('account',v('acc')||'FB001');p.set('target_type',v('target')||'profile');p.set('schedule',v('schedule')||'now');p.set('image',v('image'));p.set('content',v('content'));p.set('target_groups',v('groups'));return LOCAL+'/post?'+p.toString()}window.setMode=function(m){mode=m||'pc';id('pcMode').classList.toggle('active',mode==='pc');id('mobileMode').classList.toggle('active',mode==='mobile');show('.pcOnly',mode==='pc');show('.mobileOnly',mode==='mobile');st(mode==='pc'?'💻 Chế độ máy tính: chạy Worker rồi đăng.':'📱 Chế độ điện thoại: copy nội dung rồi mở Facebook để dán đăng.','ok')};window.checkWorker=async function(){try{var r=await fetch(LOCAL+'/health',{mode:'cors'});var j=await r.json();if(j&&j.ok){st('✅ Worker API đang chạy. Bây giờ có thể bấm Đăng bằng Worker.','ok');return true}}catch(e){}st('⚠️ Chưa thấy Worker API. Hãy mở START_FACEBOOK_WORKER.bat từ thư mục đã giải nén.','warn');return false};window.postByWorker=function(){if(!v('content')){st('⚠️ Chưa có nội dung bài viết. Nhập nội dung trước.','warn');return}st('Đang mở Worker local để tạo task đăng bài.','ok');window.open(build(),'_blank')};window.copyContent=async function(){var text=v('content');if(!text){st('⚠️ Chưa có nội dung để copy.','warn');return false}try{await navigator.clipboard.writeText(text);st('✅ Đã copy nội dung bài viết.','ok');return true}catch(e){id('content').focus();id('content').select();document.execCommand('copy');st('✅ Đã chọn/copy nội dung.','ok');return true}};window.copyAndOpenMobile=async function(){await copyContent();window.open('https://m.facebook.com/','_blank')};window.mainAction=function(){if(mode==='mobile')copyAndOpenMobile();else postByWorker()};window.addText=function(t){var e=id('content');e.value=(e.value?e.value+' ':'')+t;e.focus()};window.clearText=function(){id('content').value='';st('Đã xóa nội dung.','ok')};function clean(){try{all('#mktFixSupportFloat,#mktFixSupportPanel,#mktFixSupportBtn').forEach(function(x){x.remove()});var w=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT),bad=[];while(w.nextNode()){var n=w.currentNode,t=n.nodeValue||'';if(t.trim()==='\\n\\n\\n'||t.trim()==='\n\n\n')bad.push(n)}bad.forEach(function(n){n.parentNode&&n.parentNode.removeChild(n)})}catch(e){}}clean();setInterval(clean,800);if(/Android|iPhone|iPad|Mobile/i.test(navigator.userAgent))setMode('mobile');else setTimeout(checkWorker,700)})();
-</script></body></html>''')
+def save_task(path, task):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(task, f, ensure_ascii=False, indent=2)
 
-MKT_FACEBOOK_PERSONAL_CENTER_V1_MENU = r'''
-<style id="mkt-facebook-personal-center-v1-menu-css">#mktV225FbFloatBtn,#mktV226MainPersonalCard{display:none!important;visibility:hidden!important}.mkt-fb-v1-menu{background:linear-gradient(135deg,#16a34a,#2563eb)!important;color:#fff!important;border-radius:16px!important;box-shadow:0 12px 28px rgba(37,99,235,.26)!important}.mkt-fb-v1-card{background:linear-gradient(135deg,#ecfeff,#eff6ff,#f5f3ff)!important;border:1px solid rgba(34,197,94,.36)!important;border-radius:24px!important;padding:20px!important;box-shadow:0 22px 58px rgba(37,99,235,.13)!important;cursor:pointer!important;min-height:142px!important;display:flex!important;flex-direction:column!important;gap:9px!important}.mkt-fb-v1-card .ico{width:52px;height:52px;border-radius:18px;background:linear-gradient(135deg,#16a34a,#2563eb,#7c3aed);display:flex;align-items:center;justify-content:center;color:white;font-size:24px}.mkt-fb-v1-card h3{margin:0!important;font-size:22px!important;color:#0f172a!important}.mkt-fb-v1-card p{margin:0!important;font-size:14px!important;font-weight:800!important;color:#475569!important}</style>
-<script id="mkt-facebook-personal-center-v1-menu-js">(function(){if(window.__mktFbPersonalCenterV1Menu)return;window.__mktFbPersonalCenterV1Menu=true;function qs(s,r){return(r||document).querySelector(s)}function qsa(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s))}function openPage(){window.location.href='/facebook-personal'}function makeMenu(){var a=document.createElement('a');a.href='/facebook-personal';a.setAttribute('data-module','facebook_personal');a.className='v2-nav-link mkt-fb-v1-menu';a.innerHTML='<span class="v2-nav-text">👤 Đăng cá nhân</span><span class="mkt-dot-tag pro"><i></i><span>V1</span></span>';a.onclick=function(e){e.preventDefault();openPage()};return a}function addMenu(){var old=qsa('[data-module="facebook_personal"],a[href="#facebook_personal"]');if(old.length){old.forEach(function(a){a.href='/facebook-personal';a.classList.add('mkt-fb-v1-menu');a.innerHTML='<span class="v2-nav-text">👤 Đăng cá nhân</span><span class="mkt-dot-tag pro"><i></i><span>V1</span></span>';a.onclick=function(e){e.preventDefault();openPage()};a.style.setProperty('display','flex','important')});return}var nav=qs('.mkt-clean-nav')||qs('.sidebar')||qs('nav')||qs('.v2-nav')||qs('.menu');if(!nav)return;var ref=qs('[data-module="facebook"],[data-module="fanpage_manager"],[data-module="dashboard"],.v2-nav-link',nav);if(ref&&ref.parentNode===nav)nav.insertBefore(makeMenu(),ref.nextSibling);else nav.appendChild(makeMenu())}function addCard(){if(qs('#mktFbPersonalCenterV1Card'))return;var grid=qs('.enterprise-grid')||qs('.app-grid')||qs('.quick-grid')||qs('.dashboard-grid')||qs('.main-grid')||qs('.features-grid');if(!grid)return;var c=document.createElement('div');c.id='mktFbPersonalCenterV1Card';c.className='app-quick-card enterprise-card mkt-fb-v1-card';c.innerHTML='<div class="ico">👤</div><h3>Đăng Facebook cá nhân</h3><p>Facebook Personal Center V2: dùng gọn trên máy tính và điện thoại.</p>';c.onclick=openPage;grid.insertBefore(c,grid.firstChild)}function clean(){qsa('#mktV225FbFloatBtn,#mktV226MainPersonalCard').forEach(function(x){try{x.remove()}catch(e){x.style.display='none'}})}function boot(){addMenu();addCard();clean()}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();setTimeout(boot,500);setTimeout(boot,1500);setInterval(boot,3000)})();</script>
-'''
 
-@app.after_request
-def mkt_facebook_personal_center_v1_menu_after_request(response):
+def add_log(task_file, account, target, status, message):
+    LOG_DIR.mkdir(parents=True, exist_ok=True)
+    exists = LOG_FILE.exists()
+    with open(LOG_FILE, "a", encoding="utf-8-sig", newline="") as f:
+        writer = csv.writer(f)
+        if not exists:
+            writer.writerow(["time", "task", "account", "target", "status", "message"])
+        writer.writerow([now(), task_file, account, target, status, message])
+
+
+def load_ready_tasks():
+    items = []
+    TASK_DIR.mkdir(parents=True, exist_ok=True)
+    for task_file in sorted(TASK_DIR.glob("task_*.json")):
+        try:
+            with open(task_file, "r", encoding="utf-8") as f:
+                task = json.load(f)
+            if task.get("status") in ["READY", "WAITING"]:
+                # WAITING nhưng schedule=now vẫn cho chạy, còn hẹn giờ thực sự để scheduler chuyển READY.
+                schedule = str(task.get("schedule", "now") or "now").strip().lower()
+                if task.get("status") == "WAITING" and schedule not in ["now", "", "none"]:
+                    continue
+                items.append((task_file, task))
+        except Exception as e:
+            add_log(task_file.name, "", "", "FAILED", f"Không đọc được task: {e}")
+    return items
+
+
+def get_task_content(task):
+    content = (
+        task.get("content")
+        or task.get("caption")
+        or task.get("text")
+        or task.get("message")
+        or task.get("post_content")
+        or ""
+    )
+    content = str(content).strip()
+    if not content:
+        content = "Xin chào khách hàng"
+        task["content"] = content
+        task["auto_content_filled"] = True
+        task["auto_content_at"] = now()
+    return content
+
+
+def find_images_from_task(task):
+    files = []
+
+    def add_one(name):
+        name = str(name or "").strip()
+        if not name:
+            return
+        p = Path(name)
+        if p.is_absolute() and p.exists() and p.suffix.lower() in IMAGE_EXT:
+            files.append(str(p.resolve()))
+            return
+        p1 = MEDIA_IMAGE_DIR / name
+        if p1.exists() and p1.suffix.lower() in IMAGE_EXT:
+            files.append(str(p1.resolve()))
+
+    images_value = task.get("images", [])
+    if isinstance(images_value, list):
+        for name in images_value:
+            add_one(name)
+
+    image_value = str(task.get("image", "") or "").strip()
+    if image_value:
+        for name in image_value.replace(";", ",").split(","):
+            add_one(name)
+
+    clean = []
+    for f in files:
+        if f not in clean:
+            clean.append(f)
+
+    if clean:
+        return clean
+
+    # Không tự lấy toàn bộ kho ảnh nếu task không chọn ảnh, tránh đăng nhầm ảnh cho khách.
+    return []
+
+
+def open_post_box(page):
+    selectors = [
+        "div[role='button']:has-text('Bạn đang nghĩ gì')",
+        "div[role='button']:has-text('What’s on your mind')",
+        "div[role='button']:has-text(\"What's on your mind\")",
+        "span:has-text('Bạn đang nghĩ gì')",
+        "span:has-text('What’s on your mind')",
+        "span:has-text(\"What's on your mind\")",
+        "div[aria-label='Tạo bài viết']",
+        "div[aria-label='Create post']",
+        "div[role='button']:has-text('Viết gì đó')",
+        "span:has-text('Viết gì đó')",
+    ]
+    for selector in selectors:
+        try:
+            el = page.locator(selector).first
+            el.wait_for(state="visible", timeout=8000)
+            el.click(timeout=8000)
+            page.wait_for_timeout(2500)
+            return True
+        except Exception:
+            pass
+    return False
+
+
+def fill_post_content(page, content):
+    selectors = [
+        "div[role='dialog'] div[role='textbox']",
+        "div[role='textbox']",
+        "[contenteditable='true']",
+    ]
+    for selector in selectors:
+        try:
+            box = page.locator(selector).first
+            box.wait_for(state="visible", timeout=12000)
+            box.click(timeout=5000)
+            try:
+                box.fill(content)
+            except Exception:
+                page.keyboard.insert_text(content)
+            page.wait_for_timeout(1500)
+            return True
+        except Exception:
+            pass
+    return False
+
+
+def click_photo_video_button(page):
+    selectors = [
+        "div[role='dialog'] div[role='button']:has-text('Ảnh/video')",
+        "div[role='dialog'] div[role='button']:has-text('Photo/video')",
+        "div[role='dialog'] span:has-text('Ảnh/video')",
+        "div[role='dialog'] span:has-text('Photo/video')",
+        "div[aria-label='Ảnh/video']",
+        "div[aria-label='Photo/video']",
+    ]
+    for selector in selectors:
+        try:
+            btn = page.locator(selector).first
+            btn.wait_for(state="visible", timeout=5000)
+            btn.click(timeout=5000)
+            page.wait_for_timeout(2000)
+            return True
+        except Exception:
+            pass
+    return False
+
+
+def upload_images(page, task):
+    images = find_images_from_task(task)
+    if not images:
+        return True, "Không chọn ảnh, chỉ đăng nội dung."
+
+    print("Tổng ảnh cần upload:", len(images))
+    click_photo_video_button(page)
+    page.wait_for_timeout(2000)
+
     try:
-        ctype=(response.headers.get('Content-Type') or '').lower()
-        if 'text/html' in ctype:
-            body=response.get_data(as_text=True)
-            if 'mkt-facebook-personal-center-v1-menu-js' not in body and '</body>' in body:
-                body=body.replace('</body>', MKT_FACEBOOK_PERSONAL_CENTER_V1_MENU + '</body>')
-                response.set_data(body)
-                response.headers['Content-Length']=str(len(body.encode('utf-8')))
-    except Exception as _e:
-        print('mkt_facebook_personal_center_v1_menu_after_request skipped:', _e)
-    return response
+        file_inputs = page.locator("input[type='file']")
+        total_inputs = file_inputs.count()
+        if total_inputs <= 0:
+            return False, "Không tìm thấy input upload ảnh."
+
+        last_error = None
+        for i in range(total_inputs):
+            try:
+                file_input = file_inputs.nth(i)
+                file_input.wait_for(state="attached", timeout=15000)
+                accept = (file_input.get_attribute("accept") or "").lower()
+                if accept and "image" not in accept:
+                    continue
+
+                multiple = file_input.get_attribute("multiple")
+                if multiple is not None:
+                    file_input.set_input_files(images)
+                    page.wait_for_timeout(12000)
+                    return True, f"Đã upload {len(images)} ảnh."
+
+                uploaded = 0
+                for img in images:
+                    try:
+                        file_input.set_input_files(img)
+                        uploaded += 1
+                        page.wait_for_timeout(4500)
+                    except Exception as e:
+                        last_error = e
+                        print("Bỏ qua ảnh lỗi:", img, e)
+                if uploaded > 0:
+                    page.wait_for_timeout(8000)
+                    return True, f"Đã upload {uploaded}/{len(images)} ảnh."
+            except Exception as e:
+                last_error = e
+                continue
+
+        return False, f"Không upload được ảnh nào. Lỗi cuối: {last_error}"
+    except Exception as e:
+        return False, f"Upload ảnh lỗi: {e}"
+
+
+def click_post_button(page):
+    print("Đang tìm nút Đăng...")
+    page.wait_for_timeout(4000)
+    selectors = [
+        "div[role='dialog'] div[aria-label='Đăng'][role='button']",
+        "div[role='dialog'] div[aria-label='Post'][role='button']",
+        "div[role='dialog'] div[role='button']:has-text('Đăng')",
+        "div[role='dialog'] div[role='button']:has-text('Post')",
+        "div[role='dialog'] button:has-text('Đăng')",
+        "div[role='dialog'] button:has-text('Post')",
+        "div[aria-label='Đăng'][role='button']",
+        "div[aria-label='Post'][role='button']",
+    ]
+    for selector in selectors:
+        try:
+            btn = page.locator(selector).last
+            btn.wait_for(state="visible", timeout=9000)
+            disabled = None
+            try:
+                disabled = btn.get_attribute("aria-disabled")
+            except Exception:
+                pass
+            if disabled == "true":
+                print("Nút Đăng đang khóa, chờ thêm...")
+                page.wait_for_timeout(5000)
+            btn.click(timeout=9000)
+            page.wait_for_timeout(9000)
+            return True, "Đã bấm nút Đăng."
+        except Exception:
+            pass
+    return False, "Không tìm thấy nút Đăng hoặc nút đang bị khóa."
+
+
+def normalize_group_urls(task):
+    urls = task.get("target_groups", []) or []
+    if isinstance(urls, str):
+        urls = [x.strip() for x in urls.replace(";", ",").split(",") if x.strip()]
+    clean = []
+    for u in urls:
+        u = str(u or "").strip()
+        if not u:
+            continue
+        if u.isdigit():
+            u = "https://www.facebook.com/groups/" + u
+        if u.startswith("www.facebook.com"):
+            u = "https://" + u
+        if u and u not in clean:
+            clean.append(u)
+    return clean
+
+
+def post_to_current_page(page, task, content):
+    if not open_post_box(page):
+        return False, "Không tìm thấy ô tạo bài viết."
+    if not fill_post_content(page, content):
+        return False, "Không dán được nội dung."
+    upload_ok, upload_message = upload_images(page, task)
+    if not upload_ok:
+        return False, upload_message
+    page.wait_for_timeout(6000)
+    post_ok, post_message = click_post_button(page)
+    return post_ok, upload_message + " | " + post_message
+
+
+def run_task(context, task_file, task):
+    account = str(task.get("account", "") or "").strip()
+    content = get_task_content(task)
+    profile_path = PROFILE_DIR / account
+
+    print("=" * 60)
+    print("Task:", task_file.name)
+    print("Account:", account)
+    print("Content:", content[:120])
+
+    if not account:
+        task["status"] = "FAILED"
+        task["post_publish_status"] = "FAILED"
+        task["post_publish_message"] = "Task thiếu account."
+        task["post_publish_at"] = now()
+        save_task(task_file, task)
+        return False
+
+    if not profile_path.exists():
+        task["status"] = "FAILED"
+        task["post_publish_status"] = "FAILED"
+        task["post_publish_message"] = "Không tìm thấy profile: " + str(profile_path)
+        task["post_publish_at"] = now()
+        save_task(task_file, task)
+        return False
+
+    task["status"] = "RUNNING"
+    task["post_publish_status"] = "RUNNING"
+    task["post_publish_at"] = now()
+    save_task(task_file, task)
+
+    page = context.new_page()
+    target_type = str(task.get("target_type", "profile") or "profile").lower()
+    group_urls = normalize_group_urls(task)
+
+    results = []
+    success_count = 0
+    failed_count = 0
+
+    try:
+        if target_type == "groups" and group_urls:
+            for url in group_urls:
+                print("Đang đăng vào nhóm:", url)
+                page.goto(url, wait_until="domcontentloaded", timeout=60000)
+                page.wait_for_timeout(6500)
+                ok, msg = post_to_current_page(page, task, content)
+                results.append(f"{url}: {msg}")
+                add_log(task_file.name, account, url, "SUCCESS" if ok else "FAILED", msg)
+                if ok:
+                    success_count += 1
+                else:
+                    failed_count += 1
+                page.wait_for_timeout(3500)
+        else:
+            print("Đang đăng lên trang cá nhân")
+            page.goto("https://www.facebook.com", wait_until="domcontentloaded", timeout=60000)
+            page.wait_for_timeout(6500)
+            ok, msg = post_to_current_page(page, task, content)
+            results.append("profile: " + msg)
+            add_log(task_file.name, account, "profile", "SUCCESS" if ok else "FAILED", msg)
+            if ok:
+                success_count += 1
+            else:
+                failed_count += 1
+    except Exception as e:
+        failed_count += 1
+        results.append("Lỗi chạy task: " + str(e))
+        add_log(task_file.name, account, target_type, "FAILED", str(e))
+    finally:
+        try:
+            page.close()
+        except Exception:
+            pass
+
+    if success_count > 0 and failed_count == 0:
+        task["status"] = "SUCCESS"
+        task["post_publish_status"] = "SUCCESS"
+    elif success_count > 0 and failed_count > 0:
+        task["status"] = "PARTIAL_SUCCESS"
+        task["post_publish_status"] = "PARTIAL_SUCCESS"
+    else:
+        task["status"] = "FAILED"
+        task["post_publish_status"] = "FAILED"
+
+    task["post_publish_message"] = "\n".join(results)
+    task["post_publish_success"] = success_count
+    task["post_publish_failed"] = failed_count
+    task["post_publish_at"] = now()
+    save_task(task_file, task)
+    return success_count > 0
+
+
+def main():
+    print("=" * 60)
+    print("POST MEDIA PRO CUSTOMER READY - ĐĂNG THẬT")
+    print("=" * 60)
+
+    tasks = load_ready_tasks()
+    if not tasks:
+        print("Không có task READY cần đăng.")
+        return
+
+    success = 0
+    failed = 0
+
+    with sync_playwright() as p:
+        contexts = {}
+        try:
+            for task_file, task in tasks:
+                account = str(task.get("account", "") or "").strip()
+                profile_path = PROFILE_DIR / account
+                if account not in contexts:
+                    contexts[account] = p.chromium.launch_persistent_context(
+                        user_data_dir=str(profile_path),
+                        headless=False,
+                        viewport={"width": 1280, "height": 900}
+                    )
+                ok = run_task(contexts[account], task_file, task)
+                if ok:
+                    success += 1
+                else:
+                    failed += 1
+        finally:
+            for ctx in contexts.values():
+                try:
+                    ctx.close()
+                except Exception:
+                    pass
+
+    print("=" * 60)
+    print(f"Hoàn tất. Thành công: {success} | Lỗi: {failed}")
 
 if __name__ == "__main__":
     # Không tự tạo kho 50k content khi khởi động để tránh lỗi SQLite database is locked trên Render.
