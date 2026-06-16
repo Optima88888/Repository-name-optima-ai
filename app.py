@@ -24639,6 +24639,134 @@ def mkt_v218_mobile_quick_dock_after_request(response):
         print("mkt_v218_mobile_quick_dock_after_request skipped:", _e)
     return response
 
+# ============================================================
+# V233 - Mobile main action box cleanup
+# Chỉ xử lý 3 nút mobile đang nổi dưới màn hình: Đăng bài / Máy tính / Điện thoại.
+# Không đụng menu/cấu trúc cũ. Ẩn dock nổi V218 và đưa nút vào khung chính trên mobile.
+# ============================================================
+MKT_V233_MOBILE_MAIN_ACTIONS_CLEANUP = r"""
+<style id="mkt-v233-mobile-main-actions-cleanup-css">
+@media(max-width:900px){
+  body{padding-bottom:18px!important;}
+  #mktV218MobileDock,
+  #mktV218MobileMenuHint{
+    display:none!important;
+    visibility:hidden!important;
+    opacity:0!important;
+    pointer-events:none!important;
+  }
+  #mktV233MobileMainActions{
+    display:block!important;
+    margin:18px auto 22px!important;
+    width:min(92vw,640px)!important;
+    padding:14px!important;
+    border-radius:26px!important;
+    background:linear-gradient(135deg,rgba(255,255,255,.96),rgba(239,246,255,.94))!important;
+    border:1px solid rgba(191,219,254,.86)!important;
+    box-shadow:0 20px 48px rgba(15,23,42,.14)!important;
+    box-sizing:border-box!important;
+  }
+  #mktV233MobileMainActions .mkt-v233-title{
+    display:flex!important;align-items:center!important;justify-content:center!important;gap:8px!important;
+    margin:0 0 12px!important;color:#0f172a!important;font-size:15px!important;font-weight:1000!important;text-align:center!important;
+  }
+  #mktV233MobileMainActions .mkt-v233-grid{
+    display:grid!important;grid-template-columns:repeat(3,1fr)!important;gap:10px!important;
+  }
+  #mktV233MobileMainActions .mkt-v233-btn{
+    border:0!important;border-radius:20px!important;min-height:78px!important;padding:10px 6px!important;
+    display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;gap:5px!important;
+    color:#fff!important;font-weight:1000!important;text-align:center!important;line-height:1.08!important;text-decoration:none!important;
+    box-shadow:0 14px 30px rgba(15,23,42,.16),inset 0 0 0 1px rgba(255,255,255,.16)!important;
+    cursor:pointer!important;user-select:none!important;
+  }
+  #mktV233MobileMainActions .mkt-v233-btn b{font-size:13px!important;color:#fff!important;white-space:nowrap!important;}
+  #mktV233MobileMainActions .mkt-v233-btn small{font-size:10px!important;color:rgba(255,255,255,.88)!important;font-weight:900!important;white-space:nowrap!important;}
+  #mktV233MobileMainActions .mkt-v233-btn .ico{font-size:22px!important;line-height:1!important;}
+  #mktV233MobileMainActions .mkt-v233-post{background:linear-gradient(135deg,#2563eb,#7c3aed)!important;}
+  #mktV233MobileMainActions .mkt-v233-pc{background:linear-gradient(135deg,#16a34a,#22c55e)!important;}
+  #mktV233MobileMainActions .mkt-v233-phone{background:linear-gradient(135deg,#f97316,#f59e0b)!important;}
+  #mktV233MobileMainActions .mkt-v233-btn:active{transform:scale(.98)!important;}
+}
+@media(min-width:901px){#mktV233MobileMainActions{display:none!important;}}
+</style>
+<script id="mkt-v233-mobile-main-actions-cleanup-js">
+(function(){
+  'use strict';
+  if(window.__mktV233MobileMainActionsLoaded) return;
+  window.__mktV233MobileMainActionsLoaded=true;
+  function qs(s,r){return (r||document).querySelector(s)}
+  function qsa(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s))}
+  function hideOldDock(){
+    qsa('#mktV218MobileDock,#mktV218MobileMenuHint').forEach(function(el){
+      el.style.setProperty('display','none','important');
+      el.style.setProperty('visibility','hidden','important');
+      el.style.setProperty('opacity','0','important');
+      el.style.setProperty('pointer-events','none','important');
+    });
+  }
+  function openFacebookPersonal(tab){
+    try{location.hash='facebook_personal'}catch(e){}
+    var m=qs('.v2-nav-link[data-module="facebook_personal"],a[href="#facebook_personal"]');
+    if(m) m.click();
+    setTimeout(function(){
+      if(tab){var b=qs('#facebook_personal[data-v216="1"] .mkt-v216-tab[data-tab="'+tab+'"]');if(b)b.click();}
+      var el=qs('#facebook_personal[data-v216="1"],#facebook_personal');
+      if(el) el.scrollIntoView({behavior:'smooth',block:'start'});
+    },260);
+  }
+  function openSheet(type){
+    var old=qs('#mktV218MobileDock');
+    var btn=old && old.querySelector('[data-act="'+(type==='pc'?'pc':'phone')+'"]');
+    if(btn){btn.click();return;}
+    if(type==='pc') window.open('/download/facebook-worker.zip','_blank');
+    if(type==='phone') window.open('https://www.facebook.com/','_blank');
+  }
+  function bestPlace(){
+    return qs('.mkt-channel-strip') || qs('.dashboard-hero') || qs('.hero') || qs('.enterprise-hub') || qs('.main-card') || qs('main') || qs('.content') || document.body;
+  }
+  function ensure(){
+    hideOldDock();
+    if(qs('#mktV233MobileMainActions')) return;
+    var box=document.createElement('div');
+    box.id='mktV233MobileMainActions';
+    box.innerHTML='<div class="mkt-v233-title">⚡ Thao tác nhanh Facebook</div><div class="mkt-v233-grid"><button class="mkt-v233-btn mkt-v233-post" type="button" data-act="post"><span class="ico">🚀</span><b>Đăng bài</b><small>Tạo task</small></button><button class="mkt-v233-btn mkt-v233-pc" type="button" data-act="pc"><span class="ico">💻</span><b>Máy tính</b><small>Tải Worker</small></button><button class="mkt-v233-btn mkt-v233-phone" type="button" data-act="phone"><span class="ico">📱</span><b>Điện thoại</b><small>Copy + Mở</small></button></div>';
+    var place=bestPlace();
+    if(place && place.parentNode && (place.classList.contains('mkt-channel-strip') || place.classList.contains('dashboard-hero') || place.classList.contains('hero'))){
+      place.insertAdjacentElement('afterend',box);
+    }else if(place && place.firstChild){
+      place.insertBefore(box,place.firstChild);
+    }else{
+      document.body.appendChild(box);
+    }
+    box.addEventListener('click',function(e){
+      var b=e.target.closest('[data-act]'); if(!b) return;
+      var a=b.getAttribute('data-act');
+      if(a==='post') openFacebookPersonal('post');
+      if(a==='pc'){openFacebookPersonal('worker'); setTimeout(function(){openSheet('pc')},320);}
+      if(a==='phone'){openFacebookPersonal('post'); setTimeout(function(){openSheet('phone')},320);}
+    },true);
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',ensure); else ensure();
+  setTimeout(ensure,500);setTimeout(ensure,1500);setInterval(hideOldDock,1800);
+})();
+</script>
+"""
+@app.after_request
+def mkt_v233_mobile_main_actions_cleanup_after_request(response):
+    try:
+        ctype = (response.headers.get("Content-Type") or "").lower()
+        if "text/html" in ctype:
+            body = response.get_data(as_text=True)
+            if "mkt-v233-mobile-main-actions-cleanup-js" not in body and "</body>" in body:
+                body = body.replace("</body>", MKT_V233_MOBILE_MAIN_ACTIONS_CLEANUP + "</body>")
+                response.set_data(body)
+                response.headers["Content-Length"] = str(len(body.encode("utf-8")))
+    except Exception as _e:
+        print("mkt_v233_mobile_main_actions_cleanup_after_request skipped:", _e)
+    return response
+
+
 
 
 # ============================================================
@@ -24732,145 +24860,3 @@ if __name__ == "__main__":
     app.run(host="0.0.0.0", port=port, debug=False)
 
 
-
-# ============================================================
-# V232 - Mobile main-frame actions cleanup
-# Chỉ xử lý 3 nút nhỏ nổi dưới màn hình điện thoại: ẩn dock nổi cũ,
-# đưa Đăng bài / Máy tính / Điện thoại vào khung chính để gọn hơn.
-# Không đụng menu/cấu trúc cũ.
-# ============================================================
-MKT_V232_MOBILE_MAIN_ACTIONS_PATCH = r'''
-<style id="mkt-v232-mobile-main-actions-css">
-@media(max-width:900px){
-  body #mktV218MobileDock,
-  body #mktV218MobileMenuHint,
-  body #mktMobileActionDock,
-  body #mktPhoneCtvDockFinal,
-  body #gptMktLeftDockFinal,
-  body #mktMobileQuickActions,
-  body #mktMobileQuickActionsRestore,
-  body #mktSmoothInstallBtn,
-  body #gptMktInstallFinal{
-    display:none!important;
-    visibility:hidden!important;
-    opacity:0!important;
-    pointer-events:none!important;
-  }
-  body{padding-bottom:18px!important;}
-  #mktV232MobileMainActions{
-    display:grid!important;
-    grid-template-columns:repeat(3,1fr)!important;
-    gap:10px!important;
-    margin:16px 0 18px!important;
-    padding:12px!important;
-    border-radius:26px!important;
-    background:linear-gradient(135deg,rgba(255,255,255,.96),rgba(239,246,255,.92),rgba(245,243,255,.9))!important;
-    border:1px solid rgba(147,197,253,.55)!important;
-    box-shadow:0 18px 42px rgba(37,99,235,.16)!important;
-    backdrop-filter:blur(14px)!important;
-    position:relative!important;
-    z-index:2!important;
-  }
-  #mktV232MobileMainActions .mkt-v232-action{
-    min-width:0!important;
-    border:0!important;
-    border-radius:20px!important;
-    padding:12px 8px!important;
-    min-height:76px!important;
-    display:flex!important;
-    flex-direction:column!important;
-    align-items:center!important;
-    justify-content:center!important;
-    gap:4px!important;
-    color:#fff!important;
-    font-weight:1000!important;
-    text-align:center!important;
-    line-height:1.1!important;
-    cursor:pointer!important;
-    box-shadow:0 14px 30px rgba(15,23,42,.14), inset 0 0 0 1px rgba(255,255,255,.16)!important;
-    transform:translateZ(0)!important;
-  }
-  #mktV232MobileMainActions .mkt-v232-action b{font-size:13px!important;color:#fff!important;white-space:nowrap!important;display:block!important;}
-  #mktV232MobileMainActions .mkt-v232-action small{font-size:10px!important;color:rgba(255,255,255,.88)!important;font-weight:900!important;display:block!important;white-space:nowrap!important;}
-  #mktV232MobileMainActions .mkt-v232-ico{font-size:22px!important;line-height:1!important;display:block!important;margin-bottom:2px!important;}
-  #mktV232MobileMainActions .post{background:linear-gradient(135deg,#2563eb,#7c3aed)!important;}
-  #mktV232MobileMainActions .pc{background:linear-gradient(135deg,#16a34a,#22c55e)!important;}
-  #mktV232MobileMainActions .phone{background:linear-gradient(135deg,#f97316,#f59e0b)!important;}
-  #mktV232MobileMainActions .mkt-v232-action:active{transform:scale(.97)!important;}
-}
-@media(min-width:901px){#mktV232MobileMainActions{display:none!important}}
-</style>
-<script id="mkt-v232-mobile-main-actions-js">
-(function(){
-  if(window.__mktV232MobileMainActionsLoaded) return; window.__mktV232MobileMainActionsLoaded=true;
-  function qs(s,r){return (r||document).querySelector(s)}
-  function qsa(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s))}
-  function isMobile(){return window.matchMedia && window.matchMedia('(max-width:900px)').matches}
-  function textContent(){var el=qs('#mktV216Content')||qs('#mktFbContent')||qs('textarea[name="content"]')||qs('textarea');return el?(el.value||'').trim():''}
-  async function copyText(t){try{if(navigator.clipboard&&window.isSecureContext){await navigator.clipboard.writeText(t);return true}}catch(e){} try{var a=document.createElement('textarea');a.value=t;document.body.appendChild(a);a.select();document.execCommand('copy');a.remove();return true}catch(e){return false}}
-  function openFacebookPersonal(tab){try{location.hash='facebook_personal'}catch(e){} var m=qs('.v2-nav-link[data-module="facebook_personal"],a[href="#facebook_personal"]'); if(m)m.click(); setTimeout(function(){if(tab){var b=qs('#facebook_personal[data-v216="1"] .mkt-v216-tab[data-tab="'+tab+'"]');if(b)b.click()} var el=qs('#facebook_personal[data-v216="1"]')||qs('#facebook_personal');if(el)el.scrollIntoView({behavior:'smooth',block:'start'})},260)}
-  function ensureSheet(){
-    if(qs('#mktV218MobileSheet')) return qs('#mktV218MobileSheet');
-    var s=document.createElement('div');s.id='mktV218MobileSheet';s.innerHTML='<div class="mkt-v218-sheet-card"><h3></h3><p class="mkt-v218-body"></p><div class="mkt-v218-sheet-actions"></div></div>';document.body.appendChild(s);s.addEventListener('click',function(e){if(e.target===s||e.target.getAttribute('data-close')==='1')s.classList.remove('show')},true);return s;
-  }
-  function openSheet(type){
-    var sheet=ensureSheet();var h=qs('h3',sheet),p=qs('.mkt-v218-body',sheet),actions=qs('.mkt-v218-sheet-actions',sheet);if(!h||!p||!actions)return;
-    if(type==='pc'){
-      h.textContent='💻 Máy tính: tải Worker';
-      p.innerHTML='Tải Facebook Worker, giải nén rồi bấm <b>START_FACEBOOK_WORKER.bat</b>. Sau đó quay lại web tạo task, PC sẽ tự đăng bằng Chrome đã đăng nhập.';
-      actions.innerHTML='<a class="green" href="/download/facebook-worker.zip" target="_blank">⬇ Tải Worker</a><button class="gray" type="button" data-close="1">Đã hiểu</button>';
-    }else if(type==='phone'){
-      h.textContent='📱 Điện thoại: Copy & mở Facebook';
-      p.innerHTML='Web sẽ copy nội dung, mở Facebook để khách dán bài và tự bấm Đăng. Cách này gọn và an toàn trên điện thoại.';
-      actions.innerHTML='<button class="orange" type="button" id="mktV232CopyOpenFb">📋 Copy + Mở FB</button><button class="gray" type="button" data-close="1">Đóng</button>';
-      setTimeout(function(){var b=qs('#mktV232CopyOpenFb');if(b)b.onclick=async function(){var t=textContent();if(t)await copyText(t);window.open('https://www.facebook.com/','_blank');alert(t?'Đã copy nội dung. Hãy dán vào Facebook rồi bấm Đăng.':'Chưa có nội dung để copy. Hãy nhập bài trước.')}},60);
-    }
-    sheet.classList.add('show');
-  }
-  function hideOldDocks(){
-    qsa('#mktV218MobileDock,#mktV218MobileMenuHint,#mktMobileActionDock,#mktPhoneCtvDockFinal,#gptMktLeftDockFinal,#mktMobileQuickActions,#mktMobileQuickActionsRestore,#mktSmoothInstallBtn,#gptMktInstallFinal').forEach(function(el){
-      el.style.setProperty('display','none','important');
-      el.style.setProperty('visibility','hidden','important');
-      el.style.setProperty('opacity','0','important');
-      el.style.setProperty('pointer-events','none','important');
-    });
-  }
-  function findInsertTarget(){
-    return qs('.mkt-channel-strip') || qs('.dashboard-hero .mkt-channel-strip') || qs('.hero .mkt-channel-strip') || qs('.dashboard-hero') || qs('.hero') || qs('main') || qs('.main') || document.body;
-  }
-  function ensureMainActions(){
-    if(!isMobile()){hideOldDocks();return;}
-    hideOldDocks();
-    var box=qs('#mktV232MobileMainActions');
-    if(!box){
-      box=document.createElement('div');box.id='mktV232MobileMainActions';
-      box.innerHTML='<button type="button" class="mkt-v232-action post" data-act="post"><span class="mkt-v232-ico">🚀</span><b>Đăng bài</b><small>Tạo task</small></button><button type="button" class="mkt-v232-action pc" data-act="pc"><span class="mkt-v232-ico">💻</span><b>Máy tính</b><small>Tải Worker</small></button><button type="button" class="mkt-v232-action phone" data-act="phone"><span class="mkt-v232-ico">📱</span><b>Điện thoại</b><small>Copy + Mở</small></button>';
-      box.addEventListener('click',function(e){var b=e.target.closest('[data-act]');if(!b)return;var a=b.getAttribute('data-act');if(a==='post')openFacebookPersonal('post');if(a==='pc'){openFacebookPersonal('worker');openSheet('pc')}if(a==='phone'){openFacebookPersonal('post');openSheet('phone')}},true);
-    }
-    var target=findInsertTarget();
-    if(target && box.parentNode!==target.parentNode){
-      if(target.classList && target.classList.contains('mkt-channel-strip')) target.insertAdjacentElement('afterend',box);
-      else target.insertAdjacentElement('afterbegin',box);
-    }
-  }
-  function boot(){ensureMainActions();setTimeout(ensureMainActions,300);setTimeout(ensureMainActions,1000)}
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();
-  window.addEventListener('resize',ensureMainActions);
-  setInterval(ensureMainActions,1800);
-})();
-</script>
-'''
-
-@app.after_request
-def mkt_v232_mobile_main_actions_after_request(response):
-    try:
-        ctype = (response.headers.get("Content-Type") or "").lower()
-        if "text/html" in ctype:
-            body = response.get_data(as_text=True)
-            if "mkt-v232-mobile-main-actions-js" not in body and "</body>" in body:
-                body = body.replace("</body>", MKT_V232_MOBILE_MAIN_ACTIONS_PATCH + "</body>")
-                response.set_data(body)
-                response.headers["Content-Length"] = str(len(body.encode("utf-8")))
-    except Exception as _e:
-        print("mkt_v232_mobile_main_actions_after_request skipped:", _e)
-    return response
