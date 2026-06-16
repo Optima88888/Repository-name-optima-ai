@@ -23837,11 +23837,212 @@ def mkt_v219_download_facebook_worker_zip():
     import io as _io
     import os
     mem = _io.BytesIO()
-    readme = 'FACEBOOK WORKER - GPTMINI / MARKETING AUTOMATION PRO\n\nMỤC ĐÍCH\n- Render/Web chỉ tạo task đăng bài.\n- Máy tính khách chạy Worker để đăng Facebook thật bằng Chrome/profile đã đăng nhập.\n- Cách này ổn định hơn, tránh Render bị thiếu Chrome/profile/cookie Facebook.\n\nCÁCH DÙNG NHANH\n1. Giải nén file này vào đúng thư mục dự án FB_POSTER_PRO.\n2. Đảm bảo trong thư mục có sẵn:\n   - app.py\n   - tasks\\\n   - media\\\n   - profiles\\\n   - workers\\post_media_test.py\n   - workers\\queue_engine.py\n   - workers\\worker_api.py\n3. Bấm đúp START_FACEBOOK_WORKER.bat.\n4. Chờ cửa sổ API hiện http://127.0.0.1:8765.\n5. Mở web, bấm Kiểm tra Worker, sau đó bấm Tạo task & Đăng.\n6. Worker sẽ tự nhận task READY/WAITING và xử lý.\n7. Bản V221 đã sửa lỗi post_media_test.py không tự chạy main().\n\nLƯU Ý\n- Nếu dùng Render cho khách, khách vẫn cần chạy Worker trên máy có đăng nhập Facebook.\n- Không cần mở CMD thủ công nếu dùng file START_FACEBOOK_WORKER.bat.\n- Lần đầu nên test bằng nội dung mới, tránh Facebook chặn trùng nội dung.\n'
+    readme = 'FACEBOOK WORKER - GPTMINI / MARKETING AUTOMATION PRO\n\nMỤC ĐÍCH\n- Render/Web chỉ tạo task đăng bài.\n- Máy tính khách chạy Worker để đăng Facebook thật bằng Chrome/profile đã đăng nhập.\n- Cách này ổn định hơn, tránh Render bị thiếu Chrome/profile/cookie Facebook.\n\nCÁCH DÙNG NHANH\n1. Giải nén file này vào đúng thư mục dự án FB_POSTER_PRO.\n2. Đảm bảo trong thư mục có sẵn:\n   - app.py\n   - tasks\\\n   - media\\\n   - profiles\\\n   - workers\\post_media_test.py\n   - workers\\queue_engine.py\n   - workers\\worker_api.py\n3. Bấm đúp START_FACEBOOK_WORKER.bat.\n4. Chờ cửa sổ API hiện http://127.0.0.1:8765.\n5. Mở web, bấm Kiểm tra Worker, sau đó bấm Tạo task & Đăng.\n6. Worker sẽ tự nhận task READY/WAITING và xử lý.\n\nLƯU Ý\n- Nếu dùng Render cho khách, khách vẫn cần chạy Worker trên máy có đăng nhập Facebook.\n- Không cần mở CMD thủ công nếu dùng file START_FACEBOOK_WORKER.bat.\n- Lần đầu nên test bằng nội dung mới, tránh Facebook chặn trùng nội dung.\n'
     bat = '@echo off\nchcp 65001 >nul\ntitle GPTMini Facebook Worker\ncolor 0A\n\necho =====================================================\necho        GPTMini Facebook Worker - Dang Facebook that\necho =====================================================\necho.\ncd /d "%~dp0"\n\nif not exist workers mkdir workers\nif not exist tasks mkdir tasks\nif not exist media mkdir media\nif not exist profiles mkdir profiles\nif not exist logs mkdir logs\n\nwhere py >nul 2>nul\nif errorlevel 1 (\n  echo Khong tim thay Python launcher py.\n  echo Hay cai Python truoc, hoac chay bang python workers\\worker.py\n  pause\n  exit /b\n)\n\necho Dang cai/kiem tra thu vien co ban...\npy -m pip install -r requirements_worker.txt\n\necho.\necho Cai/kiem tra Chromium cho Playwright...\npy -m playwright install chromium\n\necho.\necho Dang mo Local Worker API tai http://127.0.0.1:8765\nstart "GPTMini Worker API" py workers\\worker_api.py\n\necho.\necho Dang khoi dong worker dang bai. De cua so nay mo trong luc dang bai.\necho Bam CTRL + C neu muon dung.\necho.\npy workers\\worker.py\npause\n'
     requirements = 'playwright\nrequests\npython-dotenv\n'
-    worker_py = 'import os\nimport time\nimport subprocess\nimport sys\nfrom pathlib import Path\n\nROOT = Path(__file__).resolve().parent.parent\nWORKERS = ROOT / "workers"\nQUEUE = WORKERS / "queue_engine.py"\nPOST = WORKERS / "post_media_test.py"\nLOGS = ROOT / "logs"\nLOGS.mkdir(exist_ok=True)\n\nprint("=" * 58)\nprint("GPTMini Facebook Worker V221")\nprint("Root:", ROOT)\nprint("=" * 58)\n\ndef run_py(path):\n    if not path.exists():\n        print("CHUA THAY FILE:", path)\n        return 1\n    print("\\n>>> RUN:", path.name)\n    try:\n        return subprocess.call([sys.executable, str(path)], cwd=str(ROOT))\n    except KeyboardInterrupt:\n        raise\n    except Exception as e:\n        print("LOI CHAY", path.name, e)\n        return 1\n\nwhile True:\n    try:\n        run_py(QUEUE)\n        run_py(POST)\n        print("\\nWorker đang chờ bài đăng từ web... 10 giây nữa quét tiếp.")\n        time.sleep(10)\n    except KeyboardInterrupt:\n        print("\\nDa dung worker.")\n        break\n'
-    worker_api_py = 'import json\nimport uuid\nfrom pathlib import Path\nfrom datetime import datetime\nfrom http.server import BaseHTTPRequestHandler, HTTPServer\n\nROOT = Path(__file__).resolve().parent.parent\nTASK_DIR = ROOT / "tasks"\nPROFILE_DIR = ROOT / "profiles"\nLOG_DIR = ROOT / "logs"\nTASK_DIR.mkdir(parents=True, exist_ok=True)\nPROFILE_DIR.mkdir(parents=True, exist_ok=True)\nLOG_DIR.mkdir(parents=True, exist_ok=True)\nHOST = "127.0.0.1"\nPORT = 8765\n\ndef now_text():\n    return datetime.now().strftime("%Y-%m-%d %H:%M:%S")\n\ndef make_task(data):\n    account = str(data.get("account") or data.get("profile") or "").strip()\n    content = str(data.get("content") or data.get("caption") or data.get("text") or "").strip()\n    schedule = str(data.get("schedule") or "now").strip()\n    target_type = str(data.get("target_type") or "profile").strip().lower()\n    target_groups = data.get("target_groups") or data.get("groups") or []\n    if isinstance(target_groups, str):\n        target_groups = [x.strip() for x in target_groups.replace("\\r", "\\n").split("\\n") if x.strip()]\n    if not account:\n        return None, "Thiếu account/profile. Hãy chọn đúng thư mục trong profiles/."\n    if not content:\n        return None, "Thiếu nội dung bài đăng."\n    if not (PROFILE_DIR / account).exists():\n        return None, "Không tìm thấy profile: profiles/" + account\n    status = "READY" if schedule.lower() in ["", "now", "ngay", "now()"] else "WAITING"\n    task_id = "task_" + datetime.now().strftime("%Y%m%d_%H%M%S_") + uuid.uuid4().hex[:8]\n    task = {\n        "id": task_id,\n        "status": status,\n        "account": account,\n        "content": content,\n        "schedule": schedule or "now",\n        "target_type": target_type,\n        "target_groups": target_groups,\n        "image": data.get("image", ""),\n        "images": data.get("images", []),\n        "delay_seconds": int(data.get("delay_seconds") or 8),\n        "source": "local_worker_api",\n        "created_at": now_text(),\n        "message": "Task được tạo trực tiếp từ web vào máy khách"\n    }\n    path = TASK_DIR / (task_id + ".json")\n    with open(path, "w", encoding="utf-8") as f:\n        json.dump(task, f, ensure_ascii=False, indent=2)\n    return {"ok": True, "task_id": task_id, "file": str(path), "status": status}, None\n\nclass Handler(BaseHTTPRequestHandler):\n    def _headers(self, code=200):\n        self.send_response(code)\n        self.send_header("Content-Type", "application/json; charset=utf-8")\n        self.send_header("Access-Control-Allow-Origin", "*")\n        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")\n        self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization")\n        self.send_header("Access-Control-Allow-Private-Network", "true")\n        self.end_headers()\n    def _send(self, data, code=200):\n        self._headers(code)\n        self.wfile.write(json.dumps(data, ensure_ascii=False).encode("utf-8"))\n    def do_OPTIONS(self):\n        self._headers(204)\n    def do_GET(self):\n        if self.path.startswith("/health"):\n            self._send({"ok": True, "name": "GPTMini Local Worker API", "root": str(ROOT), "time": now_text()}); return\n        if self.path.startswith("/profiles"):\n            self._send({"ok": True, "profiles": [p.name for p in PROFILE_DIR.iterdir() if p.is_dir()]}); return\n        if self.path.startswith("/tasks"):\n            tasks = []\n            for f in sorted(TASK_DIR.glob("task_*.json"), reverse=True)[:50]:\n                try: tasks.append(json.loads(f.read_text(encoding="utf-8")))\n                except Exception: pass\n            self._send({"ok": True, "tasks": tasks}); return\n        self._send({"ok": False, "error": "Not found"}, 404)\n    def do_POST(self):\n        if not self.path.startswith("/tasks"):\n            self._send({"ok": False, "error": "Not found"}, 404); return\n        try:\n            length = int(self.headers.get("Content-Length") or 0)\n            raw = self.rfile.read(length).decode("utf-8") if length else "{}"\n            data = json.loads(raw or "{}")\n            result, err = make_task(data)\n            if err:\n                self._send({"ok": False, "error": err}, 400); return\n            self._send(result)\n        except Exception as e:\n            self._send({"ok": False, "error": str(e)}, 500)\n    def log_message(self, fmt, *args):\n        print("[LocalAPI]", fmt % args)\n\nprint("=" * 58)\nprint("GPTMini Local Task API")\nprint("Web gửi task vào:", "http://%s:%s/tasks" % (HOST, PORT))\nprint("Profiles:", PROFILE_DIR)\nprint("Tasks:", TASK_DIR)\nprint("=" * 58)\nHTTPServer((HOST, PORT), Handler).serve_forever()\n'
+    worker_py = 'import os\nimport time\nimport subprocess\nimport sys\nfrom pathlib import Path\n\nROOT = Path(__file__).resolve().parent.parent\nWORKERS = ROOT / "workers"\nQUEUE = WORKERS / "queue_engine.py"\nPOST = WORKERS / "post_media_test.py"\nLOGS = ROOT / "logs"\nLOGS.mkdir(exist_ok=True)\n\nprint("=" * 58)\nprint("GPTMini Facebook Worker V223")\nprint("Root:", ROOT)\nprint("=" * 58)\n\ndef run_py(path):\n    if not path.exists():\n        print("CHUA THAY FILE:", path)\n        return 1\n    print("\\n>>> RUN:", path.name)\n    try:\n        return subprocess.call([sys.executable, str(path)], cwd=str(ROOT))\n    except KeyboardInterrupt:\n        raise\n    except Exception as e:\n        print("LOI CHAY", path.name, e)\n        return 1\n\nwhile True:\n    try:\n        run_py(QUEUE)\n        run_py(POST)\n        print("\\nWorker đang chờ bài đăng từ web... 10 giây nữa quét tiếp.")\n        time.sleep(10)\n    except KeyboardInterrupt:\n        print("\\nDa dung worker.")\n        break\n'
+    worker_api_py = r"""import json
+import uuid
+import html
+from pathlib import Path
+from datetime import datetime
+from http.server import BaseHTTPRequestHandler, HTTPServer
+from urllib.parse import parse_qs, urlparse
+
+ROOT = Path(__file__).resolve().parent.parent
+TASK_DIR = ROOT / "tasks"
+PROFILE_DIR = ROOT / "profiles"
+LOG_DIR = ROOT / "logs"
+MEDIA_IMAGE_DIR = ROOT / "media" / "images"
+TASK_DIR.mkdir(parents=True, exist_ok=True)
+PROFILE_DIR.mkdir(parents=True, exist_ok=True)
+LOG_DIR.mkdir(parents=True, exist_ok=True)
+MEDIA_IMAGE_DIR.mkdir(parents=True, exist_ok=True)
+HOST = "127.0.0.1"
+PORT = 8765
+
+
+def now_text():
+    return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+
+def _first(v, default=""):
+    if isinstance(v, list):
+        return str(v[0] if v else default).strip()
+    return str(v if v is not None else default).strip()
+
+
+def normalize_data(data):
+    return {
+        "account": _first(data.get("account") or data.get("profile")),
+        "content": _first(data.get("content") or data.get("caption") or data.get("text")),
+        "schedule": _first(data.get("schedule"), "now") or "now",
+        "target_type": (_first(data.get("target_type"), "profile") or "profile").lower(),
+        "target_groups": data.get("target_groups") or data.get("groups") or "",
+        "image": _first(data.get("image")),
+        "delay_seconds": int(_first(data.get("delay_seconds"), "8") or 8),
+    }
+
+
+def make_task(data):
+    data = normalize_data(data)
+    account = data["account"]
+    content = data["content"]
+    schedule = data["schedule"]
+    target_type = data["target_type"]
+    target_groups = data["target_groups"]
+
+    if isinstance(target_groups, list):
+        target_groups = [_first(x) for x in target_groups if _first(x)]
+    else:
+        target_groups = [x.strip() for x in str(target_groups).replace("\r", "\n").split("\n") if x.strip()]
+
+    if not account:
+        return None, "Thiếu account/profile. Ví dụ profile mặc định là FB001."
+    if not content:
+        return None, "Thiếu nội dung bài đăng."
+    if not (PROFILE_DIR / account).exists():
+        return None, "Không tìm thấy profile: profiles/" + account + " - Hãy chạy START_LOGIN_FB001.bat trước hoặc nhập đúng tên thư mục profile."
+
+    status = "READY" if schedule.lower() in ["", "now", "ngay", "now()"] else "WAITING"
+    task_id = "task_" + datetime.now().strftime("%Y%m%d_%H%M%S_") + uuid.uuid4().hex[:8]
+    task = {
+        "id": task_id,
+        "status": status,
+        "account": account,
+        "content": content,
+        "schedule": schedule or "now",
+        "target_type": target_type,
+        "target_groups": target_groups,
+        "image": data.get("image", ""),
+        "images": [],
+        "delay_seconds": data.get("delay_seconds", 8),
+        "source": "local_worker_post_page",
+        "created_at": now_text(),
+        "message": "Task được tạo trực tiếp trên trang local của Worker"
+    }
+    path = TASK_DIR / (task_id + ".json")
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(task, f, ensure_ascii=False, indent=2)
+    return {"ok": True, "task_id": task_id, "file": str(path), "status": status}, None
+
+
+def list_profiles():
+    return [p.name for p in PROFILE_DIR.iterdir() if p.is_dir()]
+
+
+def render_post_page(message="", preset=None):
+    preset = preset or {}
+    profiles = list_profiles()
+    default_account = html.escape(_first(preset.get("account")) or (profiles[0] if profiles else "FB001"))
+    content = html.escape(_first(preset.get("content")))
+    schedule = html.escape(_first(preset.get("schedule"), "now") or "now")
+    image = html.escape(_first(preset.get("image")))
+    groups = html.escape(_first(preset.get("target_groups") or preset.get("groups")))
+    target_type = (_first(preset.get("target_type"), "profile") or "profile").lower()
+    profiles_text = ", ".join(profiles) if profiles else "Chưa có profile - bấm START_LOGIN_FB001.bat trước"
+    msg_html = ("<div class='msg'>" + html.escape(message).replace("\n", "<br>") + "</div>") if message else ""
+    group_selected = "selected" if target_type in ["group", "groups"] else ""
+    profile_selected = "" if group_selected else "selected"
+    return f'''<!doctype html><html><head><meta charset="utf-8"><title>GPTMini Worker - Đăng bài</title>
+<style>
+body{{font-family:Arial,Helvetica,sans-serif;background:linear-gradient(135deg,#ecfeff,#eff6ff,#f5f3ff);margin:0;padding:22px;color:#0f172a}}
+.wrap{{max-width:980px;margin:auto;background:#fff;border:1px solid #bbf7d0;border-radius:24px;padding:22px;box-shadow:0 20px 60px rgba(15,23,42,.12)}}
+h1{{margin:0 0 8px;font-size:26px}} p{{font-weight:700;color:#475569}} label{{font-weight:900;margin-top:12px;display:block}}
+input,textarea,select{{width:100%;box-sizing:border-box;border:1px solid #bfdbfe;border-radius:16px;padding:13px;font-size:16px;font-weight:700;margin-top:6px}}
+textarea{{min-height:150px;resize:vertical}} .grid{{display:grid;grid-template-columns:1fr 1fr;gap:12px}} button{{border:0;border-radius:999px;padding:14px 20px;margin-top:16px;background:linear-gradient(135deg,#16a34a,#22c55e);color:white;font-size:17px;font-weight:1000;cursor:pointer}}
+.msg{{background:#ecfdf5;border:1px solid #86efac;border-radius:16px;padding:13px;margin:14px 0;color:#14532d;font-weight:900}}
+.err{{background:#fff7ed;border:1px solid #fdba74;color:#9a3412}} .small{{font-size:13px;color:#64748b;font-weight:800}} @media(max-width:800px){{.grid{{grid-template-columns:1fr}}}}
+</style></head><body><div class="wrap"><h1>🚀 GPTMini Worker - Đăng bài trực tiếp</h1>
+<p>Trang này chạy ngay trên máy khách nên task sẽ được lưu đúng vào thư mục Worker local. Không còn READY giả trên web server.</p>
+<p class="small"><b>Profiles hiện có:</b> {html.escape(profiles_text)}<br><b>Tasks:</b> {html.escape(str(TASK_DIR))}</p>{msg_html}
+<form method="POST" action="/post">
+<div class="grid"><div><label>Tên profile Facebook</label><input name="account" value="{default_account}" placeholder="FB001"></div>
+<div><label>Nơi đăng</label><select name="target_type"><option value="profile" {profile_selected}>Đăng trang cá nhân</option><option value="groups" {group_selected}>Đăng vào Group</option></select></div>
+<div><label>Thời gian</label><input name="schedule" value="{schedule}" placeholder="now hoặc 2026-06-16 20:30"></div>
+<div><label>Ảnh trong media/images</label><input name="image" value="{image}" placeholder="16.png hoặc bỏ trống"></div></div>
+<label>Nội dung bài viết</label><textarea name="content" placeholder="Nhập nội dung bài đăng...">{content}</textarea>
+<label>Link group, mỗi dòng 1 link</label><textarea name="target_groups" placeholder="Bỏ trống nếu đăng trang cá nhân">{groups}</textarea>
+<button type="submit">🚀 Tạo task vào Worker local</button>
+<a style="margin-left:12px;font-weight:900" href="/tasks" target="_blank">Xem task local</a>
+</form></div></body></html>'''
+
+
+class Handler(BaseHTTPRequestHandler):
+    def _headers(self, code=200, content_type="application/json; charset=utf-8"):
+        self.send_response(code)
+        self.send_header("Content-Type", content_type)
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization")
+        self.send_header("Access-Control-Allow-Private-Network", "true")
+        self.end_headers()
+
+    def _send_json(self, data, code=200):
+        self._headers(code)
+        self.wfile.write(json.dumps(data, ensure_ascii=False).encode("utf-8"))
+
+    def _send_html(self, html_text, code=200):
+        self._headers(code, "text/html; charset=utf-8")
+        self.wfile.write(html_text.encode("utf-8"))
+
+    def do_OPTIONS(self):
+        self._headers(204)
+
+    def do_GET(self):
+        parsed = urlparse(self.path)
+        path = parsed.path
+        if path == "/" or path.startswith("/post"):
+            qs = {k: v[0] if v else "" for k, v in parse_qs(parsed.query).items()}
+            self._send_html(render_post_page(preset=qs)); return
+        if path.startswith("/health"):
+            self._send_json({"ok": True, "name": "GPTMini Local Worker API", "root": str(ROOT), "time": now_text()}); return
+        if path.startswith("/profiles"):
+            self._send_json({"ok": True, "profiles": list_profiles()}); return
+        if path.startswith("/tasks"):
+            tasks = []
+            for f in sorted(TASK_DIR.glob("task_*.json"), reverse=True)[:50]:
+                try: tasks.append(json.loads(f.read_text(encoding="utf-8")))
+                except Exception: pass
+            self._send_json({"ok": True, "tasks": tasks}); return
+        self._send_json({"ok": False, "error": "Not found"}, 404)
+
+    def do_POST(self):
+        parsed = urlparse(self.path)
+        if not parsed.path.startswith("/tasks") and not parsed.path.startswith("/post"):
+            self._send_json({"ok": False, "error": "Not found"}, 404); return
+        try:
+            length = int(self.headers.get("Content-Length") or 0)
+            raw_bytes = self.rfile.read(length) if length else b""
+            ctype = (self.headers.get("Content-Type") or "").lower()
+            if "application/json" in ctype:
+                data = json.loads(raw_bytes.decode("utf-8") or "{}")
+            else:
+                data = {k: v[0] if v else "" for k, v in parse_qs(raw_bytes.decode("utf-8", errors="ignore")).items()}
+            result, err = make_task(data)
+            if parsed.path.startswith("/post"):
+                msg = ("✅ Đã tạo task local: " + result["task_id"] + "\nWorker sẽ tự quét và đăng trong vài giây tới.") if not err else ("❌ " + err)
+                self._send_html(render_post_page(msg, data), 200 if not err else 400); return
+            if err:
+                self._send_json({"ok": False, "error": err}, 400); return
+            self._send_json(result)
+        except Exception as e:
+            if parsed.path.startswith("/post"):
+                self._send_html(render_post_page("❌ Lỗi: " + str(e)), 500); return
+            self._send_json({"ok": False, "error": str(e)}, 500)
+
+    def log_message(self, fmt, *args):
+        print("[LocalAPI]", fmt % args)
+
+print("=" * 58)
+print("GPTMini Local Task API V223")
+print("Trang đăng local:", "http://%s:%s/post" % (HOST, PORT))
+print("Web gửi task vào:", "http://%s:%s/tasks" % (HOST, PORT))
+print("Profiles:", PROFILE_DIR)
+print("Tasks:", TASK_DIR)
+print("=" * 58)
+HTTPServer((HOST, PORT), Handler).serve_forever()
+"""
     login_profile_py = r'''import sys
 from pathlib import Path
 from playwright.sync_api import sync_playwright
@@ -23873,7 +24074,10 @@ with sync_playwright() as p:
     page = context.new_page()
     page.goto("https://www.facebook.com", wait_until="domcontentloaded", timeout=60000)
     input("Đăng nhập xong thì nhấn Enter để lưu profile FB001...")
-    context.close()
+    try:
+        context.close()
+    except Exception:
+        pass
 
 print("Đã lưu profile:", profile_path)
 '''
@@ -24404,7 +24608,6 @@ def main():
 if __name__ == "__main__":
     main()
 
-
 '''
 
     with zipfile.ZipFile(mem, "w", zipfile.ZIP_DEFLATED) as z:
@@ -24434,11 +24637,11 @@ if __name__ == "__main__":
         mem,
         mimetype="application/zip",
         as_attachment=True,
-        download_name="GPTMini_Facebook_Worker_V221_PROFILE_READY_FIXED.zip"
+        download_name="GPTMini_Facebook_Worker_V223_LOCAL_POST_FINAL.zip"
     )
 
 
-MKT_V219_FACEBOOK_WORKER_DOWNLOAD_UI = '\n<style id="mkt-v219-worker-download-css">\n#mktV219WorkerBox{margin-top:16px;border-radius:22px;padding:16px;background:linear-gradient(135deg,#ecfeff,#eff6ff,#f5f3ff);border:1px solid rgba(96,165,250,.45);box-shadow:0 16px 40px rgba(37,99,235,.12)}\n#mktV219WorkerBox h4{margin:0 0 8px;color:#0f172a;font-size:17px;font-weight:1000}\n#mktV219WorkerBox p{margin:5px 0;color:#475569;font-weight:800;line-height:1.45}\n#mktV219WorkerBox .mkt-v217-worker-steps{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:12px 0}\n#mktV219WorkerBox .mkt-v217-step{border-radius:16px;background:rgba(255,255,255,.9);border:1px solid #dbeafe;padding:10px;font-weight:900;color:#1e293b;font-size:12.5px}\n#mktV219WorkerBox .mkt-v217-download{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:0;border-radius:999px;padding:12px 18px;color:#fff;font-weight:1000;text-decoration:none;background:linear-gradient(135deg,#16a34a,#22c55e);box-shadow:0 14px 30px rgba(34,197,94,.22)}\n#mktV219WorkerBox .mkt-v217-note{margin-top:10px;border-radius:14px;background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;padding:10px;font-weight:900;font-size:13px}\n@media(max-width:900px){#mktV219WorkerBox .mkt-v217-worker-steps{grid-template-columns:1fr}}\n</style>\n<script id="mkt-v219-worker-download-js">\n(function(){\n  if(window.__mktV219WorkerDownloadLoaded) return; window.__mktV219WorkerDownloadLoaded=true;\n  function qs(s,r){return (r||document).querySelector(s)}\n  function addBox(){\n    var panel=qs(\'#facebook_personal[data-v216="1"] [data-panel="worker"] .mkt-v216-card\');\n    if(!panel || qs(\'#mktV219WorkerBox\')) return;\n    var div=document.createElement(\'div\');\n    div.id=\'mktV219WorkerBox\';\n    div.innerHTML=\'<h4>⬇ Cài Facebook Worker cho khách dùng thật</h4><p>Khách không cần gõ CMD. Chỉ tải gói Worker V221, giải nén. Nếu chưa đăng nhập profile thì bấm <b>START_LOGIN_FB001.bat</b>, sau đó bấm <b>START_FACEBOOK_WORKER.bat</b>. File này sẽ tự mở Local API để web gửi task trực tiếp.</p><div class="mkt-v217-worker-steps"><div class="mkt-v217-step">1. Tải Worker</div><div class="mkt-v217-step">2. Giải nén vào FB_POSTER_PRO</div><div class="mkt-v217-step">3. Login FB001 rồi bấm START</div><div class="mkt-v217-step">4. Web tạo task, PC tự đăng</div></div><a class="mkt-v217-download" href="/download/facebook-worker.zip" target="_blank">⬇ Tải Facebook Worker V221</a><div class="mkt-v217-note">Muốn bấm đăng trực tiếp từ web, máy khách phải mở Worker V221 trên PC đã đăng nhập Facebook. Khi API sáng, web sẽ gửi task vào máy khách.</div>\';\n    panel.appendChild(div);\n  }\n  function patchText(){\n    var pills=document.querySelectorAll(\'.mkt-v216-pill.warn\');\n    pills.forEach(function(p){ if((p.textContent||\'\').indexOf(\'Render\')>-1 || (p.textContent||\'\').indexOf(\'worker\')>-1){ p.innerHTML=\'⚠️ Tải Facebook Worker V221 có Local API để khách bấm đăng từ web\'; }});\n  }\n  document.addEventListener(\'click\',function(){setTimeout(function(){addBox();patchText()},200)},true);\n  if(document.readyState===\'loading\')document.addEventListener(\'DOMContentLoaded\',function(){setTimeout(addBox,800);setTimeout(patchText,800)}); else {setTimeout(addBox,800);setTimeout(patchText,800)}\n  setInterval(function(){addBox();patchText()},2500);\n})();\n</script>\n'
+MKT_V219_FACEBOOK_WORKER_DOWNLOAD_UI = '\n<style id="mkt-v219-worker-download-css">\n#mktV219WorkerBox{margin-top:16px;border-radius:22px;padding:16px;background:linear-gradient(135deg,#ecfeff,#eff6ff,#f5f3ff);border:1px solid rgba(96,165,250,.45);box-shadow:0 16px 40px rgba(37,99,235,.12)}\n#mktV219WorkerBox h4{margin:0 0 8px;color:#0f172a;font-size:17px;font-weight:1000}\n#mktV219WorkerBox p{margin:5px 0;color:#475569;font-weight:800;line-height:1.45}\n#mktV219WorkerBox .mkt-v217-worker-steps{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:12px 0}\n#mktV219WorkerBox .mkt-v217-step{border-radius:16px;background:rgba(255,255,255,.9);border:1px solid #dbeafe;padding:10px;font-weight:900;color:#1e293b;font-size:12.5px}\n#mktV219WorkerBox .mkt-v217-download{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:0;border-radius:999px;padding:12px 18px;color:#fff;font-weight:1000;text-decoration:none;background:linear-gradient(135deg,#16a34a,#22c55e);box-shadow:0 14px 30px rgba(34,197,94,.22)}\n#mktV219WorkerBox .mkt-v217-note{margin-top:10px;border-radius:14px;background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;padding:10px;font-weight:900;font-size:13px}\n@media(max-width:900px){#mktV219WorkerBox .mkt-v217-worker-steps{grid-template-columns:1fr}}\n</style>\n<script id="mkt-v219-worker-download-js">\n(function(){\n  if(window.__mktV219WorkerDownloadLoaded) return; window.__mktV219WorkerDownloadLoaded=true;\n  function qs(s,r){return (r||document).querySelector(s)}\n  function addBox(){\n    var panel=qs(\'#facebook_personal[data-v216="1"] [data-panel="worker"] .mkt-v216-card\');\n    if(!panel || qs(\'#mktV219WorkerBox\')) return;\n    var div=document.createElement(\'div\');\n    div.id=\'mktV219WorkerBox\';\n    div.innerHTML=\'<h4>⬇ Cài Facebook Worker cho khách dùng thật</h4><p>Khách không cần gõ CMD. Chỉ tải gói Worker V223, giải nén. Nếu chưa đăng nhập profile thì bấm <b>START_LOGIN_FB001.bat</b>, sau đó bấm <b>START_FACEBOOK_WORKER.bat</b>. File này sẽ tự mở Local API để web gửi task trực tiếp.</p><div class="mkt-v217-worker-steps"><div class="mkt-v217-step">1. Tải Worker</div><div class="mkt-v217-step">2. Giải nén vào FB_POSTER_PRO</div><div class="mkt-v217-step">3. Login FB001 rồi bấm START</div><div class="mkt-v217-step">4. Web tạo task, PC tự đăng</div></div><a class="mkt-v217-download" href="/download/facebook-worker.zip" target="_blank">⬇ Tải Facebook Worker V223</a><div class="mkt-v217-note">Muốn bấm đăng trực tiếp từ web, máy khách phải mở Worker V223 trên PC đã đăng nhập Facebook. Khi API sáng, web sẽ gửi task vào máy khách.</div>\';\n    panel.appendChild(div);\n  }\n  function patchText(){\n    var pills=document.querySelectorAll(\'.mkt-v216-pill.warn\');\n    pills.forEach(function(p){ if((p.textContent||\'\').indexOf(\'Render\')>-1 || (p.textContent||\'\').indexOf(\'worker\')>-1){ p.innerHTML=\'⚠️ Tải Facebook Worker V223 có Local API để khách bấm đăng từ web\'; }});\n  }\n  document.addEventListener(\'click\',function(){setTimeout(function(){addBox();patchText()},200)},true);\n  if(document.readyState===\'loading\')document.addEventListener(\'DOMContentLoaded\',function(){setTimeout(addBox,800);setTimeout(patchText,800)}); else {setTimeout(addBox,800);setTimeout(patchText,800)}\n  setInterval(function(){addBox();patchText()},2500);\n})();\n</script>\n'
 
 @app.after_request
 def mkt_v219_worker_download_ui_after_request(response):
@@ -24558,8 +24761,8 @@ def mkt_v219_create_facebook_task_api():
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)}), 500
 
-MKT_V219_DIRECT_TASK_CREATOR_UI = r'''
-<style id="mkt-v219-direct-task-css">
+MKT_V219_DIRECT_TASK_CREATOR_UI = r"""
+<style id="mkt-v223-local-post-css">
 #mktV219DirectTaskBox{margin-top:16px;border-radius:24px;padding:16px;background:linear-gradient(135deg,#f0fdf4,#ecfeff,#eff6ff);border:1px solid rgba(34,197,94,.35);box-shadow:0 18px 48px rgba(22,163,74,.12)}
 #mktV219DirectTaskBox h4{margin:0 0 8px;color:#052e16;font-size:18px;font-weight:1000}
 #mktV219DirectTaskBox p{margin:5px 0 12px;color:#334155;font-weight:850;line-height:1.45}
@@ -24567,7 +24770,7 @@ MKT_V219_DIRECT_TASK_CREATOR_UI = r'''
 #mktV219DirectTaskBox input,#mktV219DirectTaskBox textarea,#mktV219DirectTaskBox select{width:100%;box-sizing:border-box;border-radius:16px;border:1px solid #bbf7d0;background:#fff;padding:12px 13px;font-weight:850;color:#0f172a;outline:none}
 #mktV219DirectTaskBox textarea{min-height:110px;resize:vertical;grid-column:1/-1}
 #mktV219DirectTaskBox .mkt-v219-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
-#mktV219DirectTaskBox button{border:0;border-radius:999px;padding:12px 16px;font-weight:1000;color:#fff;cursor:pointer;box-shadow:0 14px 30px rgba(37,99,235,.18)}
+#mktV219DirectTaskBox button,#mktV219DirectTaskBox a.mkt-v223-btn{border:0;border-radius:999px;padding:12px 16px;font-weight:1000;color:#fff;cursor:pointer;box-shadow:0 14px 30px rgba(37,99,235,.18);text-decoration:none;display:inline-flex;align-items:center;justify-content:center}
 #mktV219CreateTaskBtn{background:linear-gradient(135deg,#16a34a,#22c55e)}
 #mktV219CheckBtn{background:linear-gradient(135deg,#2563eb,#7c3aed)}
 #mktV219Status{margin-top:10px;border-radius:16px;padding:10px 12px;background:#fff;border:1px dashed #86efac;color:#14532d;font-weight:950;white-space:pre-wrap}
@@ -24575,20 +24778,20 @@ MKT_V219_DIRECT_TASK_CREATOR_UI = r'''
 </style>
 <script id="mkt-v219-direct-task-js">
 (function(){
- if(window.__mktV219DirectTaskLoaded) return; window.__mktV219DirectTaskLoaded=true;
+ if(window.__mktV223LocalPostLoaded) return; window.__mktV223LocalPostLoaded=true;
  var LOCAL='http://127.0.0.1:8765';
  function qs(s,r){return (r||document).querySelector(s)}
  function val(id){var e=qs(id);return e?(e.value||'').trim():''}
  function status(t){var s=qs('#mktV219Status'); if(s)s.textContent=t}
- async function localFetch(path,opt){return fetch(LOCAL+path,Object.assign({mode:'cors'},opt||{}))}
- async function checkLocal(){try{var r=await localFetch('/health'); var j=await r.json(); if(j.ok){status('✅ Worker API đã kết nối. Khách có thể bấm Đăng trực tiếp từ web.\nRoot: '+j.root); return true}}catch(e){} status('⚠️ Chưa thấy Worker API trên máy khách. Hãy mở START_FACEBOOK_WORKER.bat trước.'); return false}
- async function loadProfiles(){try{var r=await localFetch('/profiles'); var j=await r.json(); if(j.ok&&j.profiles&&j.profiles.length){var a=qs('#mktV219Account'); if(a&&!a.value)a.value=j.profiles[0];}}catch(e){}}
- async function createTask(){var data={account:val('#mktV219Account'),content:val('#mktV219Content'),schedule:val('#mktV219Schedule')||'now',target_type:val('#mktV219TargetType')||'profile',target_groups:val('#mktV219Groups'),image:val('#mktV219Image'),delay_seconds:8}; if(!data.account){status('❌ Chưa nhập tên profile. Ví dụ: profiles/FB001 thì nhập FB001.');return} if(!data.content){status('❌ Chưa nhập nội dung bài đăng.');return} status('⏳ Đang gửi task vào Worker trên máy khách...'); try{var r=await localFetch('/tasks',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}); var j=await r.json(); if(j.ok){status('✅ Đã tạo task trực tiếp trên máy khách: '+j.task_id+'\nTrạng thái: '+j.status+'\nWorker sẽ tự quét và đăng.');return} status('❌ Worker API báo lỗi: '+(j.error||'Không rõ lỗi')); return}catch(e){status('⚠️ Không gửi được vào Worker API localhost. Đang thử tạo task trên web server...')} try{var r2=await fetch('/api/facebook/create-task',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}); var j2=await r2.json(); if(j2.ok){status('✅ Đã tạo task trên web server: '+j2.task_id+'\nLưu ý: chỉ dùng được nếu Worker và web chạy cùng máy/thư mục.');return} status('❌ Web server báo lỗi: '+(j2.error||'Không rõ lỗi'))}catch(e2){status('❌ Không tạo được task. Hãy mở START_FACEBOOK_WORKER.bat và thử lại.')}}
- function addBox(){var panel=qs('#facebook_personal[data-v216="1"] [data-panel="post"] .mkt-v216-card')||qs('#facebook_personal[data-v216="1"] .mkt-v216-card')||qs('#facebook_personal')||document.body; if(!panel||qs('#mktV219DirectTaskBox'))return; var div=document.createElement('div'); div.id='mktV219DirectTaskBox'; div.innerHTML='<h4>🚀 Đăng trực tiếp từ trang vào Worker</h4><p>Khách mở <b>START_FACEBOOK_WORKER.bat</b> trước. Sau đó nhập bài ở đây và bấm <b>Tạo task & Đăng</b>, Worker trên máy khách sẽ tự nhận bài.</p><div class="mkt-v219-grid"><input id="mktV219Account" placeholder="Tên profile, ví dụ: FB001"><select id="mktV219TargetType"><option value="profile">Đăng trang cá nhân</option><option value="groups">Đăng vào Group</option></select><input id="mktV219Schedule" placeholder="now hoặc 2026-06-16 20:30"><input id="mktV219Image" placeholder="Tên ảnh trong media/images, có thể bỏ trống"><textarea id="mktV219Content" placeholder="Nhập nội dung bài đăng..."></textarea><textarea id="mktV219Groups" placeholder="Link group, mỗi dòng 1 link. Bỏ trống nếu đăng trang cá nhân."></textarea></div><div class="mkt-v219-actions"><button id="mktV219CreateTaskBtn" type="button">🚀 Tạo task & Đăng</button><button id="mktV219CheckBtn" type="button">🔌 Kiểm tra Worker</button></div><div id="mktV219Status">Sẵn sàng. Hãy mở Worker trên máy khách trước.</div>'; panel.appendChild(div); qs('#mktV219CreateTaskBtn',div).onclick=createTask; qs('#mktV219CheckBtn',div).onclick=checkLocal; setTimeout(loadProfiles,500); setTimeout(checkLocal,900)}
+ function buildPostUrl(){var p=new URLSearchParams();p.set('account',val('#mktV219Account')||'FB001');p.set('content',val('#mktV219Content'));p.set('schedule',val('#mktV219Schedule')||'now');p.set('target_type',val('#mktV219TargetType')||'profile');p.set('target_groups',val('#mktV219Groups'));p.set('image',val('#mktV219Image'));return LOCAL+'/post?'+p.toString()}
+ async function checkLocal(){try{var r=await fetch(LOCAL+'/health',{mode:'cors'}); var j=await r.json(); if(j.ok){status('✅ Worker API đã kết nối. Bấm nút xanh để mở trang đăng local của Worker.\nRoot: '+j.root); return true}}catch(e){} status('⚠️ Chưa thấy Worker API. Hãy mở START_FACEBOOK_WORKER.bat trước, sau đó bấm lại.'); return false}
+ async function loadProfiles(){try{var r=await fetch(LOCAL+'/profiles',{mode:'cors'}); var j=await r.json(); if(j.ok&&j.profiles&&j.profiles.length){var a=qs('#mktV219Account'); if(a&&!a.value)a.value=j.profiles[0];}}catch(e){}}
+ function openLocalPost(){var url=buildPostUrl(); status('✅ Đang mở trang đăng local của Worker. Task sẽ được tạo trực tiếp trong máy khách, không tạo READY giả trên web server.'); window.open(url,'_blank');}
+ function addBox(){var panel=qs('#facebook_personal[data-v216="1"] [data-panel="post"] .mkt-v216-card')||qs('#facebook_personal[data-v216="1"] .mkt-v216-card')||qs('#facebook_personal')||document.body; if(!panel||qs('#mktV219DirectTaskBox'))return; var div=document.createElement('div'); div.id='mktV219DirectTaskBox'; div.innerHTML='<h4>🚀 Đăng bằng Worker Local V223</h4><p>Không gửi task qua web server nữa. Bấm nút xanh để mở <b>trang đăng local</b> chạy trong Worker, task sẽ vào đúng thư mục máy khách.</p><div class="mkt-v219-grid"><input id="mktV219Account" placeholder="Tên profile, ví dụ: FB001"><select id="mktV219TargetType"><option value="profile">Đăng trang cá nhân</option><option value="groups">Đăng vào Group</option></select><input id="mktV219Schedule" placeholder="now hoặc 2026-06-16 20:30"><input id="mktV219Image" placeholder="Tên ảnh trong media/images, có thể bỏ trống"><textarea id="mktV219Content" placeholder="Nhập nội dung bài đăng..."></textarea><textarea id="mktV219Groups" placeholder="Link group, mỗi dòng 1 link. Bỏ trống nếu đăng trang cá nhân."></textarea></div><div class="mkt-v219-actions"><button id="mktV219CreateTaskBtn" type="button">🚀 Mở trang đăng Worker</button><button id="mktV219CheckBtn" type="button">🔌 Kiểm tra Worker</button><a class="mkt-v223-btn" style="background:linear-gradient(135deg,#f97316,#f59e0b)" href="http://127.0.0.1:8765/tasks" target="_blank">📋 Xem task local</a></div><div id="mktV219Status">Sẵn sàng. Hãy mở START_FACEBOOK_WORKER.bat trước.</div>'; panel.appendChild(div); qs('#mktV219CreateTaskBtn',div).onclick=openLocalPost; qs('#mktV219CheckBtn',div).onclick=checkLocal; setTimeout(loadProfiles,500); setTimeout(checkLocal,900)}
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',addBox); else addBox(); setTimeout(addBox,800); setTimeout(addBox,1800); setInterval(addBox,3000);
 })();
 </script>
-'''
+"""
 
 @app.after_request
 def mkt_v219_direct_task_creator_after_request(response):
