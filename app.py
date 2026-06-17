@@ -17538,7 +17538,9 @@ def mkt_v145_facebook_personal_mobile_menu_after_request(response):
         ctype = (response.headers.get('Content-Type') or '').lower()
         if 'text/html' in ctype:
             body = response.get_data(as_text=True)
-            if 'mkt-v145-fb-personal-mobile-menu-js' not in body and '</body>' in body:
+            # V251: đã bỏ nút Facebook cá nhân cũ bị tràn ngoài màn hình điện thoại.
+            # Không inject MKT_V145_FB_PERSONAL_MOBILE_MENU_PATCH nữa để tránh chồng code/mobile float lỗi.
+            if False and 'mkt-v145-fb-personal-mobile-menu-js' not in body and '</body>' in body:
                 body = body.replace('</body>', MKT_V145_FB_PERSONAL_MOBILE_MENU_PATCH + '</body>')
                 response.set_data(body)
                 response.headers['Content-Length'] = str(len(body.encode('utf-8')))
@@ -17725,8 +17727,35 @@ function fillCTA(){{document.getElementById('aiBox').value='🎯 CTA: Nhắn tin
 </script></body></html>'''
 
 
+def mkt_fb_full_premium_view():
+    try:
+        return get_subscription_view()
+    except Exception as _e:
+        return {'active': False, 'message': 'Chưa xác định được trạng thái Premium.', 'device_id': get_device_id()}
+
+
+@app.route('/api/facebook_personal_full/status')
+def mkt_fb_full_premium_status_api():
+    sub = mkt_fb_full_premium_view()
+    return jsonify({
+        'ok': True,
+        'active': bool(sub.get('active')),
+        'device_id': sub.get('device_id') or get_device_id(),
+        'package_name': sub.get('package_name') or '',
+        'remaining_label': sub.get('remaining_label') or '',
+        'message': sub.get('message') or '',
+        'open_url': '/facebook_personal_full',
+        'upgrade_url': '/?open_premium=facebook_personal#premium'
+    })
+
+
 @app.route('/facebook_personal_full')
 def mkt_fb_full_page():
+    # Chỉ mở giao diện Facebook Cá Nhân khi thiết bị đã được admin duyệt Premium.
+    # Nếu chưa Premium thì chuyển về bảng giá, tránh khách bấm được nhưng không sử dụng được.
+    sub = mkt_fb_full_premium_view()
+    if not bool(sub.get('active')) and request.args.get('preview') != '1':
+        return redirect('/?open_premium=facebook_personal#premium')
     return mkt_fb_full_html(request.args.get('msg',''))
 
 
@@ -17825,25 +17854,88 @@ def mkt_fb_full_retry():
 
 
 MKT_V250_FB_FULL_MENU_INJECTION = r'''
-<script id="mkt-v250-fb-full-menu-js">
+<script id="mkt-v251-fb-full-mobile-premium-js">
 (function(){
-  function addFacebookFullMenu(){
-    var nav=document.querySelector('.nav');
-    if(!nav || document.querySelector('[data-mkt-v250-fb-full]')) return;
+  if(window.__MKT_V251_FB_MOBILE_PREMIUM__) return;
+  window.__MKT_V251_FB_MOBILE_PREMIUM__ = true;
+  function isMobile(){return window.innerWidth <= 820 || /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);}
+  function qs(s,r){return (r||document).querySelector(s)}
+  function qsa(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s))}
+  function removeOldOverflowFacebookButtons(){
+    try{
+      qsa('#mktFbMobileFloatBtn,.mkt-mobile-fb-personal-entry,[data-module="facebook_personal_mobile"]').forEach(function(el){if(el&&el.parentNode)el.parentNode.removeChild(el);});
+      qsa('button,a,div').forEach(function(el){
+        var txt=((el.textContent||'').trim().toLowerCase());
+        var st=window.getComputedStyle(el);
+        if(txt.indexOf('facebook cá nhân')>-1 && st.position==='fixed' && (parseInt(st.zIndex||'0',10)>1000 || (el.id||'').indexOf('mktFb')>-1)){
+          el.style.setProperty('display','none','important');
+          el.style.setProperty('visibility','hidden','important');
+          el.style.setProperty('pointer-events','none','important');
+        }
+      });
+    }catch(e){}
+  }
+  function addDesktopSidebarMenu(){
+    var nav=qs('.nav');
+    if(!nav || qs('[data-mkt-v251-fb-full]')) return;
     var a=document.createElement('a');
-    a.setAttribute('data-mkt-v250-fb-full','1');
-    a.className='v2-nav-link mkt-v250-fb-full-link';
+    a.setAttribute('data-mkt-v251-fb-full','1');
+    a.className='v2-nav-link mkt-v251-fb-full-link';
     a.href='/facebook_personal_full';
     a.innerHTML='<span class="v2-nav-text">👤 FACEBOOK CÁ NHÂN</span><span class="mkt-dot-tag pro"><i></i><span>Pro</span></span>';
     nav.insertBefore(a, nav.firstChild ? nav.firstChild.nextSibling : null);
   }
-  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', addFacebookFullMenu); else addFacebookFullMenu();
-  setTimeout(addFacebookFullMenu,500); setTimeout(addFacebookFullMenu,1600);
+  function findMobileHost(){return qs('.main') || qs('.content') || qs('.dashboard') || qs('main') || document.body;}
+  function addMobileFacebookCard(){
+    if(!isMobile()) return;
+    if(qs('#mktV251MobileFacebookCard')) return;
+    var host=findMobileHost();
+    var card=document.createElement('div');
+    card.id='mktV251MobileFacebookCard';
+    card.innerHTML='<button type="button" id="mktV251MobileFacebookBtn" class="mkt-v251-mobile-fb-btn"><span class="ico">👤</span><span><b>FACEBOOK CÁ NHÂN</b><em>Đăng bài • Hẹn giờ • Page • Group</em></span><small id="mktV251PremiumState">Kiểm tra...</small></button>';
+    var first=host.firstElementChild;
+    if(first) host.insertBefore(card, first); else host.appendChild(card);
+    var btn=qs('#mktV251MobileFacebookBtn');
+    if(btn){btn.onclick=function(e){if(e)e.preventDefault();openFacebookPremiumGate();return false;};}
+    refreshPremiumState();
+  }
+  function openUpgrade(){try{if(typeof window.openPremiumPopup==='function'){window.openPremiumPopup();return;}}catch(e){} window.location.href='/?open_premium=facebook_personal#premium';}
+  function openFacebookPremiumGate(){
+    fetch('/api/facebook_personal_full/status',{credentials:'same-origin'}).then(function(r){return r.json()}).then(function(data){
+      if(data && data.active){window.location.href=data.open_url || '/facebook_personal_full';}
+      else{alert('Tính năng FACEBOOK CÁ NHÂN chỉ mở sau khi gói Premium được admin duyệt. Vui lòng nâng cấp hoặc chờ duyệt thanh toán.');openUpgrade();}
+    }).catch(function(){openUpgrade();});
+  }
+  function refreshPremiumState(){
+    var state=qs('#mktV251PremiumState');
+    fetch('/api/facebook_personal_full/status',{credentials:'same-origin'}).then(function(r){return r.json()}).then(function(data){
+      if(!state)return;
+      if(data&&data.active){state.textContent='Premium mở khóa';state.className='ok';}
+      else{state.textContent='Khóa Premium';state.className='lock';}
+    }).catch(function(){if(state){state.textContent='Khóa Premium';state.className='lock';}});
+  }
+  function run(){removeOldOverflowFacebookButtons();addDesktopSidebarMenu();addMobileFacebookCard();}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',run);else run();
+  window.addEventListener('resize',run);
+  setTimeout(run,300);setTimeout(run,900);setTimeout(run,1800);setInterval(removeOldOverflowFacebookButtons,2500);
 })();
 </script>
-<style id="mkt-v250-fb-full-menu-css">
-html body .mkt-v250-fb-full-link{background:linear-gradient(135deg,#1877f2,#2563eb,#7c3aed)!important;color:#fff!important;box-shadow:0 16px 32px rgba(37,99,235,.30)!important;border-color:rgba(255,255,255,.20)!important;font-weight:1000!important}
-html body .mkt-v250-fb-full-link .v2-nav-text{color:#fff!important;-webkit-text-fill-color:#fff!important;font-weight:1000!important;text-transform:uppercase!important}
+<style id="mkt-v251-fb-full-mobile-premium-css">
+html body #mktFbMobileFloatBtn,html body .mkt-mobile-fb-personal-entry,html body [data-module="facebook_personal_mobile"]{display:none!important;visibility:hidden!important;pointer-events:none!important}
+html body .mkt-v251-fb-full-link{background:linear-gradient(135deg,#1877f2,#2563eb,#7c3aed)!important;color:#fff!important;box-shadow:0 16px 32px rgba(37,99,235,.30)!important;border-color:rgba(255,255,255,.20)!important;font-weight:1000!important}
+html body .mkt-v251-fb-full-link .v2-nav-text{color:#fff!important;-webkit-text-fill-color:#fff!important;font-weight:1000!important;text-transform:uppercase!important}
+#mktV251MobileFacebookCard{display:none}
+@media(max-width:820px){
+html body .mkt-v251-fb-full-link{display:none!important;visibility:hidden!important;pointer-events:none!important}
+#mktV251MobileFacebookCard{display:block!important;width:100%!important;margin:12px 0 14px!important;padding:0 12px!important;box-sizing:border-box!important;position:relative!important;z-index:20!important}
+#mktV251MobileFacebookCard .mkt-v251-mobile-fb-btn{width:100%!important;min-height:74px!important;border:0!important;border-radius:22px!important;padding:13px 14px!important;display:flex!important;align-items:center!important;gap:12px!important;text-align:left!important;color:#fff!important;background:linear-gradient(135deg,#1877f2,#2563eb,#7c3aed)!important;box-shadow:0 18px 38px rgba(37,99,235,.30)!important;font-family:inherit!important;box-sizing:border-box!important}
+#mktV251MobileFacebookCard .ico{width:46px!important;height:46px!important;min-width:46px!important;border-radius:16px!important;background:rgba(255,255,255,.18)!important;display:flex!important;align-items:center!important;justify-content:center!important;font-size:25px!important}
+#mktV251MobileFacebookCard b{display:block!important;color:#fff!important;font-size:16px!important;font-weight:1000!important;line-height:1.1!important;letter-spacing:.02em!important}
+#mktV251MobileFacebookCard em{display:block!important;color:#dbeafe!important;font-size:12px!important;font-style:normal!important;font-weight:900!important;margin-top:4px!important;line-height:1.25!important}
+#mktV251PremiumState{margin-left:auto!important;white-space:nowrap!important;border-radius:999px!important;padding:6px 9px!important;font-size:10px!important;font-weight:1000!important;background:rgba(15,23,42,.78)!important;color:#fff!important;border:1px solid rgba(255,255,255,.2)!important}
+#mktV251PremiumState.ok{background:rgba(22,163,74,.95)!important;color:#fff!important}
+#mktV251PremiumState.lock{background:rgba(15,23,42,.82)!important;color:#fef3c7!important}
+}
 </style>
 '''
 
@@ -17853,12 +17945,12 @@ def mkt_v250_fb_full_menu_after_request(response):
         ctype=(response.headers.get('Content-Type') or '').lower()
         if 'text/html' in ctype:
             body=response.get_data(as_text=True)
-            if 'mkt-v250-fb-full-menu-js' not in body and '</body>' in body:
+            if 'mkt-v251-fb-full-mobile-premium-js' not in body and '</body>' in body:
                 body=body.replace('</body>', MKT_V250_FB_FULL_MENU_INJECTION + '</body>')
                 response.set_data(body)
                 response.headers['Content-Length']=str(len(body.encode('utf-8')))
     except Exception as _e:
-        print('mkt_v250_fb_full_menu_after_request skipped:', _e)
+        print('mkt_v251_fb_full_menu_after_request skipped:', _e)
     return response
 
 if __name__ == "__main__":
