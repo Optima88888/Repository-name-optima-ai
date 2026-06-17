@@ -17546,6 +17546,321 @@ def mkt_v145_facebook_personal_mobile_menu_after_request(response):
         print('mkt_v145_facebook_personal_mobile_menu_after_request skipped:', _e)
     return response
 
+# ============================================================
+# V250 - FACEBOOK CÁ NHÂN FULL CENTER
+# Mục tiêu: 1 module sạch, 1 route chính, 1 cụm bảng DB riêng.
+# Không phụ thuộc code Facebook cũ để tránh vá chồng, trùng JS, trùng menu.
+# ============================================================
+
+def mkt_fb_full_init_db():
+    conn = db(); c = conn.cursor()
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS fb_full_accounts (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        account_code TEXT UNIQUE,
+        display_name TEXT,
+        uid TEXT,
+        login_method TEXT DEFAULT 'Chrome Profile',
+        profile_path TEXT,
+        proxy_id INTEGER,
+        status TEXT DEFAULT 'Chưa kết nối',
+        note TEXT,
+        created_at TEXT,
+        updated_at TEXT
+    )
+    """)
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS fb_full_proxies (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        proxy_name TEXT,
+        proxy_url TEXT,
+        proxy_user TEXT,
+        proxy_pass TEXT,
+        status TEXT DEFAULT 'Chưa kiểm tra',
+        note TEXT,
+        created_at TEXT,
+        updated_at TEXT
+    )
+    """)
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS fb_full_pages (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        page_name TEXT,
+        page_id TEXT,
+        owner_account TEXT,
+        status TEXT DEFAULT 'Chưa đồng bộ',
+        note TEXT,
+        created_at TEXT
+    )
+    """)
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS fb_full_groups (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        group_name TEXT,
+        group_uid TEXT,
+        keyword TEXT,
+        members INTEGER DEFAULT 0,
+        privacy TEXT,
+        join_status TEXT DEFAULT 'Chưa tham gia',
+        post_status TEXT DEFAULT 'Chưa kiểm tra',
+        note TEXT,
+        created_at TEXT
+    )
+    """)
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS fb_full_tasks (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        task_type TEXT,
+        target_type TEXT,
+        selected_accounts TEXT,
+        selected_pages TEXT,
+        selected_groups TEXT,
+        content TEXT,
+        media_path TEXT,
+        schedule_time TEXT,
+        rotate_accounts INTEGER DEFAULT 0,
+        rotate_proxies INTEGER DEFAULT 0,
+        status TEXT DEFAULT 'READY',
+        result_message TEXT,
+        created_at TEXT,
+        updated_at TEXT
+    )
+    """)
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS fb_full_logs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        action TEXT,
+        status TEXT,
+        detail TEXT,
+        created_at TEXT
+    )
+    """)
+    conn.commit(); conn.close()
+
+
+def mkt_fb_full_now():
+    return datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+
+def mkt_fb_full_log(action, status, detail):
+    try:
+        mkt_fb_full_init_db()
+        conn=db(); c=conn.cursor()
+        c.execute("INSERT INTO fb_full_logs(action,status,detail,created_at) VALUES(?,?,?,?)", (action,status,detail,mkt_fb_full_now()))
+        conn.commit(); conn.close()
+    except Exception as e:
+        print('mkt_fb_full_log skipped:', e)
+
+
+def mkt_fb_full_rows():
+    mkt_fb_full_init_db()
+    conn=db(); c=conn.cursor()
+    c.execute("SELECT a.id,a.account_code,a.display_name,a.uid,a.login_method,a.profile_path,a.status,a.note,p.proxy_name,p.proxy_url FROM fb_full_accounts a LEFT JOIN fb_full_proxies p ON a.proxy_id=p.id ORDER BY a.id DESC LIMIT 200")
+    accounts=c.fetchall()
+    c.execute("SELECT id,proxy_name,proxy_url,status,note FROM fb_full_proxies ORDER BY id DESC LIMIT 200")
+    proxies=c.fetchall()
+    c.execute("SELECT id,page_name,page_id,owner_account,status,note FROM fb_full_pages ORDER BY id DESC LIMIT 200")
+    pages=c.fetchall()
+    c.execute("SELECT id,group_name,group_uid,keyword,members,privacy,join_status,post_status,note FROM fb_full_groups ORDER BY id DESC LIMIT 200")
+    groups=c.fetchall()
+    c.execute("SELECT id,task_type,target_type,status,schedule_time,selected_accounts,selected_pages,selected_groups,substr(content,1,160),result_message,created_at FROM fb_full_tasks ORDER BY id DESC LIMIT 200")
+    tasks=c.fetchall()
+    c.execute("SELECT action,status,detail,created_at FROM fb_full_logs ORDER BY id DESC LIMIT 80")
+    logs=c.fetchall()
+    conn.close()
+    return accounts, proxies, pages, groups, tasks, logs
+
+
+def mkt_fb_full_html(message=''):
+    import html as _html
+    accounts, proxies, pages, groups, tasks, logs = mkt_fb_full_rows()
+    esc=lambda v: _html.escape(str(v or ''))
+    proxy_options=''.join([f'<option value="{p[0]}">{esc(p[1])} - {esc(p[2])}</option>' for p in proxies])
+    account_checks=''.join([f'<label><input type="checkbox" name="accounts" value="{esc(a[1])}"> <b>{esc(a[1])}</b> - {esc(a[2])}</label>' for a in accounts]) or '<div class="empty">Chưa có tài khoản. Hãy thêm ở Trung tâm tài khoản.</div>'
+    page_checks=''.join([f'<label><input type="checkbox" name="pages" value="{esc(p[2])}"> <b>{esc(p[1])}</b> - {esc(p[2])}</label>' for p in pages]) or '<div class="empty">Chưa có Page. Có thể bấm Đồng bộ Page hoặc thêm Page mẫu trước.</div>'
+    group_checks=''.join([f'<label><input type="checkbox" name="groups" value="{esc(g[2])}"> <b>{esc(g[1])}</b> - {esc(g[2])}</label>' for g in groups]) or '<div class="empty">Chưa có Group. Hãy thêm/tìm Group trước.</div>'
+    account_rows=''.join([f'<tr><td>{esc(a[1])}</td><td>{esc(a[2])}</td><td>{esc(a[3])}</td><td>{esc(a[8] or "Chưa gán")}</td><td><span class="pill">{esc(a[6])}</span></td><td>{esc(a[7])}</td></tr>' for a in accounts]) or '<tr><td colspan="6">Chưa có tài khoản.</td></tr>'
+    proxy_rows=''.join([f'<tr><td>{esc(p[1])}</td><td>{esc(p[2])}</td><td><span class="pill">{esc(p[3])}</span></td><td>{esc(p[4])}</td></tr>' for p in proxies]) or '<tr><td colspan="4">Chưa có proxy.</td></tr>'
+    page_rows=''.join([f'<tr><td>{esc(p[1])}</td><td>{esc(p[2])}</td><td>{esc(p[3])}</td><td><span class="pill">{esc(p[4])}</span></td><td>{esc(p[5])}</td></tr>' for p in pages]) or '<tr><td colspan="5">Chưa có Page.</td></tr>'
+    group_rows=''.join([f'<tr><td>{esc(g[1])}</td><td>{esc(g[2])}</td><td>{esc(g[3])}</td><td>{esc(g[4])}</td><td>{esc(g[5])}</td><td><span class="pill">{esc(g[6])}</span></td><td><span class="pill blue">{esc(g[7])}</span></td></tr>' for g in groups]) or '<tr><td colspan="7">Chưa có Group.</td></tr>'
+    task_rows=''.join([f'<tr><td>#{t[0]}</td><td>{esc(t[1])}</td><td>{esc(t[2])}</td><td><span class="pill green">{esc(t[3])}</span></td><td>{esc(t[4])}</td><td>{esc(t[8])}</td><td>{esc(t[10])}</td></tr>' for t in tasks]) or '<tr><td colspan="7">Chưa có tác vụ.</td></tr>'
+    log_rows=''.join([f'<div class="log"><b>{esc(l[3])}</b> • {esc(l[0])} • <span>{esc(l[1])}</span><br>{esc(l[2])}</div>' for l in logs]) or '<div class="empty">Chưa có nhật ký.</div>'
+    msg = f'<div class="toast">{esc(message)}</div>' if message else ''
+    return f'''<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Facebook Cá Nhân - GPTMiniPro</title>
+<style>
+:root{{--fb-blue:#1877f2;--fb-purple:#7c3aed;--fb-dark:#0f172a;--fb-soft:#f5f8ff;--fb-border:#dbeafe;--fb-text:#111827;--fb-muted:#64748b}}
+*{{box-sizing:border-box}} body{{margin:0;font-family:Arial,system-ui,sans-serif;background:radial-gradient(circle at 10% 0%,rgba(24,119,242,.16),transparent 28%),radial-gradient(circle at 88% 4%,rgba(124,58,237,.14),transparent 32%),linear-gradient(135deg,#f8fbff,#eef5ff 48%,#fff);color:var(--fb-text)}}
+.wrap{{display:grid;grid-template-columns:292px 1fr;gap:18px;max-width:1540px;margin:0 auto;padding:18px}} .side{{position:sticky;top:18px;height:calc(100vh - 36px);overflow:auto;background:linear-gradient(180deg,#0e3a80,#123f88 55%,#174a9a);border-radius:28px;padding:20px;box-shadow:18px 0 52px rgba(14,58,128,.20);color:#fff}}
+.logo{{font-size:24px;font-weight:1000;line-height:1.1;margin-bottom:8px}} .sub{{color:#dbeafe;font-size:13px;font-weight:800;margin-bottom:14px}} .navbtn{{width:100%;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.08);color:#fff;border-radius:16px;padding:12px 13px;margin:6px 0;text-align:left;font-weight:1000;cursor:pointer;display:flex;align-items:center;gap:8px}} .navbtn:hover,.navbtn.active{{background:linear-gradient(135deg,#2563eb,#7c3aed);box-shadow:0 14px 28px rgba(37,99,235,.26);transform:translateX(2px)}}
+.main{{min-width:0}} .hero,.card{{background:rgba(255,255,255,.96);border:1px solid var(--fb-border);border-radius:28px;box-shadow:0 18px 48px rgba(24,119,242,.10)}} .hero{{padding:24px;margin-bottom:16px;display:flex;justify-content:space-between;gap:16px;align-items:center}} h1{{margin:0;font-size:34px;background:linear-gradient(90deg,#1877f2,#2563eb,#7c3aed);-webkit-background-clip:text;background-clip:text;color:transparent}} h2{{margin:0 0 10px;color:#1e1b4b}} h3{{margin:12px 0 8px;color:#0f172a}} p{{color:var(--fb-muted);font-weight:700;line-height:1.45}} .grid{{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}} .grid2{{display:grid;grid-template-columns:1fr 1fr;gap:14px}} .card{{padding:18px;margin-bottom:16px}} .kpi{{padding:16px;border-radius:22px;background:linear-gradient(135deg,#fff,#eff6ff);border:1px solid #dbeafe}} .kpi b{{display:block;font-size:26px;color:#2563eb}} .kpi span{{font-size:13px;color:#64748b;font-weight:900}}
+.tabs{{display:none}} .tabs.show{{display:block}} input,textarea,select{{width:100%;border:1px solid #dbe3ef;border-radius:15px;padding:13px 14px;margin:7px 0;font-size:15px;outline:none;background:#fff}} textarea{{min-height:150px}} input:focus,textarea:focus,select:focus{{border-color:#7c3aed;box-shadow:0 0 0 4px rgba(124,58,237,.10)}} button,.btn{{border:0;border-radius:15px;padding:13px 17px;background:linear-gradient(135deg,#2563eb,#7c3aed);color:white;font-weight:1000;cursor:pointer;box-shadow:0 14px 28px rgba(37,99,235,.20);text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:7px;margin:6px 6px 6px 0}} .btn2{{background:linear-gradient(135deg,#e0e7ff,#f3e8ff);color:#4c1d95;border:1px solid #ddd6fe;box-shadow:none}} .btn-green{{background:linear-gradient(135deg,#16a34a,#22c55e)}} .btn-orange{{background:linear-gradient(135deg,#f59e0b,#f97316)}} .btn-red{{background:linear-gradient(135deg,#ef4444,#b91c1c)}}
+.checkgrid{{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:8px 0}} .checkgrid label{{display:block;background:#f8fafc;border:1px solid #e2e8f0;border-radius:14px;padding:10px;font-weight:800;color:#334155}} table{{width:100%;border-collapse:collapse;background:#fff;border-radius:18px;overflow:hidden}} th,td{{border-bottom:1px solid #e5e7eb;padding:10px;text-align:left;font-size:14px}} th{{background:#eff6ff;color:#1e3a8a;font-weight:1000}} .pill{{display:inline-flex;padding:5px 9px;border-radius:999px;background:#fef3c7;color:#92400e;font-size:12px;font-weight:1000}} .pill.green{{background:#dcfce7;color:#166534}} .pill.blue{{background:#dbeafe;color:#1d4ed8}} .empty{{padding:12px;border:1px dashed #cbd5e1;border-radius:14px;color:#64748b;background:#f8fafc;font-weight:800}} .toast{{margin-bottom:14px;padding:13px 15px;border-radius:16px;background:#dcfce7;color:#166534;border:1px solid #86efac;font-weight:1000}} .log{{padding:10px 12px;border-radius:14px;background:#f8fafc;border:1px solid #e2e8f0;margin:8px 0;color:#334155}} .mini-title{{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}}
+.badge{{display:inline-flex;padding:7px 11px;border-radius:999px;background:#111827;color:#fff;border:1px solid rgba(34,197,94,.55);box-shadow:0 0 14px rgba(34,197,94,.3);font-size:12px;font-weight:1000}} .home-link{{color:#fff;text-decoration:none;display:block;margin-top:14px;font-weight:1000;background:rgba(255,255,255,.10);padding:12px;border-radius:16px}}
+@media(max-width:980px){{.wrap{{display:block;padding:12px}}.side{{position:relative;height:auto;margin-bottom:12px}}.grid,.grid2,.checkgrid{{grid-template-columns:1fr}}.hero{{display:block}} h1{{font-size:28px}} button,.btn{{width:100%}}}}
+</style></head><body><div class="wrap"><aside class="side"><div class="logo">👤 FACEBOOK CÁ NHÂN</div><div class="sub">Module sạch cho GPTMiniPro: tài khoản → proxy → đăng bài → group → page → task.</div>
+<button class="navbtn active" onclick="openTab('account',this)">🔐 Trung tâm tài khoản</button><button class="navbtn" onclick="openTab('post',this)">📝 Đăng bài</button><button class="navbtn" onclick="openTab('group',this)">👥 Group Marketing</button><button class="navbtn" onclick="openTab('page',this)">📄 Fanpage Manager</button><button class="navbtn" onclick="openTab('ai',this)">🤖 AI Content</button><button class="navbtn" onclick="openTab('media',this)">🖼️ Media Center</button><button class="navbtn" onclick="openTab('task',this)">📋 Task Center</button><button class="navbtn" onclick="openTab('setting',this)">⚙️ Cài đặt</button><a class="home-link" href="/">← Về GPTMiniPro</a></aside>
+<main class="main">{msg}<section class="hero"><div><span class="badge">PRO Facebook Automation Center</span><h1>Facebook Cá Nhân</h1><p>Khách mở 1 menu duy nhất, bên trong có đầy đủ đăng trang cá nhân, đăng Page, đăng Group, hẹn giờ, tài khoản, proxy, UID Group, Media và hàng đợi.</p></div><div class="grid" style="min-width:520px"><div class="kpi"><b>{len(accounts)}</b><span>Tài khoản</span></div><div class="kpi"><b>{len(proxies)}</b><span>Proxy</span></div><div class="kpi"><b>{len(pages)}</b><span>Fanpage</span></div><div class="kpi"><b>{len(groups)}</b><span>Group</span></div></div></section>
+
+<section id="tab-account" class="tabs show"><div class="grid2"><div class="card"><h2>➕ Kết nối Facebook</h2><form method="post" action="/fb_full/account"><input name="account_code" placeholder="Mã tài khoản: FB001"><input name="display_name" placeholder="Tên hiển thị"><input name="uid" placeholder="UID Facebook"><select name="login_method"><option>Chrome Profile</option><option>Cookie/Session</option><option>Đăng nhập thủ công</option></select><input name="profile_path" placeholder="Đường dẫn profile: profiles/FB001"><select name="proxy_id"><option value="">Chưa gán Proxy</option>{proxy_options}</select><textarea name="note" placeholder="Ghi chú đăng nhập"></textarea><button>💾 Lưu tài khoản</button></form></div><div class="card"><h2>🌐 Proxy Manager</h2><form method="post" action="/fb_full/proxy"><input name="proxy_name" placeholder="Proxy 01"><input name="proxy_url" placeholder="IP:PORT hoặc http://ip:port"><input name="proxy_user" placeholder="User proxy nếu có"><input name="proxy_pass" placeholder="Pass proxy nếu có"><textarea name="note" placeholder="Ghi chú proxy"></textarea><button>➕ Thêm Proxy</button></form></div></div><div class="card"><div class="mini-title"><h2>📊 Danh sách tài khoản</h2><form method="post" action="/fb_full/status"><button class="btn2">🔄 Kiểm tra trạng thái</button></form></div><table><thead><tr><th>Mã</th><th>Tên</th><th>UID</th><th>Proxy</th><th>Trạng thái</th><th>Ghi chú</th></tr></thead><tbody>{account_rows}</tbody></table></div><div class="card"><h2>🌐 Danh sách Proxy</h2><table><thead><tr><th>Tên</th><th>Proxy</th><th>Trạng thái</th><th>Ghi chú</th></tr></thead><tbody>{proxy_rows}</tbody></table></div></section>
+
+<section id="tab-post" class="tabs"><div class="card"><h2>📝 Đăng bài</h2><form method="post" action="/fb_full/task" enctype="multipart/form-data"><input type="hidden" name="task_type" value="post"><div class="grid2"><div><h3>✍️ Nội dung</h3><textarea name="content" placeholder="Nhập nội dung bài viết..."></textarea><button type="button" class="btn2" onclick="fillSample()">📚 Lấy nội dung mẫu</button><button type="button" class="btn2" onclick="spinContent()">♻️ AI Spin</button><button type="button" class="btn2" onclick="writeAI()">🤖 AI Viết bài</button></div><div><h3>🖼️ Hình ảnh / Video</h3><input type="file" name="media" accept="image/*,video/*"><button type="button" class="btn2">📂 Media Center</button><button type="button" class="btn2">🎲 Random Media</button><h3>⏰ Hẹn giờ</h3><input type="datetime-local" name="schedule_time"><label><input type="checkbox" name="rotate_accounts" value="1"> Xoay vòng tài khoản</label><label><input type="checkbox" name="rotate_proxies" value="1"> Xoay vòng Proxy</label></div></div><h3>🎯 Khách chọn nơi đăng</h3><div class="grid2"><div><h3>👤 Facebook Cá Nhân</h3><div class="checkgrid">{account_checks}</div></div><div><h3>📄 Fanpage</h3><div class="checkgrid">{page_checks}</div></div></div><h3>👥 Group</h3><div class="checkgrid">{group_checks}</div><select name="target_type"><option value="profile">Facebook Cá Nhân</option><option value="page">Fanpage</option><option value="group">Group</option><option value="all">Cá nhân + Page + Group</option></select><button name="submit_mode" value="now" class="btn-green">🚀 Đăng ngay</button><button name="submit_mode" value="schedule" class="btn-orange">⏰ Đăng hẹn giờ</button></form></div></section>
+
+<section id="tab-group" class="tabs"><div class="grid2"><div class="card"><h2>🔍 Tìm Group / Thêm Group</h2><form method="post" action="/fb_full/group"><input name="keyword" placeholder="Từ khóa: bất động sản, mỹ phẩm..."><input name="group_name" placeholder="Tên Group"><input name="group_uid" placeholder="UID / Link Group"><input name="members" placeholder="Số thành viên"><select name="privacy"><option>Công khai</option><option>Riêng tư</option><option>Không rõ</option></select><textarea name="note" placeholder="Ghi chú"></textarea><button>💾 Lưu Group</button></form></div><div class="card"><h2>➕ Tham gia / Quét UID / Chia UID</h2><form method="post" action="/fb_full/task"><input type="hidden" name="task_type" value="group_action"><select name="target_type"><option value="join_group">Tham gia Group</option><option value="scan_group_uid">Quét UID Group</option><option value="split_uid">Chia UID</option><option value="comment_after_post">Bình luận sau đăng</option></select><div class="checkgrid">{group_checks}</div><input name="schedule_time" placeholder="Delay hoặc giờ chạy: 60s / 90s / 2026-06-17 20:00"><textarea name="content" placeholder="Nội dung bình luận sau đăng nếu có"></textarea><button>📋 Đưa vào hàng đợi Group</button></form></div></div><div class="card"><div class="mini-title"><h2>👥 Danh sách Group</h2><form method="post" action="/fb_full/task"><input type="hidden" name="task_type" value="post_group"><input type="hidden" name="target_type" value="group"><button class="btn-green">📢 Đăng Group nhanh</button></form></div><table><thead><tr><th>Tên Group</th><th>UID</th><th>Từ khóa</th><th>TV</th><th>Loại</th><th>Tham gia</th><th>Đăng</th></tr></thead><tbody>{group_rows}</tbody></table></div></section>
+
+<section id="tab-page" class="tabs"><div class="grid2"><div class="card"><h2>🔄 Đồng bộ / Thêm Fanpage</h2><form method="post" action="/fb_full/page"><input name="page_name" placeholder="Tên Fanpage"><input name="page_id" placeholder="Page ID"><input name="owner_account" placeholder="Tài khoản quản lý: FB001"><textarea name="note" placeholder="Ghi chú Page"></textarea><button>💾 Lưu Fanpage</button><button name="sync_demo" value="1" class="btn2">🔄 Đồng bộ Page mẫu</button></form></div><div class="card"><h2>📢 Đăng Fanpage / Lịch đăng Page</h2><form method="post" action="/fb_full/task" enctype="multipart/form-data"><input type="hidden" name="task_type" value="post_page"><input type="hidden" name="target_type" value="page"><div class="checkgrid">{page_checks}</div><textarea name="content" placeholder="Nội dung đăng Fanpage"></textarea><input type="file" name="media" accept="image/*,video/*"><input type="datetime-local" name="schedule_time"><button class="btn-green">🚀 Đăng Fanpage</button><button class="btn-orange">⏰ Lịch đăng Page</button></form></div></div><div class="card"><h2>📄 Quản lý Fanpage</h2><table><thead><tr><th>Tên Page</th><th>Page ID</th><th>Tài khoản</th><th>Trạng thái</th><th>Ghi chú</th></tr></thead><tbody>{page_rows}</tbody></table></div></section>
+
+<section id="tab-ai" class="tabs"><div class="card"><h2>🤖 AI Content</h2><div class="grid"><button class="btn2" onclick="writeAI()">✍️ AI Viết bài</button><button class="btn2" onclick="spinContent()">♻️ AI Spin</button><button class="btn2" onclick="fillViral()">🔥 Viral Content</button><button class="btn2" onclick="fillAds()">📢 Ads Content</button><button class="btn2" onclick="fillHash()">#️⃣ Hashtag AI</button><button class="btn2" onclick="fillCTA()">🎯 CTA Generator</button></div><textarea id="aiBox" placeholder="Kết quả AI sẽ hiển thị tại đây" style="min-height:260px"></textarea></div></section>
+<section id="tab-media" class="tabs"><div class="card"><h2>🖼️ Media Center</h2><div class="grid"><button class="btn2">🖼️ Kho ảnh</button><button class="btn2">🎥 Kho video</button><button class="btn2">🎲 Random ảnh</button><button class="btn2">🎲 Random video</button><button class="btn2">📂 Upload hàng loạt</button><button class="btn2">🗂️ Quản lý thư viện</button></div><p>Giai đoạn này giao diện đã tạo đủ điểm gắn. Khi nối worker local/VPS, chỉ cần đổ dữ liệu media thật vào đây.</p></div></section>
+<section id="tab-task" class="tabs"><div class="card"><div class="mini-title"><h2>📋 Task Center</h2><form method="post" action="/fb_full/retry"><button class="btn2">🔄 Retry tác vụ lỗi</button></form></div><div class="grid"><div class="kpi"><b>READY</b><span>Sẵn sàng</span></div><div class="kpi"><b>WAITING</b><span>Chờ giờ</span></div><div class="kpi"><b>RUNNING</b><span>Đang chạy</span></div><div class="kpi"><b>SUCCESS / FAILED</b><span>Kết quả</span></div></div><table><thead><tr><th>ID</th><th>Loại</th><th>Nơi đăng</th><th>Trạng thái</th><th>Hẹn giờ</th><th>Nội dung</th><th>Tạo lúc</th></tr></thead><tbody>{task_rows}</tbody></table></div><div class="card"><h2>📜 Nhật ký</h2>{log_rows}</div></section>
+<section id="tab-setting" class="tabs"><div class="card"><h2>⚙️ Cài đặt</h2><div class="grid2"><div><h3>Delay</h3><input value="60 - 120 giây"><h3>Proxy</h3><select><option>1 tài khoản = 1 proxy</option><option>Xoay vòng proxy</option></select><h3>Worker</h3><input value="Local/VPS Playwright Worker"></div><div><h3>Log</h3><select><option>Lưu toàn bộ nhật ký</option><option>Chỉ lưu lỗi</option></select><h3>Backup</h3><input value="backups/facebook_full_center"><button class="btn2">💾 Backup cấu hình</button></div></div></div></section>
+</main></div><script>
+function openTab(name,btn){{document.querySelectorAll('.tabs').forEach(x=>x.classList.remove('show'));var el=document.getElementById('tab-'+name); if(el)el.classList.add('show');document.querySelectorAll('.navbtn').forEach(x=>x.classList.remove('active')); if(btn)btn.classList.add('active'); window.scrollTo({{top:0,behavior:'smooth'}})}}
+function fillSample(){{var t=document.querySelector('textarea[name="content"]'); if(t)t.value='Sản phẩm/dịch vụ tốt cần một nội dung đủ rõ để khách hiểu, tin và nhắn tin. Inbox để được tư vấn chi tiết hôm nay.'}}
+function spinContent(){{var t=document.querySelector('textarea[name="content"]')||document.getElementById('aiBox'); if(t)t.value=(t.value||'Nội dung mẫu')+'\n\nPhiên bản spin: Viết lại tự nhiên hơn, thêm CTA và hashtag phù hợp để giảm trùng lặp.'}}
+function writeAI(){{var box=document.getElementById('aiBox')||document.querySelector('textarea[name="content"]'); if(box)box.value='AI gợi ý:\n1. Tiêu đề thu hút\n2. Nội dung bán hàng ngắn gọn\n3. CTA: Inbox để được tư vấn\n4. Hashtag: #banhangonline #marketing #gptmini'}}
+function fillViral(){{document.getElementById('aiBox').value='🔥 Viral Content: 5 lý do khách nên chọn sản phẩm của bạn hôm nay...'}}
+function fillAds(){{document.getElementById('aiBox').value='📢 Ads Content: Mẫu quảng cáo tập trung vào nỗi đau, lợi ích và lời kêu gọi hành động.'}}
+function fillHash(){{document.getElementById('aiBox').value='#marketing #banhangonline #facebook #fanpage #groupmarketing #gptmini'}}
+function fillCTA(){{document.getElementById('aiBox').value='🎯 CTA: Nhắn tin ngay để nhận tư vấn miễn phí và ưu đãi hôm nay.'}}
+</script></body></html>'''
+
+
+@app.route('/facebook_personal_full')
+def mkt_fb_full_page():
+    return mkt_fb_full_html(request.args.get('msg',''))
+
+
+@app.route('/fb_full/account', methods=['POST'])
+def mkt_fb_full_account_save():
+    mkt_fb_full_init_db(); now=mkt_fb_full_now()
+    account_code=(request.form.get('account_code') or '').strip() or ('FB' + datetime.datetime.now().strftime('%H%M%S'))
+    display_name=(request.form.get('display_name') or '').strip()
+    uid=(request.form.get('uid') or '').strip()
+    login_method=(request.form.get('login_method') or 'Chrome Profile').strip()
+    profile_path=(request.form.get('profile_path') or '').strip()
+    proxy_id=(request.form.get('proxy_id') or '').strip()
+    note=(request.form.get('note') or '').strip()
+    conn=db(); c=conn.cursor()
+    c.execute("""
+        INSERT OR REPLACE INTO fb_full_accounts(account_code,display_name,uid,login_method,profile_path,proxy_id,status,note,created_at,updated_at)
+        VALUES(?,?,?,?,?,?,?,?,COALESCE((SELECT created_at FROM fb_full_accounts WHERE account_code=?),?),?)
+    """, (account_code,display_name,uid,login_method,profile_path,int(proxy_id) if proxy_id else None,'Đã lưu cấu hình',note,account_code,now,now))
+    conn.commit(); conn.close(); mkt_fb_full_log('account_save','SUCCESS',f'Đã lưu tài khoản {account_code}')
+    return redirect('/facebook_personal_full?msg=Đã lưu tài khoản Facebook')
+
+
+@app.route('/fb_full/proxy', methods=['POST'])
+def mkt_fb_full_proxy_save():
+    mkt_fb_full_init_db(); now=mkt_fb_full_now()
+    conn=db(); c=conn.cursor()
+    c.execute("INSERT INTO fb_full_proxies(proxy_name,proxy_url,proxy_user,proxy_pass,status,note,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?)", ((request.form.get('proxy_name') or '').strip(),(request.form.get('proxy_url') or '').strip(),(request.form.get('proxy_user') or '').strip(),(request.form.get('proxy_pass') or '').strip(),'Đã lưu',(request.form.get('note') or '').strip(),now,now))
+    conn.commit(); conn.close(); mkt_fb_full_log('proxy_save','SUCCESS','Đã thêm proxy')
+    return redirect('/facebook_personal_full?msg=Đã thêm Proxy')
+
+
+@app.route('/fb_full/page', methods=['POST'])
+def mkt_fb_full_page_save():
+    mkt_fb_full_init_db(); now=mkt_fb_full_now(); conn=db(); c=conn.cursor()
+    if request.form.get('sync_demo'):
+        samples=[('Page Bán Hàng','PAGE001','FB001'),('Page Shop','PAGE002','FB002'),('Page Công Ty','PAGE003','FB003')]
+        for name,pid,owner in samples:
+            c.execute("INSERT INTO fb_full_pages(page_name,page_id,owner_account,status,note,created_at) VALUES(?,?,?,?,?,?)", (name,pid,owner,'Đã đồng bộ mẫu','Page mẫu để test giao diện',now))
+    else:
+        c.execute("INSERT INTO fb_full_pages(page_name,page_id,owner_account,status,note,created_at) VALUES(?,?,?,?,?,?)", ((request.form.get('page_name') or '').strip(),(request.form.get('page_id') or '').strip(),(request.form.get('owner_account') or '').strip(),'Đã lưu',(request.form.get('note') or '').strip(),now))
+    conn.commit(); conn.close(); mkt_fb_full_log('page_save','SUCCESS','Đã lưu/đồng bộ Fanpage')
+    return redirect('/facebook_personal_full?msg=Đã cập nhật Fanpage')
+
+
+@app.route('/fb_full/group', methods=['POST'])
+def mkt_fb_full_group_save():
+    mkt_fb_full_init_db(); now=mkt_fb_full_now(); conn=db(); c=conn.cursor()
+    try: members=int((request.form.get('members') or '0').replace('.','').replace(',',''))
+    except Exception: members=0
+    c.execute("INSERT INTO fb_full_groups(group_name,group_uid,keyword,members,privacy,join_status,post_status,note,created_at) VALUES(?,?,?,?,?,?,?,?,?)", ((request.form.get('group_name') or '').strip(),(request.form.get('group_uid') or '').strip(),(request.form.get('keyword') or '').strip(),members,(request.form.get('privacy') or '').strip(),'Chưa tham gia','Sẵn sàng',(request.form.get('note') or '').strip(),now))
+    conn.commit(); conn.close(); mkt_fb_full_log('group_save','SUCCESS','Đã lưu Group')
+    return redirect('/facebook_personal_full?msg=Đã lưu Group')
+
+
+@app.route('/fb_full/task', methods=['POST'])
+def mkt_fb_full_task_save():
+    mkt_fb_full_init_db(); now=mkt_fb_full_now()
+    task_type=(request.form.get('task_type') or 'post').strip()
+    target_type=(request.form.get('target_type') or 'profile').strip()
+    content=(request.form.get('content') or '').strip()
+    schedule_time=(request.form.get('schedule_time') or '').strip()
+    submit_mode=(request.form.get('submit_mode') or '').strip()
+    status='WAITING' if (schedule_time or submit_mode=='schedule') else 'READY'
+    selected_accounts=json.dumps(request.form.getlist('accounts'), ensure_ascii=False)
+    selected_pages=json.dumps(request.form.getlist('pages'), ensure_ascii=False)
+    selected_groups=json.dumps(request.form.getlist('groups'), ensure_ascii=False)
+    media_path=''
+    try:
+        media_path=save_upload(request.files.get('media')) if request.files.get('media') else ''
+    except Exception:
+        media_path=''
+    conn=db(); c=conn.cursor()
+    c.execute("""
+        INSERT INTO fb_full_tasks(task_type,target_type,selected_accounts,selected_pages,selected_groups,content,media_path,schedule_time,rotate_accounts,rotate_proxies,status,result_message,created_at,updated_at)
+        VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+    """, (task_type,target_type,selected_accounts,selected_pages,selected_groups,content,media_path,schedule_time,1 if request.form.get('rotate_accounts') else 0,1 if request.form.get('rotate_proxies') else 0,status,'Đã tạo task. Worker local/VPS sẽ xử lý khi được kết nối.',now,now))
+    tid=c.lastrowid; conn.commit(); conn.close(); mkt_fb_full_log('task_create','QUEUED',f'Đã tạo task #{tid} - {task_type}/{target_type}')
+    return redirect('/facebook_personal_full?msg=Đã tạo hàng đợi Facebook')
+
+
+@app.route('/fb_full/status', methods=['POST'])
+def mkt_fb_full_status_check():
+    mkt_fb_full_init_db(); now=mkt_fb_full_now(); conn=db(); c=conn.cursor()
+    c.execute("UPDATE fb_full_accounts SET status=?, updated_at=?", ('Cần worker kiểm tra đăng nhập', now))
+    c.execute("UPDATE fb_full_proxies SET status=?, updated_at=?", ('Cần worker kiểm tra proxy', now))
+    conn.commit(); conn.close(); mkt_fb_full_log('status_check','INFO','Đã đánh dấu kiểm tra trạng thái. Cần worker local/VPS chạy thật để xác minh.')
+    return redirect('/facebook_personal_full?msg=Đã gửi yêu cầu kiểm tra trạng thái')
+
+
+@app.route('/fb_full/retry', methods=['POST'])
+def mkt_fb_full_retry():
+    mkt_fb_full_init_db(); now=mkt_fb_full_now(); conn=db(); c=conn.cursor()
+    c.execute("UPDATE fb_full_tasks SET status='READY', updated_at=? WHERE status='FAILED'", (now,))
+    conn.commit(); conn.close(); mkt_fb_full_log('retry_failed','READY','Đã chuyển task FAILED về READY')
+    return redirect('/facebook_personal_full?msg=Đã đưa tác vụ lỗi về READY')
+
+
+MKT_V250_FB_FULL_MENU_INJECTION = r'''
+<script id="mkt-v250-fb-full-menu-js">
+(function(){
+  function addFacebookFullMenu(){
+    var nav=document.querySelector('.nav');
+    if(!nav || document.querySelector('[data-mkt-v250-fb-full]')) return;
+    var a=document.createElement('a');
+    a.setAttribute('data-mkt-v250-fb-full','1');
+    a.className='v2-nav-link mkt-v250-fb-full-link';
+    a.href='/facebook_personal_full';
+    a.innerHTML='<span class="v2-nav-text">👤 FACEBOOK CÁ NHÂN</span><span class="mkt-dot-tag pro"><i></i><span>Pro</span></span>';
+    nav.insertBefore(a, nav.firstChild ? nav.firstChild.nextSibling : null);
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', addFacebookFullMenu); else addFacebookFullMenu();
+  setTimeout(addFacebookFullMenu,500); setTimeout(addFacebookFullMenu,1600);
+})();
+</script>
+<style id="mkt-v250-fb-full-menu-css">
+html body .mkt-v250-fb-full-link{background:linear-gradient(135deg,#1877f2,#2563eb,#7c3aed)!important;color:#fff!important;box-shadow:0 16px 32px rgba(37,99,235,.30)!important;border-color:rgba(255,255,255,.20)!important;font-weight:1000!important}
+html body .mkt-v250-fb-full-link .v2-nav-text{color:#fff!important;-webkit-text-fill-color:#fff!important;font-weight:1000!important;text-transform:uppercase!important}
+</style>
+'''
+
+@app.after_request
+def mkt_v250_fb_full_menu_after_request(response):
+    try:
+        ctype=(response.headers.get('Content-Type') or '').lower()
+        if 'text/html' in ctype:
+            body=response.get_data(as_text=True)
+            if 'mkt-v250-fb-full-menu-js' not in body and '</body>' in body:
+                body=body.replace('</body>', MKT_V250_FB_FULL_MENU_INJECTION + '</body>')
+                response.set_data(body)
+                response.headers['Content-Length']=str(len(body.encode('utf-8')))
+    except Exception as _e:
+        print('mkt_v250_fb_full_menu_after_request skipped:', _e)
+    return response
+
 if __name__ == "__main__":
     # Không tự tạo kho 50k content khi khởi động để tránh lỗi SQLite database is locked trên Render.
     # Khi cần kiểm tra/tạo kho content, gọi /api/content_50k_stats từ admin.
