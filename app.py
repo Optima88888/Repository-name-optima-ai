@@ -26548,15 +26548,6 @@ def mkt_v247_admin_safe_before_request():
     except Exception as e:
         return _mkt_v247_admin_safe_html(e), 200
 
-if __name__ == "__main__":
-    # Không tự tạo kho 50k content khi khởi động để tránh lỗi SQLite database is locked trên Render.
-    # Khi cần kiểm tra/tạo kho content, gọi /api/content_50k_stats từ admin.
-    threading.Thread(target=scheduler_loop, daemon=True).start()
-    port = int(os.environ.get("PORT", 10000))
-    app.run(host="0.0.0.0", port=port, debug=False)
-
-
-
 
 # V248 - Sửa khóa Premium Facebook cá nhân: nếu sidebar đã là Premium/Vĩnh Viễn thì không được khóa lại hoặc tự nhảy bảng giá
 MKT_V248_FORCE_FACEBOOK_PREMIUM_UNLOCK = r"""
@@ -26632,3 +26623,12 @@ def mkt_v248_force_facebook_premium_unlock_after_request(response):
     except Exception as _e:
         print("mkt_v248_force_facebook_premium_unlock_after_request skipped:", _e)
     return response
+
+if __name__ == "__main__":
+    # Không tự tạo kho 50k content khi khởi động để tránh lỗi SQLite database is locked trên Render.
+    # Khi cần kiểm tra/tạo kho content, gọi /api/content_50k_stats từ admin.
+    threading.Thread(target=scheduler_loop, daemon=True).start()
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host="0.0.0.0", port=port, debug=False)
+
+
