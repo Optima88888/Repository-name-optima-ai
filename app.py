@@ -17809,7 +17809,18 @@ html body.mkt-fb-preview-locked .mkt-preview-lock-note{display:block!important}
   document.body.classList.add('mkt-fb-preview-locked');
   function q(s,r){return (r||document).querySelector(s)}
   function qa(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s))}
-  function device(){var id='';try{id=localStorage.getItem('mkt_device_id')||localStorage.getItem('mkt_trial_user')||'';}catch(e){};return String(id||'').toUpperCase()}
+  function device(){
+    var id='';
+    try{id=(new URLSearchParams(location.search)).get('device_id')||'';}catch(e){}
+    try{if(!id)id=localStorage.getItem('mkt_device_id')||localStorage.getItem('mkt_trial_user')||'';}catch(e){}
+    try{if(!id){var m=document.cookie.match(/(?:^|;\s*)mkt_device_id=([^;]+)/); if(m)id=decodeURIComponent(m[1]);}}catch(e){}
+    try{if(!id){var txt=document.body?(document.body.innerText||''):''; var mm=txt.match(/MKT-[A-Z0-9]{6,20}/i); if(mm)id=mm[0];}}catch(e){}
+    if(!id && typeof window.getOrCreateDeviceId==='function'){try{id=window.getOrCreateDeviceId()||'';}catch(e){}}
+    id=String(id||'').trim().toUpperCase();
+    if(id && id.indexOf('MKT-')!==0) id='MKT-'+id.replace(/[^A-Z0-9]/g,'').slice(0,10);
+    if(id){try{localStorage.setItem('mkt_device_id',id);document.cookie='mkt_device_id='+encodeURIComponent(id)+'; path=/; max-age='+(60*60*24*365*5);}catch(e){}}
+    return id;
+  }
   function premiumUrl(){var id=device();return '/?open_premium=facebook_personal'+(id?'&device_id='+encodeURIComponent(id):'')+'#premium'}
   function goPremium(){try{localStorage.setItem('mkt_fb_waiting_premium','1')}catch(e){}; window.location.href=premiumUrl()}
   function showLock(){
@@ -17848,13 +17859,82 @@ def mkt_fb_full_apply_preview_lock(html):
         pass
     return html + MKT_FB_FULL_PREMIUM_PREVIEW_LOCK
 
+
+def mkt_fb_full_current_device_id():
+    try:
+        did = (request.args.get('device_id') or request.form.get('device_id') or get_device_id() or '').strip().upper()
+    except Exception:
+        did = ''
+    if did and not did.startswith('MKT-'):
+        did = 'MKT-' + ''.join(ch for ch in did if ch.isalnum())[:10]
+    return did[:32]
+
+
+def mkt_fb_full_url(msg=''):
+    from urllib.parse import urlencode
+    params = {}
+    did = mkt_fb_full_current_device_id()
+    if did:
+        params['device_id'] = did
+    if msg:
+        params['msg'] = msg
+    return '/facebook_personal_full' + (('?' + urlencode(params)) if params else '')
+
+
+def mkt_fb_full_redirect(msg=''):
+    return redirect(mkt_fb_full_url(msg))
+
+
+MKT_FB_FULL_DEVICE_HELPER_JS = """
+<script id="mkt-fb-full-device-helper-js">
+(function(){
+  function getId(){
+    var id='';
+    try{id=(new URLSearchParams(location.search)).get('device_id')||'';}catch(e){}
+    try{if(!id)id=localStorage.getItem('mkt_device_id')||localStorage.getItem('mkt_trial_user')||'';}catch(e){}
+    try{if(!id){var m=document.cookie.match(/(?:^|;\s*)mkt_device_id=([^;]+)/); if(m)id=decodeURIComponent(m[1]);}}catch(e){}
+    try{if(!id){var txt=document.body?(document.body.innerText||''):''; var mm=txt.match(/MKT-[A-Z0-9]{6,20}/i); if(mm)id=mm[0];}}catch(e){}
+    id=String(id||'').trim().toUpperCase();
+    if(id && id.indexOf('MKT-')!==0) id='MKT-'+id.replace(/[^A-Z0-9]/g,'').slice(0,10);
+    if(id){try{localStorage.setItem('mkt_device_id',id);document.cookie='mkt_device_id='+encodeURIComponent(id)+'; path=/; max-age='+(60*60*24*365*5);}catch(e){}}
+    return id;
+  }
+  function attach(){
+    var id=getId(); if(!id) return;
+    document.querySelectorAll('form').forEach(function(f){
+      var h=f.querySelector('input[name="device_id"]');
+      if(!h){h=document.createElement('input');h.type='hidden';h.name='device_id';f.appendChild(h);} h.value=id;
+      try{var u=new URL(f.getAttribute('action')||location.pathname, location.origin); if(u.pathname.indexOf('/fb_full/')===0||u.pathname.indexOf('/facebook_personal_full')===0){u.searchParams.set('device_id',id);f.setAttribute('action',u.pathname+u.search);}}catch(e){}
+    });
+    document.querySelectorAll('a[href^="/facebook_personal_full"],a[href^="/fb_full/"]').forEach(function(a){
+      try{var u=new URL(a.getAttribute('href'),location.origin);u.searchParams.set('device_id',id);a.setAttribute('href',u.pathname+u.search+u.hash);}catch(e){}
+    });
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',attach);else attach();
+  setTimeout(attach,500);setTimeout(attach,1500);
+})();
+</script>
+"""
+
+
+def mkt_fb_full_apply_device_helper(html):
+    try:
+        did = mkt_fb_full_current_device_id()
+        if did and '<body' in html and 'data-device-id=' not in html[:1000]:
+            html = html.replace('<body', '<body data-device-id="' + did + '"', 1)
+        if '</body>' in html and 'mkt-fb-full-device-helper-js' not in html:
+            return html.replace('</body>', '\n' + MKT_FB_FULL_DEVICE_HELPER_JS + '\n</body>')
+    except Exception:
+        pass
+    return html
+
 def mkt_fb_full_require_premium_for_action():
     try:
         sub = mkt_fb_full_premium_view(request.form.get('device_id') or request.args.get('device_id'))
         if not bool(sub.get('active')):
-            return redirect('/?open_premium=facebook_personal&device_id=' + (request.form.get('device_id') or request.args.get('device_id') or get_device_id()).strip().upper() + '#premium')
+            return redirect('/?open_premium=facebook_personal&device_id=' + mkt_fb_full_current_device_id() + '#premium')
     except Exception:
-        return redirect('/?open_premium=facebook_personal&device_id=' + (request.form.get('device_id') or request.args.get('device_id') or get_device_id()).strip().upper() + '#premium')
+        return redirect('/?open_premium=facebook_personal&device_id=' + mkt_fb_full_current_device_id() + '#premium')
     return None
 
 @app.before_request
@@ -17869,8 +17949,9 @@ def mkt_fb_full_page():
     # Cho khách xem trước toàn bộ giao diện Facebook Cá Nhân.
     # Chưa Premium: xem được layout nhưng bấm dùng sẽ chuyển bảng giá.
     # Đã Premium: mở đầy đủ và dùng bình thường.
-    sub = mkt_fb_full_premium_view(request.args.get('device_id'))
-    html = mkt_fb_full_html(request.args.get('msg',''))
+    did = mkt_fb_full_current_device_id()
+    sub = mkt_fb_full_premium_view(did)
+    html = mkt_fb_full_apply_device_helper(mkt_fb_full_html(request.args.get('msg','')))
     if not bool(sub.get('active')):
         return mkt_fb_full_apply_preview_lock(html)
     return html
@@ -17892,7 +17973,7 @@ def mkt_fb_full_account_save():
         VALUES(?,?,?,?,?,?,?,?,COALESCE((SELECT created_at FROM fb_full_accounts WHERE account_code=?),?),?)
     """, (account_code,display_name,uid,login_method,profile_path,int(proxy_id) if proxy_id else None,'Đã lưu cấu hình',note,account_code,now,now))
     conn.commit(); conn.close(); mkt_fb_full_log('account_save','SUCCESS',f'Đã lưu tài khoản {account_code}')
-    return redirect('/facebook_personal_full?msg=Đã lưu tài khoản Facebook')
+    return mkt_fb_full_redirect('Đã lưu tài khoản Facebook')
 
 
 @app.route('/fb_full/proxy', methods=['POST'])
@@ -17901,7 +17982,7 @@ def mkt_fb_full_proxy_save():
     conn=db(); c=conn.cursor()
     c.execute("INSERT INTO fb_full_proxies(proxy_name,proxy_url,proxy_user,proxy_pass,status,note,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?)", ((request.form.get('proxy_name') or '').strip(),(request.form.get('proxy_url') or '').strip(),(request.form.get('proxy_user') or '').strip(),(request.form.get('proxy_pass') or '').strip(),'Đã lưu',(request.form.get('note') or '').strip(),now,now))
     conn.commit(); conn.close(); mkt_fb_full_log('proxy_save','SUCCESS','Đã thêm proxy')
-    return redirect('/facebook_personal_full?msg=Đã thêm Proxy')
+    return mkt_fb_full_redirect('Đã thêm Proxy')
 
 
 @app.route('/fb_full/page', methods=['POST'])
@@ -17914,7 +17995,7 @@ def mkt_fb_full_page_save():
     else:
         c.execute("INSERT INTO fb_full_pages(page_name,page_id,owner_account,status,note,created_at) VALUES(?,?,?,?,?,?)", ((request.form.get('page_name') or '').strip(),(request.form.get('page_id') or '').strip(),(request.form.get('owner_account') or '').strip(),'Đã lưu',(request.form.get('note') or '').strip(),now))
     conn.commit(); conn.close(); mkt_fb_full_log('page_save','SUCCESS','Đã lưu/đồng bộ Fanpage')
-    return redirect('/facebook_personal_full?msg=Đã cập nhật Fanpage')
+    return mkt_fb_full_redirect('Đã cập nhật Fanpage')
 
 
 @app.route('/fb_full/group', methods=['POST'])
@@ -17924,7 +18005,7 @@ def mkt_fb_full_group_save():
     except Exception: members=0
     c.execute("INSERT INTO fb_full_groups(group_name,group_uid,keyword,members,privacy,join_status,post_status,note,created_at) VALUES(?,?,?,?,?,?,?,?,?)", ((request.form.get('group_name') or '').strip(),(request.form.get('group_uid') or '').strip(),(request.form.get('keyword') or '').strip(),members,(request.form.get('privacy') or '').strip(),'Chưa tham gia','Sẵn sàng',(request.form.get('note') or '').strip(),now))
     conn.commit(); conn.close(); mkt_fb_full_log('group_save','SUCCESS','Đã lưu Group')
-    return redirect('/facebook_personal_full?msg=Đã lưu Group')
+    return mkt_fb_full_redirect('Đã lưu Group')
 
 
 @app.route('/fb_full/task', methods=['POST'])
@@ -17950,7 +18031,7 @@ def mkt_fb_full_task_save():
         VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)
     """, (task_type,target_type,selected_accounts,selected_pages,selected_groups,content,media_path,schedule_time,1 if request.form.get('rotate_accounts') else 0,1 if request.form.get('rotate_proxies') else 0,status,'Đã tạo task. Worker local/VPS sẽ xử lý khi được kết nối.',now,now))
     tid=c.lastrowid; conn.commit(); conn.close(); mkt_fb_full_log('task_create','QUEUED',f'Đã tạo task #{tid} - {task_type}/{target_type}')
-    return redirect('/facebook_personal_full?msg=Đã tạo hàng đợi Facebook')
+    return mkt_fb_full_redirect('Đã tạo hàng đợi Facebook')
 
 
 @app.route('/fb_full/status', methods=['POST'])
@@ -17959,7 +18040,7 @@ def mkt_fb_full_status_check():
     c.execute("UPDATE fb_full_accounts SET status=?, updated_at=?", ('Cần worker kiểm tra đăng nhập', now))
     c.execute("UPDATE fb_full_proxies SET status=?, updated_at=?", ('Cần worker kiểm tra proxy', now))
     conn.commit(); conn.close(); mkt_fb_full_log('status_check','INFO','Đã đánh dấu kiểm tra trạng thái. Cần worker local/VPS chạy thật để xác minh.')
-    return redirect('/facebook_personal_full?msg=Đã gửi yêu cầu kiểm tra trạng thái')
+    return mkt_fb_full_redirect('Đã gửi yêu cầu kiểm tra trạng thái')
 
 
 @app.route('/fb_full/retry', methods=['POST'])
@@ -17967,7 +18048,7 @@ def mkt_fb_full_retry():
     mkt_fb_full_init_db(); now=mkt_fb_full_now(); conn=db(); c=conn.cursor()
     c.execute("UPDATE fb_full_tasks SET status='READY', updated_at=? WHERE status='FAILED'", (now,))
     conn.commit(); conn.close(); mkt_fb_full_log('retry_failed','READY','Đã chuyển task FAILED về READY')
-    return redirect('/facebook_personal_full?msg=Đã đưa tác vụ lỗi về READY')
+    return mkt_fb_full_redirect('Đã đưa tác vụ lỗi về READY')
 
 
 MKT_V250_FB_FULL_MENU_INJECTION = r'''
@@ -17981,11 +18062,14 @@ MKT_V250_FB_FULL_MENU_INJECTION = r'''
   function norm(t){return String(t||'').replace(/\s+/g,' ').trim().toLowerCase()}
   function getDeviceId(){
     var id='';
-    try{id=localStorage.getItem('mkt_device_id')||localStorage.getItem('mkt_trial_user')||'';}catch(e){}
-    try{if(!id){var m=document.cookie.match(/(?:^|; )mkt_device_id=([^;]+)/); if(m) id=decodeURIComponent(m[1]);}}catch(e){}
+    try{id=(new URLSearchParams(location.search)).get('device_id')||'';}catch(e){}
+    try{if(!id) id=localStorage.getItem('mkt_device_id')||localStorage.getItem('mkt_trial_user')||'';}catch(e){}
+    try{if(!id){var m=document.cookie.match(/(?:^|;\s*)mkt_device_id=([^;]+)/); if(m) id=decodeURIComponent(m[1]);}}catch(e){}
+    try{if(!id){var txt=document.body?(document.body.innerText||''):''; var mm=txt.match(/MKT-[A-Z0-9]{6,20}/i); if(mm) id=mm[0];}}catch(e){}
     if(!id && typeof window.getOrCreateDeviceId==='function'){try{id=window.getOrCreateDeviceId()||'';}catch(e){}}
     id=String(id||'').trim().toUpperCase();
     if(id && id.indexOf('MKT-')!==0) id='MKT-'+id.replace(/[^A-Z0-9]/g,'').slice(0,10);
+    if(id){try{localStorage.setItem('mkt_device_id',id);document.cookie='mkt_device_id='+encodeURIComponent(id)+'; path=/; max-age='+(60*60*24*365*5);}catch(e){}}
     return id;
   }
   function statusUrl(){var id=getDeviceId(); return '/api/facebook_personal_full/status'+(id?'?device_id='+encodeURIComponent(id):'');}
@@ -18014,14 +18098,15 @@ MKT_V250_FB_FULL_MENU_INJECTION = r'''
     });
     qsa('#mktFbMobileFloatBtn,.mkt-mobile-fb-personal-entry,[data-module="facebook_personal_mobile"],#mktV251MobileFacebookCard').forEach(function(el){try{el.remove()}catch(e){el.style.display='none'}});
   }
-  function openUpgrade(){try{if(typeof window.openPremiumPopup==='function'){window.openPremiumPopup();return;}}catch(e){} window.location.href='/?open_premium=facebook_personal#premium';}
+  function openUpgrade(){var id=getDeviceId();try{if(typeof window.openPremiumPopup==='function'){window.openPremiumPopup();return;}}catch(e){} window.location.href='/?open_premium=facebook_personal'+(id?'&device_id='+encodeURIComponent(id):'')+'#premium';}
   function previewUrl(){var id=getDeviceId(); var u='/facebook_personal_full?preview=1'; if(id)u+='&device_id='+encodeURIComponent(id); return u;}
   function openFacebookPremiumGate(auto){fetch(statusUrl(),{credentials:'same-origin'}).then(function(r){return r.json()}).then(function(data){if(data&&data.active){try{localStorage.removeItem('mkt_fb_waiting_premium')}catch(e){} window.location.href=openUrl(data);}else if(!auto){try{localStorage.setItem('mkt_fb_waiting_premium','1')}catch(e){} window.location.href=previewUrl();}}).catch(function(){if(!auto)window.location.href=previewUrl();});}
   function bindGate(el){if(!el)return;el.onclick=function(e){if(e)e.preventDefault();openFacebookPremiumGate(false);return false;};}
   function addDesktopMenu(){
     var nav=qs('.mkt-clean-nav')||qs('.sidebar')||qs('.nav'); if(!nav)return;
     var a=qs('[data-mkt-v253-fb-full]');
-    if(!a){a=document.createElement('a');a.setAttribute('data-mkt-v253-fb-full','1');a.className='v2-nav-link mkt-v253-fb-full-link';a.href='/facebook_personal_full?preview=1';a.innerHTML='<span class="v2-nav-text">👤 FACEBOOK CÁ NHÂN</span><span class="mkt-dot-tag pro"><i></i><span>Pro</span></span>';var after=qs('.v2-nav-link',nav);if(after&&after.parentNode)after.parentNode.insertBefore(a,after.nextSibling);else nav.appendChild(a);}
+    if(!a){a=document.createElement('a');a.setAttribute('data-mkt-v253-fb-full','1');a.className='v2-nav-link mkt-v253-fb-full-link';a.href=previewUrl();a.innerHTML='<span class="v2-nav-text">👤 FACEBOOK CÁ NHÂN</span><span class="mkt-dot-tag pro"><i></i><span>Pro</span></span>';var after=qs('.v2-nav-link',nav);if(after&&after.parentNode)after.parentNode.insertBefore(a,after.nextSibling);else nav.appendChild(a);}
+    try{a.href=previewUrl();}catch(e){}
     bindGate(a);
   }
   function findMobileHost(){return qs('.main')||qs('.content')||qs('.dashboard')||qs('main')||document.body;}
