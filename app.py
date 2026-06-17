@@ -25964,6 +25964,191 @@ def mkt_v240_facebook_suite_center_after_request(response):
     return response
 
 
+# ============================================================
+# V242 - Facebook Customer Simple Flow
+# Ẩn kỹ thuật, nối giao diện khách với Local Worker API 127.0.0.1:8765
+# Không đụng menu/cấu trúc cũ, chỉ bổ sung lớp giao diện khách hàng.
+# ============================================================
+
+MKT_V242_FACEBOOK_CUSTOMER_FLOW = r"""
+<style id="mkt-v242-facebook-customer-flow-css">
+#mktV242FbCustomer{
+  margin:18px 0 22px!important;padding:22px!important;border-radius:28px!important;
+  background:radial-gradient(circle at 0% 0%,rgba(37,99,235,.18),transparent 34%),radial-gradient(circle at 100% 0%,rgba(124,58,237,.16),transparent 32%),linear-gradient(135deg,#ffffff,#f8fbff)!important;
+  border:1px solid rgba(191,219,254,.92)!important;box-shadow:0 26px 70px rgba(15,23,42,.12)!important;color:#0f172a!important;
+}
+#mktV242FbCustomer *{box-sizing:border-box}
+#mktV242FbCustomer .v242-head{display:flex!important;align-items:flex-start!important;justify-content:space-between!important;gap:16px!important;flex-wrap:wrap!important;margin-bottom:16px!important}
+#mktV242FbCustomer .v242-title{display:flex!important;gap:13px!important;align-items:center!important}
+#mktV242FbCustomer .v242-logo{width:54px!important;height:54px!important;border-radius:18px!important;display:flex!important;align-items:center!important;justify-content:center!important;color:#fff!important;font-size:27px!important;font-weight:1000!important;background:linear-gradient(135deg,#1877f2,#2563eb,#7c3aed)!important;box-shadow:0 16px 36px rgba(37,99,235,.25)!important}
+#mktV242FbCustomer h3{margin:0!important;font-size:24px!important;line-height:1.15!important;color:#0f172a!important}
+#mktV242FbCustomer p{margin:5px 0 0!important;color:#64748b!important;font-weight:800!important;line-height:1.45!important}
+#mktV242FbCustomer .v242-status{display:inline-flex!important;align-items:center!important;gap:8px!important;padding:10px 14px!important;border-radius:999px!important;background:#f8fafc!important;border:1px solid #e2e8f0!important;color:#334155!important;font-weight:1000!important;white-space:nowrap!important}
+#mktV242FbCustomer .v242-status.ok{background:#ecfdf5!important;border-color:#86efac!important;color:#166534!important}
+#mktV242FbCustomer .v242-status.bad{background:#fff7ed!important;border-color:#fed7aa!important;color:#9a3412!important}
+#mktV242FbCustomer .v242-steps{display:grid!important;grid-template-columns:repeat(5,minmax(120px,1fr))!important;gap:10px!important;margin:16px 0 18px!important}
+#mktV242FbCustomer .v242-step{padding:12px!important;border-radius:18px!important;background:rgba(255,255,255,.9)!important;border:1px solid rgba(219,234,254,.9)!important;font-weight:1000!important;color:#1e293b!important;text-align:center!important;box-shadow:0 12px 28px rgba(15,23,42,.06)!important}
+#mktV242FbCustomer .v242-grid{display:grid!important;grid-template-columns:1.35fr .85fr!important;gap:16px!important}
+#mktV242FbCustomer .v242-card{background:#fff!important;border:1px solid rgba(219,234,254,.92)!important;border-radius:24px!important;padding:16px!important;box-shadow:0 18px 44px rgba(15,23,42,.08)!important}
+#mktV242FbCustomer label{display:block!important;margin:0 0 7px!important;color:#334155!important;font-weight:1000!important}
+#mktV242FbCustomer textarea,#mktV242FbCustomer input,#mktV242FbCustomer select{
+  width:100%!important;border:1px solid #cbd5e1!important;border-radius:16px!important;padding:13px 14px!important;outline:none!important;font-size:15px!important;background:#fff!important;color:#0f172a!important;font-weight:750!important;
+}
+#mktV242FbCustomer textarea{min-height:158px!important;resize:vertical!important;line-height:1.45!important}
+#mktV242FbCustomer .v242-row{display:grid!important;grid-template-columns:1fr 1fr!important;gap:10px!important;margin-top:12px!important}
+#mktV242FbCustomer .v242-actions{display:flex!important;gap:10px!important;flex-wrap:wrap!important;margin-top:13px!important}
+#mktV242FbCustomer button{
+  border:0!important;border-radius:16px!important;padding:13px 16px!important;font-weight:1000!important;cursor:pointer!important;color:#fff!important;background:linear-gradient(135deg,#2563eb,#7c3aed)!important;box-shadow:0 16px 34px rgba(37,99,235,.22)!important;
+}
+#mktV242FbCustomer button.green{background:linear-gradient(135deg,#16a34a,#22c55e)!important}
+#mktV242FbCustomer button.gold{background:linear-gradient(135deg,#f59e0b,#d97706)!important}
+#mktV242FbCustomer button.gray{background:linear-gradient(135deg,#334155,#0f172a)!important}
+#mktV242FbCustomer .v242-note{margin-top:12px!important;border-radius:18px!important;padding:12px!important;background:#eff6ff!important;border:1px solid #bfdbfe!important;color:#1e40af!important;font-weight:900!important;line-height:1.45!important}
+#mktV242FbCustomer .v242-history{max-height:330px!important;overflow:auto!important;padding-right:4px!important}
+#mktV242FbCustomer .v242-item{padding:11px 12px!important;border-radius:16px!important;background:#f8fafc!important;border:1px solid #e2e8f0!important;margin:8px 0!important}
+#mktV242FbCustomer .v242-item b{display:block!important;color:#0f172a!important;margin-bottom:3px!important}
+#mktV242FbCustomer .v242-item span{display:block!important;color:#64748b!important;font-weight:800!important;font-size:13px!important}
+#mktV242FbCustomer .v242-mini{font-size:12px!important;color:#64748b!important;font-weight:900!important;margin-top:8px!important}
+@media(max-width:900px){
+  #mktV242FbCustomer{padding:16px!important;border-radius:22px!important}
+  #mktV242FbCustomer .v242-steps{grid-template-columns:1fr 1fr!important}
+  #mktV242FbCustomer .v242-grid{grid-template-columns:1fr!important}
+  #mktV242FbCustomer .v242-row{grid-template-columns:1fr!important}
+  #mktV242FbCustomer h3{font-size:20px!important}
+}
+</style>
+<script id="mkt-v242-facebook-customer-flow-js">
+(function(){
+  'use strict';
+  var LOCAL='http://127.0.0.1:8765';
+  function qs(s,r){return (r||document).querySelector(s)}
+  function qsa(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s))}
+  function esc(s){return String(s||'').replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+  function findHost(){
+    var candidates=['#facebook','#facebook-center','#mktV240FbSuite','#mktV239FbPersonalReliable','#mktV216FbPublishCenter','#mktV201FbCenter','#mktV197FbCenter','.main','.content','.module-section'];
+    for(var i=0;i<candidates.length;i++){var el=qs(candidates[i]);if(el)return el}
+    var cards=qsa('section,div');
+    for(var j=0;j<cards.length;j++){
+      var t=(cards[j].textContent||'').toLowerCase();
+      if(t.indexOf('facebook cá nhân')>-1 || t.indexOf('facebook personal')>-1) return cards[j];
+    }
+    return qs('body');
+  }
+  function setStatus(ok,msg){
+    var s=qs('#v242Status'); if(!s)return;
+    s.className='v242-status '+(ok?'ok':'bad');
+    s.innerHTML=(ok?'🟢 ':'🟠 ')+esc(msg||'Chưa kiểm tra');
+  }
+  function setNote(msg){var n=qs('#v242Note'); if(n)n.innerHTML=msg}
+  async function check(){
+    try{
+      var r=await fetch(LOCAL+'/health',{mode:'cors'});
+      var j=await r.json();
+      if(j&&j.ok){setStatus(true,'Facebook đã sẵn sàng');setNote('✅ Đã kết nối bộ đăng Facebook trên máy này. Bạn có thể soạn bài và bấm Đăng ngay.');return true}
+    }catch(e){}
+    setStatus(false,'Chưa kết nối');
+    setNote('⚠️ Chưa thấy bộ đăng Facebook trên máy. Hãy mở <b>GPTMini_Facebook_Worker_STABLE</b> và chạy API/Worker trước, sau đó bấm kiểm tra lại.');
+    return false;
+  }
+  async function loadTasks(){
+    var box=qs('#v242History'); if(!box)return;
+    try{
+      var r=await fetch(LOCAL+'/tasks',{mode:'cors'});
+      var j=await r.json();
+      var arr=(j&&j.tasks)||[];
+      if(!arr.length){box.innerHTML='<div class="v242-item"><b>Chưa có lịch sử</b><span>Sau khi đăng bài, trạng thái sẽ hiển thị tại đây.</span></div>';return}
+      box.innerHTML=arr.slice(0,10).map(function(t){
+        var st=t.status||t.post_publish_status||'Đang xử lý';
+        var content=(t.content||'').slice(0,95);
+        var time=t.created_at||t.finished_at||'';
+        return '<div class="v242-item"><b>'+esc(st)+' · '+esc(t.account||'FB001')+'</b><span>'+esc(content)+'</span><span>'+esc(time)+'</span></div>';
+      }).join('');
+    }catch(e){box.innerHTML='<div class="v242-item"><b>Không tải được lịch sử</b><span>Hãy kiểm tra kết nối Facebook trước.</span></div>'}
+  }
+  async function postNow(){
+    var content=(qs('#v242Content')||{}).value||'';
+    var schedule=(qs('#v242Schedule')||{}).value||'now';
+    var target=(qs('#v242Target')||{}).value||'profile';
+    if(!content.trim()){setNote('⚠️ Bạn cần nhập nội dung bài viết trước khi đăng.');return}
+    var ok=await check(); if(!ok)return;
+    var data=new URLSearchParams();
+    data.set('account','FB001');
+    data.set('target_type',target);
+    data.set('schedule',schedule.trim()||'now');
+    data.set('content',content.trim());
+    try{
+      setNote('⏳ Đang gửi bài sang bộ đăng Facebook trên máy...');
+      var r=await fetch(LOCAL+'/post',{method:'POST',mode:'cors',headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},body:data.toString()});
+      var j=await r.json();
+      if(j&&j.ok){setNote('✅ Đã đưa bài vào hàng chờ đăng. Giữ cửa sổ Worker đang chạy, hệ thống sẽ tự đăng lên Facebook.');setTimeout(loadTasks,600);setTimeout(loadTasks,3500);return}
+      setNote('❌ Không tạo được bài đăng: '+esc((j&&j.error)||'Lỗi không xác định'));
+    }catch(e){setNote('❌ Không gửi được bài sang máy bạn. Kiểm tra API Local đang mở tại '+LOCAL+'/post');}
+  }
+  function openConnect(){window.open(LOCAL+'/post','_blank')}
+  function inject(){
+    if(qs('#mktV242FbCustomer'))return;
+    var host=findHost(); if(!host)return;
+    var box=document.createElement('div');
+    box.id='mktV242FbCustomer';
+    box.innerHTML=
+      '<div class="v242-head">'+
+        '<div class="v242-title"><div class="v242-logo">f</div><div><h3>Facebook cá nhân</h3><p>Kết nối Facebook, soạn bài, đăng ngay, hẹn giờ và xem lịch sử trong một màn hình.</p></div></div>'+
+        '<div id="v242Status" class="v242-status">🟠 Chưa kiểm tra</div>'+
+      '</div>'+
+      '<div class="v242-steps"><div class="v242-step">1. Kết nối Facebook</div><div class="v242-step">2. Soạn bài</div><div class="v242-step">3. Đăng ngay</div><div class="v242-step">4. Hẹn giờ</div><div class="v242-step">5. Lịch sử đăng</div></div>'+
+      '<div class="v242-grid">'+
+        '<div class="v242-card">'+
+          '<label>Nội dung bài viết</label><textarea id="v242Content" placeholder="Nhập nội dung muốn đăng lên Facebook cá nhân..."></textarea>'+
+          '<div class="v242-row"><div><label>Chế độ đăng</label><select id="v242Target"><option value="profile">Đăng trang cá nhân</option><option value="groups">Đăng nhóm</option><option value="page">Đăng Fanpage</option></select></div><div><label>Hẹn giờ</label><input id="v242Schedule" value="now" placeholder="now hoặc 2026-06-17 20:30"></div></div>'+
+          '<div class="v242-actions"><button class="green" type="button" id="v242Check">Kết nối Facebook</button><button type="button" id="v242Post">Đăng ngay</button><button class="gold" type="button" id="v242Open">Mở bộ đăng</button><button class="gray" type="button" id="v242Refresh">Lịch sử đăng</button></div>'+
+          '<div id="v242Note" class="v242-note">Bấm <b>Kết nối Facebook</b> để kiểm tra bộ đăng trên máy. Khách chỉ cần soạn bài rồi bấm <b>Đăng ngay</b>.</div>'+
+        '</div>'+
+        '<div class="v242-card"><label>Lịch sử đăng</label><div id="v242History" class="v242-history"><div class="v242-item"><b>Đang chờ kiểm tra</b><span>Lịch sử sẽ hiện sau khi kết nối.</span></div></div><div class="v242-mini">Giao diện này đã ẩn kỹ thuật: không hiển thị task, profile, worker hay Playwright cho khách.</div></div>'+
+      '</div>';
+    if(host.id==='mktV240FbSuite' && host.parentNode){host.parentNode.insertBefore(box,host);}
+    else if(host===document.body){document.body.insertBefore(box,document.body.firstChild);}
+    else {host.insertBefore(box,host.firstChild);}
+    bind();
+    setTimeout(check,400);setTimeout(loadTasks,900);
+  }
+  function hideTech(){
+    qsa('button,a,div,span,p').forEach(function(el){
+      if(el.closest('#mktV242FbCustomer'))return;
+      var t=(el.textContent||'').toLowerCase();
+      if(t.indexOf('playwright')>-1||t.indexOf('worker api')>-1||t.indexOf('extension')>-1||t.indexOf('profile fb001')>-1||t.indexOf('task json')>-1){
+        if(el.tagName==='BUTTON'||el.tagName==='A'){el.style.display='none'}
+      }
+    });
+  }
+  function bind(){
+    var a=qs('#v242Check'),b=qs('#v242Post'),c=qs('#v242Open'),d=qs('#v242Refresh');
+    if(a&&!a.dataset.bound){a.dataset.bound='1';a.addEventListener('click',check)}
+    if(b&&!b.dataset.bound){b.dataset.bound='1';b.addEventListener('click',postNow)}
+    if(c&&!c.dataset.bound){c.dataset.bound='1';c.addEventListener('click',openConnect)}
+    if(d&&!d.dataset.bound){d.dataset.bound='1';d.addEventListener('click',loadTasks)}
+  }
+  function run(){inject();bind();hideTech()}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',run);else run();
+  setTimeout(run,700);setTimeout(run,1800);setInterval(function(){bind();hideTech();loadTasks()},7000);
+})();
+</script>
+"""
+
+@app.after_request
+def mkt_v242_facebook_customer_flow_after_request(response):
+    try:
+        ctype = (response.headers.get("Content-Type") or "").lower()
+        if "text/html" in ctype:
+            body = response.get_data(as_text=True)
+            if "mkt-v242-facebook-customer-flow-js" not in body and "</body>" in body:
+                body = body.replace("</body>", MKT_V242_FACEBOOK_CUSTOMER_FLOW + "</body>")
+                response.set_data(body)
+                response.headers["Content-Length"] = str(len(body.encode("utf-8")))
+    except Exception as _e:
+        print("mkt_v242_facebook_customer_flow_after_request skipped:", _e)
+    return response
+
+
 if __name__ == "__main__":
     # Không tự tạo kho 50k content khi khởi động để tránh lỗi SQLite database is locked trên Render.
     # Khi cần kiểm tra/tạo kho content, gọi /api/content_50k_stats từ admin.
