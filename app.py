@@ -26149,6 +26149,130 @@ def mkt_v242_facebook_customer_flow_after_request(response):
     return response
 
 
+
+# V243 - Facebook cá nhân: đưa gọn vào đúng menu + khóa Premium trước khi mở đầy đủ
+# Chỉ bổ sung lớp điều hướng/khóa UI, không đổi menu/cấu trúc cũ.
+MKT_V243_FB_PERSONAL_MENU_PREMIUM_GATE = r"""
+<style id="mkt-v243-fb-personal-menu-premium-gate-css">
+html body #mktV242FbCustomer{transition:opacity .18s ease,transform .18s ease!important}
+html body #facebook_personal #mktV242FbCustomer{
+  margin:10px 0 18px!important;max-width:1040px!important;padding:18px!important;border-radius:24px!important;
+}
+html body #facebook_personal:not(.active-module):not(.active):not(.mkt-v243-open) #mktV242FbCustomer{display:none!important}
+html body #mktV242FbCustomer.mkt-v243-compact .v242-head{margin-bottom:10px!important}
+html body #mktV242FbCustomer.mkt-v243-compact .v242-steps{grid-template-columns:repeat(5,1fr)!important;gap:8px!important;margin:12px 0!important}
+html body #mktV242FbCustomer.mkt-v243-compact .v242-step{padding:10px 8px!important;font-size:13px!important;border-radius:15px!important}
+html body #mktV242FbCustomer.mkt-v243-locked .v242-grid,
+html body #mktV242FbCustomer.mkt-v243-locked .v242-steps{display:none!important}
+html body .mkt-v243-premium-lock{
+  margin-top:12px!important;border-radius:22px!important;padding:18px!important;
+  background:linear-gradient(135deg,#fff7ed,#ffffff 55%,#eff6ff)!important;
+  border:1px solid rgba(245,158,11,.35)!important;box-shadow:0 18px 44px rgba(15,23,42,.08)!important;
+  color:#0f172a!important;display:grid!important;grid-template-columns:1fr auto!important;gap:14px!important;align-items:center!important;
+}
+html body .mkt-v243-premium-lock b{display:block!important;font-size:20px!important;margin-bottom:6px!important;color:#0f172a!important}
+html body .mkt-v243-premium-lock span{display:block!important;color:#64748b!important;font-weight:850!important;line-height:1.45!important}
+html body .mkt-v243-premium-lock button{border:0!important;border-radius:16px!important;padding:13px 18px!important;font-weight:1000!important;color:#fff!important;background:linear-gradient(135deg,#f59e0b,#7c3aed)!important;cursor:pointer!important;box-shadow:0 16px 34px rgba(124,58,237,.18)!important;white-space:nowrap!important}
+@media(max-width:900px){html body .mkt-v243-premium-lock{grid-template-columns:1fr!important}html body #mktV242FbCustomer.mkt-v243-compact .v242-steps{grid-template-columns:1fr 1fr!important}}
+</style>
+<script id="mkt-v243-fb-personal-menu-premium-gate-js">
+(function(){
+  'use strict';
+  function qs(s,r){return (r||document).querySelector(s)}
+  function qsa(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s))}
+  function txt(el){return String((el&&el.textContent)||'').trim()}
+  function findFbSection(){return qs('#facebook_personal')||qs('#facebook-personal')||qs('#fb-personal')||qs('#mkt-fb-personal')}
+  function ensureMenu(){
+    var nav=qs('.mkt-clean-nav')||qs('.sidebar')||qs('.nav'); if(!nav)return;
+    var link=qs('[data-module="facebook_personal"],a[href="#facebook_personal"]',nav);
+    if(!link){
+      var ref=qs('[data-module="fanpage_manager"]',nav)||qs('[data-module="post"]',nav)||qs('.v2-nav-link',nav);
+      link=document.createElement('a'); link.className='v2-nav-link mkt-menu-pro'; link.href='#facebook_personal'; link.setAttribute('data-module','facebook_personal');
+      link.innerHTML='<span class="v2-nav-text">👤 Facebook cá nhân</span><span class="mkt-dot-tag pro"><i></i><span>Pro</span></span>';
+      if(ref&&ref.parentNode)ref.parentNode.insertBefore(link,ref.nextSibling); else nav.appendChild(link);
+    }
+    if(!link.dataset.v243Bound){
+      link.dataset.v243Bound='1';
+      link.addEventListener('click',function(e){
+        if(e)e.preventDefault();
+        var sec=findFbSection(); if(!sec)return false;
+        try{ if(typeof window.openModule==='function') window.openModule('facebook_personal'); }catch(_e){}
+        qsa('.module-section').forEach(function(x){x.classList.remove('active-module','mkt-v243-open')});
+        sec.classList.add('module-section','active-module','mkt-v243-open'); sec.style.display='';
+        qsa('.v2-nav-link').forEach(function(a){a.classList.remove('active')}); link.classList.add('active');
+        moveBoxIntoSection();
+        setTimeout(function(){try{sec.scrollIntoView({behavior:'smooth',block:'start'});}catch(_e){}},80);
+        return false;
+      },true);
+    }
+  }
+  function moveBoxIntoSection(){
+    var sec=findFbSection(); var box=qs('#mktV242FbCustomer');
+    if(!sec||!box)return;
+    sec.classList.add('module-section');
+    if(!sec.contains(box)){
+      var note=sec.querySelector('.section-open-note');
+      if(note&&note.parentNode)note.parentNode.insertBefore(box,note.nextSibling); else sec.insertBefore(box,sec.firstChild);
+    }
+    box.classList.add('mkt-v243-compact');
+    var head=box.querySelector('.v242-title h3'); if(head)head.textContent='Facebook cá nhân';
+    var sub=box.querySelector('.v242-title p'); if(sub)sub.textContent='Kết nối Facebook, soạn bài, đăng ngay, hẹn giờ và xem lịch sử trong một màn hình.';
+  }
+  function openPricing(){
+    try{ if(typeof window.openModule==='function'){ if(window.openModule('premium')!==false)return; window.openModule('pricing'); } }catch(e){}
+    var el=qsa('a,button,.app-quick-card,.v2-nav-link').find(function(x){var t=txt(x).toLowerCase();return t.indexOf('premium')>-1||t.indexOf('nâng cấp')>-1||t.indexOf('bảng giá')>-1});
+    if(el)el.click(); else location.hash='premium';
+  }
+  function showLock(message){
+    var box=qs('#mktV242FbCustomer'); if(!box)return;
+    if(qs('#mktV243PremiumLock',box))return;
+    box.classList.add('mkt-v243-locked');
+    var lock=document.createElement('div'); lock.id='mktV243PremiumLock'; lock.className='mkt-v243-premium-lock';
+    lock.innerHTML='<div><b>🔒 Tính năng Facebook cá nhân thuộc gói Premium</b><span>'+(message||'Sau khi thanh toán và được admin duyệt Premium, khu đăng Facebook cá nhân sẽ mở đầy đủ: kết nối, soạn bài, đăng ngay, hẹn giờ và lịch sử đăng.')+'</span></div><button type="button">Xem bảng giá / Nâng cấp</button>';
+    box.appendChild(lock); var b=lock.querySelector('button'); if(b)b.onclick=openPricing;
+  }
+  function unlock(){var box=qs('#mktV242FbCustomer'); if(!box)return; box.classList.remove('mkt-v243-locked'); var l=qs('#mktV243PremiumLock',box); if(l)l.remove();}
+  async function checkPremiumGate(){
+    moveBoxIntoSection();
+    try{
+      var r=await fetch('/api/device_status',{credentials:'same-origin'}); var j=await r.json();
+      if(j&&j.ok&&j.premium){unlock();return true}
+      showLock('Thiết bị này chưa được kích hoạt Premium. Khách có thể xem giao diện giới thiệu, nhưng cần mua gói Premium để mở toàn bộ chức năng đăng Facebook tự động.');
+      return false;
+    }catch(e){
+      // Nếu không gọi được API trạng thái, không khóa nhầm giao diện đang chạy local/test.
+      unlock(); return true;
+    }
+  }
+  function hideFromDashboard(){
+    var sec=findFbSection(); if(!sec)return;
+    sec.classList.add('module-section');
+    if(!(sec.classList.contains('active-module')||sec.classList.contains('active')||location.hash==='#facebook_personal')){
+      var active=qs('.v2-nav-link.active[data-module="facebook_personal"],.v2-nav-link.active[href="#facebook_personal"]');
+      if(!active)sec.classList.remove('mkt-v243-open');
+    }
+  }
+  function run(){ensureMenu();moveBoxIntoSection();hideFromDashboard();checkPremiumGate();}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',run);else run();
+  setTimeout(run,500);setTimeout(run,1400);setTimeout(run,3000);
+})();
+</script>
+"""
+
+@app.after_request
+def mkt_v243_fb_personal_menu_premium_gate_after_request(response):
+    try:
+        ctype = (response.headers.get("Content-Type") or "").lower()
+        if "text/html" in ctype:
+            body = response.get_data(as_text=True)
+            if "mkt-v243-fb-personal-menu-premium-gate-js" not in body and "</body>" in body:
+                body = body.replace("</body>", MKT_V243_FB_PERSONAL_MENU_PREMIUM_GATE + "</body>")
+                response.set_data(body)
+                response.headers["Content-Length"] = str(len(body.encode("utf-8")))
+    except Exception as _e:
+        print("mkt_v243_fb_personal_menu_premium_gate_after_request skipped:", _e)
+    return response
+
 if __name__ == "__main__":
     # Không tự tạo kho 50k content khi khởi động để tránh lỗi SQLite database is locked trên Render.
     # Khi cần kiểm tra/tạo kho content, gọi /api/content_50k_stats từ admin.
