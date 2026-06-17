@@ -26291,6 +26291,74 @@ def mkt_v243_fb_personal_menu_premium_gate_after_request(response):
         print("mkt_v243_fb_personal_menu_premium_gate_after_request skipped:", _e)
     return response
 
+
+# V245 - Ẩn giao diện Facebook kỹ thuật cũ + ép 3 nút mobile dẫn về Premium
+MKT_V245_HIDE_OLD_FB_UI_MOBILE_PREMIUM = r"""
+<style id="mkt-v245-hide-old-fb-ui-mobile-premium-css">
+html body [id^="mktV216"],
+html body [id^="mktV217"],
+html body [id^="mktV219WorkerBox"],
+html body .mkt-v216-wrap,
+html body .mkt-v216-panel,
+html body .mkt-v216-card,
+html body .mkt-v216-pill,
+html body .mkt-v217-worker-box,
+html body .mkt-v217-download-box{
+  display:none!important;visibility:hidden!important;height:0!important;min-height:0!important;max-height:0!important;overflow:hidden!important;margin:0!important;padding:0!important;border:0!important;
+}
+html body #mktV233QuickFacebook{max-width:640px!important;margin:18px auto!important;border-radius:28px!important;}
+html body #mktV233QuickFacebook .mkt-v233-title::after{content:"  • Mở sau khi nâng cấp Premium";color:#f59e0b!important;font-size:13px!important;font-weight:1000!important;}
+html body #mktV233QuickFacebook .mkt-v233-btn small,
+html body #mktV218MobileDock .mkt-v218-btn small{font-size:11px!important;opacity:.95!important;}
+</style>
+<script id="mkt-v245-hide-old-fb-ui-mobile-premium-js">
+(function(){
+  'use strict';
+  function qs(s,r){return (r||document).querySelector(s)}
+  function qsa(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s))}
+  function txt(x){return (x&&x.textContent||'').replace(/\s+/g,' ').trim()}
+  function openPremium(){
+    try{ if(typeof window.openModule==='function'){ window.openModule('premium'); window.openModule('pricing'); } }catch(e){}
+    var el=qsa('a,button,.app-quick-card,.v2-nav-link').find(function(x){var t=txt(x).toLowerCase();return t.indexOf('premium')>-1||t.indexOf('nâng cấp')>-1||t.indexOf('bảng giá')>-1||t.indexOf('gói')>-1});
+    if(el){ try{el.click();return;}catch(e){} }
+    location.hash='premium';
+    setTimeout(function(){var p=qs('.premium-pricing-compact,.pricing-section,#premium,[data-module="premium"],#pricing'); if(p){try{p.scrollIntoView({behavior:'smooth',block:'start'});}catch(e){p.scrollIntoView();}}},120);
+  }
+  function hideOldTechnicalBlocks(){
+    qsa('section,div,article').forEach(function(el){
+      if(el.dataset && el.dataset.v245Hidden==='1')return;
+      var t=txt(el).toLowerCase();
+      var bad=(t.indexOf('facebook publish center v216')>-1)||(t.indexOf('giao diện chuẩn v216')>-1)||(t.indexOf('tải facebook worker v219')>-1)||(t.indexOf('pc + worker')>-1 && t.indexOf('facebook publish center')>-1);
+      if(bad){el.dataset.v245Hidden='1';el.style.setProperty('display','none','important');el.style.setProperty('visibility','hidden','important');el.style.setProperty('height','0','important');el.style.setProperty('overflow','hidden','important');}
+    });
+  }
+  function patchMobileQuickPremium(){
+    var box=qs('#mktV233QuickFacebook');
+    if(box && !box.dataset.v245Premium){box.dataset.v245Premium='1';qsa('[data-act]',box).forEach(function(btn){var small=btn.querySelector('small');if(small)small.textContent='Nâng cấp';btn.addEventListener('click',function(e){e.preventDefault();e.stopPropagation();openPremium();return false;},true);});}
+    var dock=qs('#mktV218MobileDock');
+    if(dock && !dock.dataset.v245Premium){dock.dataset.v245Premium='1';qsa('[data-act="post"],[data-act="pc"],[data-act="phone"]',dock).forEach(function(btn){var small=btn.querySelector('small');if(small)small.textContent='Nâng cấp';btn.addEventListener('click',function(e){e.preventDefault();e.stopPropagation();openPremium();return false;},true);});}
+  }
+  function run(){hideOldTechnicalBlocks();patchMobileQuickPremium();}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',run);else run();
+  setTimeout(run,400);setTimeout(run,1200);setTimeout(run,2600);setInterval(run,2500);
+})();
+</script>
+"""
+
+@app.after_request
+def mkt_v245_hide_old_fb_ui_mobile_premium_after_request(response):
+    try:
+        ctype = (response.headers.get("Content-Type") or "").lower()
+        if "text/html" in ctype:
+            body = response.get_data(as_text=True)
+            if "mkt-v245-hide-old-fb-ui-mobile-premium-js" not in body and "</body>" in body:
+                body = body.replace("</body>", MKT_V245_HIDE_OLD_FB_UI_MOBILE_PREMIUM + "</body>")
+                response.set_data(body)
+                response.headers["Content-Length"] = str(len(body.encode("utf-8")))
+    except Exception as _e:
+        print("mkt_v245_hide_old_fb_ui_mobile_premium_after_request skipped:", _e)
+    return response
+
 if __name__ == "__main__":
     # Không tự tạo kho 50k content khi khởi động để tránh lỗi SQLite database is locked trên Render.
     # Khi cần kiểm tra/tạo kho content, gọi /api/content_50k_stats từ admin.
