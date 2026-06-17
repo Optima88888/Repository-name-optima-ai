@@ -26410,6 +26410,124 @@ def mkt_v246_restore_menu_hide_old_fb_after_request(response):
         print("mkt_v246_restore_menu_hide_old_fb_after_request skipped:", _e)
     return response
 
+
+# V247 - Premium unlock fix + admin safe panel + hide remaining technical Facebook boxes
+# Chỉ bổ sung lớp sửa lỗi: không đổi menu/cấu trúc cũ.
+MKT_V247_PREMIUM_UNLOCK_ADMIN_SAFE = r"""
+<style id="mkt-v247-premium-unlock-admin-safe-css">
+html body .mkt-v247-hide-tech-old,
+html body [data-v247-hide-tech="1"]{
+  display:none!important;visibility:hidden!important;height:0!important;min-height:0!important;max-height:0!important;
+  overflow:hidden!important;margin:0!important;padding:0!important;border:0!important;box-shadow:none!important;
+}
+html body #mktV242FbCustomer:not(.mkt-v243-locked){display:block!important;visibility:visible!important;height:auto!important;max-height:none!important;overflow:visible!important;}
+html body #mktV242FbCustomer:not(.mkt-v243-locked) .v242-grid,
+html body #mktV242FbCustomer:not(.mkt-v243-locked) .v242-steps{display:grid!important;visibility:visible!important;}
+</style>
+<script id="mkt-v247-premium-unlock-admin-safe-js">
+(function(){
+  'use strict';
+  function qs(s,r){return (r||document).querySelector(s)}
+  function qsa(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s))}
+  function clean(t){return String(t||'').replace(/\s+/g,' ').trim()}
+  function visiblePremiumEvidence(){
+    var body=clean(document.body&&document.body.innerText||'').toLowerCase();
+    return body.indexOf('trạng thái: premium')>-1 || body.indexOf('premium ai seller')>-1 || body.indexOf('gói vĩnh viễn')>-1 || body.indexOf('premium forever')>-1 || body.indexOf('không giới hạn')>-1 || body.indexOf('còn lại: premium')>-1;
+  }
+  function getVisibleDeviceId(){
+    var m=clean(document.body&&document.body.innerText||'').match(/MKT[-\s]*[A-Z0-9]{5,}/i);
+    return m ? m[0].replace(/\s+/g,'').toUpperCase() : '';
+  }
+  function unlockFbPersonal(){
+    var box=qs('#mktV242FbCustomer');
+    if(box){
+      box.classList.remove('mkt-v243-locked');
+      box.style.removeProperty('display');
+      var lock=qs('#mktV243PremiumLock',box); if(lock)lock.remove();
+      qsa('.v242-grid,.v242-steps',box).forEach(function(el){el.style.removeProperty('display');el.style.removeProperty('visibility');});
+    }
+    var sec=qs('#facebook_personal');
+    if(sec){sec.classList.add('module-section');}
+  }
+  function hideRemainingTechnicalBoxes(){
+    var bad=['Đăng trực tiếp từ trang vào Worker','START_FACEBOOK_WORKER.bat trước','Tạo task & Đăng','Tên profile, ví dụ','Link group, mỗi dòng 1 link','Kiểm tra Worker','Facebook Publish Center V216','Tải Facebook Worker V219','FB001 - Profile chính'];
+    qsa('section,div,main,article,form').forEach(function(el){
+      if(el.id==='mktV242FbCustomer') return;
+      if(el.closest && el.closest('#mktV242FbCustomer')) return;
+      var t=clean(el.innerText||'');
+      if(!t) return;
+      var hit=bad.some(function(x){return t.indexOf(x)>-1});
+      if(hit && t.length<3500){el.classList.add('mkt-v247-hide-tech-old'); el.setAttribute('data-v247-hide-tech','1');}
+    });
+  }
+  async function premiumUnlockCheck(){
+    hideRemainingTechnicalBoxes();
+    if(visiblePremiumEvidence()){unlockFbPersonal();return;}
+    var did=getVisibleDeviceId();
+    try{
+      var url='/api/device_status'+(did?('?device_id='+encodeURIComponent(did)):'');
+      var r=await fetch(url,{credentials:'same-origin'}); var j=await r.json();
+      if(j && j.ok && (j.premium || (j.subscription && j.subscription.active))){unlockFbPersonal();}
+    }catch(e){}
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',premiumUnlockCheck);else premiumUnlockCheck();
+  setTimeout(premiumUnlockCheck,500);setTimeout(premiumUnlockCheck,1500);setTimeout(premiumUnlockCheck,3000);setInterval(premiumUnlockCheck,4000);
+})();
+</script>
+"""
+
+@app.after_request
+def mkt_v247_premium_unlock_after_request(response):
+    try:
+        ctype = (response.headers.get("Content-Type") or "").lower()
+        if "text/html" in ctype:
+            body = response.get_data(as_text=True)
+            if "mkt-v247-premium-unlock-admin-safe-js" not in body and "</body>" in body:
+                body = body.replace("</body>", MKT_V247_PREMIUM_UNLOCK_ADMIN_SAFE + "</body>")
+                response.set_data(body)
+                response.headers["Content-Length"] = str(len(body.encode("utf-8")))
+    except Exception as _e:
+        print("mkt_v247_premium_unlock_after_request skipped:", _e)
+    return response
+
+
+def _mkt_v247_admin_safe_html(error=""):
+    def _rows(sql, params=()):
+        try:
+            conn = db(); c = conn.cursor(); c.execute(sql, params); rows = c.fetchall(); conn.close(); return rows
+        except Exception as e:
+            return []
+    reqs = _rows("SELECT id,device_id,phone,email,package_name,amount,status,created_at FROM premium_upgrade_requests ORDER BY id DESC LIMIT 80")
+    subs = _rows("SELECT device_id,phone,email,package_name,end_date,status,updated_at FROM device_subscriptions ORDER BY id DESC LIMIT 80")
+    err = ("<div class='err'>" + str(error) + "</div>") if error else ""
+    req_html = "".join([f"<tr><td>#{r[0]}</td><td>{r[1] or ''}</td><td>{r[2] or ''}</td><td>{r[3] or ''}</td><td>{r[4] or ''}</td><td>{int(r[5] or 0):,}đ</td><td>{r[6] or ''}</td><td><form method='post' action='/admin/premium_action'><input type='hidden' name='request_id' value='{r[0]}'><input type='hidden' name='status' value='Đã duyệt'><button>Duyệt</button></form></td></tr>".replace(',', '.') for r in reqs]) or "<tr><td colspan='8'>Chưa có yêu cầu nâng cấp.</td></tr>"
+    sub_html = "".join([f"<tr><td>{r[0] or ''}</td><td>{r[1] or ''}</td><td>{r[2] or ''}</td><td>{r[3] or ''}</td><td>{r[4] or ''}</td><td>{r[5] or ''}</td></tr>" for r in subs]) or "<tr><td colspan='6'>Chưa có Premium.</td></tr>"
+    return f"""
+<!doctype html><html lang='vi'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'>
+<title>GPTMini Admin Safe</title>
+<style>body{{margin:0;font-family:system-ui;background:#f1f5f9;color:#0f172a;padding:24px}}.wrap{{max-width:1180px;margin:auto}}.top{{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:18px}}h1{{margin:0;font-size:30px}}.card{{background:white;border:1px solid #dbeafe;border-radius:22px;padding:18px;margin:16px 0;box-shadow:0 16px 40px rgba(15,23,42,.08)}}table{{width:100%;border-collapse:collapse;font-size:14px}}th,td{{padding:10px;border-bottom:1px solid #e5e7eb;text-align:left;vertical-align:top}}th{{color:#1d4ed8}}button,.btn{{border:0;border-radius:12px;padding:9px 13px;font-weight:900;color:#fff;background:linear-gradient(135deg,#2563eb,#7c3aed);cursor:pointer;text-decoration:none;display:inline-block}}.err{{background:#fee2e2;color:#991b1b;border:1px solid #fecaca;border-radius:14px;padding:12px;margin:10px 0;font-weight:800}}.note{{color:#64748b;font-weight:700}}</style>
+</head><body><div class='wrap'><div class='top'><div><h1>🔐 GPTMini Web Admin</h1><div class='note'>Bảng quản trị an toàn: duyệt Premium và xem gói đã kích hoạt.</div></div><a class='btn' href='/admin/logout'>Đăng xuất</a></div>{err}
+<div class='card'><h2>📥 Yêu cầu nâng cấp Premium</h2><table><tr><th>ID</th><th>ID máy</th><th>SĐT</th><th>Email</th><th>Gói</th><th>Tiền</th><th>Trạng thái</th><th>Thao tác</th></tr>{req_html}</table></div>
+<div class='card'><h2>👑 Premium đang kích hoạt</h2><table><tr><th>ID máy</th><th>SĐT</th><th>Email</th><th>Gói</th><th>Hạn dùng</th><th>Trạng thái</th></tr>{sub_html}</table></div>
+</div></body></html>"""
+
+@app.before_request
+def mkt_v247_admin_safe_before_request():
+    try:
+        if (request.path or '') != '/admin':
+            return None
+        if request.method == 'POST':
+            password = (request.form.get('password') or '').strip()
+            if password == ADMIN_PASSWORD:
+                session['gptmini_admin_ok'] = True
+            else:
+                return admin_login_html('Mật khẩu admin chưa đúng.'), 401
+        if not is_admin_logged_in() and not admin_action_token_ok():
+            return None
+        return _mkt_v247_admin_safe_html(), 200
+    except Exception as e:
+        return _mkt_v247_admin_safe_html(e), 200
+
 if __name__ == "__main__":
     # Không tự tạo kho 50k content khi khởi động để tránh lỗi SQLite database is locked trên Render.
     # Khi cần kiểm tra/tạo kho content, gọi /api/content_50k_stats từ admin.
