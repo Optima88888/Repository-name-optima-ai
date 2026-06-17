@@ -26549,6 +26549,93 @@ def mkt_v247_admin_safe_before_request():
         return _mkt_v247_admin_safe_html(e), 200
 
 
+
+# V249 - Multi-language customer UI: auto browser language + language switcher, không đụng menu/cấu trúc cũ
+MKT_V249_MULTILANGUAGE_I18N = r"""
+<style id="mkt-v249-i18n-css">
+#mktV249LangBox{
+  position:fixed!important;right:18px!important;top:88px!important;z-index:2147483200!important;
+  display:flex!important;align-items:center!important;gap:8px!important;padding:8px 10px!important;border-radius:999px!important;
+  background:linear-gradient(135deg,rgba(15,23,42,.96),rgba(30,41,59,.94))!important;color:#fff!important;
+  border:1px solid rgba(255,255,255,.16)!important;box-shadow:0 18px 42px rgba(15,23,42,.28)!important;backdrop-filter:blur(14px)!important;
+  font-family:system-ui,-apple-system,Segoe UI,Arial!important;font-weight:900!important;font-size:13px!important;
+}
+#mktV249LangBox select{border:0!important;outline:0!important;border-radius:999px!important;padding:7px 10px!important;background:#fff!important;color:#0f172a!important;font-weight:900!important;max-width:156px!important;cursor:pointer!important;}
+#mktV249LangBox .globe{width:24px!important;height:24px!important;border-radius:999px!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;background:linear-gradient(135deg,#2563eb,#7c3aed)!important;box-shadow:0 8px 22px rgba(37,99,235,.32)!important;}
+@media(max-width:760px){#mktV249LangBox{top:76px!important;right:12px!important;padding:7px!important}#mktV249LangBox b{display:none!important}#mktV249LangBox select{max-width:122px!important;font-size:12px!important}}
+</style>
+<script id="mkt-v249-i18n-js">
+(function(){
+  'use strict';
+  var supported=['vi','en','th','id','tl','ja','ko','zh'];
+  function browserLang(){
+    var l=(navigator.language||navigator.userLanguage||'vi').toLowerCase();
+    if(l.indexOf('vi')===0)return'vi'; if(l.indexOf('th')===0)return'th'; if(l.indexOf('id')===0)return'id';
+    if(l.indexOf('fil')===0||l.indexOf('tl')===0)return'tl'; if(l.indexOf('ja')===0)return'ja'; if(l.indexOf('ko')===0)return'ko';
+    if(l.indexOf('zh')===0||l.indexOf('cn')===0)return'zh'; return'en';
+  }
+  var lang=localStorage.getItem('gptmini_lang')||browserLang(); if(supported.indexOf(lang)<0)lang='vi';
+  var dict={
+    en:{
+      'Menu chính':'Main Menu','Facebook Center':'Facebook Center','Seller AI':'Seller AI','Dashboard':'Dashboard','Đăng bài Facebook':'Facebook Posting','Quản lý Fanpage':'Fanpage Manager','Facebook cá nhân':'Personal Facebook','Group Center':'Group Center','Token Fanpage':'Fanpage Token','Premium':'Premium','Bảng Giá Premium':'Premium Pricing','Nâng cấp':'Upgrade','Xem quyền lợi':'View benefits','Gói 1 Tháng':'1 Month','Gói 3 Tháng':'3 Months','Gói 6 Tháng':'6 Months','Gói 1 Năm':'1 Year','Vĩnh Viễn':'Lifetime','Giá ưu đãi hôm nay':'Today special price','khách đang quan tâm':'interested customers','Khách đang sử dụng':'Active users','Premium hoạt động':'Active Premium','CTV hoạt động':'Active Affiliates','Bài đã đăng':'Published posts','Cập nhật realtime':'Realtime update','Kết nối Facebook':'Connect Facebook','Soạn bài':'Create Post','Đăng ngay':'Post Now','Hẹn giờ':'Schedule','Lịch sử đăng':'Post History','Nội dung bài viết':'Post Content','Chế độ đăng':'Post Mode','Đăng trang cá nhân':'Post to personal profile','Mở bộ đăng':'Open publisher','Không tải được lịch sử':'Unable to load history','Chưa kết nối':'Not connected','Đã kết nối':'Connected','Kiểm tra kết nối':'Check connection','Nhập nội dung muốn đăng lên Facebook cá nhân...':'Enter content to post on personal Facebook...','now':'now','Đăng trực tiếp từ trang vào Worker':'Post directly from page to Worker','Tạo task & Đăng':'Create task & post','Tạo task đăng Facebook':'Create Facebook task','Kiểm tra Worker':'Check Worker','Tên profile, ví dụ: toiph':'Profile name, e.g. toiph','Tên ảnh trong media/images, có thể bỏ trống':'Image file in media/images, optional','Link group, mỗi dòng 1 link. Bỏ trống nếu đăng trang cá nhân.':'Group links, one per line. Leave empty for personal profile.','Khách mở START_FACEBOOK_WORKER.bat trước. Sau đó nhập bài ở đây và bấm Tạo task & Đăng, Worker trên máy khách sẽ tự nhận bài.':'Open START_FACEBOOK_WORKER.bat first, then create a post here. The local worker will pick it up automatically.','Chưa thấy Worker API trên máy khách. Hãy mở START_FACEBOOK_WORKER.bat trước.':'Worker API not found. Please open START_FACEBOOK_WORKER.bat first.','Tải xuống':'Download','Điện thoại':'Phone','Máy tính':'Computer','Đăng bài':'Post','Thao tác nhanh Facebook':'Facebook Quick Actions','Tăng khách hàng tiềm năng':'Increase potential customers','Tiết kiệm 5 - 8 giờ hằng ngày':'Save 5-8 hours daily'},
+    th:{'Menu chính':'เมนูหลัก','Dashboard':'แดชบอร์ด','Facebook cá nhân':'Facebook ส่วนตัว','Bảng Giá Premium':'ราคา Premium','Nâng cấp':'อัปเกรด','Kết nối Facebook':'เชื่อมต่อ Facebook','Soạn bài':'สร้างโพสต์','Đăng ngay':'โพสต์ทันที','Hẹn giờ':'ตั้งเวลา','Lịch sử đăng':'ประวัติการโพสต์','Nội dung bài viết':'เนื้อหาโพสต์','Đăng trang cá nhân':'โพสต์ไปยังโปรไฟล์ส่วนตัว','Chưa kết nối':'ยังไม่ได้เชื่อมต่อ','Đã kết nối':'เชื่อมต่อแล้ว','Kiểm tra kết nối':'ตรวจสอบการเชื่อมต่อ','Tải xuống':'ดาวน์โหลด','Điện thoại':'โทรศัพท์','Máy tính':'คอมพิวเตอร์','Đăng bài':'โพสต์'},
+    id:{'Menu chính':'Menu Utama','Dashboard':'Dasbor','Facebook cá nhân':'Facebook Pribadi','Bảng Giá Premium':'Harga Premium','Nâng cấp':'Upgrade','Kết nối Facebook':'Hubungkan Facebook','Soạn bài':'Buat Postingan','Đăng ngay':'Posting Sekarang','Hẹn giờ':'Jadwalkan','Lịch sử đăng':'Riwayat Posting','Nội dung bài viết':'Konten Postingan','Đăng trang cá nhân':'Posting ke profil pribadi','Chưa kết nối':'Belum terhubung','Đã kết nối':'Terhubung','Kiểm tra kết nối':'Cek koneksi','Tải xuống':'Unduh','Điện thoại':'Telepon','Máy tính':'Komputer','Đăng bài':'Posting'},
+    tl:{'Menu chính':'Main Menu','Dashboard':'Dashboard','Facebook cá nhân':'Personal Facebook','Bảng Giá Premium':'Premium Pricing','Nâng cấp':'Mag-upgrade','Kết nối Facebook':'Ikonekta ang Facebook','Soạn bài':'Gumawa ng Post','Đăng ngay':'I-post Ngayon','Hẹn giờ':'I-schedule','Lịch sử đăng':'Kasaysayan ng Post','Nội dung bài viết':'Nilalaman ng Post','Đăng trang cá nhân':'I-post sa personal profile','Chưa kết nối':'Hindi konektado','Đã kết nối':'Konektado','Kiểm tra kết nối':'Suriin ang koneksyon','Tải xuống':'Download','Điện thoại':'Telepono','Máy tính':'Computer','Đăng bài':'Post'},
+    ja:{'Menu chính':'メインメニュー','Dashboard':'ダッシュボード','Facebook cá nhân':'個人Facebook','Bảng Giá Premium':'プレミアム料金','Nâng cấp':'アップグレード','Kết nối Facebook':'Facebook連携','Soạn bài':'投稿作成','Đăng ngay':'今すぐ投稿','Hẹn giờ':'予約投稿','Lịch sử đăng':'投稿履歴','Nội dung bài viết':'投稿内容','Đăng trang cá nhân':'個人プロフィールに投稿','Chưa kết nối':'未接続','Đã kết nối':'接続済み','Kiểm tra kết nối':'接続確認','Tải xuống':'ダウンロード','Điện thoại':'電話','Máy tính':'パソコン','Đăng bài':'投稿'},
+    ko:{'Menu chính':'메인 메뉴','Dashboard':'대시보드','Facebook cá nhân':'개인 Facebook','Bảng Giá Premium':'프리미엄 요금','Nâng cấp':'업그레이드','Kết nối Facebook':'Facebook 연결','Soạn bài':'게시물 작성','Đăng ngay':'바로 게시','Hẹn giờ':'예약','Lịch sử đăng':'게시 기록','Nội dung bài viết':'게시물 내용','Đăng trang cá nhân':'개인 프로필에 게시','Chưa kết nối':'연결 안 됨','Đã kết nối':'연결됨','Kiểm tra kết nối':'연결 확인','Tải xuống':'다운로드','Điện thoại':'전화','Máy tính':'컴퓨터','Đăng bài':'게시'},
+    zh:{'Menu chính':'主菜单','Dashboard':'仪表盘','Facebook cá nhân':'个人 Facebook','Bảng Giá Premium':'高级版价格','Nâng cấp':'升级','Kết nối Facebook':'连接 Facebook','Soạn bài':'创建帖子','Đăng ngay':'立即发布','Hẹn giờ':'定时发布','Lịch sử đăng':'发布历史','Nội dung bài viết':'帖子内容','Đăng trang cá nhân':'发布到个人主页','Chưa kết nối':'未连接','Đã kết nối':'已连接','Kiểm tra kết nối':'检查连接','Tải xuống':'下载','Điện thoại':'手机','Máy tính':'电脑','Đăng bài':'发布'}
+  };
+  function norm(s){return String(s||'').replace(/\s+/g,' ').trim();}
+  function transText(s){var t=norm(s); if(!t||lang==='vi')return s; var d=dict[lang]||{}; if(d[t])return s.replace(t,d[t]); return s;}
+  function shouldSkip(el){if(!el)return true; var tag=(el.nodeName||'').toLowerCase(); return ['script','style','textarea','input','select','option','code','pre'].indexOf(tag)>-1 || (el.closest&&el.closest('#mktV249LangBox'));}
+  function translate(){
+    document.documentElement.setAttribute('lang',lang); document.body&&document.body.setAttribute('data-lang',lang);
+    if(lang!=='vi'){
+      var w=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT,{acceptNode:function(n){var p=n.parentElement; if(shouldSkip(p))return NodeFilter.FILTER_REJECT; return norm(n.nodeValue)?NodeFilter.FILTER_ACCEPT:NodeFilter.FILTER_REJECT;}});
+      var nodes=[],n; while((n=w.nextNode()))nodes.push(n); nodes.forEach(function(node){node.nodeValue=transText(node.nodeValue);});
+      Array.prototype.slice.call(document.querySelectorAll('input[placeholder],textarea[placeholder]')).forEach(function(el){el.setAttribute('placeholder',transText(el.getAttribute('placeholder')));});
+      Array.prototype.slice.call(document.querySelectorAll('option')).forEach(function(el){el.textContent=transText(el.textContent);});
+      Array.prototype.slice.call(document.querySelectorAll('[title]')).forEach(function(el){el.setAttribute('title',transText(el.getAttribute('title')));});
+    }
+  }
+  function box(){
+    if(document.getElementById('mktV249LangBox'))return;
+    var div=document.createElement('div'); div.id='mktV249LangBox';
+    div.innerHTML='<span class="globe">🌐</span><b>Language</b><select aria-label="Language"><option value="vi">🇻🇳 Tiếng Việt</option><option value="en">🇺🇸 English</option><option value="th">🇹🇭 ไทย</option><option value="id">🇮🇩 Indonesia</option><option value="tl">🇵🇭 Filipino</option><option value="ja">🇯🇵 日本語</option><option value="ko">🇰🇷 한국어</option><option value="zh">🇨🇳 中文</option></select>';
+    document.body.appendChild(div); var sel=div.querySelector('select'); sel.value=lang; sel.addEventListener('change',function(){localStorage.setItem('gptmini_lang',this.value); location.reload();});
+  }
+  function run(){box();translate();}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',run);else run();
+  setTimeout(run,500); setTimeout(run,1600); setTimeout(run,3200);
+})();
+</script>
+"""
+
+@app.after_request
+def mkt_v249_multilanguage_i18n_after_request(response):
+    try:
+        ctype = (response.headers.get("Content-Type") or "").lower()
+        if "text/html" in ctype:
+            body = response.get_data(as_text=True)
+            if "mkt-v249-i18n-js" not in body and "</body>" in body:
+                body = body.replace("</body>", MKT_V249_MULTILANGUAGE_I18N + "</body>")
+                response.set_data(body)
+                response.headers["Content-Length"] = str(len(body.encode("utf-8")))
+    except Exception as _e:
+        print("mkt_v249_multilanguage_i18n_after_request skipped:", _e)
+    return response
+
+
+if __name__ == "__main__":
+    # Không tự tạo kho 50k content khi khởi động để tránh lỗi SQLite database is locked trên Render.
+    # Khi cần kiểm tra/tạo kho content, gọi /api/content_50k_stats từ admin.
+    threading.Thread(target=scheduler_loop, daemon=True).start()
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host="0.0.0.0", port=port, debug=False)
+
+
+
+
 # V248 - Sửa khóa Premium Facebook cá nhân: nếu sidebar đã là Premium/Vĩnh Viễn thì không được khóa lại hoặc tự nhảy bảng giá
 MKT_V248_FORCE_FACEBOOK_PREMIUM_UNLOCK = r"""
 <style id="mkt-v248-force-fb-premium-unlock-css">
@@ -26623,12 +26710,3 @@ def mkt_v248_force_facebook_premium_unlock_after_request(response):
     except Exception as _e:
         print("mkt_v248_force_facebook_premium_unlock_after_request skipped:", _e)
     return response
-
-if __name__ == "__main__":
-    # Không tự tạo kho 50k content khi khởi động để tránh lỗi SQLite database is locked trên Render.
-    # Khi cần kiểm tra/tạo kho content, gọi /api/content_50k_stats từ admin.
-    threading.Thread(target=scheduler_loop, daemon=True).start()
-    port = int(os.environ.get("PORT", 10000))
-    app.run(host="0.0.0.0", port=port, debug=False)
-
-
