@@ -26250,11 +26250,31 @@ html body .mkt-v243-premium-lock button{border:0!important;border-radius:16px!im
     box.appendChild(lock); var b=lock.querySelector('button'); if(b)b.onclick=openPricing;
   }
   function unlock(){var box=qs('#mktV242FbCustomer'); if(!box)return; box.classList.remove('mkt-v243-locked'); var l=qs('#mktV243PremiumLock',box); if(l)l.remove();}
+  function mktV248PremiumVisible(){
+    try{
+      var body=String((document.body&&document.body.innerText)||'').replace(/\s+/g,' ').toLowerCase();
+      if(body.indexOf('trạng thái: premium')>-1) return true;
+      if(body.indexOf('premium ai seller')>-1) return true;
+      if(body.indexOf('gói vĩnh viễn')>-1) return true;
+      if(body.indexOf('premium forever')>-1) return true;
+      if(body.indexOf('không giới hạn')>-1) return true;
+      if(body.indexOf('còn lại: premium')>-1) return true;
+      if(body.indexOf('premium hoạt động')>-1 && body.indexOf('id máy: mkt-')>-1) return true;
+    }catch(e){}
+    return false;
+  }
+  function mktV248DeviceId(){
+    try{var m=String((document.body&&document.body.innerText)||'').match(/MKT[-\s]*[A-Z0-9]{5,}/i);return m?m[0].replace(/\s+/g,'').toUpperCase():'';}catch(e){return ''}
+  }
   async function checkPremiumGate(){
     moveBoxIntoSection();
+    if(mktV248PremiumVisible()){unlock();return true}
     try{
-      var r=await fetch('/api/device_status',{credentials:'same-origin'}); var j=await r.json();
-      if(j&&j.ok&&j.premium){unlock();return true}
+      var did=mktV248DeviceId();
+      var url='/api/device_status'+(did?('?device_id='+encodeURIComponent(did)):'');
+      var r=await fetch(url,{credentials:'same-origin'}); var j=await r.json();
+      if(j&&j.ok&&(j.premium||(j.subscription&&j.subscription.active))){unlock();return true}
+      // Chỉ khóa khi API trả lời chắc chắn là chưa Premium và trên giao diện không có dấu hiệu Premium.
       showLock('Thiết bị này chưa được kích hoạt Premium. Khách có thể xem giao diện giới thiệu, nhưng cần mua gói Premium để mở toàn bộ chức năng đăng Facebook tự động.');
       return false;
     }catch(e){
@@ -26536,3 +26556,79 @@ if __name__ == "__main__":
     app.run(host="0.0.0.0", port=port, debug=False)
 
 
+
+
+# V248 - Sửa khóa Premium Facebook cá nhân: nếu sidebar đã là Premium/Vĩnh Viễn thì không được khóa lại hoặc tự nhảy bảng giá
+MKT_V248_FORCE_FACEBOOK_PREMIUM_UNLOCK = r"""
+<style id="mkt-v248-force-fb-premium-unlock-css">
+html body.mkt-v248-premium-on #mktV242FbCustomer{
+  display:block!important;visibility:visible!important;height:auto!important;max-height:none!important;overflow:visible!important;
+}
+html body.mkt-v248-premium-on #mktV242FbCustomer .v242-grid,
+html body.mkt-v248-premium-on #mktV242FbCustomer .v242-steps{
+  display:grid!important;visibility:visible!important;height:auto!important;max-height:none!important;overflow:visible!important;
+}
+html body.mkt-v248-premium-on #mktV243PremiumLock{display:none!important;visibility:hidden!important;height:0!important;overflow:hidden!important}
+</style>
+<script id="mkt-v248-force-fb-premium-unlock-js">
+(function(){
+  'use strict';
+  function qs(s,r){return (r||document).querySelector(s)}
+  function qsa(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s))}
+  function txt(){try{return String((document.body&&document.body.innerText)||'').replace(/\s+/g,' ').toLowerCase()}catch(e){return''}}
+  function hasPremium(){
+    var t=txt();
+    return t.indexOf('trạng thái: premium')>-1 || t.indexOf('premium ai seller')>-1 || t.indexOf('gói vĩnh viễn')>-1 || t.indexOf('premium forever')>-1 || t.indexOf('không giới hạn')>-1 || t.indexOf('còn lại: premium')>-1;
+  }
+  function openFbSection(){
+    var sec=qs('#facebook_personal');
+    if(sec){
+      sec.classList.add('module-section','active-module','mkt-v243-open','active');
+      sec.style.display='';sec.style.visibility='visible';sec.style.height='auto';sec.style.maxHeight='none';sec.style.overflow='visible';
+    }
+    var box=qs('#mktV242FbCustomer');
+    if(box){
+      box.classList.remove('mkt-v243-locked');
+      box.style.display='block';box.style.visibility='visible';box.style.height='auto';box.style.maxHeight='none';box.style.overflow='visible';
+      var lock=qs('#mktV243PremiumLock',box); if(lock)lock.remove();
+      qsa('.v242-grid,.v242-steps',box).forEach(function(el){el.style.display='grid';el.style.visibility='visible';el.style.height='auto';el.style.maxHeight='none';el.style.overflow='visible';});
+    }
+  }
+  function run(){
+    if(!hasPremium())return;
+    document.body.classList.add('mkt-v248-premium-on');
+    openFbSection();
+  }
+  document.addEventListener('click',function(e){
+    var el=e.target&&e.target.closest?e.target.closest('a,button,.v2-nav-link,.app-quick-card'):null;
+    if(!el||!hasPremium())return;
+    var t=(el.textContent||'').toLowerCase();
+    var href=(el.getAttribute('href')||'').toLowerCase();
+    var mod=(el.getAttribute('data-module')||'').toLowerCase();
+    if(t.indexOf('facebook cá nhân')>-1 || href.indexOf('facebook_personal')>-1 || mod==='facebook_personal'){
+      e.preventDefault();e.stopPropagation();
+      qsa('.v2-nav-link').forEach(function(a){a.classList.remove('active')});
+      el.classList.add('active');
+      openFbSection();
+      setTimeout(function(){var sec=qs('#facebook_personal');try{sec&&sec.scrollIntoView({behavior:'smooth',block:'start'});}catch(_e){}},60);
+    }
+  },true);
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',run);else run();
+  setTimeout(run,300);setTimeout(run,900);setTimeout(run,1800);setTimeout(run,3500);setInterval(run,3000);
+})();
+</script>
+"""
+
+@app.after_request
+def mkt_v248_force_facebook_premium_unlock_after_request(response):
+    try:
+        ctype = (response.headers.get("Content-Type") or "").lower()
+        if "text/html" in ctype:
+            body = response.get_data(as_text=True)
+            if "mkt-v248-force-fb-premium-unlock-js" not in body and "</body>" in body:
+                body = body.replace("</body>", MKT_V248_FORCE_FACEBOOK_PREMIUM_UNLOCK + "</body>")
+                response.set_data(body)
+                response.headers["Content-Length"] = str(len(body.encode("utf-8")))
+    except Exception as _e:
+        print("mkt_v248_force_facebook_premium_unlock_after_request skipped:", _e)
+    return response
