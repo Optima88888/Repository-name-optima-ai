@@ -17756,14 +17756,94 @@ def mkt_fb_full_premium_status_api():
     })
 
 
+MKT_FB_FULL_PREMIUM_PREVIEW_LOCK = r'''
+<style id="mkt-fb-full-premium-preview-lock-css">
+html body.mkt-fb-preview-locked .mkt-preview-lock-note{display:block!important}
+.mkt-preview-lock-note{display:none;margin:0 0 14px;padding:14px 16px;border-radius:18px;background:linear-gradient(135deg,#fff7ed,#fffbeb);border:1px solid #fed7aa;color:#9a3412;font-weight:1000;line-height:1.45;box-shadow:0 14px 32px rgba(245,158,11,.13)}
+.mkt-preview-locked-ribbon{position:sticky;top:0;z-index:9999;background:linear-gradient(135deg,#020617,#1e1b4b,#7c3aed);color:white;padding:12px 14px;text-align:center;font-weight:1000;box-shadow:0 12px 30px rgba(15,23,42,.28)}
+.mkt-preview-locked-ribbon button{width:auto!important;margin-left:10px!important;padding:9px 13px!important;border-radius:999px!important;border:0!important;background:linear-gradient(135deg,#f59e0b,#f97316)!important;color:#111827!important;font-weight:1000!important;box-shadow:none!important}
+#mktFbPremiumPreviewModal{position:fixed;inset:0;z-index:999999;display:none;align-items:center;justify-content:center;background:rgba(2,6,23,.62);backdrop-filter:blur(6px);padding:18px}
+#mktFbPremiumPreviewModal.show{display:flex}
+#mktFbPremiumPreviewModal .box{width:min(460px,94vw);background:#fff;border-radius:26px;padding:22px;border:1px solid #ddd6fe;box-shadow:0 30px 90px rgba(2,6,23,.35);color:#0f172a}
+#mktFbPremiumPreviewModal h3{margin:0 0 8px;font-size:24px;color:#1e1b4b}
+#mktFbPremiumPreviewModal p{margin:0 0 14px;color:#64748b;font-weight:800;line-height:1.45}
+#mktFbPremiumPreviewModal .actions{display:flex;gap:10px;flex-wrap:wrap}
+#mktFbPremiumPreviewModal .primary,#mktFbPremiumPreviewModal .secondary{border:0;border-radius:15px;padding:12px 14px;font-weight:1000;cursor:pointer}
+#mktFbPremiumPreviewModal .primary{background:linear-gradient(135deg,#2563eb,#7c3aed);color:#fff;box-shadow:0 12px 28px rgba(37,99,235,.22)}
+#mktFbPremiumPreviewModal .secondary{background:#f1f5f9;color:#334155}
+@media(max-width:820px){.mkt-preview-locked-ribbon{text-align:left;font-size:13px}.mkt-preview-locked-ribbon button{display:block!important;margin:8px 0 0!important;width:100%!important}}
+</style>
+<script id="mkt-fb-full-premium-preview-lock-js">
+(function(){
+  if(window.__MKT_FB_PREVIEW_LOCK__) return; window.__MKT_FB_PREVIEW_LOCK__=true;
+  document.body.classList.add('mkt-fb-preview-locked');
+  function q(s,r){return (r||document).querySelector(s)}
+  function qa(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s))}
+  function device(){var id='';try{id=localStorage.getItem('mkt_device_id')||localStorage.getItem('mkt_trial_user')||'';}catch(e){};return String(id||'').toUpperCase()}
+  function premiumUrl(){var id=device();return '/?open_premium=facebook_personal'+(id?'&device_id='+encodeURIComponent(id):'')+'#premium'}
+  function goPremium(){try{localStorage.setItem('mkt_fb_waiting_premium','1')}catch(e){}; window.location.href=premiumUrl()}
+  function showLock(){
+    var m=q('#mktFbPremiumPreviewModal'); if(m){m.classList.add('show');return;}
+    m=document.createElement('div');m.id='mktFbPremiumPreviewModal';
+    m.innerHTML='<div class="box"><h3>👑 Cần Premium để sử dụng</h3><p>Bạn đang được xem trước toàn bộ giao diện FACEBOOK CÁ NHÂN. Khi nâng cấp Premium và admin duyệt, hệ thống sẽ mở toàn bộ tính năng đăng bài, hẹn giờ, Fanpage, Group, AI Content, Media và Task Center.</p><div class="actions"><button class="primary" id="mktFbGoPremium">Nâng cấp Premium</button><button class="secondary" id="mktFbClosePreview">Tiếp tục xem giao diện</button></div></div>';
+    document.body.appendChild(m); m.classList.add('show');
+    q('#mktFbGoPremium').onclick=goPremium; q('#mktFbClosePreview').onclick=function(){m.classList.remove('show')};
+  }
+  function addRibbon(){
+    if(q('.mkt-preview-locked-ribbon')) return;
+    var r=document.createElement('div');r.className='mkt-preview-locked-ribbon';
+    r.innerHTML='👤 FACEBOOK CÁ NHÂN đang ở chế độ xem trước. Khách xem được toàn bộ tính năng, bấm sử dụng sẽ chuyển sang bảng giá Premium. <button type="button">Nâng cấp ngay</button>';
+    document.body.insertBefore(r,document.body.firstChild); r.querySelector('button').onclick=goPremium;
+    var main=q('.main'); if(main&&!q('.mkt-preview-lock-note',main)){var n=document.createElement('div');n.className='mkt-preview-lock-note';n.innerHTML='🔒 <b>Chế độ xem trước:</b> bạn có thể xem tất cả tính năng. Các ô nhập liệu, nút lưu, đăng ngay, hẹn giờ, đồng bộ, retry sẽ mở bảng giá Premium khi bấm.'; main.insertBefore(n,main.firstElementChild);}
+  }
+  function bindLocks(){
+    qa('form input,form textarea,form select,form button,.card button,.card .btn').forEach(function(el){
+      if(el.dataset.mktPreviewLock==='1') return;
+      el.dataset.mktPreviewLock='1';
+      el.addEventListener('click',function(e){e.preventDefault();e.stopPropagation();showLock();return false;},true);
+      el.addEventListener('focus',function(e){try{e.target.blur()}catch(x){};showLock();},true);
+    });
+    qa('form').forEach(function(f){if(f.dataset.mktPreviewLockForm==='1') return;f.dataset.mktPreviewLockForm='1';f.addEventListener('submit',function(e){e.preventDefault();e.stopPropagation();showLock();return false;},true);});
+  }
+  addRibbon(); bindLocks(); setTimeout(bindLocks,400); setTimeout(bindLocks,1200); setInterval(bindLocks,2500);
+})();
+</script>
+'''
+
+def mkt_fb_full_apply_preview_lock(html):
+    try:
+        if '</body>' in html:
+            return html.replace('</body>', MKT_FB_FULL_PREMIUM_PREVIEW_LOCK + '</body>')
+    except Exception:
+        pass
+    return html + MKT_FB_FULL_PREMIUM_PREVIEW_LOCK
+
+def mkt_fb_full_require_premium_for_action():
+    try:
+        sub = mkt_fb_full_premium_view(request.form.get('device_id') or request.args.get('device_id'))
+        if not bool(sub.get('active')):
+            return redirect('/?open_premium=facebook_personal#premium')
+    except Exception:
+        return redirect('/?open_premium=facebook_personal#premium')
+    return None
+
+@app.before_request
+def mkt_fb_full_action_premium_guard():
+    path = request.path or ''
+    if path.startswith('/fb_full/') and request.method in ('POST','PUT','PATCH','DELETE'):
+        return mkt_fb_full_require_premium_for_action()
+    return None
+
 @app.route('/facebook_personal_full')
 def mkt_fb_full_page():
-    # Chỉ mở giao diện Facebook Cá Nhân khi đúng Device ID đã được admin duyệt Premium.
-    # Hỗ trợ ?device_id=... từ nút giao diện để không lệ thuộc cookie Render/Chrome.
+    # Cho khách xem trước toàn bộ giao diện Facebook Cá Nhân.
+    # Chưa Premium: xem được layout nhưng bấm dùng sẽ chuyển bảng giá.
+    # Đã Premium: mở đầy đủ và dùng bình thường.
     sub = mkt_fb_full_premium_view(request.args.get('device_id'))
-    if not bool(sub.get('active')) and request.args.get('preview') != '1':
-        return redirect('/?open_premium=facebook_personal#premium')
-    return mkt_fb_full_html(request.args.get('msg',''))
+    html = mkt_fb_full_html(request.args.get('msg',''))
+    if not bool(sub.get('active')):
+        return mkt_fb_full_apply_preview_lock(html)
+    return html
 
 
 @app.route('/fb_full/account', methods=['POST'])
@@ -17905,12 +17985,13 @@ MKT_V250_FB_FULL_MENU_INJECTION = r'''
     qsa('#mktFbMobileFloatBtn,.mkt-mobile-fb-personal-entry,[data-module="facebook_personal_mobile"],#mktV251MobileFacebookCard').forEach(function(el){try{el.remove()}catch(e){el.style.display='none'}});
   }
   function openUpgrade(){try{if(typeof window.openPremiumPopup==='function'){window.openPremiumPopup();return;}}catch(e){} window.location.href='/?open_premium=facebook_personal#premium';}
-  function openFacebookPremiumGate(auto){fetch(statusUrl(),{credentials:'same-origin'}).then(function(r){return r.json()}).then(function(data){if(data&&data.active){try{localStorage.removeItem('mkt_fb_waiting_premium')}catch(e){} window.location.href=openUrl(data);}else if(!auto){try{localStorage.setItem('mkt_fb_waiting_premium','1')}catch(e){} alert('FACEBOOK CÁ NHÂN chỉ mở sau khi gói Premium được admin duyệt.');openUpgrade();}}).catch(function(){if(!auto)openUpgrade();});}
+  function previewUrl(){var id=getDeviceId(); var u='/facebook_personal_full?preview=1'; if(id)u+='&device_id='+encodeURIComponent(id); return u;}
+  function openFacebookPremiumGate(auto){fetch(statusUrl(),{credentials:'same-origin'}).then(function(r){return r.json()}).then(function(data){if(data&&data.active){try{localStorage.removeItem('mkt_fb_waiting_premium')}catch(e){} window.location.href=openUrl(data);}else if(!auto){try{localStorage.setItem('mkt_fb_waiting_premium','1')}catch(e){} window.location.href=previewUrl();}}).catch(function(){if(!auto)window.location.href=previewUrl();});}
   function bindGate(el){if(!el)return;el.onclick=function(e){if(e)e.preventDefault();openFacebookPremiumGate(false);return false;};}
   function addDesktopMenu(){
     var nav=qs('.mkt-clean-nav')||qs('.sidebar')||qs('.nav'); if(!nav)return;
     var a=qs('[data-mkt-v253-fb-full]');
-    if(!a){a=document.createElement('a');a.setAttribute('data-mkt-v253-fb-full','1');a.className='v2-nav-link mkt-v253-fb-full-link';a.href='/facebook_personal_full';a.innerHTML='<span class="v2-nav-text">👤 FACEBOOK CÁ NHÂN</span><span class="mkt-dot-tag pro"><i></i><span>Pro</span></span>';var after=qs('.v2-nav-link',nav);if(after&&after.parentNode)after.parentNode.insertBefore(a,after.nextSibling);else nav.appendChild(a);}
+    if(!a){a=document.createElement('a');a.setAttribute('data-mkt-v253-fb-full','1');a.className='v2-nav-link mkt-v253-fb-full-link';a.href='/facebook_personal_full?preview=1';a.innerHTML='<span class="v2-nav-text">👤 FACEBOOK CÁ NHÂN</span><span class="mkt-dot-tag pro"><i></i><span>Pro</span></span>';var after=qs('.v2-nav-link',nav);if(after&&after.parentNode)after.parentNode.insertBefore(a,after.nextSibling);else nav.appendChild(a);}
     bindGate(a);
   }
   function findMobileHost(){return qs('.main')||qs('.content')||qs('.dashboard')||qs('main')||document.body;}
