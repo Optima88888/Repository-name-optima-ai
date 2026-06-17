@@ -17782,7 +17782,7 @@ def mkt_fb_full_premium_status_api():
         'remaining_label': sub.get('remaining_label') or '',
         'message': sub.get('message') or '',
         'open_url': '/facebook_personal_full',
-        'upgrade_url': '/?open_premium=facebook_personal#premium'
+        'upgrade_url': '/?open_premium=facebook_personal' + (('&device_id=' + (sub.get('device_id') or get_device_id())) if (sub.get('device_id') or get_device_id()) else '') + '#premium'
     })
 
 
@@ -17812,9 +17812,9 @@ html body.mkt-fb-preview-locked .mkt-preview-lock-note{display:block!important}
   function device(){
     var id='';
     try{id=(new URLSearchParams(location.search)).get('device_id')||'';}catch(e){}
+    try{if(!id){var txt=document.body?(document.body.innerText||''):''; var mm=txt.match(/MKT-[A-Z0-9]{6,20}/i); if(mm)id=mm[0];}}catch(e){}
     try{if(!id)id=localStorage.getItem('mkt_device_id')||localStorage.getItem('mkt_trial_user')||'';}catch(e){}
     try{if(!id){var m=document.cookie.match(/(?:^|;\s*)mkt_device_id=([^;]+)/); if(m)id=decodeURIComponent(m[1]);}}catch(e){}
-    try{if(!id){var txt=document.body?(document.body.innerText||''):''; var mm=txt.match(/MKT-[A-Z0-9]{6,20}/i); if(mm)id=mm[0];}}catch(e){}
     if(!id && typeof window.getOrCreateDeviceId==='function'){try{id=window.getOrCreateDeviceId()||'';}catch(e){}}
     id=String(id||'').trim().toUpperCase();
     if(id && id.indexOf('MKT-')!==0) id='MKT-'+id.replace(/[^A-Z0-9]/g,'').slice(0,10);
@@ -17891,9 +17891,9 @@ MKT_FB_FULL_DEVICE_HELPER_JS = """
   function getId(){
     var id='';
     try{id=(new URLSearchParams(location.search)).get('device_id')||'';}catch(e){}
+    try{if(!id){var txt=document.body?(document.body.innerText||''):''; var mm=txt.match(/MKT-[A-Z0-9]{6,20}/i); if(mm)id=mm[0];}}catch(e){}
     try{if(!id)id=localStorage.getItem('mkt_device_id')||localStorage.getItem('mkt_trial_user')||'';}catch(e){}
     try{if(!id){var m=document.cookie.match(/(?:^|;\s*)mkt_device_id=([^;]+)/); if(m)id=decodeURIComponent(m[1]);}}catch(e){}
-    try{if(!id){var txt=document.body?(document.body.innerText||''):''; var mm=txt.match(/MKT-[A-Z0-9]{6,20}/i); if(mm)id=mm[0];}}catch(e){}
     id=String(id||'').trim().toUpperCase();
     if(id && id.indexOf('MKT-')!==0) id='MKT-'+id.replace(/[^A-Z0-9]/g,'').slice(0,10);
     if(id){try{localStorage.setItem('mkt_device_id',id);document.cookie='mkt_device_id='+encodeURIComponent(id)+'; path=/; max-age='+(60*60*24*365*5);}catch(e){}}
@@ -18063,9 +18063,9 @@ MKT_V250_FB_FULL_MENU_INJECTION = r'''
   function getDeviceId(){
     var id='';
     try{id=(new URLSearchParams(location.search)).get('device_id')||'';}catch(e){}
+    try{if(!id){var txt=document.body?(document.body.innerText||''):''; var mm=txt.match(/MKT-[A-Z0-9]{6,20}/i); if(mm) id=mm[0];}}catch(e){}
     try{if(!id) id=localStorage.getItem('mkt_device_id')||localStorage.getItem('mkt_trial_user')||'';}catch(e){}
     try{if(!id){var m=document.cookie.match(/(?:^|;\s*)mkt_device_id=([^;]+)/); if(m) id=decodeURIComponent(m[1]);}}catch(e){}
-    try{if(!id){var txt=document.body?(document.body.innerText||''):''; var mm=txt.match(/MKT-[A-Z0-9]{6,20}/i); if(mm) id=mm[0];}}catch(e){}
     if(!id && typeof window.getOrCreateDeviceId==='function'){try{id=window.getOrCreateDeviceId()||'';}catch(e){}}
     id=String(id||'').trim().toUpperCase();
     if(id && id.indexOf('MKT-')!==0) id='MKT-'+id.replace(/[^A-Z0-9]/g,'').slice(0,10);
