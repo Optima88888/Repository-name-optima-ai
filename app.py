@@ -138,6 +138,18 @@ def admin_logout():
     return admin_login_html('Đã đăng xuất Web Admin.')
 
 
+# ============================================================
+# V166 - Facebook Cá Nhân standalone route isolation
+# Không cho các patch global (support chat, sidebar/menu cũ, pricing CSS...)
+# chèn vào /facebook_personal_full vì chúng làm vỡ giao diện độc lập.
+# ============================================================
+def mkt_fb_full_is_standalone_page():
+    try:
+        return (request.path or '').startswith('/facebook_personal_full')
+    except Exception:
+        return False
+
+
 
 # V184 - Enterprise Blue Sidebar + Omni Channel bot icon injection
 MKT_V182_PASTEL_UI_INJECTION = "\n<style id=\"mkt-v182-pastel-gradient-ui\">\n:root{\n  --pastel-blue:#DBEAFE;--pastel-blue-2:#BFDBFE;--pastel-lavender:#EDE9FE;\n  --pastel-pink:#FCE7F3;--pastel-cream:#FEF3C7;--pastel-mint:#D1FAE5;\n  --pastel-text:#0F172A;--pastel-muted:#64748B;--pastel-border:#E8EEF8;\n}\nbody{\n  background:\n    radial-gradient(circle at 10% 0%,rgba(191,219,254,.72),transparent 34%),\n    radial-gradient(circle at 72% 4%,rgba(237,233,254,.72),transparent 34%),\n    radial-gradient(circle at 42% 100%,rgba(252,231,243,.62),transparent 36%),\n    linear-gradient(135deg,#F8FBFF 0%,#F5F7FF 42%,#FFF7ED 100%)!important;\n  color:var(--pastel-text)!important;\n}\n.sidebar,.mkt-clean-nav{\n  background:linear-gradient(180deg,#0E3A80 0%,#123F88 55%,#174A9A 100%)!important;\n  border-right:1px solid rgba(255,255,255,.10)!important;\n  box-shadow:18px 0 50px rgba(14,58,128,.24)!important;\n  color:#FFFFFF!important;\n}\n.mkt-clean-nav .v2-nav-link,.sidebar .v2-nav-link,.mkt-clean-nav a,.sidebar a{color:#EAF2FF!important;text-shadow:none!important;}\n.mkt-clean-nav .v2-nav-link.active,.mkt-clean-nav .v2-nav-link:hover,.sidebar .v2-nav-link.active,.sidebar .v2-nav-link:hover{\n  background:linear-gradient(90deg,#2563EB,#3B82F6)!important;color:#FFFFFF!important;\n  box-shadow:0 14px 30px rgba(37,99,235,.32)!important;\n}\n.hero,.dashboard-hero,.main-card,.app-quick-card,.enterprise-hub,.enterprise-module-wrap,.premium-card,.trial-card{\n  background:linear-gradient(135deg,rgba(255,255,255,.98),rgba(248,251,255,.96))!important;\n  border:1px solid rgba(219,234,254,.95)!important;box-shadow:0 22px 54px rgba(148,163,184,.16)!important;color:#0F172A!important;\n}\n.app-quick-card:nth-of-type(3n+1){background:linear-gradient(135deg,#FFFFFF,#EFF6FF)!important;}\n.app-quick-card:nth-of-type(3n+2){background:linear-gradient(135deg,#FFFFFF,#F5F3FF)!important;}\n.app-quick-card:nth-of-type(3n+3){background:linear-gradient(135deg,#FFFFFF,#FDF2F8)!important;}\n.app-quick-card b,.enterprise-card b,.enterprise-card h3{color:#0F172A!important;}\n.app-quick-card span,.enterprise-card p,.enterprise-hub-head p{color:#64748B!important;}\n.enterprise-hub{background:linear-gradient(135deg,#FFFFFF 0%,#F0F7FF 36%,#F8F3FF 66%,#FFF7ED 100%)!important;border-color:rgba(196,181,253,.55)!important;}\n.enterprise-hub-head h2,.enterprise-module-title,.dashboard-hero h1,.hero h1{\n  background:linear-gradient(90deg,#0E3A80,#2563EB,#7C3AED)!important;-webkit-background-clip:text!important;background-clip:text!important;color:transparent!important;\n}\n.enterprise-card{background:linear-gradient(180deg,#FFFFFF,#F8FBFF)!important;border:1px solid rgba(219,234,254,.98)!important;box-shadow:0 18px 42px rgba(148,163,184,.14)!important;}\n.enterprise-card:hover,.app-quick-card:hover{transform:translateY(-4px)!important;border-color:#C4B5FD!important;box-shadow:0 26px 60px rgba(147,197,253,.22)!important;}\n.mkt-channel-strip,.topbar,.ticker,.live-bar{\n  background:rgba(255,255,255,.88)!important;border:1px solid rgba(219,234,254,.9)!important;box-shadow:0 16px 40px rgba(148,163,184,.14)!important;backdrop-filter:blur(16px)!important;\n}\n.mkt-dot-tag.enterprise,.v2-nav-link .mkt-dot-tag,.mkt-dot-tag{\n  background:rgba(254,243,199,.92)!important;color:#92400E!important;border:1px solid rgba(251,191,36,.38)!important;box-shadow:0 0 18px rgba(251,191,36,.16)!important;\n}\n.mkt-dot-tag.enterprise i,.mkt-dot-tag i{background:#FBBF24!important;box-shadow:0 0 12px #FBBF24!important;}\n.kpi-card,.stat-card{background:linear-gradient(135deg,#FFFFFF,#EFF6FF)!important;color:#0F172A!important;border:1px solid rgba(191,219,254,.72)!important;box-shadow:0 20px 50px rgba(147,197,253,.18)!important;}\n.kpi-card:nth-child(2),.stat-card:nth-child(2){background:linear-gradient(135deg,#FFFFFF,#FEF3C7)!important;}\n.kpi-card:nth-child(3),.stat-card:nth-child(3){background:linear-gradient(135deg,#FFFFFF,#D1FAE5)!important;}\n.kpi-card:nth-child(4),.stat-card:nth-child(4){background:linear-gradient(135deg,#FFFFFF,#EDE9FE)!important;}\n.mkt-bot-app-icon{\n  display:inline-flex!important;align-items:center!important;justify-content:center!important;width:46px!important;height:46px!important;min-width:46px!important;max-width:46px!important;max-height:46px!important;\n  border-radius:18px!important;background:linear-gradient(135deg,#DBEAFE,#EDE9FE,#FCE7F3)!important;box-shadow:0 14px 28px rgba(124,58,237,.18)!important;overflow:hidden!important;\n}\n.mkt-bot-app-icon svg{width:40px!important;height:40px!important;display:block!important;}\n.app-quick-card .app-ico.mkt-omni-bot-ico{\n  width:58px!important;height:58px!important;min-width:58px!important;border-radius:20px!important;background:linear-gradient(135deg,#DBEAFE,#EDE9FE,#FCE7F3)!important;box-shadow:0 14px 30px rgba(124,58,237,.16)!important;\n}\n.app-quick-card .app-ico.mkt-omni-bot-ico .mkt-bot-app-icon{width:48px!important;height:48px!important;min-width:48px!important;box-shadow:none!important;background:transparent!important;}\n.enterprise-card .ec-icon .mkt-brand-logo,.enterprise-module-title .mkt-brand-logo,.app-quick-card .app-ico .mkt-brand-logo{max-width:42px!important;max-height:42px!important;object-fit:contain!important;}\n.mkt-logo-stack{max-width:74px!important;gap:4px!important}.mkt-logo-stack .mkt-brand-logo{width:18px!important;height:18px!important;min-width:18px!important;max-width:18px!important;max-height:18px!important;margin:0!important}\n</style>\n\n<script id=\"mkt-v182-omni-bot-fix\">\n(function(){\n  var botHtml = \"<span class=\\\"mkt-bot-app-icon\\\" aria-label=\\\"GPTMini Bot\\\">\\n<svg viewBox=\\\"0 0 64 64\\\" role=\\\"img\\\" xmlns=\\\"http://www.w3.org/2000/svg\\\">\\n  <defs>\\n    <linearGradient id=\\\"botPastelG\\\" x1=\\\"0\\\" y1=\\\"0\\\" x2=\\\"1\\\" y2=\\\"1\\\">\\n      <stop offset=\\\"0\\\" stop-color=\\\"#93C5FD\\\"/>\\n      <stop offset=\\\".45\\\" stop-color=\\\"#C4B5FD\\\"/>\\n      <stop offset=\\\".75\\\" stop-color=\\\"#F9A8D4\\\"/>\\n      <stop offset=\\\"1\\\" stop-color=\\\"#A7F3D0\\\"/>\\n    </linearGradient>\\n  </defs>\\n  <rect x=\\\"10\\\" y=\\\"14\\\" width=\\\"44\\\" height=\\\"38\\\" rx=\\\"16\\\" fill=\\\"url(#botPastelG)\\\"/>\\n  <rect x=\\\"17\\\" y=\\\"22\\\" width=\\\"30\\\" height=\\\"21\\\" rx=\\\"10\\\" fill=\\\"#fff\\\"/>\\n  <circle cx=\\\"26\\\" cy=\\\"32\\\" r=\\\"3.2\\\" fill=\\\"#2563EB\\\"/>\\n  <circle cx=\\\"38\\\" cy=\\\"32\\\" r=\\\"3.2\\\" fill=\\\"#EC4899\\\"/>\\n  <path d=\\\"M27 39h10\\\" stroke=\\\"#7C3AED\\\" stroke-width=\\\"3\\\" stroke-linecap=\\\"round\\\"/>\\n  <path d=\\\"M32 8v7\\\" stroke=\\\"#60A5FA\\\" stroke-width=\\\"4\\\" stroke-linecap=\\\"round\\\"/>\\n  <circle cx=\\\"32\\\" cy=\\\"7\\\" r=\\\"3\\\" fill=\\\"#A78BFA\\\"/>\\n</svg></span>\";\n  function fixOmniBotIcon(){\n    document.querySelectorAll('.app-quick-card').forEach(function(card){\n      var title = ((card.querySelector('b')||{}).textContent || '').trim();\n      if(title === 'Omni Channel Center'){\n        var ico = card.querySelector('.app-ico');\n        if(ico){ ico.classList.add('mkt-omni-bot-ico'); ico.innerHTML = botHtml; }\n      }\n    });\n  }\n  if(document.readyState === 'loading'){document.addEventListener('DOMContentLoaded', fixOmniBotIcon);}else{fixOmniBotIcon();}\n  setTimeout(fixOmniBotIcon, 600);\n  setTimeout(fixOmniBotIcon, 1800);\n})();\n</script>\n"
@@ -262,6 +274,8 @@ html body .v2-nav-link.active .mkt-dot-tag{
 @app.after_request
 def mkt_v182_pastel_ui_after_request(response):
     try:
+        if mkt_fb_full_is_standalone_page():
+            return response
         ctype = (response.headers.get("Content-Type") or "").lower()
         if "text/html" in ctype:
             body = response.get_data(as_text=True)
@@ -422,6 +436,8 @@ html body .compact-price-card .plan-actions{position:relative!important;z-index:
 @app.after_request
 def mkt_v230_pricing_value_after_request(response):
     try:
+        if mkt_fb_full_is_standalone_page():
+            return response
         ctype = (response.headers.get("Content-Type") or "").lower()
         if "text/html" in ctype:
             body = response.get_data(as_text=True)
@@ -15656,6 +15672,8 @@ _MKT_V154_SAFE_MOBILE_PATCH = r"""
 @app.after_request
 def _mkt_v154_safe_mobile_cleanup_after_request(response):
     try:
+        if mkt_fb_full_is_standalone_page():
+            return response
         content_type = response.headers.get("Content-Type", "")
         if response.status_code == 200 and "text/html" in content_type.lower():
             html = response.get_data(as_text=True)
@@ -15791,6 +15809,8 @@ _MKT_V159_SUPPORT_CHAT_PATCH = r"""
 @app.after_request
 def _mkt_v159_support_chat_after_request(response):
     try:
+        if mkt_fb_full_is_standalone_page():
+            return response
         content_type = response.headers.get("Content-Type", "")
         if response.status_code == 200 and "text/html" in content_type.lower():
             html = response.get_data(as_text=True)
@@ -16351,6 +16371,8 @@ def admin_telegram_admin_help_route():
 @app.after_request
 def _mkt_ctv_mobile_register_fix(response):
     try:
+        if mkt_fb_full_is_standalone_page():
+            return response
         ctype = response.headers.get('Content-Type', '')
         if 'text/html' not in ctype.lower():
             return response
@@ -17101,6 +17123,8 @@ MKT_V153_FACEBOOK_REAL_POST_STATUS_PATCH = r"""
 @app.after_request
 def mkt_v153_facebook_real_post_status_after_request(response):
     try:
+        if mkt_fb_full_is_standalone_page():
+            return response
         ctype=(response.headers.get('Content-Type') or '').lower()
         if 'text/html' in ctype:
             body=response.get_data(as_text=True)
@@ -17131,6 +17155,8 @@ def mkt_download_facebook_personal_extension_zip():
 @app.after_request
 def mkt_v143_facebook_personal_pc_mobile_after_request(response):
     try:
+        if mkt_fb_full_is_standalone_page():
+            return response
         ctype = (response.headers.get('Content-Type') or '').lower()
         if 'text/html' in ctype:
             body = response.get_data(as_text=True)
@@ -17235,6 +17261,8 @@ MKT_V144_FB_PERSONAL_VISIBLE_FIX = r"""
 @app.after_request
 def mkt_v144_facebook_personal_visible_fix_after_request(response):
     try:
+        if mkt_fb_full_is_standalone_page():
+            return response
         ctype = (response.headers.get('Content-Type') or '').lower()
         if 'text/html' in ctype:
             body = response.get_data(as_text=True)
@@ -17535,6 +17563,8 @@ MKT_V145_FB_PERSONAL_MOBILE_MENU_PATCH = r"""
 @app.after_request
 def mkt_v145_facebook_personal_mobile_menu_after_request(response):
     try:
+        if mkt_fb_full_is_standalone_page():
+            return response
         ctype = (response.headers.get('Content-Type') or '').lower()
         if 'text/html' in ctype:
             body = response.get_data(as_text=True)
@@ -17688,7 +17718,7 @@ def mkt_fb_full_html(message=''):
     task_rows=''.join([f'<tr><td>#{t[0]}</td><td>{esc(t[1])}</td><td>{esc(t[2])}</td><td><span class="pill green">{esc(t[3])}</span></td><td>{esc(t[4])}</td><td>{esc(t[8])}</td><td>{esc(t[10])}</td></tr>' for t in tasks]) or '<tr><td colspan="7">Chưa có tác vụ.</td></tr>'
     log_rows=''.join([f'<div class="log"><b>{esc(l[3])}</b> • {esc(l[0])} • <span>{esc(l[1])}</span><br>{esc(l[2])}</div>' for l in logs]) or '<div class="empty">Chưa có nhật ký.</div>'
     msg = f'<div class="toast">{esc(message)}</div>' if message else ''
-    return f'''<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Facebook Cá Nhân - GPTMiniPro</title>
+    return f'''<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Facebook Cá Nhân - GPTMiniPro</title><meta name="mkt-fb-full-standalone" content="1">
 <style>
 :root{{--fb-blue:#1877f2;--fb-purple:#7c3aed;--fb-dark:#0f172a;--fb-soft:#f5f8ff;--fb-border:#dbeafe;--fb-text:#111827;--fb-muted:#64748b}}
 *{{box-sizing:border-box}} body{{margin:0;font-family:Arial,system-ui,sans-serif;background:radial-gradient(circle at 10% 0%,rgba(24,119,242,.16),transparent 28%),radial-gradient(circle at 88% 4%,rgba(124,58,237,.14),transparent 32%),linear-gradient(135deg,#f8fbff,#eef5ff 48%,#fff);color:var(--fb-text)}}
@@ -17813,7 +17843,7 @@ html body.mkt-fb-preview-locked .mkt-preview-lock-note{display:block!important}
 def mkt_fb_full_apply_preview_lock(html):
     try:
         if '</body>' in html:
-            return html.replace('</body>', MKT_FB_FULL_PREMIUM_PREVIEW_LOCK + '</body>')
+            return html.replace('</body>', '\n' + MKT_FB_FULL_PREMIUM_PREVIEW_LOCK + '\n</body>')
     except Exception:
         pass
     return html + MKT_FB_FULL_PREMIUM_PREVIEW_LOCK
@@ -17822,9 +17852,9 @@ def mkt_fb_full_require_premium_for_action():
     try:
         sub = mkt_fb_full_premium_view(request.form.get('device_id') or request.args.get('device_id'))
         if not bool(sub.get('active')):
-            return redirect('/?open_premium=facebook_personal#premium')
+            return redirect('/?open_premium=facebook_personal&device_id=' + (request.form.get('device_id') or request.args.get('device_id') or get_device_id()).strip().upper() + '#premium')
     except Exception:
-        return redirect('/?open_premium=facebook_personal#premium')
+        return redirect('/?open_premium=facebook_personal&device_id=' + (request.form.get('device_id') or request.args.get('device_id') or get_device_id()).strip().upper() + '#premium')
     return None
 
 @app.before_request
@@ -18024,6 +18054,8 @@ html body .mkt-v253-fb-full-link .v2-nav-text{color:#fff!important;-webkit-text-
 @app.after_request
 def mkt_v250_fb_full_menu_after_request(response):
     try:
+        if mkt_fb_full_is_standalone_page():
+            return response
         ctype=(response.headers.get('Content-Type') or '').lower()
         if 'text/html' in ctype:
             body=response.get_data(as_text=True)
