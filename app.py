@@ -17727,16 +17727,23 @@ function fillCTA(){{document.getElementById('aiBox').value='🎯 CTA: Nhắn tin
 </script></body></html>'''
 
 
-def mkt_fb_full_premium_view():
+def mkt_fb_full_premium_view(device_id=None):
     try:
-        return get_subscription_view()
+        device_id = (device_id or request.args.get('device_id') or request.form.get('device_id') or get_device_id()).strip().upper()
+        return get_subscription_view(device_id)
     except Exception as _e:
-        return {'active': False, 'message': 'Chưa xác định được trạng thái Premium.', 'device_id': get_device_id()}
+        try:
+            _device_id = (device_id or request.args.get('device_id') or get_device_id()).strip().upper()
+        except Exception:
+            _device_id = ''
+        return {'active': False, 'message': 'Chưa xác định được trạng thái Premium.', 'device_id': _device_id}
 
 
 @app.route('/api/facebook_personal_full/status')
 def mkt_fb_full_premium_status_api():
-    sub = mkt_fb_full_premium_view()
+    # Quan trọng: kiểm tra đúng Device ID khách gửi lên từ giao diện.
+    # Trước đây API bỏ qua ?device_id= nên admin đã duyệt nhưng module Facebook vẫn bị khóa.
+    sub = mkt_fb_full_premium_view(request.args.get('device_id'))
     return jsonify({
         'ok': True,
         'active': bool(sub.get('active')),
@@ -17751,9 +17758,9 @@ def mkt_fb_full_premium_status_api():
 
 @app.route('/facebook_personal_full')
 def mkt_fb_full_page():
-    # Chỉ mở giao diện Facebook Cá Nhân khi thiết bị đã được admin duyệt Premium.
-    # Nếu chưa Premium thì chuyển về bảng giá, tránh khách bấm được nhưng không sử dụng được.
-    sub = mkt_fb_full_premium_view()
+    # Chỉ mở giao diện Facebook Cá Nhân khi đúng Device ID đã được admin duyệt Premium.
+    # Hỗ trợ ?device_id=... từ nút giao diện để không lệ thuộc cookie Render/Chrome.
+    sub = mkt_fb_full_premium_view(request.args.get('device_id'))
     if not bool(sub.get('active')) and request.args.get('preview') != '1':
         return redirect('/?open_premium=facebook_personal#premium')
     return mkt_fb_full_html(request.args.get('msg',''))
@@ -17898,7 +17905,7 @@ MKT_V250_FB_FULL_MENU_INJECTION = r'''
     qsa('#mktFbMobileFloatBtn,.mkt-mobile-fb-personal-entry,[data-module="facebook_personal_mobile"],#mktV251MobileFacebookCard').forEach(function(el){try{el.remove()}catch(e){el.style.display='none'}});
   }
   function openUpgrade(){try{if(typeof window.openPremiumPopup==='function'){window.openPremiumPopup();return;}}catch(e){} window.location.href='/?open_premium=facebook_personal#premium';}
-  function openFacebookPremiumGate(auto){fetch(statusUrl(),{credentials:'same-origin'}).then(function(r){return r.json()}).then(function(data){if(data&&data.active){window.location.href=openUrl(data);}else if(!auto){alert('FACEBOOK CÁ NHÂN chỉ mở sau khi gói Premium được admin duyệt.');openUpgrade();}}).catch(function(){if(!auto)openUpgrade();});}
+  function openFacebookPremiumGate(auto){fetch(statusUrl(),{credentials:'same-origin'}).then(function(r){return r.json()}).then(function(data){if(data&&data.active){try{localStorage.removeItem('mkt_fb_waiting_premium')}catch(e){} window.location.href=openUrl(data);}else if(!auto){try{localStorage.setItem('mkt_fb_waiting_premium','1')}catch(e){} alert('FACEBOOK CÁ NHÂN chỉ mở sau khi gói Premium được admin duyệt.');openUpgrade();}}).catch(function(){if(!auto)openUpgrade();});}
   function bindGate(el){if(!el)return;el.onclick=function(e){if(e)e.preventDefault();openFacebookPremiumGate(false);return false;};}
   function addDesktopMenu(){
     var nav=qs('.mkt-clean-nav')||qs('.sidebar')||qs('.nav'); if(!nav)return;
@@ -17914,7 +17921,11 @@ MKT_V250_FB_FULL_MENU_INJECTION = r'''
     var first=host.firstElementChild;if(first)host.insertBefore(card,first);else host.appendChild(card);bindGate(qs('#mktV253MobileFacebookBtn'));refreshPremiumState(false);
   }
   function refreshPremiumState(autoOpen){
-    var state=qs('#mktV253PremiumState');fetch(statusUrl(),{credentials:'same-origin'}).then(function(r){return r.json()}).then(function(data){if(state){if(data&&data.active){state.textContent='Premium mở khóa';state.className='ok';}else{state.textContent='Khóa Premium';state.className='lock';}}if(data&&data.active&&autoOpen&&/open_premium=facebook_personal|facebook_personal/i.test(location.href))window.location.href=openUrl(data);}).catch(function(){if(state){state.textContent='Khóa Premium';state.className='lock';}});
+    var state=qs('#mktV253PremiumState');fetch(statusUrl(),{credentials:'same-origin'}).then(function(r){return r.json()}).then(function(data){
+      if(state){if(data&&data.active){state.textContent='Premium mở khóa';state.className='ok';}else{state.textContent='Khóa Premium';state.className='lock';}}
+      var waiting=false; try{waiting=localStorage.getItem('mkt_fb_waiting_premium')==='1'}catch(e){}
+      if(data&&data.active&&autoOpen&&(waiting||/open_premium=facebook_personal|facebook_personal/i.test(location.href))){try{localStorage.removeItem('mkt_fb_waiting_premium')}catch(e){} window.location.href=openUrl(data);}
+    }).catch(function(){if(state){state.textContent='Khóa Premium';state.className='lock';}});
   }
   function run(){hideOldFacebookMenuOnly();addDesktopMenu();addMobileCard();refreshPremiumState(false);}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',run);else run();window.addEventListener('resize',run);setTimeout(run,300);setTimeout(run,1000);setTimeout(run,2500);setInterval(function(){hideOldFacebookMenuOnly();refreshPremiumState(true);},4000);
